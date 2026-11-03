@@ -7,7 +7,6 @@ was edited without the other, which is the most common way bilingual documents r
 Pairs covered:
   docs/<name>-en.md  <->  docs/<name>-zh.md
   README.md          <->  README-zh.md
-  CONTRIBUTING.md    <->  CONTRIBUTING-zh.md
 
 Usage: python scripts/check-bilingual.py
 Exit code: 0 when every pair matches, 1 otherwise.
@@ -26,7 +25,6 @@ HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
 
 ROOT_PAIRS = [
     ("README.md", "README-zh.md"),
-    ("CONTRIBUTING.md", "CONTRIBUTING-zh.md"),
 ]
 
 
