@@ -20,10 +20,10 @@ Phase status lives here. Why it moved lives in `PROGRESS.md`.
 |---|---|---|
 | A — capture | @FrozenYty | camera, trigger, sensors, serial, storage |
 | B — server | @Gtechson | database, API, detection, scheduling, training |
-| C — web | @chemflower | pages, canvas review, charts |
+| C — web | @chemflowers | pages, canvas review, charts |
 | D — quality | @IkeaFyj | test cases, acceptance checks, documents, demo script |
 
-Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflower` Sun Jianheng ·
+Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` Sun Jianheng ·
 `@IkeaFyj` Fu Yijia.
 
 ## 3. Phases
@@ -46,7 +46,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflower` S
       three machines install identically
 - [ ] **P0-03** Hardware purchase and arrival check · @FrozenYty · done when the items are in hand and
       the camera outputs frames
-- [ ] **P0-04** Page skeleton and design tokens · @chemflower · done when `tokens.css` is final and
+- [ ] **P0-04** Page skeleton and design tokens · @chemflowers · done when `tokens.css` is final and
       three pages navigate
 - [ ] **P0-05** Requirement review record · @IkeaFyj · done when the review outcome is recorded in
       SRS annex B
@@ -61,7 +61,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflower` S
       `/api/health` returns `{code, message, data, request_id}`
 - [ ] **P1-03** Capture module: open device, lock exposure, grab, score, persist · @FrozenYty · done
       when 20 frames are captured and file, score and `frame_id` all agree
-- [ ] **P1-04** Thirteen static pages · @chemflower · done when every page opens, uses mock data and
+- [ ] **P1-04** Thirteen static pages · @chemflowers · done when every page opens, uses mock data and
       shares one visual language
 - [ ] **P1-05** Test case draft against the 36 acceptance items · @IkeaFyj · done when each item has
       at least one case, marked not-yet-implemented
@@ -75,9 +75,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflower` S
       boxes with `model_version` and `latency_ms`
 - [ ] **P2-02** Result persistence and query API · @Gtechson · done when boxes land in
       `detect_object` and querying by `frame_id` returns them
-- [ ] **P2-03** Capture and review pages on real data · @chemflower · done when no mock data is left
+- [ ] **P2-03** Capture and review pages on real data · @chemflowers · done when no mock data is left
       on those two pages
-- [ ] **P2-04** Minimal review loop: delete, add, relabel · @chemflower @Gtechson · done when the
+- [ ] **P2-04** Minimal review loop: delete, add, relabel · @chemflowers @Gtechson · done when the
       edit persists and the count updates without a page reload
 
 - [ ] **GATE P2** — from a cold start, someone who has not seen the system completes the slice in
@@ -87,12 +87,12 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflower` S
 
 - [ ] **P3-01** Batch detection, thread pool, progress · @Gtechson · done when a 100-frame task
       completes, progress is queryable and state survives a restart
-- [ ] **P3-02** Statistics dashboard and report export · @chemflower · done when four charts render
+- [ ] **P3-02** Statistics dashboard and report export · @chemflowers · done when four charts render
       and Word and PDF export both work
 - [ ] **P3-03** Model version management and activation · @Gtechson · done when exactly one model is
       online and results record the version
 - [ ] **P3-04** Accounts, roles, permissions · @Gtechson · done when the role is enforced server-side
-- [ ] **P3-05** Review canvas: drag, zoom, add, delete · @chemflower · done when all four gestures
+- [ ] **P3-05** Review canvas: drag, zoom, add, delete · @chemflowers · done when all four gestures
       work on one frame without a reload
 - [ ] **P3-06** Demo mode · @FrozenYty · done when one action resets data and hides debug output
 
