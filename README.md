@@ -60,7 +60,9 @@ inference speed at least 90% of the baseline.
 ## Contributing
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before the first commit.
-Branches, commits, pull requests, code style and document rules all live there.
+Branches, commits, pull requests and document rules all live there.
+
+If you are an AI assistant, read [AGENTS.md](AGENTS.md) first — it tells you which lane you are in.
 
 ## License
 
