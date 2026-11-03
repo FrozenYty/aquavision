@@ -37,7 +37,9 @@ chore(ci): run ruff on pull requests
 
 - 单个 PR 改动**不超过 400 行**，超了就拆。
 - 按模板填写：改了什么、怎么验证的、还影响哪些地方。
-- 至少**一人 review 通过**。组长的 PR 由模块负责人审。
+- **CI 是唯一的门槛**：`check` 绿了就能合，不需要任何人批准。
+- 评审仍然欢迎，意见用评论提，不阻塞合并；不值得再走一轮的，合并后补一个 PR 修。
+- 开完 PR 立刻打开 **auto-merge**，`check` 一过就自动合并。
 - 用 **squash** 合并——一个功能在 `main` 上只留一个提交。
 - 有关联 Issue 时写 `Closes #12`。
 
@@ -111,5 +113,5 @@ datasets/             训练与测试数据
 - [ ] `ruff check .` 与 `ruff format --check .` 通过
 - [ ] 本地 `pytest` 通过
 - [ ] 中英对照文档已同步（`scripts/check-bilingual.py`）
-- [ ] PR 模板填写完整，且有人 review 通过
+- [ ] PR 模板填写完整，且 CI 通过
 - [ ] 行为有变化时，`docs/` 已同步更新
