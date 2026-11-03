@@ -13,6 +13,7 @@ with a human review loop that feeds corrections back into training.
 | Document | Notes |
 |---|---|
 | [SRS v1.2](docs/srs-v1.2.docx) | 29 functional requirements, 9 use cases, 9 tables, 36 acceptance items |
+| [Plan](PLAN.md) | Phases, tasks and gates — the task contract for the team |
 | [Architecture](docs/architecture-en.md) | Layers, dependency rules, runtime model, frame lifecycle |
 | [API contract](docs/api-contract-en.md) | REST paths, response envelope, error codes, WebSocket protocol |
 | [Data model](docs/data-model-en.md) | Nine tables, fields, indexes, file storage |

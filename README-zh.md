@@ -15,6 +15,7 @@
 | 文档 | 说明 |
 |---|---|
 | [需求定义书 V1.2](docs/srs-v1.2.docx) | 功能需求 29 条、用例 9 个、数据表 9 张、验收项 36 条 |
+| [任务计划](PLAN.md) | 阶段、任务与门禁，团队的任务契约 |
 | [总体架构](docs/architecture-zh.md) · [English](docs/architecture-en.md) | 分层、依赖规则、运行时模型、一帧的生命周期 |
 | [接口约定](docs/api-contract-zh.md) · [English](docs/api-contract-en.md) | REST 路径、响应封装、错误码、WebSocket 协议 |
 | [数据模型](docs/data-model-zh.md) · [English](docs/data-model-en.md) | 九张表、字段、索引、文件存储 |
