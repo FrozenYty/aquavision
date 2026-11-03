@@ -1,0 +1,104 @@
+# AGENTS.md
+
+Instructions for AI assistants working in this repository. Read this before your first task.
+
+> This file only holds what is not written elsewhere. If a rule already lives in `CONTRIBUTING.md`,
+> `PLAN.md` or `docs/`, delete the copy here instead of maintaining two versions.
+
+## 1. Before you start
+
+Read, in this order:
+
+```
+PLAN.md  ->  PROGRESS.md  ->  CONTRIBUTING.md  ->  docs/architecture-en.md  ->  the ADR that touches your change
+```
+
+- Find out **who you are helping** (§3). Ask your user if it is not stated.
+- The files beat your memory. This repository is edited by four people and four assistants between
+  your sessions; anything you remember may already be wrong.
+- When something is unclear, say what is unclear and what would make it clear. Do not guess at
+  another lane's intent.
+
+## 2. The project
+
+AquaVision — underwater species detection and monitoring. A USB camera feeds a quality check, then
+YOLOv8 detection, then human review; corrections flow back into training. Five classes: sea
+cucumber, sea urchin, scallop, starfish, marine debris.
+
+One FastAPI process, a static frontend, and an ESP32 that only handles trigger, light and sensors.
+
+Phase and task state live in `PLAN.md`. Recent changes live in `PROGRESS.md`. Do not restate either
+one here — stale summaries are worse than none.
+
+## 3. Who you are helping
+
+| User | Lane | Default: read-only |
+|---|---|---|
+| Yao Tianyu | A — capture, architecture, documents | B, C |
+| Gao Tianxiang | B — data, model, backend | A, C |
+| Sun Jianheng | C — frontend, annotation | A, B |
+| Fu Yijia | D — test cases, acceptance, demo material | everything else |
+
+Only take tasks that `PLAN.md` assigns to your user. Everything else is read-only by default.
+
+- **Small change in another lane** — go ahead and submit the PR, but say so in the description:
+  “touches lane B: added a field to the detection response”.
+- **Large change in another lane** — ask first. Two assistants editing one file is the most
+  expensive accident this repository can have.
+
+## 4. Six working principles
+
+**1. Look before you move.** Read the file, list the directory, check the branch. Never edit from
+memory — three other people have been working here since your last session.
+
+**2. Smallest change that works.** Every line you touch is a line someone else may be editing.
+If you write 200 lines and it could be 50, rewrite it.
+
+**3. Simple beats clever.** No abstraction for single-use code, no configurability nobody asked for,
+no error handling for situations that cannot happen. Would a senior engineer call this overbuilt?
+
+**4. Define done before coding.** `PLAN.md` already gives a “done when” for most tasks. If yours has
+none, write one in the PR description before you start — a check you can run, not a feeling.
+
+**5. Change one thing, search the whole repository.** Deleting a file, renaming a field, changing an
+ID: grep for every reference. Stale links and stale names are the most common silent defect here.
+
+**6. Read the error.** A non-zero exit is information. Read it, then adjust or report; do not retry
+the identical command and hope.
+
+## 5. Rules of the shared repository
+
+- Branch names, commit format and PR rules live in `CONTRIBUTING.md`. Follow them; they are not
+  repeated here.
+- **Never force-push.** Never push to `main` — it is protected, and the branch is shared.
+- **Never tick a `PLAN.md` box** for work you did not deliver.
+- **`PROGRESS.md` is append-only.** Add a dated entry; never rewrite an older one.
+- **An accepted ADR is closed.** To change a decision, write a new ADR that supersedes it — do not
+  quietly code around it.
+- **A problem outside your lane: report it, do not fix it.** One sentence in the PR description or
+  the weekly sync is enough. Fixing it in your commit makes the diff unreviewable.
+
+## 6. Verify and report
+
+```bash
+python scripts/check-bilingual.py     # bilingual pairs in sync
+ruff check . && ruff format --check . # lint and format
+pytest -q                             # tests
+```
+
+`ruff` cannot always be installed locally (pip fails during unpack in some sandboxes). If you cannot
+run it, push the branch and open a PR — CI is the authority, not your local result.
+
+Report in three parts:
+
+1. **What changed** — files and behaviour, not intentions.
+2. **How it was verified** — commands run and their result.
+3. **What is left undone** — be explicit; “it works” is not a report.
+
+## 7. Language
+
+Talk to your user in Chinese. Write everything to disk in English: code, comments, commit messages,
+documents, PR descriptions.
+
+Chinese prose uses full-width punctuation — “”、，。；：（） — never ASCII quotes or commas wedged
+into a Chinese sentence.

@@ -61,7 +61,9 @@ tests/       测试
 ## 协作
 
 第一次提交前请读 [CONTRIBUTING.md](CONTRIBUTING.md)（仅英文）。
-分支、提交、Pull Request、代码风格与文档规则都在那里。
+分支、提交、Pull Request 与文档规则都在那里。
+
+如果你是 AI 助手，先读 [AGENTS.md](AGENTS.md)，它会告诉你该在哪条线上干活。
 
 ## 许可
 
