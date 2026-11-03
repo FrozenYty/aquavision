@@ -1,0 +1,12 @@
+# 文本文件统一 LF，避免 Windows 与 CI 之间反复改动
+* text=auto eol=lf
+
+# 文档按二进制处理，避免 git 试图做文本 diff
+*.docx  binary
+*.doc    binary
+*.xlsx  binary
+*.xls    binary
+*.pdf    binary
+*.pptx   binary
+*.png    binary
+*.jpg    binary

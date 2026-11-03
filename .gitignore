@@ -1,0 +1,40 @@
+# --- 模型与数据：不进仓库 ---
+*.pt
+*.onnx
+*.engine
+data/
+datasets/
+*.mp4
+*.avi
+*.mov
+
+# --- 密钥与本地配置 ---
+.env
+.env.*
+!.env.example
+
+# --- Word / Office 临时文件 ---
+~$*
+*.tmp
+
+# --- 系统文件 ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# --- 编辑器 ---
+.vscode/
+.idea/
+
+# --- 渲染与调试产物 ---
+_probe.pdf
+*.pdf.tmp
