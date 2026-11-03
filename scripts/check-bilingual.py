@@ -7,6 +7,7 @@ was edited without the other, which is the most common way bilingual documents r
 Pairs covered:
   docs/<name>-en.md  <->  docs/<name>-zh.md
   README.md          <->  README-zh.md
+  CONTRIBUTING.md    <->  CONTRIBUTING-zh.md
 
 Usage: python scripts/check-bilingual.py
 Exit code: 0 when every pair matches, 1 otherwise.
@@ -22,6 +23,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
+
+ROOT_PAIRS = [
+    ("README.md", "README-zh.md"),
+    ("CONTRIBUTING.md", "CONTRIBUTING-zh.md"),
+]
 
 
 def heading_levels(path: Path) -> list[int]:
@@ -39,9 +45,10 @@ def iter_pairs() -> Iterator[tuple[Path, Path]]:
     for en_path in sorted(DOCS.glob("*-en.md")):
         yield en_path, en_path.with_name(en_path.name[: -len("-en.md")] + "-zh.md")
 
-    readme_en = ROOT / "README.md"
-    if readme_en.exists():
-        yield readme_en, ROOT / "README-zh.md"
+    for en_name, zh_name in ROOT_PAIRS:
+        en_path = ROOT / en_name
+        if en_path.exists():
+            yield en_path, ROOT / zh_name
 
 
 def report(pairs: list[tuple[Path, Path]]) -> int:

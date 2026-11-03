@@ -34,7 +34,10 @@ One commit does one thing. If the message needs "and", split the commit.
 
 - Keep a PR under **400 changed lines**. Larger work is split.
 - Fill in the template: what changed, how it was verified, what else is affected.
-- At least **one reviewer** approves. The lead's PRs are reviewed by the module owner.
+- **CI is the only gate.** When `check` is green the PR may merge; no approval is required.
+- Review is still welcome — leave a comment instead of blocking. Fix it in a follow-up if it is
+  not worth another round trip.
+- Turn on **auto-merge** right after opening the PR: it merges itself once `check` passes.
 - Merge with **squash** — one feature, one commit on `main`.
 - Link the issue (`Closes #12`) when one exists.
 
@@ -108,5 +111,5 @@ A change is done when all of these hold:
 - [ ] `ruff check .` and `ruff format --check .` pass
 - [ ] `pytest` passes locally
 - [ ] Bilingual documents are in sync (`scripts/check-bilingual.py`)
-- [ ] The PR template is filled in and a reviewer approved
+- [ ] The PR template is filled in and CI is green
 - [ ] Any behaviour change is reflected in `docs/`
