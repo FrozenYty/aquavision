@@ -2,6 +2,8 @@
 
 Single source of truth for tasks. No issue tracker — this file is the contract.
 
+Phase status lives here. Why it moved lives in `PROGRESS.md`.
+
 ## 1. How to use this file
 
 - Every task has an ID (`P1-03`). Reference it in the PR title when the PR delivers that task:

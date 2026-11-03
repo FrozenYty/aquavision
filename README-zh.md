@@ -60,7 +60,7 @@ tests/       测试
 
 ## 协作
 
-第一次提交前请读 [CONTRIBUTING.md](CONTRIBUTING.md)（[中文](CONTRIBUTING-zh.md)）。
+第一次提交前请读 [CONTRIBUTING.md](CONTRIBUTING.md)（仅英文）。
 分支、提交、Pull Request、代码风格与文档规则都在那里。
 
 ## 许可

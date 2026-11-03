@@ -1,6 +1,7 @@
 # Contributing
 
-Conventions for this repository. Read this before your first commit.
+How we work in this repository. GitHub collaboration only — code style beyond what CI enforces is
+between the author and the reviewer.
 
 ## 1. Branching
 
@@ -12,7 +13,7 @@ feat/capture-quality    fix/review-rollback    docs/api-contract
 
 Merge into `main` through a pull request, then delete the branch.
 
-Branch names are lowercase, hyphen-separated, and prefixed by type. No Chinese, no pinyin.
+Branch names are lowercase, hyphen-separated, prefixed by type. No Chinese, no pinyin.
 
 ## 2. Commits
 
@@ -39,50 +40,30 @@ One commit does one thing. If the message needs "and", split the commit.
   not worth another round trip.
 - Turn on **auto-merge** right after opening the PR: it merges itself once `check` passes.
 - Merge with **squash** — one feature, one commit on `main`.
-- Link the issue (`Closes #12`) when one exists.
+- Name the task ID in the title when the PR delivers one: `feat(capture): frame scoring (P1-03)`.
 
-Use issues for anything larger than a small fix. Small fixes may go straight to a PR.
+## 4. What CI checks
 
-## 4. Code style
+Four jobs, and any failure blocks the merge:
 
-**Python** — enforced by `ruff` (lint + format). Run before every commit:
+| Job | Command | Fix |
+|---|---|---|
+| Lint | `ruff check .` | `ruff check . --fix` |
+| Format | `ruff format --check .` | `ruff format .` |
+| Docs | `python scripts/check-bilingual.py` | update the missing language |
+| Tests | `pytest -q` | write the failing test first |
 
-```
-ruff check . && ruff format .
-```
+Python style is whatever `ruff` accepts — the configured line length is 100, nothing else is
+negotiated. Comments and docstrings are English.
 
-- Type hints on every public function.
-- Comments and docstrings in English.
-- Files under 300 lines, functions under 50 lines.
-- Business errors raise `BizError`, never bare `Exception`.
-- `logging`, not `print` (except under `scripts/`).
-- Configuration through `.env` and `pydantic-settings`; no hard-coded paths or secrets.
-
-**Web** — no framework, no build step.
-
-- All HTTP calls go through `web/static/js/api.js`. No `fetch()` in page scripts.
-- One page per module: `capture.html`, `review.html`, `stats.html`.
-- Bootstrap utility classes plus `web/static/css/app.css`. No inline `style=`.
-- Business logic lives in `.js`, not in markup.
-
-**Firmware** — Arduino framework on ESP32.
-
-- Pin assignments only in `config.h`.
-- Serial commands and replies defined in `protocol.h`.
-- `firmware/README.md` must list the wiring table, flashing steps and the serial protocol.
-
-## 5. Documentation
+## 5. Files and data
 
 - **Filenames are English**, lowercase, hyphen-separated. Content may be Chinese.
 - Deliverables carry a version, not a date: `srs-v1.2.docx`.
-- Design documents come in pairs: `architecture-en.md` and `architecture-zh.md`. The README is the same: `README.md` in English, `README-zh.md` as the Chinese reference.
-- **English is the source of truth.** Change the English file first, then update the Chinese one in the same PR.
-- Diagrams are Mermaid code blocks inside the Markdown, never image files.
-- `PROGRESS.md` is updated every week, in English, five lines maximum.
-
-## 6. Data and assets
-
-Never commit:
+- Design documents come in pairs: `architecture-en.md` and `architecture-zh.md`, with English as
+  the source of truth. `README.md` / `README-zh.md` follow the same rule.
+- Diagrams are Mermaid code blocks inside Markdown, never image files.
+- Never commit:
 
 ```
 *.pt  *.onnx          model weights
@@ -92,24 +73,14 @@ datasets/             training and test data
 .env                  secrets
 ```
 
-Weights go to GitHub Releases. Datasets go to external storage; link them from the README together with a checksum.
+Weights go to GitHub Releases. Datasets go to external storage; link them from the README with a
+checksum. Keep the repository under 20 MB.
 
-Keep the repository under 20 MB.
+## 6. Definition of done
 
-## 7. Weekly rhythm
+A change is done when:
 
-| When | What |
-|---|---|
-| Wednesday, after class | 20-minute sync: blockers only, not status reports |
-| Friday | Merge the week's PRs; no branches left open over the weekend |
-| Friday | 15-minute code walk-through of the week's PRs |
-
-## 8. Definition of done
-
-A change is done when all of these hold:
-
-- [ ] `ruff check .` and `ruff format --check .` pass
-- [ ] `pytest` passes locally
-- [ ] Bilingual documents are in sync (`scripts/check-bilingual.py`)
-- [ ] The PR template is filled in and CI is green
-- [ ] Any behaviour change is reflected in `docs/`
+- [ ] `check` is green on the PR
+- [ ] The PR template is filled in
+- [ ] Bilingual pairs are updated in the same commit
+- [ ] The task box in `PLAN.md` is ticked by whoever merged
