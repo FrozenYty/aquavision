@@ -632,14 +632,13 @@ body {
   width: 10px;
   height: 10px;
   border-radius: 2px;
-  background: var(--av-class-color, var(--av-class-debris));
+  background: var(--av-class-color, var(--av-text-muted));
 }
 
 .av-class-holothurian { --av-class-color: var(--av-class-holothurian); }
 .av-class-strongylocentrotus { --av-class-color: var(--av-class-strongylocentrotus); }
 .av-class-chlamys { --av-class-color: var(--av-class-chlamys); }
 .av-class-asterias { --av-class-color: var(--av-class-asterias); }
-.av-class-debris { --av-class-color: var(--av-class-debris); }
 
 /* ---- Login (no shell): deep water with drifting caustics ---- */
 
