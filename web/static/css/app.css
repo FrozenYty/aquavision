@@ -31,6 +31,17 @@ body {
   --bs-btn-active-border-color: var(--av-primary-hover);
 }
 
+.pagination {
+  --bs-pagination-color: var(--av-primary);
+  --bs-pagination-active-bg: var(--av-primary);
+  --bs-pagination-active-border-color: var(--av-primary);
+}
+
+.form-check-input:checked {
+  background-color: var(--av-primary);
+  border-color: var(--av-primary);
+}
+
 /* ---- Top bar ---- */
 
 .av-topbar {
@@ -174,6 +185,7 @@ body {
 .av-page-header .av-page-actions {
   margin-left: auto;
   display: flex;
+  flex-wrap: wrap;
   gap: var(--av-space-2);
 }
 
@@ -217,6 +229,73 @@ body {
   text-align: center;
   color: var(--av-text-muted);
   font-size: var(--av-fs-sm);
+}
+
+/* Tables keep one line per cell and scroll inside .table-responsive on narrow screens. */
+.av-card .table {
+  white-space: nowrap;
+}
+
+.av-card .table th {
+  color: var(--av-text-muted);
+  font-weight: 500;
+}
+
+.av-pager {
+  display: flex;
+  align-items: center;
+  margin-top: var(--av-space-4);
+}
+
+.av-toasts {
+  position: fixed;
+  right: var(--av-space-4);
+  bottom: var(--av-space-4);
+  z-index: 1080;
+  max-width: 320px;
+}
+
+/* ---- Frame thumbnails (P-04). Placeholder tiles until the server serves thumbnails. ---- */
+
+.av-thumb {
+  position: relative;
+  display: block;
+  border: 1px solid var(--av-border);
+  border-radius: var(--av-radius);
+  overflow: hidden;
+  background: var(--av-surface);
+  cursor: pointer;
+}
+
+.av-thumb-img {
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(135deg, var(--av-primary) 0%, var(--av-accent) 100%);
+}
+
+.av-thumb.is-retake .av-thumb-img {
+  filter: grayscale(0.7) blur(1px);
+}
+
+.av-thumb input {
+  position: absolute;
+  top: var(--av-space-2);
+  left: var(--av-space-2);
+}
+
+.av-thumb .badge {
+  position: absolute;
+  top: var(--av-space-2);
+  right: var(--av-space-2);
+}
+
+.av-thumb-meta {
+  padding: var(--av-space-2);
+  font-size: var(--av-fs-xs);
+  color: var(--av-text-muted);
+}
+
+.av-thumb:has(input:checked) {
+  outline: 2px solid var(--av-accent);
 }
 
 /* ---- Class swatches, one per class_code ---- */
