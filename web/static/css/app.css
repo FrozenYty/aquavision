@@ -1,0 +1,289 @@
+/*
+ * Shared layout and components. Values come from tokens.css only.
+ * Shell: top bar + collapsible left menu + content area (SRS §5.1).
+ */
+
+body {
+  margin: 0;
+  font-family: var(--av-font);
+  color: var(--av-text);
+  background: var(--av-bg);
+}
+
+/* Bootstrap hard-codes its button colours per variant; point them at the tokens. */
+.btn-primary {
+  --bs-btn-bg: var(--av-primary);
+  --bs-btn-border-color: var(--av-primary);
+  --bs-btn-hover-bg: var(--av-primary-hover);
+  --bs-btn-hover-border-color: var(--av-primary-hover);
+  --bs-btn-active-bg: var(--av-primary-hover);
+  --bs-btn-active-border-color: var(--av-primary-hover);
+  --bs-btn-disabled-bg: var(--av-primary);
+  --bs-btn-disabled-border-color: var(--av-primary);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--av-primary);
+  --bs-btn-border-color: var(--av-primary);
+  --bs-btn-hover-bg: var(--av-primary);
+  --bs-btn-hover-border-color: var(--av-primary);
+  --bs-btn-active-bg: var(--av-primary-hover);
+  --bs-btn-active-border-color: var(--av-primary-hover);
+}
+
+/* ---- Top bar ---- */
+
+.av-topbar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 1030;
+  height: var(--av-topbar-h);
+  display: flex;
+  align-items: center;
+  gap: var(--av-space-4);
+  padding: 0 var(--av-space-4);
+  background: var(--av-primary);
+  color: var(--av-text-inverse);
+}
+
+.av-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--av-space-2);
+  color: inherit;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: var(--av-fs-lg);
+  white-space: nowrap;
+}
+
+.av-brand small {
+  font-weight: 400;
+  font-size: var(--av-fs-sm);
+  opacity: 0.75;
+}
+
+.av-brand-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--av-accent);
+}
+
+.av-topbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--av-space-4);
+  font-size: var(--av-fs-sm);
+}
+
+.av-topbar a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.av-menu-toggle {
+  display: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: var(--av-fs-lg);
+  line-height: 1;
+}
+
+/* ---- Left menu ---- */
+
+.av-sidebar {
+  position: fixed;
+  top: var(--av-topbar-h);
+  bottom: 0;
+  left: 0;
+  z-index: 1020;
+  width: var(--av-sidebar-w);
+  overflow-y: auto;
+  padding: var(--av-space-3) 0;
+  background: var(--av-surface);
+  border-right: 1px solid var(--av-border);
+}
+
+.av-menu-group > summary {
+  padding: var(--av-space-2) var(--av-space-4);
+  color: var(--av-text-muted);
+  font-size: var(--av-fs-xs);
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  list-style: none;
+}
+
+.av-menu-group > summary::after {
+  content: "▾";
+  float: right;
+}
+
+.av-menu-group:not([open]) > summary::after {
+  content: "▸";
+}
+
+.av-menu-link {
+  display: block;
+  padding: var(--av-space-2) var(--av-space-4) var(--av-space-2) var(--av-space-5);
+  color: var(--av-text);
+  text-decoration: none;
+  font-size: var(--av-fs-sm);
+  border-left: 3px solid transparent;
+}
+
+.av-menu-link:hover {
+  background: var(--av-surface-muted);
+  color: var(--av-primary);
+}
+
+.av-menu-link.active {
+  background: var(--av-primary-soft);
+  color: var(--av-primary);
+  border-left-color: var(--av-accent);
+  font-weight: 600;
+}
+
+/* ---- Content ---- */
+
+.av-content {
+  margin: var(--av-topbar-h) 0 0 var(--av-sidebar-w);
+  padding: var(--av-space-5);
+}
+
+.av-content > * {
+  max-width: var(--av-content-max);
+}
+
+.av-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--av-space-3);
+  margin-bottom: var(--av-space-4);
+}
+
+.av-page-header h1 {
+  margin: 0;
+  font-size: var(--av-fs-xl);
+  font-weight: 600;
+}
+
+.av-page-header .av-page-actions {
+  margin-left: auto;
+  display: flex;
+  gap: var(--av-space-2);
+}
+
+.av-footer {
+  margin-top: var(--av-space-6);
+  color: var(--av-text-muted);
+  font-size: var(--av-fs-xs);
+}
+
+/* ---- Cards ---- */
+
+.av-card {
+  background: var(--av-surface);
+  border: 1px solid var(--av-border);
+  border-radius: var(--av-radius);
+  box-shadow: var(--av-shadow);
+  padding: var(--av-space-4);
+  height: 100%;
+}
+
+.av-card-title {
+  margin: 0 0 var(--av-space-3);
+  font-size: var(--av-fs-md);
+  font-weight: 600;
+}
+
+.av-kpi-label {
+  color: var(--av-text-muted);
+  font-size: var(--av-fs-sm);
+}
+
+.av-kpi-value {
+  font-size: var(--av-fs-xl);
+  font-weight: 600;
+  color: var(--av-primary);
+}
+
+/* Empty state: guidance text plus an entry point (SRS §5.1). */
+.av-empty {
+  padding: var(--av-space-6) var(--av-space-4);
+  text-align: center;
+  color: var(--av-text-muted);
+  font-size: var(--av-fs-sm);
+}
+
+/* ---- Class swatches, one per class_code ---- */
+
+.av-class {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--av-space-1);
+}
+
+.av-class::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--av-class-color, var(--av-class-debris));
+}
+
+.av-class-holothurian { --av-class-color: var(--av-class-holothurian); }
+.av-class-strongylocentrotus { --av-class-color: var(--av-class-strongylocentrotus); }
+.av-class-chlamys { --av-class-color: var(--av-class-chlamys); }
+.av-class-asterias { --av-class-color: var(--av-class-asterias); }
+.av-class-debris { --av-class-color: var(--av-class-debris); }
+
+/* ---- Login (no shell) ---- */
+
+.av-login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--av-space-4);
+  background: linear-gradient(160deg, var(--av-primary) 0%, var(--av-primary-hover) 55%, #04283a 100%);
+}
+
+.av-login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: var(--av-space-6);
+  background: var(--av-surface);
+  border-radius: var(--av-radius-lg);
+  box-shadow: var(--av-shadow);
+}
+
+/* ---- Narrow screens: the menu becomes a drawer (375 px target, SRS §2.5.1) ---- */
+
+@media (max-width: 991.98px) {
+  .av-menu-toggle {
+    display: inline-block;
+  }
+
+  .av-brand small,
+  .av-topbar-user {
+    display: none;
+  }
+
+  .av-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: var(--av-shadow);
+  }
+
+  body.av-menu-open .av-sidebar {
+    transform: none;
+  }
+
+  .av-content {
+    margin-left: 0;
+    padding: var(--av-space-4);
+  }
+}

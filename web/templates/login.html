@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>登录 · AquaVision</title>
+  <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
+  <link rel="stylesheet" href="../static/css/tokens.css">
+  <link rel="stylesheet" href="../static/css/app.css">
+</head>
+<body>
+  <main class="av-login">
+    <form class="av-login-card" id="login-form" novalidate>
+      <div class="av-brand mb-1" style="color: var(--av-primary)">
+        <span class="av-brand-mark" aria-hidden="true"></span>AquaVision
+      </div>
+      <p class="text-secondary small mb-4">水下物种识别与监测系统</p>
+
+      <div class="mb-3">
+        <label class="form-label" for="account">手机号或邮箱</label>
+        <input class="form-control" id="account" name="account" autocomplete="username" required>
+        <div class="invalid-feedback">请输入手机号或邮箱</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="password">密码</label>
+        <input class="form-control" id="password" name="password" type="password"
+               autocomplete="current-password" required>
+        <div class="invalid-feedback">请输入密码</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="captcha">图形验证码</label>
+        <div class="input-group">
+          <input class="form-control" id="captcha" name="captcha" maxlength="4" required>
+          <span class="input-group-text font-monospace" title="验证码图片由服务端提供">8K3W</span>
+          <div class="invalid-feedback">请输入验证码</div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary w-100" type="submit">登录</button>
+      <div class="text-end mt-3"><a class="small" href="#">找回密码</a></div>
+    </form>
+  </main>
+
+  <script type="module">
+    // Until /api/auth/login exists, a filled-in form simply opens the workbench.
+    const form = document.getElementById("login-form");
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      form.classList.add("was-validated");
+      if (form.checkValidity()) location.href = "home.html";
+    });
+  </script>
+</body>
+</html>

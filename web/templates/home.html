@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>工作台 · AquaVision</title>
+  <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
+  <link rel="stylesheet" href="../static/css/tokens.css">
+  <link rel="stylesheet" href="../static/css/app.css">
+</head>
+<body>
+  <main class="av-content">
+    <div class="av-page-header">
+      <h1>工作台</h1>
+      <div class="av-page-actions">
+        <a class="btn btn-primary" href="capture.html">开始采集</a>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-lg-3">
+        <div class="av-card"><div class="av-kpi-label">今日采集帧数</div><div class="av-kpi-value">—</div></div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="av-card"><div class="av-kpi-label">今日识别帧数</div><div class="av-kpi-value">—</div></div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="av-card"><div class="av-kpi-label">待复核</div><div class="av-kpi-value">—</div></div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="av-card"><div class="av-kpi-label">需重拍</div><div class="av-kpi-value">—</div></div>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-lg-8">
+        <section class="av-card">
+          <h2 class="av-card-title">最近任务</h2>
+          <div class="av-empty">暂无识别任务。<a href="capture.html">去采集一帧</a></div>
+        </section>
+      </div>
+      <div class="col-lg-4">
+        <section class="av-card">
+          <h2 class="av-card-title">消息</h2>
+          <div class="av-empty">暂无消息</div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { renderShell } from "../static/js/layout.js";
+    renderShell("P-02");
+  </script>
+</body>
+</html>
