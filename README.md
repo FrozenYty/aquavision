@@ -6,7 +6,8 @@ Underwater species detection and monitoring built on YOLOv8. A live camera feed 
 count and locate five classes — sea cucumber, sea urchin, scallop, starfish and marine debris —
 with a human review loop that feeds corrections back into training.
 
-**Status**: requirements complete; SRS v1.2 under review. No code yet.
+**Status**: phase P0, see [PROGRESS.md](PROGRESS.md). Frontend pages run on mock data; the server
+is not started yet.
 
 ## Documents
 
@@ -43,10 +44,21 @@ tests/       tests
 | Capture | USB camera (1080P, manual exposure, UVC) with OpenCV |
 | Detection | PyTorch + Ultralytics YOLOv8n, three improvements: underwater colour correction, EMA attention, WIoU v3 |
 | Backend | Python 3.11, FastAPI, SQLAlchemy 2.0, PostgreSQL 14 |
-| Frontend | HTML5, Bootstrap 5, ECharts 5 |
+| Frontend | HTML5, Bootstrap 5.3.3, ECharts 5, plain ES modules, no build step; libraries vendored in `web/static/vendor/` |
 
 Targets: mAP@0.5 ≥ 0.75 on the four species, ≥ 0.60 on debris, +0.03 over the baseline, and
 inference speed at least 90% of the baseline.
+
+## Frontend preview
+
+The pages need no build. Serve `web/` and open the login page:
+
+```bash
+python -m http.server 8765 --directory web
+```
+
+Then visit <http://localhost:8765/templates/login.html>. Data comes from `web/static/mock/` until
+`USE_MOCK` in `web/static/js/api.js` is switched off.
 
 ## Team
 

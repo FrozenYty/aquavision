@@ -8,7 +8,7 @@
 
 > 本文为 `README.md` 的中文对照版，以英文版为准。
 
-**当前状态**：需求分析阶段完成，需求定义书 V1.2 评审中。代码尚未开始。
+**当前状态**：P0 阶段，进展见 [PROGRESS.md](PROGRESS.md)。前端页面已可用模拟数据运行，服务端尚未开始。
 
 ## 文档
 
@@ -44,10 +44,21 @@ tests/       测试
 | 采集 | USB 摄像头（1080P、手动曝光、免驱 UVC）+ OpenCV |
 | 识别 | PyTorch + Ultralytics YOLOv8n，三项改进：水下色彩校正、EMA 注意力、WIoU v3 |
 | 服务 | Python 3.11、FastAPI、SQLAlchemy 2.0、PostgreSQL 14 |
-| 前端 | HTML5、Bootstrap 5、ECharts 5 |
+| 前端 | HTML5、Bootstrap 5.3.3、ECharts 5，原生 ES 模块，无构建步骤；第三方库放在 `web/static/vendor/` |
 
 目标指标：四类物种 mAP@0.5 ≥ 0.75，垃圾类 ≥ 0.60，改进模型较基线提升 ≥ 0.03，
 推理速度不低于基线 90%。
+
+## 前端预览
+
+页面无需构建。用静态服务器打开 `web/` 目录：
+
+```bash
+python -m http.server 8765 --directory web
+```
+
+然后访问 <http://localhost:8765/templates/login.html>。在 `web/static/js/api.js` 的 `USE_MOCK`
+关闭之前，数据来自 `web/static/mock/`。
 
 ## 团队
 
