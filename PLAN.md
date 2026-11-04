@@ -46,7 +46,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       three machines install identically
 - [ ] **P0-03** Hardware purchase and arrival check · @FrozenYty · done when the items are in hand and
       the camera outputs frames
-- [ ] **P0-04** Page skeleton and design tokens · @chemflowers · done when `tokens.css` is final and
+- [x] **P0-04** Page skeleton and design tokens · @chemflowers · done when `tokens.css` is final and
       three pages navigate
 - [ ] **P0-05** Requirement review record · @IkeaFyj · done when the review outcome is recorded in
       SRS annex B
