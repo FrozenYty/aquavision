@@ -67,7 +67,7 @@ server/
     models/            SQLAlchemy 定义
     core/              配置、鉴权、日志、异常
 web/
-  static/              css、js、字体
+  static/              css、js、字体、vendor（锁定版本的第三方库）、mock（api.js 的模拟数据）
   templates/           html 页面
 firmware/
   main/                ESP32 工程

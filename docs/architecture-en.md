@@ -66,7 +66,7 @@ server/
     models/            SQLAlchemy definitions
     core/              config, auth, logging, errors
 web/
-  static/              css, js, fonts
+  static/              css, js, fonts, vendor (pinned libraries), mock (fixtures for api.js)
   templates/           html pages
 firmware/
   main/                ESP32 sketch
