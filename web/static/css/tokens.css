@@ -1,7 +1,41 @@
 /*
  * Design tokens — the only place colours, type, spacing and layout sizes are defined.
  * Source: SRS v1.2 §5.1. Pages and app.css read these variables; never hard-code a value.
+ *
+ * Visual language: a research-vessel instrument console. A dark deep-sea frame (top bar and
+ * menu) holds a light chart-paper work area; numbers read like instrument dials, identifiers
+ * like telemetry.
  */
+
+/* Latin-only subsets, vendored for offline demos: Saira Condensed 5.3.0, JetBrains Mono 5.3.0
+   (@fontsource, SIL OFL 1.1, licences beside the files). Chinese uses the system stack. */
+@font-face {
+  font-family: "Saira Condensed";
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/saira-condensed-600.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Saira Condensed";
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/saira-condensed-700.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/jetbrains-mono-400.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/jetbrains-mono-600.woff2") format("woff2");
+}
 
 :root {
   /* Brand: deep-sea blue and teal. No medical blue-and-white (SRS §2.5.2). */
@@ -10,20 +44,29 @@
   --av-primary-soft: #e3eff4;
   --av-accent: #01baef;
   --av-accent-soft: #e0f6fd;
+  --av-accent-glow: rgb(1 186 239 / 0.35);
 
-  /* Surfaces: white cards on a light grey canvas. */
-  --av-bg: #f2f5f7;
+  /* Frame: the dark console around the work area. */
+  --av-abyss: #04202d;
+  --av-abyss-2: #072f41;
+  --av-abyss-line: rgb(1 186 239 / 0.14);
+  --av-frame-text: #d3e8f0;
+  --av-frame-muted: #7d9fae;
+
+  /* Surfaces: white cards on a light grey chart-paper canvas. */
+  --av-bg: #edf2f4;
+  --av-grid: rgb(11 79 108 / 0.045);
   --av-surface: #ffffff;
-  --av-surface-muted: #f8fafb;
-  --av-border: #dde4e9;
-  --av-text: #1c2b33;
-  --av-text-muted: #5f7480;
+  --av-surface-muted: #f5f8f9;
+  --av-border: #d8e2e7;
+  --av-text: #13262f;
+  --av-text-muted: #5b7380;
   --av-text-inverse: #ffffff;
 
   /* Feedback. */
-  --av-success: #1f9d6b;
-  --av-warning: #d99100;
-  --av-danger: #d64545;
+  --av-success: #12936a;
+  --av-warning: #c98a00;
+  --av-danger: #cf3f3f;
   --av-info: var(--av-accent);
 
   /* Class colours, keyed by class_code (glossary §4). Charts use the same values. */
@@ -42,15 +85,17 @@
   --av-box-fill-alpha: 0.25;
   --av-box-badge-size: 14px;
 
-  /* Type: system stack with Chinese fallbacks, no web fonts (works offline). */
-  --av-font: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei",
-    "Noto Sans CJK SC", sans-serif;
-  --av-font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  /* Type: condensed display for numbers and titles, mono for identifiers and telemetry. */
+  --av-font: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --av-font-display: "Saira Condensed", var(--av-font);
+  --av-font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
   --av-fs-xs: 0.75rem;
   --av-fs-sm: 0.875rem;
   --av-fs-md: 1rem;
   --av-fs-lg: 1.25rem;
   --av-fs-xl: 1.75rem;
+  --av-fs-dial: 2.5rem;
 
   /* Spacing scale, 4 px base. */
   --av-space-1: 4px;
@@ -60,15 +105,20 @@
   --av-space-5: 24px;
   --av-space-6: 32px;
 
-  /* Shape. */
-  --av-radius-sm: 4px;
-  --av-radius: 8px;
-  --av-radius-lg: 12px;
-  --av-shadow: 0 1px 2px rgb(11 79 108 / 0.06), 0 2px 8px rgb(11 79 108 / 0.06);
+  /* Shape and depth. */
+  --av-radius-sm: 3px;
+  --av-radius: 6px;
+  --av-radius-lg: 10px;
+  --av-shadow: 0 1px 0 rgb(4 32 45 / 0.04), 0 6px 18px -10px rgb(4 32 45 / 0.25);
+  --av-shadow-lift: 0 1px 0 rgb(4 32 45 / 0.04), 0 14px 28px -14px rgb(4 32 45 / 0.4);
+
+  /* Motion. Disabled under prefers-reduced-motion in app.css. */
+  --av-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --av-dur: 0.45s;
 
   /* Layout: top bar + left menu + content (SRS §5.1). */
   --av-topbar-h: 56px;
-  --av-sidebar-w: 220px;
+  --av-sidebar-w: 224px;
   --av-content-max: 1440px;
 
   /* Map onto Bootstrap so its components pick up the brand without overrides. */
@@ -76,12 +126,17 @@
   --bs-primary-rgb: 11, 79, 108;
   --bs-info: var(--av-accent);
   --bs-info-rgb: 1, 186, 239;
+  --bs-success-rgb: 18, 147, 106;
+  --bs-warning-rgb: 201, 138, 0;
+  --bs-danger-rgb: 207, 63, 63;
   --bs-body-font-family: var(--av-font);
   --bs-body-color: var(--av-text);
   --bs-body-bg: var(--av-surface); /* inputs and dropdowns; the page canvas is set in app.css */
   --bs-border-color: var(--av-border);
   --bs-border-radius: var(--av-radius);
+  --bs-border-radius-sm: var(--av-radius-sm);
   --bs-link-color: var(--av-primary);
   --bs-link-color-rgb: 11, 79, 108;
   --bs-link-hover-color: var(--av-primary-hover);
+  --bs-focus-ring-color: var(--av-accent-glow);
 }

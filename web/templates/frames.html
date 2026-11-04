@@ -81,7 +81,7 @@
                 <input class="form-check-input" type="checkbox" value="${esc(f.frame_id)}"
                   ${selected.has(f.frame_id) ? "checked" : ""} ${f.quality.verdict === "ok" ? "" : "disabled title=\"需重拍的帧不进入识别\""}>
                 ${qualityBadge(f.quality)}
-                <div class="av-thumb-meta"><div class="font-monospace text-truncate">${esc(f.frame_id)}</div>${fmtTime(f.captured_at)}</div>
+                <div class="av-thumb-meta"><div class="av-mono text-truncate">${esc(f.frame_id)}</div>${fmtTime(f.captured_at)}</div>
               </label>
             </div>`).join("")
           : '<div class="col-12 av-empty">没有符合条件的帧。调整筛选条件，或前往 <a href="capture.html">采集控制</a> 采集新帧。</div>';
