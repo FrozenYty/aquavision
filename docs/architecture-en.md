@@ -148,3 +148,4 @@ No path, port or threshold is hard-coded in business code.
 | [02](adr/02-drop-pan-tilt.md) | No pan-tilt; fixed camera, moving targets |
 | [03](adr/03-single-process.md) | Single FastAPI process, no microservices |
 | [04](adr/04-static-frontend.md) | Static frontend with fetch, no framework or build step |
+| [05](adr/05-vendored-frontend-assets.md) | Frontend libraries and fonts vendored, no CDN at runtime |
