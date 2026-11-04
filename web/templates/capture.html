@@ -13,34 +13,38 @@
     <div class="av-page-header">
       <h1>采集控制</h1>
       <div class="av-page-actions">
-        <button class="btn btn-primary" type="button" disabled>开始采集</button>
-        <button class="btn btn-outline-primary" type="button" disabled>停止</button>
+        <select class="form-select" id="site" aria-label="点位">
+          <option value="A3">点位 A3</option><option value="B1">点位 B1</option>
+        </select>
+        <button class="btn btn-primary text-nowrap" id="btn-open" type="button">开始采集</button>
+        <button class="btn btn-outline-primary text-nowrap" id="btn-grab" type="button" disabled>抓取一帧</button>
+        <button class="btn btn-outline-secondary text-nowrap" id="btn-close" type="button" disabled>结束</button>
       </div>
     </div>
 
     <div class="row g-3">
       <div class="col-lg-8">
         <section class="av-card">
-          <h2 class="av-card-title">实时画面</h2>
-          <div class="av-empty">摄像头未连接。请检查 USB 摄像头后点击“开始采集”。</div>
+          <h2 class="av-card-title">最近一帧 <small class="text-secondary fw-normal" id="camera"></small></h2>
+          <div id="last-frame" class="av-empty">点击“开始采集”打开采集会话，再抓取一帧。</div>
         </section>
       </div>
       <div class="col-lg-4">
         <section class="av-card">
-          <h2 class="av-card-title">本帧计数</h2>
-          <ul class="list-unstyled mb-0 small">
-            <li class="av-class av-class-holothurian d-flex">海参<span class="ms-auto">—</span></li>
-            <li class="av-class av-class-strongylocentrotus d-flex">海胆<span class="ms-auto">—</span></li>
-            <li class="av-class av-class-chlamys d-flex">扇贝<span class="ms-auto">—</span></li>
-            <li class="av-class av-class-asterias d-flex">海星<span class="ms-auto">—</span></li>
-            <li class="av-class av-class-debris d-flex">海洋垃圾<span class="ms-auto">—</span></li>
-          </ul>
+          <h2 class="av-card-title">收帧进度</h2>
+          <div id="progress" class="av-empty">暂无进行中的采集会话</div>
         </section>
       </div>
       <div class="col-12">
         <section class="av-card">
           <h2 class="av-card-title">采集会话</h2>
-          <div class="av-empty">暂无采集会话</div>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+              <thead><tr><th>会话</th><th>点位</th><th>开始时间</th><th>帧数</th><th>需重拍</th><th>状态</th><th>失败原因</th></tr></thead>
+              <tbody id="sessions"></tbody>
+            </table>
+          </div>
+          <div class="av-pager" id="pager"></div>
         </section>
       </div>
     </div>
@@ -48,7 +52,92 @@
 
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
+    import * as api from "../static/js/api.js";
+    import { esc, fmtTime, qualityBadge, renderPager, toast } from "../static/js/ui.js";
+
     renderShell("P-03");
+
+    const $ = (id) => document.getElementById(id);
+    const STATUS = {
+      open: '<span class="badge text-bg-info">采集中</span>',
+      closed: '<span class="badge text-bg-secondary">已结束</span>',
+      failed: '<span class="badge text-bg-danger">失败</span>',
+    };
+    let current = null;
+    let page = 1;
+
+    async function loadSessions() {
+      const data = await api.listSessions({ page, size: 5 });
+      $("sessions").innerHTML = data.items.map((s) => `<tr>
+        <td class="font-monospace">${esc(s.session_id)}</td><td>${esc(s.site)}</td>
+        <td>${fmtTime(s.started_at)}</td><td>${s.frame_count}</td><td>${s.retake_count}</td>
+        <td>${STATUS[s.status]}</td><td class="text-danger">${esc(s.fail_reason ?? "")}</td></tr>`).join("");
+      renderPager($("pager"), data, (n) => { page = n; loadSessions(); });
+    }
+
+    function renderProgress() {
+      if (!current) return;
+      const ok = current.frame_count - current.retake_count;
+      $("progress").className = "small";
+      $("progress").innerHTML = `
+        <div class="font-monospace mb-2">${esc(current.session_id)}</div>
+        <div class="d-flex"><span>已收帧</span><strong class="ms-auto">${current.frame_count}</strong></div>
+        <div class="d-flex"><span>合格</span><strong class="ms-auto">${ok}</strong></div>
+        <div class="d-flex"><span>需重拍</span><strong class="ms-auto">${current.retake_count}</strong></div>`;
+    }
+
+    function renderFrame(f) {
+      const q = f.quality;
+      $("last-frame").className = "";
+      $("last-frame").innerHTML = `
+        <div class="av-thumb${q.verdict === "ok" ? "" : " is-retake"} mb-3"><div class="av-thumb-img"></div>${qualityBadge(q)}</div>
+        <div class="row small g-2">
+          <div class="col-6 col-md-3">清晰度 <strong>${q.sharpness}</strong></div>
+          <div class="col-6 col-md-3">亮度 <strong>${q.brightness}</strong></div>
+          <div class="col-6 col-md-3">色偏 <strong>${q.colorcast}</strong></div>
+          <div class="col-6 col-md-3">水温 <strong>${f.env.water_temp_c ?? "—"} ℃</strong> · 浊度 <strong>${f.env.turbidity_ntu ?? "—"} NTU</strong></div>
+        </div>
+        <div class="small text-secondary mt-2 font-monospace">${esc(f.frame_id)} · ${fmtTime(f.captured_at)}</div>
+        ${q.verdict === "ok" ? "" : '<div class="alert alert-warning small mt-2 mb-0">质量分低于 60，已入库但不进入识别队列，请调整后重拍。</div>'}`;
+    }
+
+    function setRunning(running) {
+      $("btn-open").disabled = running;
+      $("site").disabled = running;
+      $("btn-grab").disabled = !running;
+      $("btn-close").disabled = !running;
+    }
+
+    async function run(action) {
+      try { await action(); } catch (err) { toast(err.message, "danger"); }
+    }
+
+    $("btn-open").onclick = () => run(async () => {
+      current = await api.openSession({ site: $("site").value, camera_index: 0 });
+      setRunning(true);
+      renderProgress();
+      await loadSessions();
+    });
+    $("btn-grab").onclick = () => run(async () => {
+      const frame = await api.grabFrame(current.session_id);
+      current.frame_count += 1;
+      if (frame.quality.verdict !== "ok") current.retake_count += 1;
+      renderFrame(frame);
+      renderProgress();
+      await loadSessions();
+    });
+    $("btn-close").onclick = () => run(async () => {
+      await api.closeSession(current.session_id);
+      toast(`会话 ${current.session_id} 已结束，共 ${current.frame_count} 帧`, "success");
+      setRunning(false);
+      await loadSessions();
+    });
+
+    run(async () => {
+      const [camera] = await api.listCameras();
+      $("camera").textContent = camera ? `· ${camera.name}` : "· 未检测到摄像头";
+      await loadSessions();
+    });
   </script>
 </body>
 </html>
