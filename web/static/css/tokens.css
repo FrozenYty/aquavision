@@ -1,0 +1,87 @@
+/*
+ * Design tokens — the only place colours, type, spacing and layout sizes are defined.
+ * Source: SRS v1.2 §5.1. Pages and app.css read these variables; never hard-code a value.
+ */
+
+:root {
+  /* Brand: deep-sea blue and teal. No medical blue-and-white (SRS §2.5.2). */
+  --av-primary: #0b4f6c;
+  --av-primary-hover: #083c52;
+  --av-primary-soft: #e3eff4;
+  --av-accent: #01baef;
+  --av-accent-soft: #e0f6fd;
+
+  /* Surfaces: white cards on a light grey canvas. */
+  --av-bg: #f2f5f7;
+  --av-surface: #ffffff;
+  --av-surface-muted: #f8fafb;
+  --av-border: #dde4e9;
+  --av-text: #1c2b33;
+  --av-text-muted: #5f7480;
+  --av-text-inverse: #ffffff;
+
+  /* Feedback. */
+  --av-success: #1f9d6b;
+  --av-warning: #d99100;
+  --av-danger: #d64545;
+  --av-info: var(--av-accent);
+
+  /* Class colours, keyed by class_code (glossary §4). Charts use the same values. */
+  --av-class-holothurian: #f08a24; /* sea cucumber — orange */
+  --av-class-strongylocentrotus: #8e5bd0; /* sea urchin — purple */
+  --av-class-chlamys: #e86fa6; /* scallop — pink */
+  --av-class-asterias: #f2c230; /* starfish — yellow */
+  --av-class-debris: #8a969e; /* marine debris — grey */
+
+  /*
+   * Box states. Never told apart by colour alone (SRS §5.1):
+   * unrecognised = dashed outline, pending review = corner badge, low confidence = translucent fill.
+   */
+  --av-box-stroke: 2px;
+  --av-box-dash: 6 4;
+  --av-box-fill-alpha: 0.25;
+  --av-box-badge-size: 14px;
+
+  /* Type: system stack with Chinese fallbacks, no web fonts (works offline). */
+  --av-font: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei",
+    "Noto Sans CJK SC", sans-serif;
+  --av-font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --av-fs-xs: 0.75rem;
+  --av-fs-sm: 0.875rem;
+  --av-fs-md: 1rem;
+  --av-fs-lg: 1.25rem;
+  --av-fs-xl: 1.75rem;
+
+  /* Spacing scale, 4 px base. */
+  --av-space-1: 4px;
+  --av-space-2: 8px;
+  --av-space-3: 12px;
+  --av-space-4: 16px;
+  --av-space-5: 24px;
+  --av-space-6: 32px;
+
+  /* Shape. */
+  --av-radius-sm: 4px;
+  --av-radius: 8px;
+  --av-radius-lg: 12px;
+  --av-shadow: 0 1px 2px rgb(11 79 108 / 0.06), 0 2px 8px rgb(11 79 108 / 0.06);
+
+  /* Layout: top bar + left menu + content (SRS §5.1). */
+  --av-topbar-h: 56px;
+  --av-sidebar-w: 220px;
+  --av-content-max: 1440px;
+
+  /* Map onto Bootstrap so its components pick up the brand without overrides. */
+  --bs-primary: var(--av-primary);
+  --bs-primary-rgb: 11, 79, 108;
+  --bs-info: var(--av-accent);
+  --bs-info-rgb: 1, 186, 239;
+  --bs-body-font-family: var(--av-font);
+  --bs-body-color: var(--av-text);
+  --bs-body-bg: var(--av-surface); /* inputs and dropdowns; the page canvas is set in app.css */
+  --bs-border-color: var(--av-border);
+  --bs-border-radius: var(--av-radius);
+  --bs-link-color: var(--av-primary);
+  --bs-link-color-rgb: 11, 79, 108;
+  --bs-link-hover-color: var(--av-primary-hover);
+}
