@@ -37,13 +37,11 @@ committed; the images themselves are not.
 |---|---|---|---|
 | AL-01 | mAP@0.5, four species | ≥ 0.75 | Frozen test set |
 | AL-02 | mAP@0.5:0.95 | ≥ 0.45 | Frozen test set |
-| AL-03 | Per-class recall | species ≥ 0.75, debris ≥ 0.60 | Frozen test set |
+| AL-03 | Per-class recall | all four ≥ 0.75 | Frozen test set |
 | AL-04 | Improvement over baseline | mAP@0.5 +0.03 | Same data, epochs and seed |
 | AL-05 | Inference speed | ≥ 90% of baseline | 100 images, same hardware |
 | AL-06 | Parameter growth | ≤ 20% | Model summary |
 | AL-07 | Counting deviation | ≤ 15% | Three 3-minute videos, manual count |
-| AL-08 | Class-level mAP, debris | ≥ 0.60 | Frozen test set |
-| AL-09 | Overall mAP, five classes | ≥ 0.70 | Reference only, not a gate |
 
 A single +0.03 margin sits close to run-to-run noise on a 500-image test set. Run the baseline and
 the improved model with three seeds and report mean ± standard deviation.

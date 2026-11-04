@@ -56,4 +56,3 @@ table. Do not invent synonyms.
 | `strongylocentrotus` | 海胆 | sea urchin | 经济种 |
 | `chlamys` | 扇贝 | scallop | 经济种 |
 | `asterias` | 海星 | starfish | 敌害种 |
-| `debris` | 海洋垃圾 | marine debris | 环境物 |

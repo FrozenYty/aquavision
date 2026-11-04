@@ -19,6 +19,10 @@ done lives in `PLAN.md`.
   implemented as perceptual-hash grouping (dhash64, hamming <= 3, largest group 4).
 - Open issues: echinus has 24x the boxes of chlamys; debris class has no images yet.
 - Next: find a debris source, finish the three-machine install check.
+- Scope change, later on 11-04: **marine debris is dropped**. The line above is superseded — the class
+  has no public dataset, and the self-collected route cost two days for the one class that could not
+  be defended in the metric table. SRS V1.3 records it in annex B; lane C still has to remove it from
+  the frontend.
 
 ## 2026-11-03
 

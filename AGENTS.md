@@ -22,8 +22,8 @@ PLAN.md  ->  PROGRESS.md  ->  CONTRIBUTING.md  ->  docs/architecture-en.md  ->  
 ## 2. The project
 
 AquaVision — underwater species detection and monitoring. A USB camera feeds a quality check, then
-YOLOv8 detection, then human review; corrections flow back into training. Five classes: sea
-cucumber, sea urchin, scallop, starfish, marine debris.
+YOLOv8 detection, then human review; corrections flow back into training. Four classes: sea
+cucumber, sea urchin, scallop, starfish.
 
 One FastAPI process, a static frontend, and an ESP32 that only handles trigger, light and sensors.
 
