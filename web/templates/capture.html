@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>采集控制 · AquaVision</title>
+  <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
+  <link rel="stylesheet" href="../static/css/tokens.css">
+  <link rel="stylesheet" href="../static/css/app.css">
+</head>
+<body>
+  <main class="av-content">
+    <div class="av-page-header">
+      <h1>采集控制</h1>
+      <div class="av-page-actions">
+        <button class="btn btn-primary" type="button" disabled>开始采集</button>
+        <button class="btn btn-outline-primary" type="button" disabled>停止</button>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-lg-8">
+        <section class="av-card">
+          <h2 class="av-card-title">实时画面</h2>
+          <div class="av-empty">摄像头未连接。请检查 USB 摄像头后点击“开始采集”。</div>
+        </section>
+      </div>
+      <div class="col-lg-4">
+        <section class="av-card">
+          <h2 class="av-card-title">本帧计数</h2>
+          <ul class="list-unstyled mb-0 small">
+            <li class="av-class av-class-holothurian d-flex">海参<span class="ms-auto">—</span></li>
+            <li class="av-class av-class-strongylocentrotus d-flex">海胆<span class="ms-auto">—</span></li>
+            <li class="av-class av-class-chlamys d-flex">扇贝<span class="ms-auto">—</span></li>
+            <li class="av-class av-class-asterias d-flex">海星<span class="ms-auto">—</span></li>
+            <li class="av-class av-class-debris d-flex">海洋垃圾<span class="ms-auto">—</span></li>
+          </ul>
+        </section>
+      </div>
+      <div class="col-12">
+        <section class="av-card">
+          <h2 class="av-card-title">采集会话</h2>
+          <div class="av-empty">暂无采集会话</div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { renderShell } from "../static/js/layout.js";
+    renderShell("P-03");
+  </script>
+</body>
+</html>
