@@ -3,7 +3,7 @@
 //
 // Paths marked "provisional" are not in docs/api-contract-en.md yet; lane B confirms them.
 
-const USE_MOCK = true;
+export const USE_MOCK = true;
 
 export class ApiError extends Error {
   constructor(code, message, requestId) {

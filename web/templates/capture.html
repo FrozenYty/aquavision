@@ -13,7 +13,7 @@
     <div class="av-page-header">
       <h1>采集控制</h1>
       <div class="av-page-actions">
-        <select class="form-select" id="site" aria-label="点位">
+        <select class="form-select w-auto" id="site" aria-label="点位">
           <option value="A3">点位 A3</option><option value="B1">点位 B1</option>
         </select>
         <button class="btn btn-primary text-nowrap" id="btn-open" type="button">开始采集</button>
@@ -24,8 +24,8 @@
 
     <div class="row g-3">
       <div class="col-lg-8">
-        <section class="av-card">
-          <h2 class="av-card-title">最近一帧 <small class="text-secondary fw-normal" id="camera"></small></h2>
+        <section class="av-card" id="frame-card">
+          <h2 class="av-card-title">最近一帧 <small class="text-secondary fw-normal" id="camera"></small><span class="av-live">REC</span></h2>
           <div id="last-frame" class="av-empty">点击“开始采集”打开采集会话，再抓取一帧。</div>
         </section>
       </div>
@@ -69,7 +69,7 @@
     async function loadSessions() {
       const data = await api.listSessions({ page, size: 5 });
       $("sessions").innerHTML = data.items.map((s) => `<tr>
-        <td class="font-monospace">${esc(s.session_id)}</td><td>${esc(s.site)}</td>
+        <td class="av-mono">${esc(s.session_id)}</td><td>${esc(s.site)}</td>
         <td>${fmtTime(s.started_at)}</td><td>${s.frame_count}</td><td>${s.retake_count}</td>
         <td>${STATUS[s.status]}</td><td class="text-danger">${esc(s.fail_reason ?? "")}</td></tr>`).join("");
       renderPager($("pager"), data, (n) => { page = n; loadSessions(); });
@@ -78,30 +78,32 @@
     function renderProgress() {
       if (!current) return;
       const ok = current.frame_count - current.retake_count;
-      $("progress").className = "small";
+      const dial = (label, value) =>
+        `<div class="col-4"><div class="av-kpi-label">${label}</div><div class="av-kpi-value">${value}</div></div>`;
+      $("progress").className = "";
       $("progress").innerHTML = `
-        <div class="font-monospace mb-2">${esc(current.session_id)}</div>
-        <div class="d-flex"><span>已收帧</span><strong class="ms-auto">${current.frame_count}</strong></div>
-        <div class="d-flex"><span>合格</span><strong class="ms-auto">${ok}</strong></div>
-        <div class="d-flex"><span>需重拍</span><strong class="ms-auto">${current.retake_count}</strong></div>`;
+        <div class="av-mono small text-secondary mb-2">${esc(current.session_id)}</div>
+        <div class="row g-2">${dial("已收帧", current.frame_count)}${dial("合格", ok)}${dial("需重拍", current.retake_count)}</div>`;
     }
+
+    const meter = (label, v) => `<div class="av-meter${v < 60 ? " is-low" : ""}">
+      <span>${label}</span><div class="av-meter-bar"><span style="--v: ${v}"></span></div><strong>${v}</strong></div>`;
 
     function renderFrame(f) {
       const q = f.quality;
-      $("last-frame").className = "";
+      $("last-frame").className = "row g-4 align-items-center";
       $("last-frame").innerHTML = `
-        <div class="av-thumb${q.verdict === "ok" ? "" : " is-retake"} mb-3"><div class="av-thumb-img"></div>${qualityBadge(q)}</div>
-        <div class="row small g-2">
-          <div class="col-6 col-md-3">清晰度 <strong>${q.sharpness}</strong></div>
-          <div class="col-6 col-md-3">亮度 <strong>${q.brightness}</strong></div>
-          <div class="col-6 col-md-3">色偏 <strong>${q.colorcast}</strong></div>
-          <div class="col-6 col-md-3">水温 <strong>${f.env.water_temp_c ?? "—"} ℃</strong> · 浊度 <strong>${f.env.turbidity_ntu ?? "—"} NTU</strong></div>
+        <div class="col-md-7"><div class="av-thumb${q.verdict === "ok" ? "" : " is-retake"}"><div class="av-thumb-img"></div>${qualityBadge(q)}</div></div>
+        <div class="col-md-5 d-grid gap-2">
+          ${meter("清晰度", q.sharpness)}${meter("亮度", q.brightness)}${meter("色偏", q.colorcast)}
+          <div class="small text-secondary mt-2">水温 <strong class="text-body">${f.env.water_temp_c ?? "—"} ℃</strong> · 浊度 <strong class="text-body">${f.env.turbidity_ntu ?? "—"} NTU</strong></div>
+          <div class="small text-secondary"><span class="av-mono text-body">${esc(f.frame_id)}</span><br>${fmtTime(f.captured_at)}</div>
         </div>
-        <div class="small text-secondary mt-2 font-monospace">${esc(f.frame_id)} · ${fmtTime(f.captured_at)}</div>
-        ${q.verdict === "ok" ? "" : '<div class="alert alert-warning small mt-2 mb-0">质量分低于 60，已入库但不进入识别队列，请调整后重拍。</div>'}`;
+        ${q.verdict === "ok" ? "" : '<div class="col-12"><div class="alert alert-warning small mb-0">质量分低于 60，已入库但不进入识别队列，请调整后重拍。</div></div>'}`;
     }
 
     function setRunning(running) {
+      $("frame-card").classList.toggle("is-live", running);
       $("btn-open").disabled = running;
       $("site").disabled = running;
       $("btn-grab").disabled = !running;

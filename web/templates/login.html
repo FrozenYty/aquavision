@@ -10,11 +10,26 @@
 </head>
 <body>
   <main class="av-login">
-    <form class="av-login-card" id="login-form" novalidate>
-      <div class="av-brand mb-1" style="color: var(--av-primary)">
-        <span class="av-brand-mark" aria-hidden="true"></span>AquaVision
+    <section class="av-login-hero av-reveal">
+      <div class="av-brand">
+        <span class="av-brand-mark" aria-hidden="true"></span>
+        <span class="av-brand-name">AQUAVISION</span>
+        <small>水下物种识别与监测</small>
       </div>
-      <p class="text-secondary small mb-4">水下物种识别与监测系统</p>
+      <h1>看清水下的<br>每一个生命</h1>
+      <p>摄像头采集，质量把关，YOLOv8 识别，人工复核回流。每一条结果都能追溯到帧、模型版本与参数。</p>
+      <div class="mt-4">
+        <span class="av-class av-class-holothurian">海参</span>
+        <span class="av-class av-class-strongylocentrotus">海胆</span>
+        <span class="av-class av-class-chlamys">扇贝</span>
+        <span class="av-class av-class-asterias">海星</span>
+        <span class="av-class av-class-debris">海洋垃圾</span>
+      </div>
+    </section>
+
+    <form class="av-login-card av-reveal" id="login-form" style="--i: 2" novalidate>
+      <h2 class="h5 fw-bold mb-1">登录</h2>
+      <p class="text-secondary small mb-4">使用分配的账号进入系统</p>
 
       <div class="mb-3">
         <label class="form-label" for="account">手机号或邮箱</label>
@@ -31,7 +46,7 @@
         <label class="form-label" for="captcha">图形验证码</label>
         <div class="input-group">
           <input class="form-control" id="captcha" name="captcha" maxlength="4" required>
-          <span class="input-group-text font-monospace" title="验证码图片由服务端提供">8K3W</span>
+          <span class="input-group-text av-mono" title="验证码图片由服务端提供">8K3W</span>
           <div class="invalid-feedback">请输入验证码</div>
         </div>
       </div>
