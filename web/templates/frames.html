@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>影像浏览 · AquaVision</title>
+  <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
+  <link rel="stylesheet" href="../static/css/tokens.css">
+  <link rel="stylesheet" href="../static/css/app.css">
+</head>
+<body>
+  <main class="av-content">
+    <div class="av-page-header">
+      <h1>影像浏览</h1>
+      <div class="av-page-actions">
+        <button class="btn btn-primary" id="btn-batch" type="button" disabled>批量识别（0）</button>
+      </div>
+    </div>
+
+    <form class="av-card mb-3 row g-2 align-items-end mx-0" id="filters">
+      <div class="col-12 col-md-3">
+        <label class="form-label small" for="f-session">采集会话</label>
+        <input class="form-control form-control-sm" id="f-session" name="session_id" placeholder="如 s-a3-001">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small" for="f-site">点位</label>
+        <select class="form-select form-select-sm" id="f-site" name="site">
+          <option value="">全部</option><option>A3</option><option>B1</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small" for="f-verdict">质量</label>
+        <select class="form-select form-select-sm" id="f-verdict" name="verdict">
+          <option value="">全部</option><option value="ok">合格</option><option value="retake">需重拍</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small" for="f-from">开始日期</label>
+        <input class="form-control form-control-sm" id="f-from" name="from" type="date">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small" for="f-to">结束日期</label>
+        <input class="form-control form-control-sm" id="f-to" name="to" type="date">
+      </div>
+      <div class="col-12 col-md-1 d-grid">
+        <button class="btn btn-sm btn-outline-primary" type="submit">查询</button>
+      </div>
+    </form>
+
+    <section class="av-card">
+      <div class="row g-3" id="grid"></div>
+      <div class="av-pager" id="pager"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { renderShell } from "../static/js/layout.js";
+    import * as api from "../static/js/api.js";
+    import { esc, fmtTime, qualityBadge, renderPager, toast } from "../static/js/ui.js";
+
+    renderShell("P-04");
+
+    const $ = (id) => document.getElementById(id);
+    const selected = new Set();
+    let page = 1;
+
+    function updateBatchButton() {
+      $("btn-batch").textContent = `批量识别（${selected.size}）`;
+      $("btn-batch").disabled = selected.size === 0;
+    }
+
+    async function load() {
+      const filters = Object.fromEntries(new FormData($("filters")));
+      try {
+        const data = await api.listFrames({ ...filters, page, size: 12 });
+        $("grid").innerHTML = data.items.length
+          ? data.items.map((f) => `
+            <div class="col-6 col-md-4 col-xl-3">
+              <label class="av-thumb${f.quality.verdict === "ok" ? "" : " is-retake"}">
+                <div class="av-thumb-img"></div>
+                <input class="form-check-input" type="checkbox" value="${esc(f.frame_id)}"
+                  ${selected.has(f.frame_id) ? "checked" : ""} ${f.quality.verdict === "ok" ? "" : "disabled title=\"需重拍的帧不进入识别\""}>
+                ${qualityBadge(f.quality)}
+                <div class="av-thumb-meta"><div class="font-monospace text-truncate">${esc(f.frame_id)}</div>${fmtTime(f.captured_at)}</div>
+              </label>
+            </div>`).join("")
+          : '<div class="col-12 av-empty">没有符合条件的帧。调整筛选条件，或前往 <a href="capture.html">采集控制</a> 采集新帧。</div>';
+        renderPager($("pager"), data, (n) => { page = n; load(); });
+      } catch (err) {
+        toast(err.message, "danger");
+      }
+    }
+
+    $("grid").addEventListener("change", (event) => {
+      const box = event.target;
+      if (box.checked) selected.add(box.value); else selected.delete(box.value);
+      updateBatchButton();
+    });
+
+    $("filters").addEventListener("submit", (event) => {
+      event.preventDefault();
+      page = 1;
+      load();
+    });
+
+    $("btn-batch").onclick = async () => {
+      try {
+        const task = await api.startBatch([...selected]);
+        toast(`已创建识别任务 #${task.task_id}，共 ${task.total} 帧`, "success");
+        selected.clear();
+        updateBatchButton();
+        load();
+      } catch (err) {
+        toast(err.message, "danger");
+      }
+    };
+
+    load();
+  </script>
+</body>
+</html>

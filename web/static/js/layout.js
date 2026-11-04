@@ -3,7 +3,13 @@
 
 const MENU = [
   { group: "概览", items: [{ id: "P-02", label: "工作台", href: "home.html" }] },
-  { group: "采集", items: [{ id: "P-03", label: "采集控制", href: "capture.html" }] },
+  {
+    group: "采集",
+    items: [
+      { id: "P-03", label: "采集控制", href: "capture.html" },
+      { id: "P-04", label: "影像浏览", href: "frames.html" },
+    ],
+  },
 ];
 
 const DATA_SOURCE = "数据来源：公开水下数据集与教学演示水箱影像，不含真实海域位置信息。";
