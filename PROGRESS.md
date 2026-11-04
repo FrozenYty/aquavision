@@ -6,6 +6,14 @@ Gate: dataset ≥ 3000 split · three environments identical · camera outputs f
 Dated log, newest first, five lines per entry. **Why** a task moved lives here; **whether** it is
 done lives in `PLAN.md`.
 
+## 2026-11-04
+
+- P0-04 done: design tokens, shared shell, three pages navigate (#7). P0-02 environment lock (#11).
+- P1-04 started ahead of GATE P0: lane C does not depend on the server; lead to confirm.
+- P1-04 so far: `api.js` and contract-shaped mocks (#8), capture and frame pages (#9), visual language (#10); 4 of 13 pages.
+- Open: provisional endpoints in #8 for lane B; SRS vs contract on login token, captcha and frame rate for lanes A/B.
+- Next: the remaining nine pages, one PR per domain; the last one ticks P1-04.
+
 ## 2026-11-03
 
 - Repository created: conventions, CI, branch protection (#1, #2).
