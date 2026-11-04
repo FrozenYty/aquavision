@@ -65,7 +65,7 @@
 
 ### species_dict
 
-上线时五行：`holothurian`、`strongylocentrotus`、`chlamys`、`asterias`、`debris`。
+上线时四行：`holothurian`、`strongylocentrotus`、`chlamys`、`asterias`。
 
 | 列 | 类型 | 说明 |
 |---|---|---|

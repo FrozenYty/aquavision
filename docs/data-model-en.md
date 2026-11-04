@@ -64,13 +64,13 @@ Never store a comma-separated list in a column. If a value repeats, it belongs i
 
 ### species_dict
 
-Five rows at launch: `holothurian`, `strongylocentrotus`, `chlamys`, `asterias`, `debris`.
+Four rows at launch: `holothurian`, `strongylocentrotus`, `chlamys`, `asterias`.
 
 | Column | Type | Notes |
 |---|---|---|
 | `class_code` | VARCHAR(32) | Must match `labels.txt` of the model, exactly and in order |
 | `cn_name` | VARCHAR(32) | Display name |
-| `category` | SMALLINT | 1 economic, 2 pest, 3 debris |
+| `category` | SMALLINT | 1 economic, 2 pest, 3 environment (reserved, no class yet) |
 | `conf_thr` | NUMERIC(4,2) | Per-class threshold, default 0.50 |
 | `in_stat` | SMALLINT | Whether the class counts toward statistics |
 

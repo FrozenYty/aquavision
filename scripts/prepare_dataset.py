@@ -24,7 +24,7 @@ from pathlib import Path
 import cv2
 
 # Contract with species_dict (docs/data-model-en.md): order must match labels.txt.
-CLASS_CODES = ["holothurian", "strongylocentrotus", "chlamys", "asterias", "debris"]
+CLASS_CODES = ["holothurian", "strongylocentrotus", "chlamys", "asterias"]
 DUO_TO_INDEX = {"holothurian": 0, "echinus": 1, "scallop": 2, "starfish": 3}
 
 VAL_RATIO = 0.15

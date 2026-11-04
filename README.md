@@ -3,7 +3,7 @@
 [中文](README-zh.md)
 
 Underwater species detection and monitoring built on YOLOv8. A live camera feed is analysed to
-count and locate five classes — sea cucumber, sea urchin, scallop, starfish and marine debris —
+count and locate four classes — sea cucumber, sea urchin, scallop and starfish —
 with a human review loop that feeds corrections back into training.
 
 **Status**: phase P0, see [PROGRESS.md](PROGRESS.md). Frontend pages run on mock data; the server
@@ -13,7 +13,7 @@ is not started yet.
 
 | Document | Notes |
 |---|---|
-| [SRS v1.2](docs/srs-v1.2.docx) | 29 functional requirements, 9 use cases, 9 tables, 36 acceptance items |
+| [SRS v1.3](docs/srs-v1.3.docx) | 29 functional requirements, 9 use cases, 9 tables, 36 acceptance items |
 | [Plan](PLAN.md) | Phases, tasks and gates — the task contract for the team |
 | [Architecture](docs/architecture-en.md) | Layers, dependency rules, runtime model, frame lifecycle |
 | [API contract](docs/api-contract-en.md) | REST paths, response envelope, error codes, WebSocket protocol |
@@ -46,7 +46,7 @@ tests/       tests
 | Backend | Python 3.11, FastAPI, SQLAlchemy 2.0, PostgreSQL 14 |
 | Frontend | HTML5, Bootstrap 5.3.3, ECharts 5, plain ES modules, no build step; libraries vendored in `web/static/vendor/` |
 
-Targets: mAP@0.5 ≥ 0.75 on the four species, ≥ 0.60 on debris, +0.03 over the baseline, and
+Targets: mAP@0.5 ≥ 0.75 on the four species, +0.03 over the baseline, and
 inference speed at least 90% of the baseline.
 
 ## Frontend preview
