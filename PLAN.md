@@ -40,7 +40,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 
 ### P0 — foundation
 
-- [ ] **P0-01** Dataset acquisition, cleaning, statistics, split · @Gtechson · done when
+- [x] **P0-01** Dataset acquisition, cleaning, statistics, split · @Gtechson · done when
       `data/dataset-stats.json` is written, the split is by video, and the test set is ≥ 500 images
 - [x] **P0-02** Environment and dependency lock · @Gtechson · done when `requirements.txt` exists and
       three machines install identically
