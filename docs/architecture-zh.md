@@ -148,3 +148,4 @@ MODEL_DIR=data/models
 | [02](adr/02-drop-pan-tilt.md) | 不做云台，固定机位、移动靶标 |
 | [03](adr/03-single-process.md) | 单个 FastAPI 进程，不拆微服务 |
 | [04](adr/04-static-frontend.md) | 前端纯静态 + fetch，不引框架与构建工具 |
+| [05](adr/05-vendored-frontend-assets.md) | 前端第三方库与字体放在本地，运行时不依赖 CDN |
