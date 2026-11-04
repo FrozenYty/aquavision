@@ -1,0 +1,17 @@
+# AquaVision runtime dependencies, pinned (P0-02).
+# Python 3.11. Install: pip install -r requirements.txt -r requirements-dev.txt
+fastapi==0.162.0
+uvicorn[standard]==0.54.0
+sqlalchemy==2.1.8
+psycopg[binary]==3.3.7
+pydantic==2.14.2
+pydantic-settings==2.16.2
+python-jose[cryptography]==3.5.0
+bcrypt==4.3.0
+opencv-python-headless==5.0.0.93
+numpy==2.4.6
+pillow==13.0.0
+ultralytics==8.4.202
+# Development dependencies, pinned (P0-02). CI runs ruff and pytest.
+pytest==9.2.0
+ruff==0.17.3
