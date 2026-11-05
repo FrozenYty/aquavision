@@ -1,0 +1,27 @@
+name: auto-merge
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          # Succeeds only if "Allow auto-merge" is enabled in Settings -> General.
+          # The merge itself still waits for the required "check" status.
+          gh pr merge "$PR" --auto --squash --delete-branch || {
+            echo "::warning::auto-merge was not enabled for PR #$PR."
+            echo "::warning::Check Settings -> General -> Allow auto-merge."
+          }
