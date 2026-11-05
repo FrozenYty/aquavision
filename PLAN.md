@@ -48,13 +48,13 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       9 items and an order number exists
 - [x] **P0-04** Page skeleton and design tokens · @chemflowers · done when `tokens.css` is final and
       three pages navigate
-- [ ] **P0-05** Requirement review record · @IkeaFyj · done when the review outcome is recorded in
-      SRS annex B
+- [x] **P0-05** Requirement review record · @IkeaFyj · done when the review outcome is recorded in
+      SRS annex B — four internal rounds, V1.1 to V1.4, approver column filled
 - [x] **P0-06** Rig design: lighting, camera position, tank layout · @FrozenYty · done when the single
       lamp rig is specified with fallbacks and the acceptance numbers are fixed — see `PROGRESS.md`
       2026-11-05
 
-- [ ] **GATE P0** — every task above ticked
+- [x] **GATE P0** — every task above ticked
 
 ### P1 — skeleton
 

@@ -1,10 +1,24 @@
 # Progress
 
-Current phase: **P0 — foundation**
-Gate: dataset ≥ 3000 split · three environments identical · purchase list final · rig design final
+Current phase: **P1 — skeleton**
+Gate: `uvicorn` starts, `/api/health` answers, 9 tables exist, 13 pages render
 
 Dated log, newest first, five lines per entry. **Why** a task moved lives here; **whether** it is
 done lives in `PLAN.md`.
+
+## 2026-11-05 (evening)
+
+- **P0 closed.** Requirement review recorded as four internal rounds (annotation, revision, review,
+  rework) rather than an external one: the calendar is not fixed and the team drives the schedule, so
+  waiting on a date would have stalled coding for nothing. Annex B now carries the approver for V1.1
+  to V1.4.
+- **Review bar adopted**: an item passes when a stranger holding only the document can decide whether
+  it holds. Anything that leaves a decision to the author is a must-fix. One round is capped at 90
+  minutes and does not start with more than 15 must-fix items — that is debugging, not review.
+- **Demo format fixed**: live rig first, screen recording always prepared as the fallback. Recording is
+  not optional; a live demo that dies has nothing behind it otherwise.
+- **Scope of the review**: the 11-11 date is no longer a dependency. The team proceeds on its own
+  schedule; an external look can happen later without blocking P1.
 
 ## 2026-11-05 (later)
 
