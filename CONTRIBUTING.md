@@ -60,7 +60,7 @@ negotiated. Comments and docstrings are English.
 ## 5. Files and data
 
 - **Filenames are English**, lowercase, hyphen-separated. Content may be Chinese.
-- Deliverables carry a version, not a date: `srs-v1.2.docx`.
+- Deliverables carry a version, not a date: `srs-v1.4.docx`. Submission artefacts live outside the repository (see §6).
 - Design documents come in pairs: `architecture-en.md` and `architecture-zh.md`, with English as
   the source of truth. `README.md` / `README-zh.md` follow the same rule.
 - **An English document carries no Chinese prose.** Describe the part, not its Chinese brand name:

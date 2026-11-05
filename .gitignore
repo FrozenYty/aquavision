@@ -38,3 +38,6 @@ venv/
 # --- 渲染与调试产物 ---
 _probe.pdf
 *.pdf.tmp
+
+# Submission artefacts live outside the repository
+*.docx
