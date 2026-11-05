@@ -9,6 +9,11 @@ One entry per day, newest first. A day's work goes in that day's entry; do not o
 the afternoon brings more. The heading is the date and nothing else — no “evening”, no “later”.
 **Why** a task moved lives here; **whether** it is done lives in `PLAN.md`.
 
+Length is not capped. A long day is a long day, and forcing it shorter only invites compressing the
+truth or splitting one day across two dates. What matters is one bullet per decision or per change of
+state, not a parade of every commit — the commits are already in git. If a day grows past a screen,
+the usual cause is a decision sitting in the log that belongs in an ADR.
+
 ## 2026-11-05
 
 - **Rig design settled (P0-06).** A desk lamp instead of purchased LED bars: one lamp above and 45°
