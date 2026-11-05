@@ -30,6 +30,7 @@
 | `api-contract-en/zh.md` | 路径、封装、错误码、WebSocket | 接口或字段变化 | @Gtechson |
 | `data-model-en/zh.md` | 表、字段、索引、文件落盘 | 加表或加字段 | @Gtechson |
 | `test-plan-en/zh.md` | 测试分层、数据集、指标、缺陷分级 | 指标或验收项变化 | @IkeaFyj |
+| `prototype-en/zh.md` | 11-06 走查展示什么，逐屏说明 | 原型被正式切片取代 | @chemflowers |
 | `procurement-en/zh.md` | 买什么、为什么买这些、怎么验收 | 换硬件 | @FrozenYty |
 | `glossary-en-zh.md` | 每个概念的唯一叫法 | 出现新概念 | @FrozenYty |
 | `adr/01-06` | 为什么这样定、什么时候该重审 | 不改写，只被新 ADR 取代 | 该篇作者 |

@@ -38,7 +38,7 @@ One commit does one thing. If the message needs "and", split the commit.
 - **CI is the only gate.** When `check` is green the PR may merge; no approval is required.
 - Review is still welcome — leave a comment instead of blocking. Fix it in a follow-up if it is
   not worth another round trip.
-- Turn on **auto-merge** right after opening the PR: it merges itself once `check` passes.
+- **Auto-merge is applied by `.github/workflows/auto-merge.yml`** the moment a PR opens; nobody has to click anything. If a PR sits green without merging, that workflow printed a warning: the repository setting is off, tell the lead.
 - Merge with **squash** — one feature, one commit on `main`.
 - Name the task ID in the title when the PR delivers one: `feat(capture): frame scoring (P1-03)`.
 

@@ -31,6 +31,7 @@ else.
 | `api-contract-en/zh.md` | endpoint paths, envelope, error codes, WebSocket | an endpoint or a field changes | @Gtechson |
 | `data-model-en/zh.md` | tables, columns, indexes, file layout | a table or column changes | @Gtechson |
 | `test-plan-en/zh.md` | levels, datasets, metrics, defect classes | a metric or acceptance item changes | @IkeaFyj |
+| `prototype-en/zh.md` | what the 11-06 walkthrough shows, screen by screen | the prototype is replaced by the real slice | @chemflowers |
 | `procurement-en/zh.md` | what to buy, why these parts, how to accept them | hardware changes | @FrozenYty |
 | `glossary-en-zh.md` | the one word for each concept | a new concept appears | @FrozenYty |
 | `adr/01-06` | why a decision was taken and when to revisit it | never edited; superseded instead | the author of that ADR |
