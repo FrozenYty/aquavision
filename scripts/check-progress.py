@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keep PROGRESS.md scannable.
+"""Keep docs/progress.md scannable.
 
 Three rules, each cheap to check and each easy to break silently:
   1. every entry starts with a heading of the form ``## YYYY-MM-DD``;
@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-LOG = ROOT / "PROGRESS.md"
+LOG = ROOT / "docs" / "progress.md"
 HEADING = re.compile(r"^## (.+)$")
 DATED = re.compile(r"^(\d{4}-\d{2}-\d{2})(?:\s*\(.+\))?$")
 MAX_LINES = 20
@@ -66,10 +66,10 @@ def main() -> int:
 
     print()
     if problems:
-        print(f"{problems} problem(s) in PROGRESS.md")
+        print(f"{problems} problem(s) in docs/progress.md")
         return 1
 
-    print(f"PROGRESS.md is well formed ({len(read_entries())} entries)")
+    print(f"docs/progress.md is well formed ({len(read_entries())} entries)")
     return 0
 
 

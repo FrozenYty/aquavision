@@ -5,7 +5,7 @@
 > Owner: @FrozenYty · Revisit when: the hardware changes
 
 Final bill of materials, frozen on 2026-11-05: nine items, two channels, ¥377.42. This is the list the
-rig is built from; changing it means changing PLAN.md P0-03 and this document together. Brand names
+rig is built from; changing it means changing tasks.md P0-03 and this document together. Brand names
 and the Chinese search strings are listed in the Chinese version; this file describes the same parts
 in English.
 
@@ -35,7 +35,7 @@ in English.
 | Scenery | Stones and plants found on site. One dark stone shaped like a sea cucumber is enough to stage a false positive. |
 | Water level sensor | The tank level is constant and nothing depends on it. It is not in the SRS. |
 | Water temperature probe | It fills one field and drives no decision. The SRS states that missing sensor fields stay empty and are excluded from statistics. |
-| Second lamp | Only if the left/right brightness ratio fails; see `PROGRESS.md` 2026-11-05. |
+| Second lamp | Only if the left/right brightness ratio fails; see `progress.md` 2026-11-05. |
 
 ## 3. Things to verify before assembly
 
