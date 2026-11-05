@@ -11,17 +11,16 @@ together.
 | # | Item | Model / part | Qty | Unit ¥ | Channel | Purpose |
 |---|---|---|---|---|---|---|
 | 1 | USB camera | 柏立 1080P UVC module, 3.6 mm low-distortion lens, with housing | 1 | 200.60 | JD | Image capture |
-| 2 | Glass tank | 坤宁王 ultra-clear glass 300×170×200 mm, 5 mm walls, bare tank | 1 | 46.99 | JD | Capture chamber |
+| 2 | Glass tank | 坤宁王 ultra-clear glass 300×170×200 mm, 5 mm walls, bare tank | 1 | 48.90 | JD | Capture chamber |
 | 3 | Linear polariser | FINNER 无胶光面 PL, 200×200 mm, 0.2 mm | 1 | 35.60 | JD | Cross-polarisation, two pieces cut from one sheet |
 | 4 | MCU board | DZYJ ESP32-S3 N16R8 DevKitC, headers pre-soldered | 1 | 26.60 | JD | Trigger, PWM, I2C master |
 | 5 | Level shifter | 大富瑞 8-channel bidirectional 3.3 V ↔ 5 V, headers pre-soldered | 1 | 7.10 | JD | Bridges the 5 V sensor to 3.3 V GPIO |
 | 6 | Jumper wires | DZYJ 40-pin ribbon, male-male / male-female / female-female, 120 pcs | 1 | 8.26 | JD | All wiring |
-| 7 | Breadboard | DZYJ MB-102, 1660 tie points, with power rails | 1 | 23.70 | JD | Solderless assembly |
+| 7 | Breadboard | DZYJ MB-102, 1660 tie points, with power rails | 1 | 23.70 | JD | Solderless assembly; the 405-hole board is too small once the ESP32 and shifter are seated |
 | 8 | Turbidity sensor | LIGHT ME2100A-IIC, I2C, reflective | 1 | 18.82 | LCSC | Reads water clarity |
 | 9 | Sensor cable | WHEELTEC GH1.25 4-pin to Dupont female, 200 mm | 1 | 7.84 | JD | Turbidity sensor to the level shifter pins |
-| 10 | Button module | Tactile switch on a small PCB, 2.54 mm pins | 1 | 3.00 | JD | Physical capture trigger |
 
-**Total ¥382.43.** Two corrections were made after the first checkout: the GH1.25 cable must end in Dupont female sockets (a tinned end does not hold in a breadboard), and the tactile switch must be a through-hole or module version (the 6×6 mm PCB-mount switches bought first have bent legs that will not seat).
+**Total ¥377.42.** The button is not on the list: through-hole switches are already on hand. A second, 405-hole breadboard was dropped from the order — the ESP32 with headers, the shifter and the wiring need the 1660-hole board.
 
 ## 2. Deliberately not bought
 
