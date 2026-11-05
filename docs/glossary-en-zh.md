@@ -1,5 +1,7 @@
 # Glossary — English ↔ 中文
 
+> 维护人 / Owner: @FrozenYty · 重审时机 / Revisit when: 出现新概念 / a new concept appears
+
 Single source for terminology. When a word appears in code, docs or UI, use the term from this
 table. Do not invent synonyms.
 

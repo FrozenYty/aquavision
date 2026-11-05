@@ -2,6 +2,8 @@
 
 > Chinese version: [procurement-zh.md](procurement-zh.md). This file is the source of truth.
 
+> Owner: @FrozenYty · Revisit when: the hardware changes
+
 Final bill of materials, frozen on 2026-11-05: nine items, two channels, ¥377.42. This is the list the
 rig is built from; changing it means changing PLAN.md P0-03 and this document together. Brand names
 and the Chinese search strings are listed in the Chinese version; this file describes the same parts

@@ -14,6 +14,7 @@
 
 | 文档 | 说明 |
 |---|---|
+| [文档索引](docs/INDEX-zh.md) | 哪份文档回答什么，以及改一处要连带改哪些 |
 | [需求定义书 V1.4](docs/srs-v1.4.docx) | 功能需求 29 条、用例 9 个、数据表 9 张、验收项 36 条 |
 | [任务计划](PLAN.md) | 阶段、任务与门禁，团队的任务契约 |
 | [总体架构](docs/architecture-zh.md) · [English](docs/architecture-en.md) | 分层、依赖规则、运行时模型、一帧的生命周期 |

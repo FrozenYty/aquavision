@@ -2,6 +2,8 @@
 
 > Chinese version: [api-contract-zh.md](api-contract-zh.md). This file is the source of truth.
 
+> Owner: @Gtechson · Revisit when: an endpoint or a field changes
+
 ## 1. Conventions
 
 - Base path: `/api`. All endpoints return JSON.

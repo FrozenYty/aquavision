@@ -3,7 +3,7 @@
 Current phase: **P1 — skeleton**
 Gate: `uvicorn` starts, `/api/health` answers, 9 tables exist, 13 pages render
 
-Dated log, newest first, five lines per entry. **Why** a task moved lives here; **whether** it is
+Dated log, newest first, one screen per entry (20 lines, checked by CI). **Why** a task moved lives here; **whether** it is
 done lives in `PLAN.md`.
 
 ## 2026-11-05 (evening)

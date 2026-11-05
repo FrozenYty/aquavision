@@ -2,6 +2,8 @@
 
 > Chinese version: [test-plan-zh.md](test-plan-zh.md). This file is the source of truth.
 
+> Owner: @IkeaFyj · Revisit when: a metric or an acceptance item changes
+
 ## 1. Scope and levels
 
 | Level | What it covers | Tool | When |

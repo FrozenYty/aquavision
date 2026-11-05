@@ -81,7 +81,20 @@ datasets/             training and test data
 Weights go to GitHub Releases. Datasets go to external storage; link them from the README with a
 checksum. Keep the repository under 20 MB.
 
-## 6. Definition of done
+## 6. Documents
+
+`docs/INDEX-en.md` is the map: which document answers what, which one wins when two disagree, and
+what else has to change alongside a given change. Read it before adding or moving anything.
+
+Two conventions that keep the set from drifting:
+
+- **Every design document carries an owner line** under its title: `> Owner: @handle · Revisit when:
+  <trigger>`. A trigger, not a date — dates rot, triggers do not.
+- **A decision that is expensive to reverse becomes an ADR**, not a paragraph in `PROGRESS.md`. When
+  a phase gate passes, sweep that phase's `PROGRESS.md` entries for decisions that changed the plan
+  and promote them. One decision, one ADR; do not write it twice.
+
+## 7. Definition of done
 
 A change is done when:
 
@@ -89,3 +102,4 @@ A change is done when:
 - [ ] The PR template is filled in
 - [ ] Bilingual pairs are updated in the same commit
 - [ ] The task box in `PLAN.md` is ticked by whoever merged
+- [ ] `docs/INDEX-en.md` updated if a document was added, renamed or removed

@@ -2,6 +2,8 @@
 
 > Chinese version: [data-model-zh.md](data-model-zh.md). This file is the source of truth.
 
+> Owner: @Gtechson · Revisit when: a table or a column changes
+
 ## 1. Entities
 
 Nine tables. Three of them carry the business core, the rest support it.
