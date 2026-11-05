@@ -30,7 +30,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 
 | Phase | Goal | Gate |
 |---|---|---|
-| P0 | External dependencies in hand | dataset ≥ 3000 images and split; three environments identical; camera produces frames |
+| P0 | Decisions made and external dependencies committed | dataset ≥ 3000 images and split; three environments identical; purchase list final; rig design final |
 | P1 | Every layer has a minimal implementation | `uvicorn` starts, `/api/health` returns the envelope, 9 tables created, 13 pages open |
 | P2 | One real end-to-end slice | press capture → boxes and counts on screen within 3 s; edit one box → count changes |
 | P3 | All 29 requirements implemented | the 36 acceptance items can each be demonstrated live |
@@ -44,12 +44,15 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       `data/dataset-stats.json` is written, the split is by video, and the test set is ≥ 500 images
 - [x] **P0-02** Environment and dependency lock · @Gtechson · done when `requirements.txt` exists and
       three machines install identically
-- [ ] **P0-03** Hardware purchase and arrival check · @FrozenYty · done when the items are in hand and
-      the camera outputs frames
+- [ ] **P0-03** Hardware purchase list final and ordered · @FrozenYty · done when the list is frozen at
+      16 items and an order number exists
 - [x] **P0-04** Page skeleton and design tokens · @chemflowers · done when `tokens.css` is final and
       three pages navigate
 - [ ] **P0-05** Requirement review record · @IkeaFyj · done when the review outcome is recorded in
       SRS annex B
+- [x] **P0-06** Rig design: lighting, camera position, tank layout · @FrozenYty · done when the single
+      lamp rig is specified with fallbacks and the acceptance numbers are fixed — see `PROGRESS.md`
+      2026-11-05
 
 - [ ] **GATE P0** — every task above ticked
 
@@ -65,6 +68,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       shares one visual language
 - [ ] **P1-05** Test case draft against the 36 acceptance items · @IkeaFyj · done when each item has
       at least one case, marked not-yet-implemented
+- [ ] **P1-06** Hardware arrival check and rig assembly · @FrozenYty · done when the camera outputs
+      frames, exposure can be locked, and the rig meets its numbers: left/right brightness ratio
+      ≥ 0.7, a 5 cm target ≥ 45 px at 640 input, no flicker, 20-frame mean brightness spread < 10%
 
 - [ ] **GATE P1** — `uvicorn app.main:app` starts on a clean machine, `/api/health` answers, 9 tables
       exist, 13 pages render
