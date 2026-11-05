@@ -152,3 +152,4 @@ MODEL_DIR=data/models
 | [04](adr/04-static-frontend.md) | 前端纯静态 + fetch，不引框架与构建工具 |
 | [05](adr/05-vendored-frontend-assets.md) | 前端第三方库与字体放在本地，运行时不依赖 CDN |
 | [06](adr/06-dataset-duo.md) | 训练数据使用 DUO，不使用 URPC |
+| [07](adr/07-local-first-verification.md) | 检查在本地跑完再推送；CI 是确认，不是发现 |

@@ -81,6 +81,9 @@ Writing them early would mean writing them twice.
 
 ## 6. Keeping this index honest
 
+Pairs are written 
+ame-en/zh.md above; both files exist and both are kept in step by CI.
+
 A document that is not in the map above does not exist as far as the team is concerned. Adding,
 renaming or deleting a document means editing this page in the same commit; the pull request template
 asks for it.
