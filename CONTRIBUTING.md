@@ -44,7 +44,7 @@ One commit does one thing. If the message needs "and", split the commit.
 
 ## 4. What CI checks
 
-Five jobs, and any failure blocks the merge:
+Seven jobs, and any failure blocks the merge:
 
 | Job | Command | Fix |
 |---|---|---|
@@ -52,6 +52,8 @@ Five jobs, and any failure blocks the merge:
 | Format | `ruff format --check .` | `ruff format .` |
 | Docs | `python scripts/check-bilingual.py` | update the missing language |
 | Language | `python scripts/check-language.py` | move the Chinese into the `-zh` file |
+| Progress | `python scripts/check-progress.py` | one entry per day, date heading only |
+| Paths | `python scripts/check-paths.py` | write it relative to the repository root |
 | Tests | `pytest -q` | write the failing test first |
 
 Python style is whatever `ruff` accepts — the configured line length is 100, nothing else is
@@ -97,6 +99,11 @@ Naming and placement, so nobody has to guess:
 
 Root files are single-language and change often; `docs/` files are bilingual and change rarely. If a
 file does not fit that split, the split is wrong, not the file.
+
+**Nothing machine-specific goes into a shared document.** No absolute paths, no user names, no local
+folder names: they are dead links on every other machine, and they leak how one person's disk happens
+to be arranged. Write commands relative to the repository root and the interpreter as `python`. If
+something exists only on your machine, it does not belong in a file the others read.
 
 Two conventions that keep the set from drifting:
 

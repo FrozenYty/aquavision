@@ -26,8 +26,8 @@ obstacle.
 Run the full check set locally before every push. CI confirms; it does not discover.
 
 ```
-D:/anaconda3/envs/dsh/python.exe -m ruff check .
-D:/anaconda3/envs/dsh/python.exe -m ruff format --check .
+python -m ruff check .
+python -m ruff format --check .
 python scripts/check-bilingual.py
 python scripts/check-language.py
 python scripts/check-progress.py
