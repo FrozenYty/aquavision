@@ -152,3 +152,4 @@ No path, port or threshold is hard-coded in business code.
 | [04](adr/04-static-frontend.md) | Static frontend with fetch, no framework or build step |
 | [05](adr/05-vendored-frontend-assets.md) | Frontend libraries and fonts vendored, no CDN at runtime |
 | [06](adr/06-dataset-duo.md) | Training data comes from DUO, not URPC |
+| [07](adr/07-local-first-verification.md) | Checks run locally before a push; CI confirms, it does not discover |

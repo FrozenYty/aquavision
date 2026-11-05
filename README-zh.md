@@ -22,7 +22,7 @@
 | [数据模型](docs/data-model-zh.md) · [English](docs/data-model-en.md) | 九张表、字段、索引、文件存储 |
 | [测试计划](docs/test-plan-zh.md) · [English](docs/test-plan-en.md) | 测试分层、数据集划分、指标与验收 |
 | [术语表](docs/glossary-en-zh.md) | 中英对照，代码与文档共用的唯一词表 |
-| [决策记录](docs/adr/) | 五条已采纳的架构决定及其理由 |
+| [决策记录](docs/adr/) | 七条已采纳的决定及其理由 |
 
 设计文档以英文版为准，中文为对照版，两者必须在同一次提交内同步。
 
