@@ -2,19 +2,20 @@
 
 > Chinese version: [procurement-zh.md](procurement-zh.md). This file is the source of truth.
 
-Final bill of materials, frozen on 2026-11-05. Ten items, three channels, ¥374.46 before shipping.
-This is the list the rig is built from; changing it means changing `PLAN.md` P0-03 and this document
-together.
+Final bill of materials, frozen on 2026-11-05: nine items, two channels, ¥377.42. This is the list the
+rig is built from; changing it means changing PLAN.md P0-03 and this document together. Brand names
+and the Chinese search strings are listed in the Chinese version; this file describes the same parts
+in English.
 
 ## 1. Final list
 
 | # | Item | Model / part | Qty | Unit ¥ | Channel | Purpose |
 |---|---|---|---|---|---|---|
-| 1 | USB camera | 柏立 1080P UVC module, 3.6 mm low-distortion lens, with housing | 1 | 200.60 | JD | Image capture |
-| 2 | Glass tank | 坤宁王 ultra-clear glass 300×170×200 mm, 5 mm walls, bare tank | 1 | 48.90 | JD | Capture chamber |
-| 3 | Linear polariser | FINNER 无胶光面 PL, 200×200 mm, 0.2 mm | 1 | 35.60 | JD | Cross-polarisation, two pieces cut from one sheet |
+| 1 | USB camera | 1080P UVC module, 3.6 mm low-distortion lens, metal housing | 1 | 200.60 | JD | Image capture |
+| 2 | Glass tank | Low-iron ultra-clear glass, 300×170×200 mm, 5 mm walls, bare tank | 1 | 48.90 | JD | Capture chamber |
+| 3 | Linear polariser | FINNER PL sheet, gloss finish, no adhesive, 200×200 mm, 0.2 mm | 1 | 35.60 | JD | Cross-polarisation, two pieces cut from one sheet |
 | 4 | MCU board | DZYJ ESP32-S3 N16R8 DevKitC, headers pre-soldered | 1 | 26.60 | JD | Trigger, PWM, I2C master |
-| 5 | Level shifter | 大富瑞 8-channel bidirectional 3.3 V ↔ 5 V, headers pre-soldered | 1 | 7.10 | JD | Bridges the 5 V sensor to 3.3 V GPIO |
+| 5 | Level shifter | 8-channel bidirectional 3.3 V ↔ 5 V, headers pre-soldered | 1 | 7.10 | JD | Bridges the 5 V sensor to 3.3 V GPIO |
 | 6 | Jumper wires | DZYJ 40-pin ribbon, male-male / male-female / female-female, 120 pcs | 1 | 8.26 | JD | All wiring |
 | 7 | Breadboard | DZYJ MB-102, 1660 tie points, with power rails | 1 | 23.70 | JD | Solderless assembly; the 405-hole board is too small once the ESP32 and shifter are seated |
 | 8 | Turbidity sensor | LIGHT ME2100A-IIC, I2C, reflective | 1 | 18.82 | LCSC | Reads water clarity |
@@ -36,14 +37,13 @@ together.
 
 ## 3. Things to verify before assembly
 
-- **Camera exposure lock.** The module was bought from a different listing than the one whose seller
-  confirmed UVC exposure control. Run `test_exposure.py` the day it arrives; if exposure cannot be
-  locked, fall back to fixed lighting with a 15 % brightness tolerance and record the change.
-- **Tactile switch package.** The listing names both “贴片” (SMD) and “DIP-4P”. SMD parts cannot be
-  plugged into a breadboard. Confirm through-hole legs on arrival.
-- **Sensor cable.** The purchased cable is single-ended with tinned wire. A 28 AWG tinned end does not
-  hold in a breadboard socket; either replace it with a GH1.25-to-Dupont-female cable or insert the
-  tinned end into a screw terminal.
+- **Camera exposure lock.** The seller confirms the module locks exposure over UVC. `test_exposure.py`
+  still runs on arrival and its output is kept as evidence; if the driver disagrees with the seller,
+  fall back to fixed lighting with a 15 % brightness tolerance and record the change.
+- **Button.** A through-hole momentary push button is already on hand. Check its legs are straight: the
+  PCB-mount parts with bent legs bought earlier will not seat in a breadboard. A latching switch would
+  not work here — the firmware expects a falling edge per press.
+- **Sensor cable.** GH1.25 to Dupont female. A single-ended tinned cable has nothing to plug into.
 
 ## 4. Assembly order
 
