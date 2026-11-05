@@ -89,6 +89,11 @@ pytest -q                             # tests
 `ruff` cannot always be installed locally (pip fails during unpack in some sandboxes). If you cannot
 run it, push the branch and open a PR — CI is the authority, not your local result.
 
+**A passing local run proves less than it looks.** The three document checks never look at Python
+code, and a script can execute correctly while still failing static analysis: a name read before the
+branch that assigns it is an `F821` that no runtime test will hit. Defend against it by wiring
+scripts into a real test or by keeping the shape simple — define, then use, in that order.
+
 Report in three parts:
 
 1. **What changed** — files and behaviour, not intentions.
