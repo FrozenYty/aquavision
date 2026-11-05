@@ -6,6 +6,21 @@ Gate: dataset ≥ 3000 split · three environments identical · purchase list fi
 Dated log, newest first, five lines per entry. **Why** a task moved lives here; **whether** it is
 done lives in `PLAN.md`.
 
+## 2026-11-05 (later)
+
+- **Order placed.** Nine items, ¥377.42: JD eight (camera, glass tank, polarising sheet, ESP32-S3,
+  level shifter, jumpers, 1660-hole breadboard, GH1.25-to-Dupont cable) and LCSC one (turbidity
+  module). The list is frozen in `docs/procurement-en.md`.
+- **Three items dropped at the last check**: the 405-hole breadboard (redundant — the ESP32 and the
+  shifter do not fit on it), the button (through-hole switches already on hand), and the tinned
+  single-ended GH1.25 cable (nothing to plug it into). Two of the three were caught before shipping.
+- **Camera exposure confirmed lockable by the seller.** Plan B (fixed lighting, 15 % tolerance) is off
+  the table and SRS 2.4.3 stays as written. `test_exposure.py` still runs on arrival, now as evidence
+  rather than as a gate.
+- **SRS V1.4 closes the field question.** `water_temp_c` deleted, `turbidity_ntu` renamed
+  `turbidity_rel` (0–100, 0 clear) because the sensor reports a reflectance index, not NTU. Table 2-3
+  rebuilt against the actual rig; api-contract and data-model follow in both languages.
+
 ## 2026-11-05
 
 - **Rig design settled (P0-06 done).** Lighting is a desk lamp, not purchased LED bars: the tank is
