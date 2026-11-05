@@ -1,5 +1,5 @@
 # AquaVision runtime dependencies, pinned (P0-02).
-# Python 3.11. Install: pip install -r requirements.txt -r requirements-dev.txt
+# Python 3.11. Install: pip install -r requirements.txt
 fastapi==0.162.0
 uvicorn[standard]==0.54.0
 sqlalchemy==2.1.8
