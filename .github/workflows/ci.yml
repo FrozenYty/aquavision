@@ -27,6 +27,9 @@ jobs:
       - name: Bilingual documents in sync
         run: python scripts/check-bilingual.py
 
+      - name: No Chinese in English documents
+        run: python scripts/check-language.py
+
       - name: Tests
         run: |
           if compgen -G "tests/test_*.py" > /dev/null; then

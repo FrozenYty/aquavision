@@ -44,13 +44,14 @@ One commit does one thing. If the message needs "and", split the commit.
 
 ## 4. What CI checks
 
-Four jobs, and any failure blocks the merge:
+Five jobs, and any failure blocks the merge:
 
 | Job | Command | Fix |
 |---|---|---|
 | Lint | `ruff check .` | `ruff check . --fix` |
 | Format | `ruff format --check .` | `ruff format .` |
 | Docs | `python scripts/check-bilingual.py` | update the missing language |
+| Language | `python scripts/check-language.py` | move the Chinese into the `-zh` file |
 | Tests | `pytest -q` | write the failing test first |
 
 Python style is whatever `ruff` accepts — the configured line length is 100, nothing else is
@@ -62,6 +63,10 @@ negotiated. Comments and docstrings are English.
 - Deliverables carry a version, not a date: `srs-v1.2.docx`.
 - Design documents come in pairs: `architecture-en.md` and `architecture-zh.md`, with English as
   the source of truth. `README.md` / `README-zh.md` follow the same rule.
+- **An English document carries no Chinese prose.** Describe the part, not its Chinese brand name:
+  “8-channel bidirectional level shifter” rather than the shop listing title. Product names,
+  quotations and search strings that only exist in Chinese belong in the `-zh` counterpart. The one
+  exception is the README language switcher, which is navigation rather than prose.
 - Diagrams are Mermaid code blocks inside Markdown, never image files.
 - Never commit:
 
