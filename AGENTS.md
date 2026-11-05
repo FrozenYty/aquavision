@@ -81,21 +81,17 @@ the identical command and hope.
 ## 6. Verify and report
 
 ```bash
-python scripts/check-bilingual.py     # bilingual pairs in sync
-ruff check . && ruff format --check . # lint and format
-pytest -q                             # tests
+python scripts/check-bilingual.py      # bilingual pairs in sync
+python scripts/check-language.py       # no Chinese in English documents
+python scripts/check-progress.py       # PROGRESS.md well formed
+python -m ruff check .                 # lint
+python -m ruff format --check .        # format
+pytest -q                              # tests
 ```
 
-`ruff` is installed in the `dsh` environment. Call it through that interpreter:
-
-```
-D:/anaconda3/envs/dsh/python.exe -m ruff check .
-D:/anaconda3/envs/dsh/python.exe -m ruff format --check .
-```
-
-If it is missing on another machine, install it rather than skipping the check. On Windows the sandbox
-can block pip's unpack directory; run the install outside the sandbox or with elevated permission.
-CI is the final authority, but "CI will catch it" is not a reason to push without looking.
+If `ruff` is missing, install it rather than skipping the check. On Windows a sandbox can block pip's
+unpack directory; run the install outside the sandbox or with elevated permission. CI is the final
+authority, but "CI will catch it" is not a reason to push without looking.
 
 **A passing local run proves less than it looks.** The three document checks never look at Python
 code, and a script can execute correctly while still failing static analysis: a name read before the

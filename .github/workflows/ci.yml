@@ -33,6 +33,9 @@ jobs:
       - name: Progress log well formed
         run: python scripts/check-progress.py
 
+      - name: No machine-specific paths
+        run: python scripts/check-paths.py
+
       - name: Tests
         run: |
           if compgen -G "tests/test_*.py" > /dev/null; then
