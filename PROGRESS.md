@@ -10,10 +10,11 @@ done lives in `PLAN.md`.
 
 - **Order placed.** Nine items, ¥377.42: JD eight (camera, glass tank, polarising sheet, ESP32-S3,
   level shifter, jumpers, 1660-hole breadboard, GH1.25-to-Dupont cable) and LCSC one (turbidity
-  module). The list is frozen in `docs/procurement-en.md`.
+  module). `P0-03` ticked; the list is frozen in `docs/procurement-en.md`.
 - **Three items dropped at the last check**: the 405-hole breadboard (redundant — the ESP32 and the
-  shifter do not fit on it), the button (through-hole switches already on hand), and the tinned
-  single-ended GH1.25 cable (nothing to plug it into). Two of the three were caught before shipping.
+  shifter do not fit on it), the button (a through-hole momentary push button is already on hand),
+  and the tinned single-ended GH1.25 cable (nothing to plug it into). Two of the three were caught
+  before shipping.
 - **Camera exposure confirmed lockable by the seller.** Plan B (fixed lighting, 15 % tolerance) is off
   the table and SRS 2.4.3 stays as written. `test_exposure.py` still runs on arrival, now as evidence
   rather than as a gate.

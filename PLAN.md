@@ -44,8 +44,8 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       `data/dataset-stats.json` is written, the split is by video, and the test set is ≥ 500 images
 - [x] **P0-02** Environment and dependency lock · @Gtechson · done when `requirements.txt` exists and
       three machines install identically
-- [ ] **P0-03** Hardware purchase list final and ordered · @FrozenYty · done when the list is frozen at
-      16 items and an order number exists
+- [x] **P0-03** Hardware purchase list final and ordered · @FrozenYty · done when the list is frozen at
+      9 items and an order number exists
 - [x] **P0-04** Page skeleton and design tokens · @chemflowers · done when `tokens.css` is final and
       three pages navigate
 - [ ] **P0-05** Requirement review record · @IkeaFyj · done when the review outcome is recorded in

@@ -20,7 +20,7 @@ together.
 | 8 | Turbidity sensor | LIGHT ME2100A-IIC, I2C, reflective | 1 | 18.82 | LCSC | Reads water clarity |
 | 9 | Sensor cable | WHEELTEC GH1.25 4-pin to Dupont female, 200 mm | 1 | 7.84 | JD | Turbidity sensor to the level shifter pins |
 
-**Total ¥377.42.** The button is not on the list: through-hole switches are already on hand. A second, 405-hole breadboard was dropped from the order — the ESP32 with headers, the shifter and the wiring need the 1660-hole board.
+**Total ¥377.42.** The button is not on the list: a through-hole momentary push button is already on hand. A second, 405-hole breadboard was dropped from the order — the ESP32 with headers, the shifter and the wiring need the 1660-hole board.
 
 ## 2. Deliberately not bought
 
