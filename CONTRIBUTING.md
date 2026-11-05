@@ -90,19 +90,20 @@ Naming and placement, so nobody has to guess:
 
 | What | Where | Name |
 |---|---|---|
-| entry points | repository root | `README.md`, `README-zh.md`, `AGENTS.md`, `CONTRIBUTING.md`, `LICENSE` |
-| everything else | `docs/` | lowercase, hyphen-separated |
-| a design document | `docs/` | `name-en.md` + `name-zh.md`, English as the source of truth |
-| one bilingual file | `docs/` | `name-en-zh.md`, both languages in one table |
-| a working file | `docs/` | English only, single file: `tasks.md`, `progress.md` |
+| entry points and live state | repository root, uppercase | `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, `PLAN.md`, `PROGRESS.md`, `LICENSE` |
+| a design document | `docs/`, lowercase | `name-en.md` + `name-zh.md`, English as the source of truth |
+| one bilingual file | `docs/`, lowercase | `name-en-zh.md`, both languages in one table |
 | a decision | `docs/adr/` | `NN-short-title.md`, two digits, never renamed |
+
+Root files are single-language and change often; `docs/` files are bilingual and change rarely. If a
+file does not fit that split, the split is wrong, not the file.
 
 Two conventions that keep the set from drifting:
 
 - **Every design document carries an owner line** under its title: `> Owner: @handle · Revisit when:
   <trigger>`. A trigger, not a date — dates rot, triggers do not.
-- **A decision that is expensive to reverse becomes an ADR**, not a paragraph in `docs/progress.md`. When a
-  phase gate passes, sweep that phase's entries in `docs/progress.md` for decisions that changed the plan
+- **A decision that is expensive to reverse becomes an ADR**, not a paragraph in `PROGRESS.md`. When a
+  phase gate passes, sweep that phase's entries in `PROGRESS.md` for decisions that changed the plan
   and promote them. One decision, one ADR; do not write it twice.
 
 ## 7. Definition of done
@@ -112,5 +113,5 @@ A change is done when:
 - [ ] `check` is green on the PR
 - [ ] The PR template is filled in
 - [ ] Bilingual pairs are updated in the same commit
-- [ ] The task box in `docs/tasks.md` is ticked by whoever merged
+- [ ] The task box in `PLAN.md` is ticked by whoever merged
 - [ ] `docs/INDEX-en.md` updated if a document was added, renamed or removed

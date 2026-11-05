@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Keep docs/progress.md scannable.
+"""Keep PROGRESS.md scannable.
 
-Three rules, each cheap to check and each easy to break silently:
-  1. every entry starts with a heading of the form ``## YYYY-MM-DD``;
-  2. entries run newest first;
-  3. an entry stays within 20 lines, roughly one screen.
+Four rules, each cheap to check and each easy to break silently:
+  1. every entry starts with a heading of the form ``## YYYY-MM-DD`` — a date and nothing else;
+  2. one entry per day, never two;
+  3. entries run newest first;
+  4. a day stays within 40 lines.
 
 Usage: python scripts/check-progress.py
 Exit code: 0 when the log is well formed, 1 otherwise.
@@ -17,14 +18,14 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-LOG = ROOT / "docs" / "progress.md"
+LOG = ROOT / "PROGRESS.md"
 HEADING = re.compile(r"^## (.+)$")
-DATED = re.compile(r"^(\d{4}-\d{2}-\d{2})(?:\s*\(.+\))?$")
-MAX_LINES = 20
+DATED = re.compile(r"^(\d{4}-\d{2}-\d{2})$")
+MAX_LINES = 40
 
 
 def read_entries() -> list[dict[str, object]]:
-    """Return one record per dated section: its title, its date and its line count."""
+    """Return one record per section: its title and how many body lines follow it."""
     entries: list[dict[str, object]] = []
     current: dict[str, object] | None = None
 
@@ -43,6 +44,7 @@ def read_entries() -> list[dict[str, object]]:
 def main() -> int:
     problems = 0
     previous_date = ""
+    seen: set[str] = set()
 
     for entry in read_entries():
         title = str(entry["title"])
@@ -50,11 +52,16 @@ def main() -> int:
         dated = DATED.match(title)
 
         if not dated:
-            print(f"  bad heading: '## {title}' - expected '## YYYY-MM-DD'")
+            print(f"  bad heading: '## {title}' - expected '## YYYY-MM-DD' and nothing else")
             problems += 1
             continue
 
         date = dated.group(1)
+        if date in seen:
+            print(f"  duplicate entry: {date} appears twice - merge it into one")
+            problems += 1
+        seen.add(date)
+
         if previous_date and date > previous_date:
             print(f"  out of order: {date} appears after {previous_date}")
             problems += 1
@@ -66,10 +73,10 @@ def main() -> int:
 
     print()
     if problems:
-        print(f"{problems} problem(s) in docs/progress.md")
+        print(f"{problems} problem(s) in PROGRESS.md")
         return 1
 
-    print(f"docs/progress.md is well formed ({len(read_entries())} entries)")
+    print(f"PROGRESS.md is well formed ({len(read_entries())} entries)")
     return 0
 
 
