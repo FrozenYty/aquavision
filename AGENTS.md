@@ -86,13 +86,21 @@ ruff check . && ruff format --check . # lint and format
 pytest -q                             # tests
 ```
 
-`ruff` cannot always be installed locally (pip fails during unpack in some sandboxes). If you cannot
-run it, push the branch and open a PR — CI is the authority, not your local result.
+`ruff` is installed in the `dsh` environment. Call it through that interpreter:
+
+```
+D:/anaconda3/envs/dsh/python.exe -m ruff check .
+D:/anaconda3/envs/dsh/python.exe -m ruff format --check .
+```
+
+If it is missing on another machine, install it rather than skipping the check. On Windows the sandbox
+can block pip's unpack directory; run the install outside the sandbox or with elevated permission.
+CI is the final authority, but "CI will catch it" is not a reason to push without looking.
 
 **A passing local run proves less than it looks.** The three document checks never look at Python
 code, and a script can execute correctly while still failing static analysis: a name read before the
-branch that assigns it is an `F821` that no runtime test will hit. Defend against it by wiring
-scripts into a real test or by keeping the shape simple — define, then use, in that order.
+branch that assigns it is an `F821` that no runtime test will hit. Run `ruff` on every change to
+Python — that is what catches it.
 
 Report in three parts:
 
