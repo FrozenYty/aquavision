@@ -30,6 +30,9 @@ jobs:
       - name: No Chinese in English documents
         run: python scripts/check-language.py
 
+      - name: Progress log well formed
+        run: python scripts/check-progress.py
+
       - name: Tests
         run: |
           if compgen -G "tests/test_*.py" > /dev/null; then

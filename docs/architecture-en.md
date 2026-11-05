@@ -2,6 +2,8 @@
 
 > Chinese version: [architecture-zh.md](architecture-zh.md). This file is the source of truth.
 
+> Owner: @FrozenYty · Revisit when: the layering or the dependency rule changes
+
 ## 1. Purpose
 
 The system turns a live camera feed into structured observations: species, count, position and

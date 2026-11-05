@@ -1,0 +1,86 @@
+# Documentation index
+
+> Chinese version: [INDEX-zh.md](INDEX-zh.md). This file is the source of truth.
+
+> Owner: @FrozenYty · Revisit when: a document is added, renamed or removed
+
+One page that answers three questions: which document answers what, which one wins when two of them
+disagree, and which other files have to change when you touch one. Read this before opening anything
+else.
+
+## 1. Where to start
+
+| You want to | Read |
+|---|---|
+| work in this repository for the first time | `README.md`, then `CONTRIBUTING.md` |
+| know what is being built and how it is judged | `docs/srs-v1.4.docx` — §3 requirements, §8 acceptance |
+| pick up a task | `PLAN.md` for the contract, `PROGRESS.md` for why it moved |
+| understand how the system is shaped | `docs/architecture-en.md`, then the ADR that touches it |
+| call or serve an API | `docs/api-contract-en.md` |
+| add a table or a column | `docs/data-model-en.md` |
+| buy or wire hardware | `docs/procurement-en.md` |
+| name a thing consistently | `docs/glossary-en-zh.md` |
+| know why a decision was made | `docs/adr/` |
+
+## 2. The map
+
+| Document | Answers | Changes when | Owner |
+|---|---|---|---|
+| `srs-v1.4.docx` | what the system does, how it is accepted | a requirement or an acceptance item changes | @FrozenYty |
+| `architecture-en/zh.md` | layers, dependency direction, runtime model | the shape changes, not the code | @FrozenYty |
+| `api-contract-en/zh.md` | endpoint paths, envelope, error codes, WebSocket | an endpoint or a field changes | @Gtechson |
+| `data-model-en/zh.md` | tables, columns, indexes, file layout | a table or column changes | @Gtechson |
+| `test-plan-en/zh.md` | levels, datasets, metrics, defect classes | a metric or acceptance item changes | @IkeaFyj |
+| `procurement-en/zh.md` | what to buy, why these parts, how to accept them | hardware changes | @FrozenYty |
+| `glossary-en-zh.md` | the one word for each concept | a new concept appears | @FrozenYty |
+| `adr/01-06` | why a decision was taken and when to revisit it | never edited; superseded instead | the author of that ADR |
+| `PLAN.md` | phases, tasks, gates | a task is delivered or re-scoped | every lane |
+| `PROGRESS.md` | what happened and why it moved | continuously, append only | whoever did the work |
+
+## 3. When documents disagree
+
+Each document is authoritative over its own subject, and none of them is authoritative over all of
+them:
+
+- **acceptance** — the SRS wins;
+- **endpoint shape** — `api-contract` wins, even where the SRS describes the same call in prose;
+- **table structure** — `data-model` wins;
+- **layering and dependency direction** — `architecture` wins;
+- **history** — `PROGRESS` wins, but it never describes the present.
+
+If the disagreement comes from a decision that changed, fix the documents, not your memory. If it
+comes from a decision nobody made yet, make it, record it in `PROGRESS`, and raise an ADR if it is
+expensive to reverse.
+
+## 4. Where a change lands
+
+A change is rarely local. This is the list that keeps `grep` from being the only defence:
+
+| If you change | Also update |
+|---|---|
+| a field name or type | `data-model`, `api-contract`, the mock data, the SRS field list |
+| an endpoint | `api-contract`, `api.js`, the mock server, the SRS module table |
+| a metric or acceptance item | SRS §3.5 and §8, `test-plan`, `PLAN.md` P4 |
+| a class or its order | `glossary`, `species_dict` seed, `prepare_dataset.CLASS_CODES`, the frontend colour tokens |
+| hardware | `procurement`, SRS table 2-3, `PLAN.md` P1-06 |
+| a phase boundary | `PLAN.md`, `PROGRESS.md`, and this index if a document was added |
+| anything with a doc pair | both languages, in the same commit |
+
+## 5. Documents that do not exist yet
+
+Planned, and deliberately absent until the phase that needs them:
+
+| Document | Appears at |
+|---|---|
+| database DDL note | P1-01 |
+| test case table | P1-05 |
+| demo script and screenshots | P4-06 |
+| metric report | P4-04 |
+
+Writing them early would mean writing them twice.
+
+## 6. Keeping this index honest
+
+A document that is not in the map above does not exist as far as the team is concerned. Adding,
+renaming or deleting a document means editing this page in the same commit; the pull request template
+asks for it.
