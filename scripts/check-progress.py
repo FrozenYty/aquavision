@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Keep PROGRESS.md scannable.
 
-Two rules, both cheap to check and both easy to break silently:
-  1. every entry starts with ``## YYYY-MM-DD`` (an optional suffix in parentheses is allowed);
+Three rules, each cheap to check and each easy to break silently:
+  1. every entry starts with a heading of the form ``## YYYY-MM-DD``;
   2. entries run newest first;
   3. an entry stays within 20 lines, roughly one screen.
 
@@ -23,38 +23,43 @@ DATED = re.compile(r"^(\d{4}-\d{2}-\d{2})(?:\s*\(.+\))?$")
 MAX_LINES = 20
 
 
-def main() -> int:
-    text = LOG.read_text(encoding="utf-8")
-    entries: list[tuple[str, str, int]] = []
-    title = None
-    count = 0
-    for line in text.splitlines():
-        match = HEADING.match(line)
-        if match:
-            if title is not None:
-                entries.append((title, date, count))
-            title = match.group(1).strip()
-            date = ""
-            count = 0
-            continue
-        if title is not None:
-            count += 1
-    if title is not None:
-        entries.append((title, date, count))
+def read_entries() -> list[dict[str, object]]:
+    """Return one record per dated section: its title, its date and its line count."""
+    entries: list[dict[str, object]] = []
+    current: dict[str, object] | None = None
 
+    for line in LOG.read_text(encoding="utf-8").splitlines():
+        heading = HEADING.match(line)
+        if heading:
+            current = {"title": heading.group(1).strip(), "lines": 0}
+            entries.append(current)
+            continue
+        if current is not None:
+            current["lines"] = int(current["lines"]) + 1
+
+    return entries
+
+
+def main() -> int:
     problems = 0
-    previous = ""
-    for entry_title, _unused, lines in entries:
-        match = DATED.match(entry_title)
-        if not match:
-            print(f"  bad heading: '## {entry_title}' - expected '## YYYY-MM-DD'")
+    previous_date = ""
+
+    for entry in read_entries():
+        title = str(entry["title"])
+        lines = int(entry["lines"])
+        dated = DATED.match(title)
+
+        if not dated:
+            print(f"  bad heading: '## {title}' - expected '## YYYY-MM-DD'")
             problems += 1
             continue
-        date = match.group(1)
-        if previous and date > previous:
-            print(f"  out of order: {date} appears after {previous}")
+
+        date = dated.group(1)
+        if previous_date and date > previous_date:
+            print(f"  out of order: {date} appears after {previous_date}")
             problems += 1
-        previous = date
+        previous_date = date
+
         if lines > MAX_LINES:
             print(f"  too long: {date} has {lines} lines, limit {MAX_LINES}")
             problems += 1
@@ -63,7 +68,8 @@ def main() -> int:
     if problems:
         print(f"{problems} problem(s) in PROGRESS.md")
         return 1
-    print(f"PROGRESS.md is well formed ({len(entries)} entries)")
+
+    print(f"PROGRESS.md is well formed ({len(read_entries())} entries)")
     return 0
 
 
