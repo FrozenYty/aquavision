@@ -18,10 +18,10 @@ together.
 | 6 | Jumper wires | DZYJ 40-pin ribbon, male-male / male-female / female-female, 120 pcs | 1 | 8.26 | JD | All wiring |
 | 7 | Breadboard | DZYJ MB-102, 1660 tie points, with power rails | 1 | 23.70 | JD | Solderless assembly |
 | 8 | Turbidity sensor | LIGHT ME2100A-IIC, I2C, reflective | 1 | 18.82 | LCSC | Reads water clarity |
-| 9 | Sensor cable | GH1.25 4-pin, 200 mm, 28 AWG, single-ended tinned | 5 | 0.61 | LCSC | Turbidity sensor to breadboard |
-| 10 | Tactile switch | 6×6×5.5 mm, 4-pin | 20 | 0.19 | LCSC | Physical capture trigger |
+| 9 | Sensor cable | WHEELTEC GH1.25 4-pin to Dupont female, 200 mm | 1 | 7.84 | JD | Turbidity sensor to the level shifter pins |
+| 10 | Button module | Tactile switch on a small PCB, 2.54 mm pins | 1 | 3.00 | JD | Physical capture trigger |
 
-**Total ¥374.46** (JD ¥348.85 after discounts, LCSC ¥25.61).
+**Total ¥382.43.** Two corrections were made after the first checkout: the GH1.25 cable must end in Dupont female sockets (a tinned end does not hold in a breadboard), and the tactile switch must be a through-hole or module version (the 6×6 mm PCB-mount switches bought first have bent legs that will not seat).
 
 ## 2. Deliberately not bought
 
