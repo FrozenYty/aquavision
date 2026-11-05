@@ -1,8 +1,10 @@
 name: auto-merge
 
+# Fires once per pull request, not on every push to its branch: auto-merge stays armed after the first
+# call, so a synchronize trigger would only add runs and notifications.
 on:
   pull_request:
-    types: [opened, reopened, synchronize, ready_for_review]
+    types: [opened, reopened, ready_for_review]
 
 permissions:
   contents: write
