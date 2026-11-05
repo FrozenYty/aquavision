@@ -8,7 +8,7 @@
 
 > 本文为 `README.md` 的中文对照版，以英文版为准。
 
-**当前状态**：P0 阶段，进展见 [docs/progress.md](docs/progress.md)。前端页面已可用模拟数据运行，服务端尚未开始。
+**当前状态**：P0 阶段，进展见 [PROGRESS.md](PROGRESS.md)。前端页面已可用模拟数据运行，服务端尚未开始。
 
 ## 文档
 
@@ -16,7 +16,7 @@
 |---|---|
 | [文档索引](docs/INDEX-zh.md) | 哪份文档回答什么，以及改一处要连带改哪些 |
 | [需求定义书 V1.4](docs/srs-v1.4.docx) | 功能需求 29 条、用例 9 个、数据表 9 张、验收项 36 条 |
-| [任务计划](docs/tasks.md) | 阶段、任务与门禁，团队的任务契约 |
+| [任务计划](PLAN.md) | 阶段、任务与门禁，团队的任务契约 |
 | [总体架构](docs/architecture-zh.md) · [English](docs/architecture-en.md) | 分层、依赖规则、运行时模型、一帧的生命周期 |
 | [接口约定](docs/api-contract-zh.md) · [English](docs/api-contract-en.md) | REST 路径、响应封装、错误码、WebSocket 协议 |
 | [数据模型](docs/data-model-zh.md) · [English](docs/data-model-en.md) | 九张表、字段、索引、文件存储 |

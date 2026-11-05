@@ -10,21 +10,21 @@ else.
 
 ## 1. Where to start
 
-Two layers, one rule each:
+Two layers. The test is one question: **will this file change next week?**
 
 | Layer | Holds | Rule |
 |---|---|---|
-| repository root | `README`, `README-zh`, `AGENTS`, `CONTRIBUTING`, `LICENSE` | what a person needs on first contact |
-| `docs/` | everything else about the project | what you look up while working |
+| repository root | `README`, `README-zh`, `AGENTS`, `CONTRIBUTING`, `LICENSE`, `PLAN`, `PROGRESS` | yes — entry points and live state |
+| `docs/` | everything else | no — reference material, every file in an `-en` / `-zh` pair |
 
-Nothing about the project itself lives at the root; nothing a newcomer reads first lives only in
-`docs/`. Within `docs/`, the fastest route is this table:
+`PLAN.md` and `PROGRESS.md` sit at the root because they change daily; that is also why they are the
+only single-language files above the line. Within `docs/`, the fastest route is this table:
 
 | You want to | Read |
 |---|---|
 | work in this repository for the first time | `README.md`, then `CONTRIBUTING.md` |
 | know what is being built and how it is judged | `srs-v1.4.docx` — §3 requirements, §8 acceptance |
-| pick up a task | `tasks.md` for the contract, `progress.md` for why it moved |
+| pick up a task | `PLAN.md` for the contract, `PROGRESS.md` for why it moved |
 | understand how the system is shaped | `architecture-en.md`, then the ADR that touches it |
 | call or serve an API | `api-contract-en.md` |
 | add a table or a column | `data-model-en.md` |
@@ -46,8 +46,8 @@ Nothing about the project itself lives at the root; nothing a newcomer reads fir
 | `procurement-en/zh.md` | what to buy, why these parts, how to accept them | hardware changes | @FrozenYty |
 | `glossary-en-zh.md` | the one word for each concept | a new concept appears | @FrozenYty |
 | `adr/01-06` | why a decision was taken and when to revisit it | never edited; superseded instead | the author of that ADR |
-| `tasks.md` | phases, tasks, gates | a task is delivered or re-scoped | every lane |
-| `progress.md` | what happened and why it moved | continuously, append only | whoever did the work |
+| `PLAN.md` | phases, tasks, gates | a task is delivered or re-scoped | every lane |
+| `PROGRESS.md` | what happened and why it moved | continuously, append only | whoever did the work |
 
 ## 3. When documents disagree
 
@@ -72,10 +72,10 @@ A change is rarely local. This is the list that keeps `grep` from being the only
 |---|---|
 | a field name or type | `data-model`, `api-contract`, the mock data, the SRS field list |
 | an endpoint | `api-contract`, `api.js`, the mock server, the SRS module table |
-| a metric or acceptance item | SRS §3.5 and §8, `test-plan`, `tasks.md` P4 |
+| a metric or acceptance item | SRS §3.5 and §8, `test-plan`, `PLAN.md` P4 |
 | a class or its order | `glossary`, `species_dict` seed, `prepare_dataset.CLASS_CODES`, the frontend colour tokens |
-| hardware | `procurement`, SRS table 2-3, `tasks.md` P1-06 |
-| a phase boundary | `tasks.md`, `progress.md`, and this index if a document was added |
+| hardware | `procurement`, SRS table 2-3, `PLAN.md` P1-06 |
+| a phase boundary | `PLAN.md`, `PROGRESS.md`, and this index if a document was added |
 | anything with a doc pair | both languages, in the same commit |
 
 ## 5. Documents that do not exist yet

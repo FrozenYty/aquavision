@@ -6,7 +6,7 @@ Underwater species detection and monitoring built on YOLOv8. A live camera feed 
 count and locate four classes — sea cucumber, sea urchin, scallop and starfish —
 with a human review loop that feeds corrections back into training.
 
-**Status**: phase P0, see [docs/progress.md](docs/progress.md). Frontend pages run on mock data; the server
+**Status**: phase P0, see [PROGRESS.md](PROGRESS.md). Frontend pages run on mock data; the server
 is not started yet.
 
 ## Documents
@@ -15,7 +15,7 @@ is not started yet.
 |---|---|
 | [Documentation index](docs/INDEX-en.md) | Which document answers what, and what else changes with it |
 | [SRS v1.4](docs/srs-v1.4.docx) | 29 functional requirements, 9 use cases, 9 tables, 36 acceptance items |
-| [Plan](docs/tasks.md) | Phases, tasks and gates — the task contract for the team |
+| [Plan](PLAN.md) | Phases, tasks and gates — the task contract for the team |
 | [Architecture](docs/architecture-en.md) | Layers, dependency rules, runtime model, frame lifecycle |
 | [API contract](docs/api-contract-en.md) | REST paths, response envelope, error codes, WebSocket protocol |
 | [Data model](docs/data-model-en.md) | Nine tables, fields, indexes, file storage |
