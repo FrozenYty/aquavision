@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""Keep PROGRESS.md scannable.
+"""Keep PROGRESS.md well formed.
 
-Four rules, each cheap to check and each easy to break silently:
+Three hard rules, each objective and each easy to break silently:
   1. every entry starts with a heading of the form ``## YYYY-MM-DD`` — a date and nothing else;
   2. one entry per day, never two;
-  3. entries run newest first;
-  4. a day stays within 40 lines.
+  3. entries run newest first.
+
+Length is not a hard rule. A long day is a long day, and a cap only invites compressing the truth or
+splitting a day's work across two dates. Above SOFT_LINES the log prints a note instead: a day that
+long usually means a decision belongs in an ADR, not that the writer was verbose.
 
 Usage: python scripts/check-progress.py
-Exit code: 0 when the log is well formed, 1 otherwise.
+Exit code: 0 when the log is well formed, 1 when a hard rule is broken.
 """
 
 from __future__ import annotations
@@ -21,7 +24,7 @@ ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "PROGRESS.md"
 HEADING = re.compile(r"^## (.+)$")
 DATED = re.compile(r"^(\d{4}-\d{2}-\d{2})$")
-MAX_LINES = 40
+SOFT_LINES = 60
 
 
 def read_entries() -> list[dict[str, object]]:
@@ -43,6 +46,7 @@ def read_entries() -> list[dict[str, object]]:
 
 def main() -> int:
     problems = 0
+    notes = 0
     previous_date = ""
     seen: set[str] = set()
 
@@ -67,16 +71,20 @@ def main() -> int:
             problems += 1
         previous_date = date
 
-        if lines > MAX_LINES:
-            print(f"  too long: {date} has {lines} lines, limit {MAX_LINES}")
-            problems += 1
+        if lines > SOFT_LINES:
+            print(
+                f"  note: {date} runs to {lines} lines. "
+                "A day that long usually hides a decision that belongs in an ADR."
+            )
+            notes += 1
 
     print()
     if problems:
         print(f"{problems} problem(s) in PROGRESS.md")
         return 1
 
-    print(f"PROGRESS.md is well formed ({len(read_entries())} entries)")
+    suffix = f", {notes} note(s)" if notes else ""
+    print(f"PROGRESS.md is well formed ({len(read_entries())} entries{suffix})")
     return 0
 
 
