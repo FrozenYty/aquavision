@@ -22,7 +22,7 @@
 | 你想做的事 | 读这份 |
 |---|---|
 | 第一次进这个仓库 | `README.md`，然后 `CONTRIBUTING.md` |
-| 知道要做什么、怎么算过 | `srs-v1.4.docx`——第 3 章需求、第 8 章验收 |
+| 知道要做什么、怎么算过 | `srs-zh.md`——第 3 章需求、第 8 章验收 |
 | 领一个任务 | `PLAN.md` 是契约，`PROGRESS.md` 说明它为什么动 |
 | 理解系统怎么分层 | `architecture-zh.md`，再看相关那篇 ADR |
 | 调接口或写接口 | `api-contract-zh.md` |
@@ -36,7 +36,7 @@
 
 | 文档 | 回答什么 | 什么时候会变 | 维护人 |
 |---|---|---|---|
-| `srs-v1.4.docx` | 系统做什么、怎么验收 | 需求条目或验收项变化 | @FrozenYty |
+| `srs-en/zh.md` | 系统做什么、怎么验收 | 需求条目或验收项变化 | @FrozenYty |
 | `architecture-en/zh.md` | 分层、依赖方向、运行时模型 | 形状变化时，不是改代码时 | @FrozenYty |
 | `api-contract-en/zh.md` | 路径、封装、错误码、WebSocket | 接口或字段变化 | @Gtechson |
 | `data-model-en/zh.md` | 表、字段、索引、文件落盘 | 加表或加字段 | @Gtechson |

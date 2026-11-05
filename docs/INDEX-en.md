@@ -23,7 +23,7 @@ only single-language files above the line. Within `docs/`, the fastest route is 
 | You want to | Read |
 |---|---|
 | work in this repository for the first time | `README.md`, then `CONTRIBUTING.md` |
-| know what is being built and how it is judged | `srs-v1.4.docx` — §3 requirements, §8 acceptance |
+| know what is being built and how it is judged | `srs-en.md` — §3 requirements, §8 acceptance |
 | pick up a task | `PLAN.md` for the contract, `PROGRESS.md` for why it moved |
 | understand how the system is shaped | `architecture-en.md`, then the ADR that touches it |
 | call or serve an API | `api-contract-en.md` |
@@ -37,7 +37,7 @@ only single-language files above the line. Within `docs/`, the fastest route is 
 
 | Document | Answers | Changes when | Owner |
 |---|---|---|---|
-| `srs-v1.4.docx` | what the system does, how it is accepted | a requirement or an acceptance item changes | @FrozenYty |
+| `srs-en/zh.md` | what the system does, how it is accepted | a requirement or an acceptance item changes | @FrozenYty |
 | `architecture-en/zh.md` | layers, dependency direction, runtime model | the shape changes, not the code | @FrozenYty |
 | `api-contract-en/zh.md` | endpoint paths, envelope, error codes, WebSocket | an endpoint or a field changes | @Gtechson |
 | `data-model-en/zh.md` | tables, columns, indexes, file layout | a table or column changes | @Gtechson |
