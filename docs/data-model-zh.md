@@ -46,8 +46,7 @@
 | `exposure_us`、`gain_db` | INT / NUMERIC(5,2) | 采集参数，用于复现 |
 | `quality_score` | SMALLINT | 0–100 |
 | `quality_flag` | SMALLINT | 0 合格，1 需重拍 |
-| `water_temp_c` | NUMERIC(5,2) | 可空，来自传感器 |
-| `turbidity_ntu` | NUMERIC(6,2) | 可空，来自传感器 |
+| `turbidity_rel` | SMALLINT | 0–100，0 为清澈；无传感器时为空 |
 
 ### detect_object
 

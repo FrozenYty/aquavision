@@ -88,7 +88,7 @@ GET /api/frames?page=1&size=24&site=A3&from=2026-11-01&to=2026-11-03
   "session_id": "s-a3-001",
   "captured_at": "2026-11-03T19:30:12.418+08:00",
   "quality": { "sharpness": 71, "brightness": 64, "colorcast": 58, "score": 66, "verdict": "ok" },
-  "env": { "water_temp_c": 21.4, "turbidity_ntu": 3.2 },
+  "env": { "turbidity_rel": 12 },
   "width": 1920, "height": 1080
 }
 ```

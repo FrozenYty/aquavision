@@ -45,8 +45,7 @@ Never store a comma-separated list in a column. If a value repeats, it belongs i
 | `exposure_us`, `gain_db` | INT / NUMERIC(5,2) | Capture parameters, kept for reproducibility |
 | `quality_score` | SMALLINT | 0–100 |
 | `quality_flag` | SMALLINT | 0 ok, 1 needs retake |
-| `water_temp_c` | NUMERIC(5,2) | Nullable, from sensor |
-| `turbidity_ntu` | NUMERIC(6,2) | Nullable, from sensor |
+| `turbidity_rel` | SMALLINT | 0-100, 0 = clear; nullable when no sensor |
 
 ### detect_object
 
