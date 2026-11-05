@@ -9,17 +9,27 @@
 
 ## 一、从哪读起
 
+两层，各一条规则：
+
+| 层 | 放什么 | 规则 |
+|---|---|---|
+| 仓库根目录 | `README`、`README-zh`、`AGENTS`、`CONTRIBUTING`、`LICENSE` | 第一次接触这个仓库要看的东西 |
+| `docs/` | 其余全部 | 干活时要查的东西 |
+
+项目内容不放在根目录；新人第一眼要看的，不在 `docs/` 里孤零零躺着。进入 `docs/` 之后，最快的路径是这张表：
+
 | 你想做的事 | 读这份 |
 |---|---|
 | 第一次进这个仓库 | `README.md`，然后 `CONTRIBUTING.md` |
-| 知道要做什么、怎么算过 | `docs/srs-v1.4.docx`——第 3 章需求、第 8 章验收 |
-| 领一个任务 | `PLAN.md` 是契约，`PROGRESS.md` 说明它为什么动 |
-| 理解系统怎么分层 | `docs/architecture-zh.md`，再看相关那篇 ADR |
-| 调接口或写接口 | `docs/api-contract-zh.md` |
-| 加表加字段 | `docs/data-model-zh.md` |
-| 买硬件、接线 | `docs/procurement-zh.md` |
-| 某个词该叫什么 | `docs/glossary-en-zh.md` |
-| 为什么当初这么定 | `docs/adr/` |
+| 知道要做什么、怎么算过 | `srs-v1.4.docx`——第 3 章需求、第 8 章验收 |
+| 领一个任务 | `tasks.md` 是契约，`progress.md` 说明它为什么动 |
+| 理解系统怎么分层 | `architecture-zh.md`，再看相关那篇 ADR |
+| 调接口或写接口 | `api-contract-zh.md` |
+| 加表加字段 | `data-model-zh.md` |
+| 买硬件、接线 | `procurement-zh.md` |
+| 知道原型展示什么 | `prototype-zh.md` |
+| 某个词该叫什么 | `glossary-en-zh.md` |
+| 为什么当初这么定 | `adr/` |
 
 ## 二、文档地图
 
@@ -34,8 +44,8 @@
 | `procurement-en/zh.md` | 买什么、为什么买这些、怎么验收 | 换硬件 | @FrozenYty |
 | `glossary-en-zh.md` | 每个概念的唯一叫法 | 出现新概念 | @FrozenYty |
 | `adr/01-06` | 为什么这样定、什么时候该重审 | 不改写，只被新 ADR 取代 | 该篇作者 |
-| `PLAN.md` | 阶段、任务、门禁 | 任务交付或重新划范围 | 全员 |
-| `PROGRESS.md` | 发生了什么、为什么动 | 持续追加，只追加 | 干活的人 |
+| `tasks.md` | 阶段、任务、门禁 | 任务交付或重新划范围 | 全员 |
+| `progress.md` | 发生了什么、为什么动 | 持续追加，只追加 | 干活的人 |
 
 ## 三、两份文档冲突时
 
@@ -57,10 +67,10 @@
 |---|---|
 | 字段名或类型 | `data-model`、`api-contract`、mock 数据、SRS 字段表 |
 | 一个接口 | `api-contract`、`api.js`、mock server、SRS 模块表 |
-| 指标或验收项 | SRS 3.5 与 8、`test-plan`、`PLAN.md` 的 P4 |
+| 指标或验收项 | SRS 3.5 与 8、`test-plan`、`tasks.md` 的 P4 |
 | 类别或类别顺序 | `glossary`、`species_dict` 种子、`prepare_dataset.CLASS_CODES`、前端配色变量 |
-| 硬件 | `procurement`、SRS 表 2-3、`PLAN.md` 的 P1-06 |
-| 阶段边界 | `PLAN.md`、`PROGRESS.md`；若增减了文档，还有本页 |
+| 硬件 | `procurement`、SRS 表 2-3、`tasks.md` 的 P1-06 |
+| 阶段边界 | `tasks.md`、`progress.md`；若增减了文档，还有本页 |
 | 任何成对的文档 | 两种语言，同一次提交 |
 
 ## 五、还不存在的文档

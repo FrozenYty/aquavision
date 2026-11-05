@@ -3,14 +3,14 @@
 Instructions for AI assistants working in this repository. Read this before your first task.
 
 > This file only holds what is not written elsewhere. If a rule already lives in `CONTRIBUTING.md`,
-> `PLAN.md` or `docs/`, delete the copy here instead of maintaining two versions.
+> `docs/tasks.md` or `docs/`, delete the copy here instead of maintaining two versions.
 
 ## 1. Before you start
 
 Read, in this order:
 
 ```
-PLAN.md  ->  PROGRESS.md  ->  CONTRIBUTING.md  ->  docs/architecture-en.md  ->  the ADR that touches your change
+docs/tasks.md  ->  docs/progress.md  ->  CONTRIBUTING.md  ->  docs/architecture-en.md  ->  the ADR that touches your change
 ```
 
 - Find out **who you are helping** (§3). Ask your user if it is not stated.
@@ -27,7 +27,7 @@ cucumber, sea urchin, scallop, starfish.
 
 One FastAPI process, a static frontend, and an ESP32 that only handles trigger, light and sensors.
 
-Phase and task state live in `PLAN.md`. Recent changes live in `PROGRESS.md`. Do not restate either
+Phase and task state live in `docs/tasks.md`. Recent changes live in `docs/progress.md`. Do not restate either
 one here — stale summaries are worse than none.
 
 ## 3. Who you are helping
@@ -39,7 +39,7 @@ one here — stale summaries are worse than none.
 | Sun Jianheng | C — frontend, annotation | A, B |
 | Fu Yijia | D — test cases, acceptance, demo material | everything else |
 
-Only take tasks that `PLAN.md` assigns to your user. Everything else is read-only by default.
+Only take tasks that `docs/tasks.md` assigns to your user. Everything else is read-only by default.
 
 - **Small change in another lane** — go ahead and submit the PR, but say so in the description:
   “touches lane B: added a field to the detection response”.
@@ -57,7 +57,7 @@ If you write 200 lines and it could be 50, rewrite it.
 **3. Simple beats clever.** No abstraction for single-use code, no configurability nobody asked for,
 no error handling for situations that cannot happen. Would a senior engineer call this overbuilt?
 
-**4. Define done before coding.** `PLAN.md` already gives a “done when” for most tasks. If yours has
+**4. Define done before coding.** `docs/tasks.md` already gives a “done when” for most tasks. If yours has
 none, write one in the PR description before you start — a check you can run, not a feeling.
 
 **5. Change one thing, search the whole repository.** Deleting a file, renaming a field, changing an
@@ -71,8 +71,8 @@ the identical command and hope.
 - Branch names, commit format and PR rules live in `CONTRIBUTING.md`. Follow them; they are not
   repeated here.
 - **Never force-push.** Never push to `main` — it is protected, and the branch is shared.
-- **Never tick a `PLAN.md` box** for work you did not deliver.
-- **`PROGRESS.md` is append-only.** Add a dated entry; never rewrite an older one.
+- **Never tick a box in `docs/tasks.md`** for work you did not deliver.
+- **`docs/progress.md` is append-only.** Add a dated entry; never rewrite an older one.
 - **An accepted ADR is closed.** To change a decision, write a new ADR that supersedes it — do not
   quietly code around it.
 - **A problem outside your lane: report it, do not fix it.** One sentence in the PR description or

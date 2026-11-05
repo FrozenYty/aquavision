@@ -1,10 +1,12 @@
 # Progress
 
+> Owner: whoever did the work · Revisit when: continuously, append only
+
 Current phase: **P1 — skeleton**
 Gate: `uvicorn` starts, `/api/health` answers, 9 tables exist, 13 pages render
 
 Dated log, newest first, one screen per entry (20 lines, checked by CI). **Why** a task moved lives here; **whether** it is
-done lives in `PLAN.md`.
+done lives in `tasks.md`.
 
 ## 2026-11-05 (evening)
 
@@ -51,7 +53,7 @@ done lives in `PLAN.md`.
 - **Purchase list frozen at 16 items, ¥382.42**, across three channels: Taobao (camera module, tank,
   models, scenery, polarising film), JD (ESP32-S3 with pre-soldered headers), LCSC (turbidity module
   C55121807, level shifter, GH1.25 cable, DS18B20 probe C22360667, wire, switch, terminals).
-- Lighting in use is recorded in `PROGRESS.md` and, later, in `dataset-stats.json`. It is deliberately
+- Lighting in use is recorded in this log and, later, in `dataset-stats.json`. It is deliberately
   **not** written into `site`, which is a monitoring location — appending `-L1` would split the stats.
 
 ## 2026-11-04
@@ -75,7 +77,7 @@ done lives in `PLAN.md`.
 ## 2026-11-03
 
 - Repository created: conventions, CI, branch protection (#1, #2).
-- `PLAN.md` in place: five phases, 27 tasks, five gates (#3).
+- `tasks.md` in place: five phases, 27 tasks, five gates (#3).
 - SRS reached V1.2: five classes, hardware list, per-class metrics.
 - Blocked: P0-01 — dataset download links are dead, mirrors under review.
 - Next: P0-02 environment lock, P0-03 hardware order.
