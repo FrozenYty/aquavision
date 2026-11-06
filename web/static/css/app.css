@@ -799,6 +799,72 @@ body {
   filter: grayscale(0.8);
 }
 
+/* ---- Review workbench: editable boxes, corner handles, object list ---- */
+
+.av-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--av-space-3);
+}
+
+.av-stage.is-editing {
+  touch-action: none;
+}
+
+.av-stage.is-editing .av-box {
+  animation: none;
+  cursor: move;
+}
+
+.av-stage.is-drawing {
+  cursor: crosshair;
+}
+
+.av-stage.is-drawing .av-box {
+  pointer-events: none;
+}
+
+.av-box.is-selected {
+  z-index: 2;
+  outline: 2px solid var(--av-text-inverse);
+  outline-offset: 1px;
+}
+
+.av-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--av-class-color);
+  border-radius: 2px;
+  background: var(--av-surface);
+}
+
+.av-handle[data-h="nw"] { left: -7px; top: -7px; cursor: nwse-resize; }
+.av-handle[data-h="ne"] { right: -7px; top: -7px; cursor: nesw-resize; }
+.av-handle[data-h="sw"] { left: -7px; bottom: -7px; cursor: nesw-resize; }
+.av-handle[data-h="se"] { right: -7px; bottom: -7px; cursor: nwse-resize; }
+
+.av-object-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--av-space-2);
+  padding: var(--av-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--av-radius);
+  cursor: pointer;
+}
+
+.av-object-row:hover {
+  background: var(--av-surface-muted);
+}
+
+.av-object-row.is-selected {
+  border-color: var(--av-accent);
+  background: var(--av-accent-soft);
+}
+
 /* ---- Class swatches, one per class_code ---- */
 
 .av-class {
