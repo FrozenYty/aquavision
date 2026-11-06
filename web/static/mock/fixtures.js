@@ -43,7 +43,7 @@ function makeFrame(session, i) {
     session_id: session.session_id,
     captured_at: `${local.toISOString().slice(0, 23)}+08:00`,
     quality: { sharpness, brightness, colorcast, score, verdict: score >= 60 ? "ok" : "retake" },
-    env: { water_temp_c: +(20 + rand() * 3).toFixed(1), turbidity_ntu: +(2 + rand() * 4).toFixed(1) },
+    env: { turbidity_rel: int(4, 28) },
     width: 1920,
     height: 1080,
     site: session.site, // provisional: the contract filters by site but the frame has no site field
@@ -58,3 +58,13 @@ export const FRAMES = SESSIONS.filter((s) => s.status !== "failed").flatMap((s) 
 });
 
 export const newFrame = makeFrame;
+// Dashboard figures. Fixed rather than random: a demo that changes on every reload looks broken.
+// today is the last element; the array runs oldest to newest.
+export const DASHBOARD = {
+  frames_today: 412,
+  rejected_today: 49,
+  to_review: 7,
+  model_version: "v8n-E3",
+  model_map50: 0.83,
+  daily: [318, 402, 377, 441, 389, 356, 412],
+};

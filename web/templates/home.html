@@ -7,42 +7,57 @@
   <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
   <link rel="stylesheet" href="../static/css/tokens.css">
   <link rel="stylesheet" href="../static/css/app.css">
+  <style>
+    /* Screen-local layout only; every colour and size comes from tokens.css. */
+    .av-dash-kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--av-space-3); }
+    @media (max-width: 991.98px) { .av-dash-kpi { grid-template-columns: repeat(2, 1fr); } }
+    .av-dash-note { font-size: var(--av-fs-xs); color: var(--av-text-muted); margin-top: var(--av-space-1); }
+    .av-dash-note .up { color: var(--av-success); }
+    .av-dash-note .warn { color: var(--av-warning); }
+    .av-dash-model { font-family: var(--av-font-mono); font-size: var(--av-fs-lg); color: var(--av-primary); }
+    .av-trend { width: 100%; height: auto; display: block; }
+    .av-trend .grid { stroke: var(--av-border); stroke-width: 1; }
+    .av-trend .area { fill: var(--av-primary-soft); }
+    .av-trend .line { fill: none; stroke: var(--av-primary); stroke-width: 2; stroke-linejoin: round; }
+    .av-trend .dot { fill: var(--av-surface); stroke: var(--av-primary); stroke-width: 2; }
+    .av-trend .dot-today { fill: var(--av-accent); stroke: var(--av-accent); }
+    .av-trend .tick { fill: var(--av-text-muted); font-size: 11px; font-family: var(--av-font-mono); }
+    .av-trend .value { fill: var(--av-primary); font-size: 11px; font-family: var(--av-font-mono); }
+    .av-session { display: grid; grid-template-columns: 1fr auto; gap: var(--av-space-1) var(--av-space-3);
+                  padding: var(--av-space-3) 0; border-top: 1px solid var(--av-border); }
+    .av-session:first-of-type { border-top: 0; padding-top: 0; }
+    .av-session small { color: var(--av-text-muted); }
+  </style>
 </head>
 <body>
   <main class="av-content">
     <div class="av-page-header">
       <h1>工作台</h1>
       <div class="av-page-actions">
+        <a class="btn btn-outline-primary" href="frames.html">影像浏览</a>
         <a class="btn btn-primary" href="capture.html">开始采集</a>
       </div>
     </div>
 
-    <div class="row g-3 mb-3">
-      <div class="col-6 col-lg-3">
-        <div class="av-card"><div class="av-kpi-label">今日采集帧数</div><div class="av-kpi-value">—</div></div>
-      </div>
-      <div class="col-6 col-lg-3">
-        <div class="av-card"><div class="av-kpi-label">今日识别帧数</div><div class="av-kpi-value">—</div></div>
-      </div>
-      <div class="col-6 col-lg-3">
-        <div class="av-card"><div class="av-kpi-label">待复核</div><div class="av-kpi-value">—</div></div>
-      </div>
-      <div class="col-6 col-lg-3">
-        <div class="av-card"><div class="av-kpi-label">需重拍</div><div class="av-kpi-value">—</div></div>
-      </div>
-    </div>
+    <div class="av-dash-kpi mb-3" id="kpis"></div>
 
     <div class="row g-3">
       <div class="col-lg-8">
         <section class="av-card">
-          <h2 class="av-card-title">最近任务</h2>
-          <div class="av-empty">暂无识别任务。<a href="capture.html">去采集一帧</a></div>
+          <h2 class="av-card-title">近 7 日采集量 <span class="av-status">帧</span></h2>
+          <div id="trend"></div>
         </section>
       </div>
       <div class="col-lg-4">
         <section class="av-card">
           <h2 class="av-card-title">消息</h2>
-          <div class="av-empty">暂无消息</div>
+          <div class="av-empty">暂无未读消息</div>
+        </section>
+      </div>
+      <div class="col-12">
+        <section class="av-card">
+          <h2 class="av-card-title">最近采集会话 <a class="ms-auto small fw-normal" href="capture.html">全部</a></h2>
+          <div id="sessions"></div>
         </section>
       </div>
     </div>
@@ -50,7 +65,99 @@
 
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
+    import { DASHBOARD } from "../static/mock/fixtures.js";
+    import * as api from "../static/js/api.js";
+    import { esc, fmtTime } from "../static/js/ui.js";
+
     renderShell("P-02");
+
+    const $ = (id) => document.getElementById(id);
+    const pct = (part, whole) => Math.round((part / whole) * 100);
+
+    // Four cards, two of them a plain number and two a short label: the eye lands on the number first.
+    function renderKpis(d) {
+      const cards = [
+        ["今日采集", d.frames_today, `较昨日 <span class="up">+${d.frames_today - d.daily.at(-2)}</span> 帧`],
+        ["待复核", d.to_review, `<span class="warn">需在 24 小时内处理</span>`],
+        ["质量拦截率", `${pct(d.rejected_today, d.frames_today)}%`, `${d.rejected_today} 帧需重拍`],
+        ["在线模型", null, `mAP@0.5 ${d.model_map50.toFixed(2)}`],
+      ];
+      $("kpis").innerHTML = cards
+        .map(([label, value, note]) => {
+          const body = value === null
+            ? `<div class="av-dash-model">${esc(d.model_version)}</div>`
+            : `<div class="av-kpi-value">${value}</div>`;
+          return `<div class="av-card"><div class="av-kpi-label">${label}</div>${body}
+                  <div class="av-dash-note">${note}</div></div>`;
+        })
+        .join("");
+    }
+
+    // Hand-drawn SVG: one file, no chart library, and it stays crisp at any width.
+    function renderTrend(values) {
+      const W = 720, H = 200, padL = 34, padR = 16, padT = 18, padB = 26;
+      const max = Math.max(...values) * 1.18;
+      const innerW = W - padL - padR;
+      const innerH = H - padT - padB;
+      const x = (i) => padL + (innerW * i) / (values.length - 1);
+      const y = (v) => padT + innerH * (1 - v / max);
+
+      const labels = values.map((_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (values.length - 1 - i));
+        return `${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      });
+
+      // Three horizontal guides, the top one labelled with a round number.
+      const grid = [0, 0.5, 1].map((t) => {
+        const gy = padT + innerH * t;
+        const gv = Math.round(max * (1 - t));
+        return `<line class="grid" x1="${padL}" y1="${gy}" x2="${W - padR}" y2="${gy}"></line>
+                <text class="tick" x="${padL - 6}" y="${gy + 4}" text-anchor="end">${gv}</text>`;
+      }).join("");
+
+      const line = values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+      const area = `${line} L${x(values.length - 1).toFixed(1)},${padT + innerH} L${padL},${padT + innerH} Z`;
+      const dots = values.map((v, i) => {
+        const last = i === values.length - 1;
+        return `<circle class="dot${last ? " dot-today" : ""}" cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${last ? 5 : 3.5}"></circle>` +
+          (last ? `<text class="value" x="${x(i).toFixed(1)}" y="${(y(v) - 12).toFixed(1)}" text-anchor="middle">${v}</text>` : "");
+      }).join("");
+      const ticks = labels.map((l, i) => `<text class="tick" x="${x(i).toFixed(1)}" y="${H - 8}" text-anchor="middle">${l}</text>`).join("");
+
+      $("trend").innerHTML = `<svg class="av-trend" viewBox="0 0 ${W} ${H}" role="img" aria-label="近 7 日采集量折线图">
+        ${grid}<path class="area" d="${area}"></path><path class="line" d="${line}"></path>${dots}${ticks}</svg>`;
+    }
+
+    const STATUS = {
+      open: '<span class="badge text-bg-info">采集中</span>',
+      closed: '<span class="badge text-bg-secondary">已结束</span>',
+      failed: '<span class="badge text-bg-danger">失败</span>',
+    };
+
+    function renderSessions(items) {
+      if (!items.length) {
+        $("sessions").innerHTML = '<div class="av-empty">暂无采集会话。<a href="capture.html">去采集一帧</a></div>';
+        return;
+      }
+      $("sessions").innerHTML = items
+        .map((s) => `<div class="av-session">
+          <div><span class="av-mono">${esc(s.session_id)}</span> · 点位 ${esc(s.site)}
+            <br><small>${fmtTime(s.started_at)} · ${s.frame_count} 帧 · 需重拍 ${s.retake_count}</small></div>
+          <div class="text-end">${STATUS[s.status] ?? esc(s.status)}</div>
+        </div>`)
+        .join("");
+    }
+
+    renderKpis(DASHBOARD);
+    renderTrend(DASHBOARD.daily);
+
+    try {
+      const data = await api.listSessions({ page: 1, size: 4 });
+      renderSessions(data.items);
+    } catch (err) {
+      $("sessions").innerHTML = `<div class="av-empty">会话加载失败：${esc(err.message)}</div>`;
+    }
   </script>
 </body>
 </html>

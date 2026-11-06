@@ -96,7 +96,7 @@
         <div class="col-md-7"><div class="av-thumb${q.verdict === "ok" ? "" : " is-retake"}"><div class="av-thumb-img"></div>${qualityBadge(q)}</div></div>
         <div class="col-md-5 d-grid gap-2">
           ${meter("清晰度", q.sharpness)}${meter("亮度", q.brightness)}${meter("色偏", q.colorcast)}
-          <div class="small text-secondary mt-2">水温 <strong class="text-body">${f.env.water_temp_c ?? "—"} ℃</strong> · 浊度 <strong class="text-body">${f.env.turbidity_ntu ?? "—"} NTU</strong></div>
+          <div class="small text-secondary mt-2">浊度（相对值）<strong class="text-body">${f.env.turbidity_rel ?? "—"}</strong> · 0 清澈 / 100 最浑</div>
           <div class="small text-secondary"><span class="av-mono text-body">${esc(f.frame_id)}</span><br>${fmtTime(f.captured_at)}</div>
         </div>
         ${q.verdict === "ok" ? "" : '<div class="col-12"><div class="alert alert-warning small mb-0">质量分低于 60，已入库但不进入识别队列，请调整后重拍。</div></div>'}`;
