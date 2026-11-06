@@ -40,10 +40,12 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
   picture actually change when the exposure property moves, and do 20 pinned frames stay inside the
   10 % spread. Exit codes separate "no camera" (2) from "camera fails the check" (1), so nobody
   mistakes an unplugged cable for a broken module.
-- **Merged branches now delete themselves.** `gh pr merge --auto --delete-branch` does not work: the
-  flag is read when the merge is *requested*, and with auto-merge the merge happens later. Twelve
-  branches had piled up. A `pull_request: closed` job deletes the head branch instead, after checking
-  the PR actually merged and that the branch belongs to this repository.
+- **Branch deletion moved to a repository setting.** `gh pr merge --auto --delete-branch` does not
+  work — the flag is read when the merge is *requested*, and with auto-merge the merge happens
+  minutes later. A `pull_request: closed` workaround was tried and did not fire either: GitHub does
+  not cascade workflow runs from events raised by `GITHUB_TOKEN`, and the bot is what merges. The
+  setting *Settings → General → Automatically delete head branches* applies regardless of who
+  merges, so the workaround is deleted rather than left looking useful.
 - **Copy pass over the thirteen pages.** The mechanical layer was already clean — no doubled
   characters, no half-width punctuation inside Chinese, no missing spaces around Latin text — so the
   edits were about meaning, all in the interface language, which is Chinese by requirement:
