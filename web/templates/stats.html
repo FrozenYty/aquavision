@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>统计与报告 · AquaVision</title>
+  <title>统计看板 · AquaVision</title>
   <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
   <link rel="stylesheet" href="../static/css/tokens.css">
   <link rel="stylesheet" href="../static/css/app.css">
@@ -11,10 +11,9 @@
 <body>
   <main class="av-content">
     <div class="av-page-header">
-      <h1>统计与报告</h1>
+      <h1>统计看板</h1>
       <div class="av-page-actions">
-        <button class="btn btn-primary text-nowrap" id="btn-report" type="button">生成报告</button>
-        <button class="btn btn-outline-primary text-nowrap" id="btn-export" type="button">导出 PDF</button>
+        <a class="btn btn-primary text-nowrap" href="reports.html">生成巡检报告</a>
       </div>
     </div>
 
@@ -51,7 +50,6 @@
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
     import * as api from "../static/js/api.js";
-    import { toast } from "../static/js/ui.js";
     import {
       renderSpeciesDonut,
       renderTrendLine,
@@ -62,12 +60,6 @@
     renderShell("P-10");
 
     const $ = (id) => document.getElementById(id);
-
-    // Prototype scope: the buttons only confirm with a light toast, no real file.
-    $("btn-report").onclick = () =>
-      toast("报告已生成（演示）：按当前统计口径生成摘要", "success");
-    $("btn-export").onclick = () =>
-      toast("导出 PDF（演示）：正式版将下载完整报告", "info");
 
     (async () => {
       const [species, quality, trend, corrections] = await Promise.all([
