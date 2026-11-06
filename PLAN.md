@@ -62,8 +62,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 
 - [x] **P1-01** DDL script and species dictionary seed · @Gtechson · done when `scripts/init_db.py`
       runs on an empty database and four classes are seeded
-- [ ] **P1-02** FastAPI skeleton: 18 routes, envelope, error codes, JWT · @Gtechson · done when
-      `/api/health` returns `{code, message, data, request_id}`
+- [ ] **P1-02** FastAPI skeleton: every contract route, envelope, error codes, JWT · @Gtechson ·
+      done when `/api/health` answers in the envelope, every route in `docs/api-contract-en.md` §6 is
+      mounted, and the ones marked P0 return real data while the rest return 501 in the same envelope
 - [ ] **P1-03** Capture module: open device, lock exposure, grab, score, persist · @FrozenYty · done
       when 20 frames are captured and file, score and `frame_id` all agree
 - [x] **P1-04** Thirteen static pages · @chemflowers · done when every page opens, uses mock data and

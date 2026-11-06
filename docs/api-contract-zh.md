@@ -62,26 +62,53 @@ GET /api/frames?page=1&size=24&site=A3&from=2026-11-01&to=2026-11-03
 
 ## 六、REST 接口
 
-| 方法 | 路径 | 用途 |
-|---|---|---|
-| POST | `/api/auth/login` | 获取令牌 |
-| GET | `/api/auth/me` | 当前用户与角色 |
-| GET | `/api/cameras` | 枚举可用摄像头 |
-| POST | `/api/capture/sessions` | 开一次采集会话 |
-| POST | `/api/capture/sessions/{id}/frames` | 抓一帧 |
-| POST | `/api/capture/sessions/{id}/close` | 关闭会话 |
-| POST | `/api/detect/frames/{frame_id}` | 单帧识别 |
-| POST | `/api/detect/batches` | 发起批量任务 |
-| GET | `/api/tasks/{task_id}` | 任务进度 |
-| GET | `/api/frames` | 查询帧 |
-| GET | `/api/frames/{frame_id}` | 帧详情 |
-| GET | `/api/frames/{frame_id}/objects` | 检测框 |
-| POST | `/api/review/frames/{frame_id}` | 提交复核 |
-| POST | `/api/compare/frames/{frame_id}` | 同一帧跑基线与改进模型 |
-| GET | `/api/stats/species` | 物种组成统计 |
-| GET | `/api/stats/quality` | 质量拦截率 |
-| GET | `/api/models` | 模型版本列表 |
-| POST | `/api/models/{id}/activate` | 切换线上模型 |
+每条路由标注它服务的需求，优先级继承 SRS 表 3-1。于是范围问题去 SRS 里查，不在这里数行数：
+**路由数量是结果，不是指标。**
+
+| 方法 | 路径 | 用途 | 需求 | 优先级 |
+|---|---|---|---|---|
+| POST | `/api/auth/login` | 获取令牌 | FR-M1-01 | P0 |
+| GET | `/api/auth/me` | 当前用户与角色 | FR-M1-01 | P0 |
+| GET | `/api/users` | 账号列表 | FR-M1-03 | P1 |
+| POST | `/api/users/{id}/status` | 停用或恢复账号 | FR-M1-03 | P1 |
+| POST | `/api/users/{id}/reset-password` | 重置密码 | FR-M1-03 | P1 |
+| GET | `/api/logs` | 操作日志 | FR-M1-04 | P1 |
+| GET | `/api/cameras` | 枚举可用摄像头 | FR-M2-01 | P0 |
+| POST | `/api/capture/sessions` | 开一次采集会话 | FR-M2-01 | P0 |
+| GET | `/api/capture/sessions` | 采集会话列表 | FR-M2-04 | P1 |
+| POST | `/api/capture/sessions/{id}/frames` | 抓一帧 | FR-M2-01 | P0 |
+| POST | `/api/capture/sessions/{id}/close` | 关闭会话 | FR-M2-01 | P0 |
+| GET | `/api/frames` | 查询帧 | FR-M2-04 | P1 |
+| GET | `/api/stats/quality` | 质量拦截率 | FR-M2-03 | P0 |
+| POST | `/api/detect/frames/{frame_id}` | 单帧识别 | FR-M3-01 | P0 |
+| POST | `/api/detect/batches` | 发起批量任务 | FR-M3-02 | P0 |
+| GET | `/api/tasks` | 识别任务列表 | FR-M3-02 | P0 |
+| GET | `/api/tasks/{task_id}` | 任务进度 | FR-M3-02 | P0 |
+| POST | `/api/tasks/{id}/cancel` | 取消任务 | FR-M3-02 | P0 |
+| POST | `/api/tasks/{id}/retry` | 重试失败任务 | FR-M3-02 | P0 |
+| GET | `/api/frames/{frame_id}` | 帧详情 | FR-M3-04 | P0 |
+| GET | `/api/frames/{frame_id}/objects` | 检测框 | FR-M3-04 | P0 |
+| POST | `/api/review/frames/{frame_id}` | 提交复核 | FR-M4-01 | P0 |
+| GET | `/api/hard-samples` | 难例池 | FR-M4-03 | P1 |
+| DELETE | `/api/hard-samples/{frame_id}` | 移出难例池 | FR-M4-03 | P1 |
+| GET | `/api/datasets` | 数据集快照 | FR-M4-04 | P1 |
+| POST | `/api/datasets` | 导出数据集快照 | FR-M4-04 | P1 |
+| GET | `/api/stats/corrections` | 复核修正分布 | FR-M4-02 | P1 |
+| GET | `/api/stats/species` | 物种组成统计 | FR-M5-01 | P1 |
+| GET | `/api/stats/trend` | 每日采集量 | FR-M5-03 | P2 |
+| GET | `/api/reports` | 报告历史 | FR-M5-04 | P1 |
+| POST | `/api/reports` | 生成报告 | FR-M5-04 | P1 |
+| GET | `/api/models` | 模型版本列表 | FR-M6-01 | P0 |
+| POST | `/api/models/{id}/activate` | 切换线上模型 | FR-M6-02 | P1 |
+| GET | `/api/experiments` | 训练实验列表 | FR-M6-03 | P0 |
+| POST | `/api/compare/frames/{frame_id}` | 同一帧跑基线与改进模型 | FR-M6-03 | P0 |
+| GET | `/api/species` | 物种字典与阈值 | FR-M6-04 | P0 |
+| PATCH | `/api/species/{class_code}` | 修改分类别阈值 | FR-M6-04 | P0 |
+| GET | `/api/params` | 系统参数 | FR-M7-01 | P1 |
+| PATCH | `/api/params` | 修改系统参数 | FR-M7-01 | P1 |
+| GET | `/api/monitor` | 运行监控 | FR-M8-01 | P1 |
+| GET | `/api/messages` | 站内消息 | FR-M8-02 | P2 |
+| POST | `/api/messages/{id}/read` | 标记消息已读 | FR-M8-02 | P2 |
 
 ### 帧对象
 
@@ -99,10 +126,33 @@ GET /api/frames?page=1&size=24&site=A3&from=2026-11-01&to=2026-11-03
 ### 检测框
 
 ```json
-{ "class_code": "holothurian", "confidence": 0.87, "x": 0.41, "y": 0.52, "w": 0.12, "h": 0.09 }
+{
+  "object_id": 10231,
+  "class_code": "holothurian",
+  "confidence": 0.87,
+  "x": 0.41, "y": 0.52, "w": 0.12, "h": 0.09,
+  "is_manual": 0,
+  "review_status": 0
+}
 ```
 
 坐标归一化到 `0..1`，相对整幅图像，原点在左上角。
+
+- `object_id` —— `detect_object` 主键；复核页要能稳定地指向某个框。
+- `is_manual` —— `0` 自动识别，`1` 复核时人工补画。
+- `review_status` —— `0` 待复核，`1` 已确认，`2` 已修改，`3` 已驳回。
+
+### 复核提交
+
+```
+POST /api/review/frames/{frame_id}
+{ "objects": [ <检测框> ], "note": "礁石误判为海参，已删除" }
+
+→ { "version_no": 2, "object_count": 11, "hard_sample": true }
+```
+
+请求体提交**整份修正后的框集合**，不是增量差异：复核画布才是准，差异还要跟一个可能已经变过的版本合并。
+`hard_sample` 表示这一帧是否进入了难例池（FR-M4-03）。
 
 ## 七、WebSocket 协议
 

@@ -20,7 +20,7 @@ table. Do not invent synonyms.
 | 采集会话 | capture session | batch, run | 一次连续采集，`session_id` 标识 |
 | 帧 | frame | image, picture, shot | 一次拍摄产生的单张图像 |
 | 识别 | detection | recognition, identification | 目标检测，输出框与类别 |
-| 检测框 | bounding box | rect, region | 归一化坐标，原点左上 |
+| 检测框 | bounding box | rect, region, **目标框** | 归一化坐标，原点左上 |
 | 复核 | review | verify, check, audit | 人工修正自动结果 |
 | 难例 | hard sample | hard case, bad case | 低置信、被修正或跨模型不一致的样本 |
 | 基线模型 | baseline model | base model, original | 未经改进的 YOLOv8n |
@@ -31,6 +31,7 @@ table. Do not invent synonyms.
 | 模型版本 | model version | model id | 一份权重与其指标的集合 |
 | 质量分 | quality score | sharpness score | 清晰度、亮度、色偏的加权结果 |
 | 需重拍 | needs retake | rejected, failed | 质量分低于阈值，只入库不识别 |
+| 采集员 | collector（角色码 `observer`） | observer 单独使用, inspector | 四个角色之一；契约与数据表里的 `observer` 指的就是采集员 |
 | 阈值 | threshold | cutoff | 置信度或质量分的判定边界 |
 | 同框对比 | side-by-side comparison | A/B test | 同一帧跑基线与改进模型并排显示 |
 

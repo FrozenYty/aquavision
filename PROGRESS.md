@@ -58,6 +58,19 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
 - **Deferred: the `P-xx` eyebrow above each page title.** It is development scaffolding, and the
   request is to remove it at design polish. It stays until then because it is the only anchor tying a
   screen to its row in SRS §5.2, and reviewers are still tracing screens to requirements.
+- **Contract closed from 18 to 42 routes.** The frontend was calling 24 routes that the contract never
+  named; a route the contract does not describe is a route the backend cannot build against. Each
+  route now carries the requirement it serves and inherits that requirement's priority from SRS
+  Table 3-1, so scope is read from the SRS instead of counted in the contract.
+- **`P1-02` redefined the same way.** Its "18 routes" was a snapshot of the old table; it now says
+  every contract route is mounted, P0 ones return real data, the rest return 501 in the envelope.
+  The count is gone from `PLAN.md` — today's lesson about brittle numbers, applied before it bit.
+- **Three box fields and the review body are now in the contract**: `object_id`, `is_manual`,
+  `review_status` already existed in the data model, and a reviewer cannot edit a box without a
+  stable handle. The review POST carries the whole corrected set rather than a diff, because the
+  canvas is the authority and a diff would have to merge against a version that may have moved.
+- **Role mapping settled in the glossary**: the contract's `observer` is the SRS collector role. Renaming the
+  code would touch the seed, the contract and the frontend for no functional gain.
 - **The five blocked directories are gone**, by asking for the access instead of designing around it.
   The temporary ruff exclude is removed; the principle is now `AGENTS.md` §4.7.
 - **Prototype screen 6 done:** stats page with four hand-rolled SVG charts (species donut, daily
