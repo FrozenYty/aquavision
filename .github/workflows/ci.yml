@@ -40,7 +40,7 @@ jobs:
         run: |
           if compgen -G "tests/test_*.py" > /dev/null; then
             # Only what the tests import; requirements.txt pulls torch via ultralytics.
-            pip install pytest numpy opencv-python-headless
+            pip install pytest numpy opencv-python-headless sqlalchemy
             pytest -q
           else
             echo "no tests yet"
