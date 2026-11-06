@@ -73,6 +73,13 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
   canvas is the authority and a diff would have to merge against a version that may have moved.
 - **Role mapping settled in the glossary**: the contract's `observer` is the SRS collector role. Renaming the
   code would touch the seed, the contract and the frontend for no functional gain.
+- **The camera device path now has tests, written against a fake `VideoCapture`.** Everything tested
+  before went through the image-folder source; `open`, `lock_exposure` and `read` had never run under
+  a test. Ten cases cover backend fallback, the "tried all three" message, a lock that holds, a lock
+  that drifts (and says so), a read that returns nothing, and a driver with no exposure control. Two
+  deliberate mutations — forcing the lock verdict to true, swapping the backend order — each turned a
+  test red, so the suite is not passing vacuously. Tomorrow's arrival now has one unknown left: does
+  the device open at all.
 - **The five blocked directories are gone**, by asking for the access instead of designing around it.
   The temporary ruff exclude is removed; the principle is now `AGENTS.md` §4.7.
 - **Prototype screen 6 done:** stats page with four hand-rolled SVG charts (species donut, daily
