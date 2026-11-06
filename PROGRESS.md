@@ -67,6 +67,12 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
   `{ objects }` and its `{ count_before, count_after }` reply.
 - **Unverified here:** the "try the laptop camera" button. The Browser pane blocks camera access, so
   only the failure path (a toast, the samples stay) was seen; the real camera needs a check in Chrome.
+- **Data model completed before P1-01.** data-model carried only the 3 core tables while SRS 4.2
+  held the full dictionary — with stale names (`asset_code`/`species_code`/`x_center`) that
+  disagreed with api-contract and the mocks. data-model now defines all 9 tables field by field
+  (media_asset 18, detect_object 19); the SRS core tables were synced to it: `frame_id`,
+  `captured_at`, `class_code`, `x`/`y`/`w`/`h`, `map50`/`map50_95`. `detect_task.class_filter`
+  stores a JSON array — the one documented exception to the no-lists rule.
 - **P1-04 done: all 13 pages open on mock data** (#48 tasks, #49 hard samples, #50 dataset export,
   #51 reports, #52 models, and system administration in the PR that ticks the box). No menu entry is
   greyed any more. Checked page by page: each opens, the menu highlights the right entry, nothing

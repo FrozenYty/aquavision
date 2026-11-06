@@ -986,9 +986,9 @@ Nine tables. Against the first draft, the site table, annotation table, dataset-
 |---|---|---|---|
 | sys_user | User | Account, role and sign-in state; underpins authentication and permissions. | 13 |
 | sys_log | Operation log | Audit record of key actions; append-only. | 10 |
-| media_asset | Image asset | Captured frame with path, timestamp, exposure and quality score. | 14 |
+| media_asset | Image asset | Captured frame with path, timestamp, exposure and quality score. | 18 |
 | detect_task | Detection job | Model, parameters, progress and statistics for one job. | 16 |
-| detect_object | Detected object | Class, confidence, coordinates and review state of one box. | 18 |
+| detect_object | Detected object | Class, confidence, coordinates and review state of one box. | 19 |
 | species_dict | Species dictionary | Class code, names, category and per-class confidence threshold. | 10 |
 | model_version | Model version | Weights, metrics and activation state. | 14 |
 | train_experiment | Training experiment | Dataset snapshot, hyperparameters and metrics, with a baseline flag. | 18 |
@@ -1042,21 +1042,23 @@ Field level, one field per row, with types and constraints usable directly for s
 | Field | Type | Constraint / default | Note |
 |---|---|---|---|
 | asset_id | BIGINT | PK, AUTO_INCREMENT | Primary key |
-| asset_code | VARCHAR(32) | UNIQUE, NOT NULL | Resource code, rule MAyyMMdd-index |
+| frame_id | VARCHAR(32) | UNIQUE, NOT NULL | Frame id, format YYYYMMDDTHHMMSS-mmmm |
+| session_id | VARCHAR(32) | NOT NULL | Session ID, one value per continuous capture |
 | point_code | VARCHAR(32) | NOT NULL | Monitoring site |
 | file_path | VARCHAR(512) | NOT NULL | Relative file path |
 | thumb_path | VARCHAR(512) | NULL | Thumbnail path |
 | file_size | BIGINT | NOT NULL | Bytes |
 | file_hash | CHAR(64) | NOT NULL | SHA-256, used for de-duplication |
-| shot_at | TIMESTAMP | NOT NULL | Capture timestamp |
+| captured_at | TIMESTAMP | NOT NULL | Capture timestamp, UTC, millisecond precision |
+| width | INT | NOT NULL | Width in pixels |
+| height | INT | NOT NULL | Height in pixels |
 | exposure_us | INT | NULL | Exposure time (µs) |
 | gain_db | NUMERIC(5,2) | NULL | Gain (dB) |
 | quality_score | SMALLINT | DEFAULT 0 | Total score 0-100 |
 | quality_flag | SMALLINT | DEFAULT 0 | 0 pass / 1 needs retake |
 | is_retake | SMALLINT | DEFAULT 0 | Whether this frame is a retake |
-| created_at | TIMESTAMP | DEFAULT now() | Registered at |
-| session_id | VARCHAR(32) | NOT NULL | Session ID, one value per continuous capture |
 | turbidity_rel | SMALLINT | NULL | Relative turbidity 0-100, 0 clear; from the capture sensor |
+| created_at | TIMESTAMP | DEFAULT now() | Registered at |
 
 #### 4.2.4 detect_task
 
@@ -1072,7 +1074,7 @@ Field level, one field per row, with types and constraints usable directly for s
 | conf_thr | NUMERIC(4,2) | DEFAULT 0.50 | Confidence threshold |
 | iou_thr | NUMERIC(4,2) | DEFAULT 0.45 | IoU threshold |
 | max_det | INT | DEFAULT 100 | Maximum detections per image |
-| class_filter | VARCHAR(256) | NULL | Class codes participating |
+| class_filter | VARCHAR(256) | NULL | Class codes as a JSON array, NULL = all classes |
 | status | SMALLINT | DEFAULT 0 | 0 queued / 1 running / 2 done / 3 failed / 4 cancelled |
 | progress | SMALLINT | DEFAULT 0 | Progress percentage |
 | obj_count | INT | DEFAULT 0 | Total objects |
@@ -1088,14 +1090,15 @@ Field level, one field per row, with types and constraints usable directly for s
 | Field | Type | Constraint / default | Note |
 |---|---|---|---|
 | object_id | BIGINT | PK, AUTO_INCREMENT | Primary key |
-| task_id | BIGINT | FK→detect_task | Owning job |
-| asset_id | BIGINT | FK→media_asset | Owning frame |
-| species_code | VARCHAR(32) | FK→species_dict | Class code |
+| task_id | BIGINT | FK→detect_task, NOT NULL | Owning job |
+| asset_id | BIGINT | FK→media_asset, NOT NULL | Owning frame |
+| frame_id | VARCHAR(32) | NOT NULL | Frame id, denormalised for fast lookup |
+| class_code | VARCHAR(32) | FK→species_dict, NOT NULL | Class code |
 | confidence | NUMERIC(5,4) | NOT NULL | Confidence |
-| x_center | NUMERIC(8,5) | NOT NULL | Box centre x (normalised) |
-| y_center | NUMERIC(8,5) | NOT NULL | Box centre y (normalised) |
-| box_w | NUMERIC(8,5) | NOT NULL | Box width (normalised) |
-| box_h | NUMERIC(8,5) | NOT NULL | Box height (normalised) |
+| x | NUMERIC(8,5) | NOT NULL | Box left edge (normalised) |
+| y | NUMERIC(8,5) | NOT NULL | Box top edge (normalised) |
+| w | NUMERIC(8,5) | NOT NULL | Box width (normalised) |
+| h | NUMERIC(8,5) | NOT NULL | Box height (normalised) |
 | track_id | BIGINT | NULL | Track ID for within-frame de-duplication |
 | is_manual | SMALLINT | DEFAULT 0 | 0 automatic / 1 human-drawn |
 | review_status | SMALLINT | DEFAULT 0 | 0 pending / 1 confirmed / 2 modified / 3 rejected |
@@ -1113,7 +1116,7 @@ Field level, one field per row, with types and constraints usable directly for s
 | Field | Type | Constraint / default | Note |
 |---|---|---|---|
 | species_id | BIGINT | PK, AUTO_INCREMENT | Primary key |
-| species_code | VARCHAR(32) | UNIQUE, NOT NULL | Class code, must match model labels |
+| class_code | VARCHAR(32) | UNIQUE, NOT NULL | Class code, must match model labels exactly and in order |
 | cn_name | VARCHAR(32) | NOT NULL | Chinese name |
 | latin_name | VARCHAR(64) | NULL | Latin name |
 | category | SMALLINT | NOT NULL | 1 commercial / 2 predator / 3 environmental |
@@ -1135,8 +1138,8 @@ Field level, one field per row, with types and constraints usable directly for s
 | onnx_path | VARCHAR(512) | NULL | Path to the ONNX export |
 | labels_path | VARCHAR(512) | NOT NULL | Path to the class-order file |
 | dataset_ref | VARCHAR(128) | NULL | Dataset snapshot ID |
-| mAP50 | NUMERIC(5,4) | NULL | mAP@0.5 |
-| mAP5095 | NUMERIC(5,4) | NULL | mAP@0.5:0.95 |
+| map50 | NUMERIC(5,4) | NULL | mAP@0.5 |
+| map50_95 | NUMERIC(5,4) | NULL | mAP@0.5:0.95 |
 | recall_avg | NUMERIC(5,4) | NULL | Mean recall |
 | fps | NUMERIC(6,2) | NULL | Inference frame rate |
 | params_m | NUMERIC(6,2) | NULL | Parameters (millions) |
@@ -1160,8 +1163,8 @@ Field level, one field per row, with types and constraints usable directly for s
 | batch_size | INT | NOT NULL | Batch size |
 | lr | NUMERIC(8,6) | NOT NULL | Initial learning rate |
 | augment_json | TEXT | NULL | Augmentation configuration |
-| mAP50 | NUMERIC(5,4) | NULL | mAP@0.5 |
-| mAP5095 | NUMERIC(5,4) | NULL | mAP@0.5:0.95 |
+| map50 | NUMERIC(5,4) | NULL | mAP@0.5 |
+| map50_95 | NUMERIC(5,4) | NULL | mAP@0.5:0.95 |
 | recall_avg | NUMERIC(5,4) | NULL | Mean recall |
 | fps | NUMERIC(6,2) | NULL | Inference frame rate |
 | params_m | NUMERIC(6,2) | NULL | Parameters (millions) |

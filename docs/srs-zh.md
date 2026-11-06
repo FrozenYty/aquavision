@@ -986,9 +986,9 @@ M8 运维监控
 |---|---|---|---|
 | sys_user | 用户表 | 账号、角色与登录状态，支撑认证与权限。 | 13 |
 | sys_log | 操作日志表 | 关键操作的审计记录，只追加不修改。 | 10 |
-| media_asset | 影像资源表 | 采集帧及其路径、时间戳、曝光参数与质量评分。 | 14 |
+| media_asset | 影像资源表 | 采集帧及其路径、时间戳、曝光参数与质量评分。 | 18 |
 | detect_task | 识别任务表 | 一次识别任务的模型、参数、进度与统计。 | 16 |
-| detect_object | 检测目标表 | 单个检测框的类别、置信度、坐标与复核状态。 | 18 |
+| detect_object | 检测目标表 | 单个检测框的类别、置信度、坐标与复核状态。 | 19 |
 | species_dict | 物种字典表 | 类别码、名称、大类与分类别置信度阈值。 | 10 |
 | model_version | 模型版本表 | 权重、指标与上下线状态。 | 14 |
 | train_experiment | 训练实验表 | 实验的数据集快照、超参数与指标，含基线标记。 | 18 |
@@ -1042,21 +1042,23 @@ M8 运维监控
 | 字段名 | 类型 | 约束／默认值 | 说明 |
 |---|---|---|---|
 | asset_id | BIGINT | PK, AUTO_INCREMENT | 资源主键 |
-| asset_code | VARCHAR(32) | UNIQUE, NOT NULL | 资源编号，规则 MAyyMMdd-序号 |
+| frame_id | VARCHAR(32) | UNIQUE, NOT NULL | 帧号，格式 `YYYYMMDDTHHMMSS-mmmm` |
+| session_id | VARCHAR(32) | NOT NULL | 采集会话号，一次连续采集为同一值 |
 | point_code | VARCHAR(32) | NOT NULL | 监测点位 |
 | file_path | VARCHAR(512) | NOT NULL | 文件相对路径 |
 | thumb_path | VARCHAR(512) | NULL | 缩略图路径 |
 | file_size | BIGINT | NOT NULL | 字节数 |
 | file_hash | CHAR(64) | NOT NULL | SHA-256，用于去重 |
-| shot_at | TIMESTAMP | NOT NULL | 采集时间戳 |
+| captured_at | TIMESTAMP | NOT NULL | 采集时间戳，UTC，毫秒精度 |
+| width | INT | NOT NULL | 像素宽 |
+| height | INT | NOT NULL | 像素高 |
 | exposure_us | INT | NULL | 曝光时间（微秒） |
 | gain_db | NUMERIC(5,2) | NULL | 增益（dB） |
 | quality_score | SMALLINT | DEFAULT 0 | 质量总分 0~100 |
 | quality_flag | SMALLINT | DEFAULT 0 | 0 合格／1 需重拍 |
 | is_retake | SMALLINT | DEFAULT 0 | 是否重拍帧 |
-| created_at | TIMESTAMP | DEFAULT now() | 入库时间 |
-| session_id | VARCHAR(32) | NOT NULL | 采集会话号，一次连续采集为同一值 |
 | turbidity_rel | SMALLINT | NULL | 浊度相对值 0-100，0 为清澈；来自采集端传感器 |
+| created_at | TIMESTAMP | DEFAULT now() | 入库时间 |
 
 #### 4.2.4 识别任务表（detect_task）
 
@@ -1072,7 +1074,7 @@ M8 运维监控
 | conf_thr | NUMERIC(4,2) | DEFAULT 0.50 | 置信度阈值 |
 | iou_thr | NUMERIC(4,2) | DEFAULT 0.45 | IoU 阈值 |
 | max_det | INT | DEFAULT 100 | 单图最大检测数 |
-| class_filter | VARCHAR(256) | NULL | 参与检测的类别码 |
+| class_filter | VARCHAR(256) | NULL | 参与检测的类别码，**JSON 数组**；空为全部类别 |
 | status | SMALLINT | DEFAULT 0 | 0 排队／1 运行／2 完成／3 失败／4 取消 |
 | progress | SMALLINT | DEFAULT 0 | 进度百分比 |
 | obj_count | INT | DEFAULT 0 | 目标总数 |
@@ -1088,14 +1090,15 @@ M8 运维监控
 | 字段名 | 类型 | 约束／默认值 | 说明 |
 |---|---|---|---|
 | object_id | BIGINT | PK, AUTO_INCREMENT | 目标主键 |
-| task_id | BIGINT | FK→detect_task | 所属任务 |
-| asset_id | BIGINT | FK→media_asset | 所在帧 |
-| species_code | VARCHAR(32) | FK→species_dict | 类别码 |
+| task_id | BIGINT | FK→detect_task, NOT NULL | 所属任务 |
+| asset_id | BIGINT | FK→media_asset, NOT NULL | 所在帧 |
+| frame_id | VARCHAR(32) | NOT NULL | 帧号冗余，便于快查 |
+| class_code | VARCHAR(32) | FK→species_dict, NOT NULL | 类别码 |
 | confidence | NUMERIC(5,4) | NOT NULL | 置信度 |
-| x_center | NUMERIC(8,5) | NOT NULL | 框中心横坐标（相对值） |
-| y_center | NUMERIC(8,5) | NOT NULL | 框中心纵坐标（相对值） |
-| box_w | NUMERIC(8,5) | NOT NULL | 框宽（相对值） |
-| box_h | NUMERIC(8,5) | NOT NULL | 框高（相对值） |
+| x | NUMERIC(8,5) | NOT NULL | 归一化框左上角横坐标 |
+| y | NUMERIC(8,5) | NOT NULL | 归一化框左上角纵坐标 |
+| w | NUMERIC(8,5) | NOT NULL | 框宽（相对值） |
+| h | NUMERIC(8,5) | NOT NULL | 框高（相对值） |
 | track_id | BIGINT | NULL | 同帧去重用的跟踪编号 |
 | is_manual | SMALLINT | DEFAULT 0 | 0 自动／1 人工补画 |
 | review_status | SMALLINT | DEFAULT 0 | 0 待复核／1 已确认／2 已修改／3 已驳回 |
@@ -1113,7 +1116,7 @@ M8 运维监控
 | 字段名 | 类型 | 约束／默认值 | 说明 |
 |---|---|---|---|
 | species_id | BIGINT | PK, AUTO_INCREMENT | 主键 |
-| species_code | VARCHAR(32) | UNIQUE, NOT NULL | 类别码，须与模型 labels 一致 |
+| class_code | VARCHAR(32) | UNIQUE, NOT NULL | 类别码，须与模型 labels **完全一致且顺序相同** |
 | cn_name | VARCHAR(32) | NOT NULL | 中文名 |
 | latin_name | VARCHAR(64) | NULL | 拉丁名 |
 | category | SMALLINT | NOT NULL | 1 经济种／2 敌害种／3 环境物 |
@@ -1135,8 +1138,8 @@ M8 运维监控
 | onnx_path | VARCHAR(512) | NULL | ONNX 路径 |
 | labels_path | VARCHAR(512) | NOT NULL | 类别顺序文件路径 |
 | dataset_ref | VARCHAR(128) | NULL | 数据集快照编号 |
-| mAP50 | NUMERIC(5,4) | NULL | mAP@0.5 |
-| mAP5095 | NUMERIC(5,4) | NULL | mAP@0.5:0.95 |
+| map50 | NUMERIC(5,4) | NULL | mAP@0.5 |
+| map50_95 | NUMERIC(5,4) | NULL | mAP@0.5:0.95 |
 | recall_avg | NUMERIC(5,4) | NULL | 平均召回率 |
 | fps | NUMERIC(6,2) | NULL | 推理帧率 |
 | params_m | NUMERIC(6,2) | NULL | 参数量（百万） |
@@ -1160,8 +1163,8 @@ M8 运维监控
 | batch_size | INT | NOT NULL | 批量大小 |
 | lr | NUMERIC(8,6) | NOT NULL | 初始学习率 |
 | augment_json | TEXT | NULL | 数据增强配置 |
-| mAP50 | NUMERIC(5,4) | NULL | mAP@0.5 |
-| mAP5095 | NUMERIC(5,4) | NULL | mAP@0.5:0.95 |
+| map50 | NUMERIC(5,4) | NULL | mAP@0.5 |
+| map50_95 | NUMERIC(5,4) | NULL | mAP@0.5:0.95 |
 | recall_avg | NUMERIC(5,4) | NULL | 平均召回率 |
 | fps | NUMERIC(6,2) | NULL | 推理帧率 |
 | params_m | NUMERIC(6,2) | NULL | 参数量（百万） |
