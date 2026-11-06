@@ -71,9 +71,10 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       shares one visual language
 - [ ] **P1-05** Test case draft against the 36 acceptance items · @IkeaFyj · done when each item has
       at least one case, marked not-yet-implemented
-- [ ] **P1-06** Hardware arrival check and rig assembly · @FrozenYty · done when the camera outputs
-      frames, exposure can be locked, and the rig meets its numbers: left/right brightness ratio
-      ≥ 0.7, a 5 cm target ≥ 45 px at 640 input, no flicker, 20-frame mean brightness spread < 10%
+- [ ] **P1-06** Hardware arrival check and rig assembly · @FrozenYty · done when
+      `python scripts/test_exposure.py` exits 0 — the device opens, the picture answers the exposure
+      property, and 20 pinned frames stay inside a 10 % spread — and the rig meets its numbers:
+      left/right brightness ratio ≥ 0.7, a 5 cm target ≥ 45 px at 640 input, no flicker
 
 - [ ] **GATE P1** — `uvicorn app.main:app` starts on a clean machine, `/api/health` answers, 9 tables
       exist, 13 pages render
