@@ -80,3 +80,32 @@ export const SPECIES = [
   { class_code: "chlamys", cn_name: "扇贝", category: 1, conf_thr: 0.45, in_stat: 1 },
   { class_code: "asterias", cn_name: "海星", category: 2, conf_thr: 0.5, in_stat: 1 },
 ];
+
+// sys_user, system parameters, sys_log and sys_message. Roles use the contract's codes
+// (api-contract §4); reading observer as the SRS capture operator is an assumption to confirm.
+export const USERS = [
+  { user_id: 1, account: "admin@aquavision.test", role: "admin", status: 1, last_login: "2026-11-06T08:55:00+08:00" },
+  { user_id: 2, account: "analyst@aquavision.test", role: "analyst", status: 1, last_login: "2026-11-06T09:40:00+08:00" },
+  { user_id: 3, account: "algo@aquavision.test", role: "algo", status: 1, last_login: "2026-11-05T21:10:00+08:00" },
+  { user_id: 4, account: "capture@aquavision.test", role: "observer", status: 1, last_login: "2026-11-06T10:42:00+08:00" },
+  { user_id: 5, account: "intern@aquavision.test", role: "observer", status: 0, last_login: "2026-10-28T14:00:00+08:00" },
+];
+
+// Defaults from architecture §8 and the SRS: two workers, 300 ms detection interval, score 60.
+export const PARAMS = { retention_days: 90, max_workers: 2, default_conf: 0.5, quality_threshold: 60, detect_interval_ms: 300 };
+
+export const LOGS = [
+  { time: "2026-11-06T10:58:00+08:00", account: "analyst@aquavision.test", action: "提交复核", before: "4 个目标", after: "5 个目标" },
+  { time: "2026-11-06T09:30:00+08:00", account: "admin@aquavision.test", action: "修改参数", before: "质量阈值 55", after: "质量阈值 60" },
+  { time: "2026-11-05T18:02:00+08:00", account: "algo@aquavision.test", action: "模型上线", before: "v8n-E2", after: "v8n-E3" },
+  { time: "2026-11-05T09:15:00+08:00", account: "admin@aquavision.test", action: "停用账号", before: "intern@aquavision.test 启用", after: "停用" },
+  { time: "2026-11-04T16:21:00+08:00", account: "algo@aquavision.test", action: "导出数据集", before: "DS-V1", after: "DS-V2" },
+  { time: "2026-11-04T08:50:00+08:00", account: "capture@aquavision.test", action: "登录", before: "", after: "" },
+];
+
+// msg_type: capture_fail, task_fail, report_done (FR-M8-02).
+export const MESSAGES = [
+  { msg_id: 3, msg_type: "task_fail", text: "识别任务 #2044 失败：推理超时，单帧超过 5 秒", created_at: "2026-11-06T09:06:00+08:00", is_read: 0 },
+  { msg_id: 2, msg_type: "report_done", text: "11 月第 1 周巡检报告已生成，可在巡检报告页下载", created_at: "2026-11-06T09:00:00+08:00", is_read: 0 },
+  { msg_id: 1, msg_type: "capture_fail", text: "会话 s-b1-002 采集失败：摄像头不可用，请检查 USB 连接", created_at: "2026-11-04T08:45:00+08:00", is_read: 1 },
+];

@@ -40,7 +40,7 @@ const MENU = [
     group: "模型与系统",
     items: [
       { id: "P-12", label: "模型与实验", href: "models.html" },
-      { id: "P-13", label: "系统管理" },
+      { id: "P-13", label: "系统管理", href: "admin.html" },
     ],
   },
 ];
@@ -57,7 +57,7 @@ function topbarHtml() {
     </a>
     <div class="av-topbar-actions">
       <span class="av-clock" aria-hidden="true"></span>
-      <a href="#" title="站内消息">消息 <span class="badge rounded-pill text-bg-info">0</span></a>
+      <a href="admin.html?tab=messages" title="站内消息">消息 <span class="badge rounded-pill text-bg-info">0</span></a>
       <span class="av-topbar-user"><span class="av-avatar" aria-hidden="true">演</span> 演示账号</span>
       <a href="login.html">退出</a>
     </div>`;

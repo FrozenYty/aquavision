@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>系统管理 · AquaVision</title>
+  <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
+  <link rel="stylesheet" href="../static/css/tokens.css">
+  <link rel="stylesheet" href="../static/css/app.css">
+</head>
+<body>
+  <main class="av-content">
+    <div class="av-page-header">
+      <h1>系统管理</h1>
+    </div>
+
+    <section class="av-card" id="tabs">
+      <ul class="nav nav-tabs mb-3">
+        <li class="nav-item"><button class="nav-link active" data-tab="users" type="button">账号</button></li>
+        <li class="nav-item"><button class="nav-link" data-tab="params" type="button">参数</button></li>
+        <li class="nav-item"><button class="nav-link" data-tab="monitor" type="button">运行监控</button></li>
+        <li class="nav-item"><button class="nav-link" data-tab="logs" type="button">操作日志</button></li>
+        <li class="nav-item"><button class="nav-link" data-tab="messages" type="button">消息</button></li>
+      </ul>
+
+      <div data-panel="users">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead><tr><th>账号</th><th>角色</th><th>状态</th><th>最近登录</th><th>操作</th></tr></thead>
+            <tbody id="users"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <form data-panel="params" id="params" class="row g-3" hidden novalidate>
+        <div class="col-md-4"><label class="form-label small" for="p-retention">中间文件保留天数</label>
+          <input class="form-control form-control-sm" id="p-retention" name="retention_days" type="number" min="1" max="365"></div>
+        <div class="col-md-4"><label class="form-label small" for="p-workers">批量识别并发数</label>
+          <input class="form-control form-control-sm" id="p-workers" name="max_workers" type="number" min="1" max="4"></div>
+        <div class="col-md-4"><label class="form-label small" for="p-conf">默认置信度阈值</label>
+          <input class="form-control form-control-sm" id="p-conf" name="default_conf" type="number" step="0.05" min="0.05" max="0.95"></div>
+        <div class="col-md-4"><label class="form-label small" for="p-quality">质量分阈值</label>
+          <input class="form-control form-control-sm" id="p-quality" name="quality_threshold" type="number" min="0" max="100"></div>
+        <div class="col-md-4"><label class="form-label small" for="p-interval">识别间隔（ms）</label>
+          <input class="form-control form-control-sm" id="p-interval" name="detect_interval_ms" type="number" min="100" max="2000" step="50"></div>
+        <div class="col-12"><button class="btn btn-primary btn-sm" type="submit">保存参数</button>
+          <span class="small text-secondary ms-2">超出范围的项会就地标红，不会保存</span></div>
+      </form>
+
+      <div data-panel="monitor" hidden>
+        <div class="row g-3" id="monitor"></div>
+        <p class="small text-secondary mt-3 mb-0" id="monitor-note"></p>
+      </div>
+
+      <div data-panel="logs" hidden>
+        <form class="d-flex gap-2 mb-3" id="log-filter">
+          <input class="form-control form-control-sm w-auto" id="log-q" name="q" placeholder="账号、动作或内容">
+          <button class="btn btn-sm btn-outline-primary" type="submit">查询</button>
+        </form>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0 small">
+            <thead><tr><th>时间</th><th>账号</th><th>动作</th><th>变更前</th><th>变更后</th></tr></thead>
+            <tbody id="logs"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <ul data-panel="messages" class="list-unstyled mb-0 d-grid gap-2" id="messages" hidden></ul>
+    </section>
+  </main>
+
+  <script type="module">
+    import { renderShell } from "../static/js/layout.js";
+    import * as api from "../static/js/api.js";
+    import { bindTabs, confirmAction, esc, fmtTime, toast } from "../static/js/ui.js";
+
+    renderShell("P-13");
+
+    function $(id) { return document.getElementById(id); }
+    const ROLE = { admin: "管理员", analyst: "分析员", algo: "算法员", observer: "采集员" };
+    const MSG = { capture_fail: ["采集失败", "danger"], task_fail: ["任务失败", "warning"], report_done: ["报告完成", "success"] };
+    const MONITOR_MS = 30000; // FR-M8-01: the panel refreshes every 30 s
+    const fail = (err) => toast(err.message, "danger");
+
+    bindTabs($("tabs"));
+    const wanted = new URLSearchParams(location.search).get("tab");
+    document.querySelector(`[data-tab="${wanted}"]`)?.click();
+
+    async function loadUsers() {
+      $("users").innerHTML = (await api.listUsers()).map((u) => `<tr>
+        <td class="av-mono">${esc(u.account)}</td><td>${ROLE[u.role]}</td>
+        <td>${u.status ? '<span class="badge text-bg-success">启用</span>' : '<span class="badge text-bg-secondary">停用</span>'}</td>
+        <td>${fmtTime(u.last_login).slice(0, -3)}</td>
+        <td class="d-flex gap-1">
+          <button class="btn btn-sm btn-outline-${u.status ? "danger" : "success"}" data-user="${u.user_id}" data-act="${u.status ? "disable" : "enable"}" type="button">${u.status ? "停用" : "恢复"}</button>
+          <button class="btn btn-sm btn-outline-secondary" data-user="${u.user_id}" data-act="reset" type="button">重置密码</button></td></tr>`).join("");
+    }
+
+    $("users").addEventListener("click", async (event) => {
+      const btn = event.target.closest("[data-act]");
+      if (!btn) return;
+      const id = Number(btn.dataset.user);
+      const account = btn.closest("tr").firstElementChild.textContent;
+      try {
+        if (btn.dataset.act === "reset") {
+          if (!confirmAction(`重置 ${account} 的密码？对方下次登录须设置新密码。`)) return;
+          await api.resetPassword(id);
+          toast("密码已重置", "success");
+        } else {
+          const enable = btn.dataset.act === "enable";
+          if (!confirmAction(`${enable ? "恢复" : "停用"}账号 ${account}？`)) return;
+          await api.setUserStatus(id, enable ? 1 : 0);
+          toast(`已${enable ? "恢复" : "停用"} ${account}`, "success");
+          await loadUsers();
+        }
+      } catch (err) {
+        fail(err);
+      }
+    });
+
+    async function loadParams() {
+      const params = await api.getParams();
+      for (const [name, value] of Object.entries(params)) $("params").elements[name].value = value;
+    }
+
+    $("params").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const inputs = [...$("params").querySelectorAll("input")];
+      inputs.forEach((el) => el.classList.toggle("is-invalid", !el.checkValidity() || el.value === ""));
+      if (inputs.some((el) => el.classList.contains("is-invalid"))) return;
+      try {
+        await api.updateParams(Object.fromEntries(inputs.map((el) => [el.name, Number(el.value)])));
+        toast("参数已保存，新任务开始生效", "success");
+      } catch (err) {
+        fail(err);
+      }
+    });
+
+    async function loadMonitor() {
+      const m = await api.getMonitor();
+      const card = (label, value, note = "") => `<div class="col-6 col-lg-3"><div class="av-card">
+        <div class="av-kpi-label">${label}</div><div class="av-kpi-value">${value}</div><div class="small text-secondary">${note}</div></div></div>`;
+      $("monitor").innerHTML =
+        card("识别队列", m.queue, `运行中 ${m.running}`) +
+        card("任务失败率", `${(m.failure_rate * 100).toFixed(1)}%`, "已结束任务中") +
+        card("GPU 显存", `${m.gpu_mem_gb} GB`, `共 ${m.gpu_mem_total_gb} GB`) +
+        card("磁盘占用", `${m.disk_used_pct}%`, "data/ 所在分区");
+      $("monitor-note").textContent = `最近刷新 ${fmtTime(m.checked_at)} · 每 30 秒自动刷新`;
+    }
+
+    async function loadLogs() {
+      const logs = await api.listLogs(Object.fromEntries(new FormData($("log-filter"))));
+      $("logs").innerHTML = logs.length
+        ? logs.map((l) => `<tr><td>${fmtTime(l.time).slice(0, -3)}</td><td class="av-mono">${esc(l.account)}</td>
+            <td>${esc(l.action)}</td><td>${esc(l.before)}</td><td>${esc(l.after)}</td></tr>`).join("")
+        : '<tr><td colspan="5" class="text-secondary">没有匹配的日志</td></tr>';
+    }
+
+    $("log-filter").addEventListener("submit", (event) => {
+      event.preventDefault();
+      loadLogs().catch(fail);
+    });
+
+    async function loadMessages() {
+      $("messages").innerHTML = (await api.listMessages()).map((m) => {
+        const [label, kind] = MSG[m.msg_type];
+        return `<li class="av-object-row${m.is_read ? "" : " is-selected"}">
+          <span class="badge text-bg-${kind}">${label}</span><span class="flex-grow-1">${esc(m.text)}</span>
+          <span class="small text-secondary">${fmtTime(m.created_at).slice(0, -3)}</span>
+          ${m.is_read ? '<span class="small text-secondary">已读</span>' : `<button class="btn btn-sm btn-outline-primary" data-msg="${m.msg_id}" type="button">标为已读</button>`}</li>`;
+      }).join("");
+    }
+
+    $("messages").addEventListener("click", async (event) => {
+      const id = event.target.closest("[data-msg]")?.dataset.msg;
+      if (!id) return;
+      await api.markRead(id).catch(fail);
+      await loadMessages();
+    });
+
+    Promise.all([loadUsers(), loadParams(), loadMonitor(), loadLogs(), loadMessages()]).catch(fail);
+    setInterval(() => loadMonitor().catch(fail), MONITOR_MS);
+  </script>
+</body>
+</html>
