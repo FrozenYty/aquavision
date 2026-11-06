@@ -15,3 +15,16 @@ export const TASKS = [
   { task_id: 2043, kind: "single", source: "20261103T143000-0001", total: 1, done: 1, status: 2, model_version: "v8n-E2", created_at: "2026-11-05T16:12:00+08:00", error: null },
   { task_id: 2042, kind: "batch", source: "s-b1-001", total: 20, done: 20, status: 2, model_version: "v8n-E2", created_at: "2026-11-05T15:30:00+08:00", error: null },
 ];
+
+// Hard-sample pool (FR-M4-03). Three sources: low confidence, corrected in review, and models that
+// disagree. The mock attaches these to real frames in order; frames corrected on the review page
+// join as "corrected" on their own.
+export const HARD_SEEDS = [
+  { source: "low_conf", class_code: "holothurian", confidence: 0.42, reason: "礁石纹理被判成海参" },
+  { source: "disagree", class_code: "chlamys", confidence: 0.55, reason: "基线判扇贝，改进模型判海星" },
+  { source: "low_conf", class_code: "asterias", confidence: 0.38, reason: "目标被泥沙半遮挡" },
+  { source: "corrected", class_code: "strongylocentrotus", confidence: 0.61, reason: "漏检一只海胆，复核补框" },
+  { source: "disagree", class_code: "holothurian", confidence: 0.49, reason: "两模型框位置偏差超过 0.3 IoU" },
+  { source: "low_conf", class_code: "strongylocentrotus", confidence: 0.44, reason: "画面边缘，目标只露一半" },
+  { source: "corrected", class_code: "asterias", confidence: 0.58, reason: "海星被改为扇贝" },
+];

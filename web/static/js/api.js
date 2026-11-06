@@ -56,6 +56,8 @@ export const startBatch = (frameIds) =>
 export const listTasks = (query) => request("GET", "/tasks", { query }); // provisional
 export const cancelTask = (id) => request("POST", `/tasks/${id}/cancel`); // provisional
 export const retryTask = (id) => request("POST", `/tasks/${id}/retry`); // provisional
+export const listHardSamples = (query) => request("GET", "/hard-samples", { query }); // provisional
+export const removeHardSample = (frameId) => request("DELETE", `/hard-samples/${frameId}`); // provisional
 export const getFrame = (frameId) => request("GET", `/frames/${frameId}`);
 export const getObjects = (frameId) => request("GET", `/frames/${frameId}/objects`);
 
