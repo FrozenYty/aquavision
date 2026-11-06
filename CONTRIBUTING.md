@@ -44,7 +44,7 @@ One commit does one thing. If the message needs "and", split the commit.
 
 ## 4. What CI checks
 
-Seven jobs, and any failure blocks the merge:
+Every job below blocks the merge. The list grows; the rule does not — if it is in this table, a red run stops the merge.
 
 | Job | Command | Fix |
 |---|---|---|
@@ -81,7 +81,20 @@ datasets/             training and test data
 ```
 
 Weights go to GitHub Releases. Datasets go to external storage; link them from the README with a
-checksum. Keep the repository under 20 MB.
+checksum.
+
+Size is a consequence, not a target. What decides is whether a file needs to share history with the
+code:
+
+- **It does** for source, documents, and the small images a document references. A reader expects them
+  beside the text, and they change a little at a time.
+- **It does not** for weights, datasets, video, and generated documents. They are large, they change
+  wholesale every time they are produced, and git keeps every version forever — a repository that
+  accepted them would grow without ever becoming more useful.
+
+A clone should feel quick and a diff should stay readable. If either stops being true, something moved
+to the wrong side of that line. No number is written down: one would only be argued with at the
+boundary, and the boundary is never where the problem is.
 
 ## 6. Documents
 
@@ -105,7 +118,7 @@ folder names: they are dead links on every other machine, and they leak how one 
 to be arranged. Write commands relative to the repository root and the interpreter as `python`. If
 something exists only on your machine, it does not belong in a file the others read.
 
-Two conventions that keep the set from drifting:
+Conventions that keep the set from drifting:
 
 - **Every design document carries an owner line** under its title: `> Owner: @handle · Revisit when:
   <trigger>`. A trigger, not a date — dates rot, triggers do not.
