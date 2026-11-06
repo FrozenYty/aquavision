@@ -14,6 +14,26 @@ truth or splitting one day across two dates. What matters is one bullet per deci
 state, not a parade of every commit — the commits are already in git. If a day grows past a screen,
 the usual cause is a decision sitting in the log that belongs in an ADR.
 
+## 2026-11-06
+
+- **Prototype screen 2 delivered** (`web/templates/home.html`): four KPI cards, a hand-drawn 7-day
+  SVG trend, and the recent-session list. No chart library, deliberately: ECharts is not vendored and
+  screen 6 needs a team decision before two people pull it in different ways.
+- **Two stale fields found in lane A and fixed.** `fixtures.js` and `capture.html` still carried
+  `water_temp_c` and `turbidity_ntu`, both removed in SRS V1.4. The change map in `docs/INDEX-en.md`
+  §4 lists "field name → mock data" exactly for this; nobody had run it.
+- **P1-03 capture module written**: `server/app/vision/quality.py` scores a frame, `capture.py` owns
+  the device, ids, paths and manifest, and the CLI verifies its own output. 18 tests.
+- **That verification found a real defect.** Scores were computed on the in-memory frame, so JPEG
+  smoothing changed the stored file's score — 25 against 29 on low-sharpness frames. The score is now
+  taken from the encoded bytes, and a borderline-frame regression test fails without the fix.
+- **The camera half is unverified here.** This environment has no usable device: DirectShow cannot
+  open by index and FFmpeg lacks libavdevice. The error path behaves correctly, so the device and
+  exposure-lock steps still need a machine with the camera — the lead's laptop, or P1-06.
+- Two empty `pytest-cache-files-*` directories carry a DACL that grants this account nothing, so they
+  cannot be read, renamed or deleted; `pyproject.toml` excludes them so ruff stops crashing on them.
+  They need removing from an administrator shell.
+
 ## 2026-11-05
 
 - **Rig design settled (P0-06).** A desk lamp instead of purchased LED bars: one lamp above and 45°

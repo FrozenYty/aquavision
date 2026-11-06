@@ -41,3 +41,6 @@ _probe.pdf
 
 # Submission artefacts live outside the repository
 *.docx
+
+# pytest scratch space (see tests/conftest.py)
+tests/tmp/
