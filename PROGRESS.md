@@ -86,6 +86,14 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
   operator, which nobody has confirmed.
 - **Known limitation:** after a rollback on P-12, the dashboard and report footer still say v8n-E3 for
   that tab; their figure is fixed in the fixtures.
+- **The screen 6 review answered** (`fix/stats-review`): the P-10 menu label now matches the SRS page
+  list — statistics dashboard, not statistics-and-reports; the report side stays with P-11 (the id
+  itself was already corrected in #43). `.av-page-actions` centres its children, so no badge needs
+  inline styles. The four Chinese species names live once in `web/static/js/species.js`, imported by
+  the charts and the box overlay (`boxes.js` re-exports it as `CLASSES` for the five pages that
+  already import from there). The overlay now clamps each box to the frame at draw time, so an
+  annotation that pokes past the image edge can never render outside it. Two other review items
+  were already resolved by #43-#46 (P-10 id, badge in the shell).
 
 ## 2026-11-05
 

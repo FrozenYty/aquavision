@@ -377,6 +377,9 @@ body {
   margin-left: auto;
   display: flex;
   flex-wrap: wrap;
+  /* Centre non-button children (the prototype badge, pill tags) — flex defaults to stretch,
+     which sat their text high until each one rescued itself with inline styles. */
+  align-items: center;
   gap: var(--av-space-2);
 }
 

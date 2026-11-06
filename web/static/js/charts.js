@@ -3,12 +3,7 @@
 // not justify pulling one in. Colours and type come from tokens.css custom
 // properties; nothing is hard-coded here.
 
-export const CLASS_LABELS = {
-  holothurian: "海参",
-  strongylocentrotus: "海胆",
-  chlamys: "扇贝",
-  asterias: "海星",
-};
+import { SPECIES } from "./species.js";
 
 const NS = "http://www.w3.org/2000/svg";
 
@@ -28,7 +23,12 @@ function node(name, attrs = {}) {
   return n;
 }
 
-function text(x, y, content, { size = 11, fill = "var(--av-text-muted)", anchor = "middle", family, weight } = {}) {
+function text(
+  x,
+  y,
+  content,
+  { size = 11, fill = "var(--av-text-muted)", anchor = "middle", family, weight } = {},
+) {
   const t = node("text", { x, y, "text-anchor": anchor, "font-size": size });
   t.setAttribute("fill", fill);
   if (family) t.setAttribute("font-family", family);
@@ -84,7 +84,7 @@ export function renderSpeciesDonut(container, rows) {
     seg.setAttribute("transform", `rotate(-90 ${cx} ${cy})`);
     seg.style.stroke = `var(--av-class-${row.class_code})`;
     const tip = node("title");
-    tip.textContent = `${CLASS_LABELS[row.class_code]}：${row.box_count} 框`;
+    tip.textContent = `${SPECIES[row.class_code]}：${row.box_count} 框`;
     seg.append(tip);
     s.append(seg);
     acc += len + 2;
@@ -105,7 +105,7 @@ export function renderSpeciesDonut(container, rows) {
     const pct = ((row.box_count / total) * 100).toFixed(1);
     s.append(
       swatch,
-      text(292, y, `${CLASS_LABELS[row.class_code]} · ${row.class_code}`, {
+      text(292, y, `${SPECIES[row.class_code]} · ${row.class_code}`, {
         anchor: "start",
         fill: "var(--av-text)",
         size: 12.5,
@@ -138,13 +138,16 @@ export function renderTrendLine(container, rows) {
   const ys = rows.map((row) => T + (1 - row.frames / top) * (H - T - B));
 
   const area = node("path", {
-    d: `M ${xs[0]} ${H - B} ${xs.map((x, i) => `L ${x} ${ys[i]}`).join(" ")} L ${xs[xs.length - 1]} ${H - B} Z`,
+    d:
+      `M ${xs[0]} ${H - B} ${xs.map((x, i) => `L ${x} ${ys[i]}`).join(" ")} ` +
+      `L ${xs[xs.length - 1]} ${H - B} Z`,
     fill: "var(--av-primary)",
     opacity: 0.07,
   });
   s.append(area);
 
-  const line = node("polyline", { points: xs.map((x, i) => `${x},${ys[i]}`).join(" "), fill: "none" });
+  const points = xs.map((x, i) => `${x},${ys[i]}`).join(" ");
+  const line = node("polyline", { points, fill: "none" });
   line.setAttribute("stroke", "var(--av-primary)");
   line.setAttribute("stroke-width", 2);
   s.append(line);
@@ -242,12 +245,14 @@ export function renderCorrectionStack(container, rows) {
         const seg = node("rect", { x, y: yCursor, width: bw, height: hgt });
         seg.style.fill = color;
         const tip = node("title");
-        tip.textContent = `${CLASS_LABELS[row.class_code]} · ${name} ${row[key]} 次`;
+        tip.textContent = `${SPECIES[row.class_code]} · ${name} ${row[key]} 次`;
         seg.append(tip);
         s.append(seg);
       }
     }
-    s.append(text(x + bw / 2, H - B + 18, CLASS_LABELS[row.class_code], { size: 11, fill: "var(--av-text)" }));
+    s.append(
+      text(x + bw / 2, H - B + 18, SPECIES[row.class_code], { size: 11, fill: "var(--av-text)" }),
+    );
   });
 
   series.forEach(([, name, color], i) => {
