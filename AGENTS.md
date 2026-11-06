@@ -46,7 +46,7 @@ Only take tasks that `PLAN.md` assigns to your user. Everything else is read-onl
 - **Large change in another lane** — ask first. Two assistants editing one file is the most
   expensive accident this repository can have.
 
-## 4. Six working principles
+## 4. Seven working principles
 
 **1. Look before you move.** Read the file, list the directory, check the branch. Never edit from
 memory — three other people have been working here since your last session.
@@ -66,6 +66,11 @@ ID: grep for every reference. Stale links and stale names are the most common si
 **6. Read the error.** A non-zero exit is information. Read it, then adjust or report; do not retry
 the identical command and hope.
 
+**7. A blocked operation is a request for permission, not an invitation to work around it.** When the
+sandbox or the filesystem refuses something, say what was refused and ask for the access you need.
+Routing around it — an exclude pattern here, a hand-delete there — leaves the cause in place and hands
+the user a list of chores you could have done yourself. Ask once, plainly, with the exact command.
+
 ## 5. Rules of the shared repository
 
 - Branch names, commit format and PR rules live in `CONTRIBUTING.md`. Follow them; they are not
@@ -84,6 +89,7 @@ the identical command and hope.
 python scripts/check-bilingual.py      # bilingual pairs in sync
 python scripts/check-language.py       # no Chinese in English documents
 python scripts/check-progress.py       # PROGRESS.md well formed
+python scripts/check-paths.py          # no machine-specific paths
 python -m ruff check .                 # lint
 python -m ruff format --check .        # format
 pytest -q                              # tests
