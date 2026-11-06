@@ -30,9 +30,13 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
 - **The camera half is unverified here.** This environment has no usable device: DirectShow cannot
   open by index and FFmpeg lacks libavdevice. The error path behaves correctly, so the device and
   exposure-lock steps still need a machine with the camera — the lead's laptop, or P1-06.
-- Two empty `pytest-cache-files-*` directories carry a DACL that grants this account nothing, so they
-  cannot be read, renamed or deleted; `pyproject.toml` excludes them so ruff stops crashing on them.
-  They need removing from an administrator shell.
+- **Page self-check added** (`tests/test_pages.py`, 19 cases): dead links, script-requested ids that
+  the markup never defines, duplicate ids, pages that skip the shared shell, and menu entries that
+  point nowhere. Proven by planting all three faults in one template and watching them fail.
+- **`scripts/make_samples.py` added**: deterministic synthetic frames for running the capture pipeline
+  where no camera exists. Five of them ran the whole path end to end and the manifest verified.
+- **The five blocked directories are gone**, by asking for the access instead of designing around it.
+  The temporary ruff exclude is removed; the principle is now `AGENTS.md` §4.7.
 
 ## 2026-11-05
 
