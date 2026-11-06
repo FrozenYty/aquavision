@@ -17,24 +17,54 @@
           <option value="A3">点位 A3</option><option value="B1">点位 B1</option>
         </select>
         <button class="btn btn-primary text-nowrap" id="btn-open" type="button">开始采集</button>
-        <button class="btn btn-outline-primary text-nowrap" id="btn-grab" type="button" disabled>抓取一帧</button>
-        <button class="btn btn-outline-secondary text-nowrap" id="btn-close" type="button" disabled>结束</button>
+        <button class="btn btn-outline-secondary text-nowrap" id="btn-close" type="button" disabled>停止</button>
+        <button class="btn btn-outline-primary text-nowrap" id="btn-webcam" type="button">试一下本机摄像头</button>
       </div>
     </div>
 
     <div class="row g-3">
-      <div class="col-lg-8">
+      <div class="col-xl-8">
         <section class="av-card" id="frame-card">
-          <h2 class="av-card-title">最近一帧 <small class="text-secondary fw-normal" id="camera"></small><span class="av-live">REC</span></h2>
-          <div id="last-frame" class="av-empty">点击“开始采集”打开采集会话，再抓取一帧。</div>
+          <h2 class="av-card-title">实时画面 <small class="text-secondary fw-normal" id="camera"></small><span class="av-live">REC</span></h2>
+          <div class="av-live-view">
+            <div id="live" class="av-empty">点击“开始采集”，画面与识别结果会在这里逐帧出现。</div>
+            <video id="webcam" class="av-webcam" autoplay muted playsinline hidden></video>
+            <span class="av-latency" id="latency" hidden></span>
+          </div>
+          <div class="d-flex flex-wrap gap-3 small text-secondary mt-2">
+            <span id="frame-meta">—</span>
+            <span class="ms-auto">影像来自 DUO 公开数据集样张；正式版由 USB 摄像头实时供帧</span>
+          </div>
         </section>
       </div>
-      <div class="col-lg-4">
+      <div class="col-xl-4 d-flex flex-column gap-3">
         <section class="av-card">
-          <h2 class="av-card-title">收帧进度</h2>
-          <div id="progress" class="av-empty">暂无进行中的采集会话</div>
+          <h2 class="av-card-title">质量分</h2>
+          <div class="d-flex align-items-center gap-4">
+            <svg class="av-ring" id="q-ring" viewBox="0 0 120 120" aria-hidden="true">
+              <circle cx="60" cy="60" r="52" class="av-ring-track"></circle>
+              <circle cx="60" cy="60" r="52" class="av-ring-value" pathLength="100" stroke-dasharray="0 100"></circle>
+            </svg>
+            <div>
+              <div class="av-kpi-value" id="q-score">—</div>
+              <div class="small" id="q-verdict">等待第一帧</div>
+            </div>
+          </div>
+          <div class="d-grid gap-2 mt-3" id="q-meters"></div>
+        </section>
+        <section class="av-card">
+          <h2 class="av-card-title">本帧计数 <small class="text-secondary fw-normal" id="count-total"></small></h2>
+          <ul class="list-unstyled mb-0 d-grid gap-1" id="counts"></ul>
         </section>
       </div>
+
+      <div class="col-12">
+        <section class="av-card">
+          <h2 class="av-card-title">最近帧 <small class="text-secondary fw-normal">点一帧查看识别结果</small></h2>
+          <div class="av-strip" id="strip"><div class="av-empty w-100">开始采集后，最近的帧会排在这里。</div></div>
+        </section>
+      </div>
+
       <div class="col-12">
         <section class="av-card">
           <h2 class="av-card-title">采集会话</h2>
@@ -53,11 +83,14 @@
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
     import * as api from "../static/js/api.js";
-    import { esc, fmtTime, qualityBadge, renderPager, toast } from "../static/js/ui.js";
+    import { esc, fmtTime, renderPager, toast } from "../static/js/ui.js";
+    import { CLASSES, countByClass, stageHtml } from "../static/js/boxes.js";
 
     renderShell("P-03");
 
     const $ = (id) => document.getElementById(id);
+    const GRAB_MS = 3000; // one frame every three seconds reads as a live feed without rushing the demo
+    const LATENCY_MS = 2000;
     const STATUS = {
       open: '<span class="badge text-bg-info">采集中</span>',
       closed: '<span class="badge text-bg-secondary">已结束</span>',
@@ -65,6 +98,8 @@
     };
     let current = null;
     let page = 1;
+    let timers = [];
+    let stream = null;
 
     async function loadSessions() {
       const data = await api.listSessions({ page, size: 5 });
@@ -75,69 +110,117 @@
       renderPager($("pager"), data, (n) => { page = n; loadSessions(); });
     }
 
-    function renderProgress() {
-      if (!current) return;
-      const ok = current.frame_count - current.retake_count;
-      const dial = (label, value) =>
-        `<div class="col-4"><div class="av-kpi-label">${label}</div><div class="av-kpi-value">${value}</div></div>`;
-      $("progress").className = "";
-      $("progress").innerHTML = `
-        <div class="av-mono small text-secondary mb-2">${esc(current.session_id)}</div>
-        <div class="row g-2">${dial("已收帧", current.frame_count)}${dial("合格", ok)}${dial("需重拍", current.retake_count)}</div>`;
-    }
-
     const meter = (label, v) => `<div class="av-meter${v < 60 ? " is-low" : ""}">
       <span>${label}</span><div class="av-meter-bar"><span style="--v: ${v}"></span></div><strong>${v}</strong></div>`;
 
-    function renderFrame(f) {
-      const q = f.quality;
-      $("last-frame").className = "row g-4 align-items-center";
-      $("last-frame").innerHTML = `
-        <div class="col-md-7"><div class="av-thumb${q.verdict === "ok" ? "" : " is-retake"}"><div class="av-thumb-img"></div>${qualityBadge(q)}</div></div>
-        <div class="col-md-5 d-grid gap-2">
-          ${meter("清晰度", q.sharpness)}${meter("亮度", q.brightness)}${meter("色偏", q.colorcast)}
-          <div class="small text-secondary mt-2">浊度（相对值）<strong class="text-body">${f.env.turbidity_rel ?? "—"}</strong> · 0 清澈 / 100 最浑</div>
-          <div class="small text-secondary"><span class="av-mono text-body">${esc(f.frame_id)}</span><br>${fmtTime(f.captured_at)}</div>
-        </div>
-        ${q.verdict === "ok" ? "" : '<div class="col-12"><div class="alert alert-warning small mb-0">质量分低于 60，已入库但不进入识别队列，请调整后重拍。</div></div>'}`;
+    function renderQuality(q) {
+      const low = q.verdict !== "ok";
+      $("q-ring").classList.toggle("is-low", low);
+      $("q-ring").querySelector(".av-ring-value").setAttribute("stroke-dasharray", `${q.score} 100`);
+      $("q-score").textContent = q.score;
+      $("q-verdict").innerHTML = low
+        ? '<span class="badge text-bg-warning">需重拍</span> 低于 60，入库但不识别'
+        : '<span class="badge text-bg-success">合格</span> 已送入识别';
+      $("q-meters").innerHTML = meter("清晰度", q.sharpness) + meter("亮度", q.brightness) + meter("色偏", q.colorcast);
+    }
+
+    function renderCounts(boxes) {
+      const counts = countByClass(boxes);
+      $("count-total").textContent = `共 ${boxes.length} 个目标`;
+      $("counts").innerHTML = Object.entries(CLASSES).map(([code, name]) =>
+        `<li class="d-flex"><span class="av-class av-class-${code}">${name}</span>` +
+        `<strong class="ms-auto av-mono">${counts[code]}</strong></li>`).join("");
+    }
+
+    function addToStrip(frame) {
+      const strip = $("strip");
+      strip.querySelector(".av-empty")?.remove();
+      const retake = frame.quality.verdict !== "ok";
+      strip.insertAdjacentHTML("afterbegin", `
+        <a class="av-strip-item${retake ? " is-retake" : ""}" href="frame.html?id=${encodeURIComponent(frame.frame_id)}">
+          <img src="${esc(frame.image_url)}" alt="">
+          <span class="av-mono">${esc(frame.frame_id.slice(-9))}</span>
+          <span>${retake ? "需重拍" : `质量 ${frame.quality.score}`}</span>
+        </a>`);
+      while (strip.children.length > 8) strip.lastElementChild.remove();
+    }
+
+    async function grabOne() {
+      const frame = await api.grabFrame(current.session_id);
+      const boxes = await api.getObjects(frame.frame_id);
+      $("live").className = frame.quality.verdict === "ok" ? "" : "is-retake";
+      $("live").innerHTML = stageHtml(frame.image_url, boxes);
+      $("frame-meta").innerHTML = `<span class="av-mono">${esc(frame.frame_id)}</span> · ${fmtTime(frame.captured_at)}`;
+      renderQuality(frame.quality);
+      renderCounts(boxes);
+      addToStrip(frame);
+      await loadSessions();
+    }
+
+    // Mock latency: a believable figure that moves, refreshed every two seconds (prototype §3).
+    function tickLatency() {
+      $("latency").textContent = `延迟 ${110 + Math.floor(Math.random() * 50)} ms`;
     }
 
     function setRunning(running) {
       $("frame-card").classList.toggle("is-live", running);
       $("btn-open").disabled = running;
       $("site").disabled = running;
-      $("btn-grab").disabled = !running;
       $("btn-close").disabled = !running;
+      $("latency").hidden = !running;
+      timers.forEach(clearInterval);
+      timers = running
+        ? [setInterval(() => run(grabOne), GRAB_MS), setInterval(tickLatency, LATENCY_MS)]
+        : [];
     }
 
     async function run(action) {
-      try { await action(); } catch (err) { toast(err.message, "danger"); }
+      try { await action(); } catch (err) { toast(err.message, "danger"); setRunning(false); }
+    }
+
+    async function stopSession() {
+      if (!current) return;
+      setRunning(false);
+      await api.closeSession(current.session_id);
+      toast(`会话 ${current.session_id} 已结束`, "success");
+      current = null;
+      await loadSessions();
+    }
+
+    // The laptop camera proves frames can come from a device; no boxes in this mode (prototype §4).
+    async function toggleWebcam() {
+      if (stream) {
+        stream.getTracks().forEach((t) => t.stop());
+        stream = null;
+        $("webcam").hidden = true;
+        $("live").hidden = false;
+        $("btn-webcam").textContent = "试一下本机摄像头";
+        return;
+      }
+      await stopSession();
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      $("webcam").srcObject = stream;
+      $("webcam").hidden = false;
+      $("live").hidden = true;
+      $("btn-webcam").textContent = "返回样张";
+      $("frame-meta").textContent = "本机摄像头实时画面，此模式不叠检测框";
     }
 
     $("btn-open").onclick = () => run(async () => {
+      if (stream) await toggleWebcam();
       current = await api.openSession({ site: $("site").value, camera_index: 0 });
+      tickLatency();
       setRunning(true);
-      renderProgress();
-      await loadSessions();
+      await grabOne();
     });
-    $("btn-grab").onclick = () => run(async () => {
-      const frame = await api.grabFrame(current.session_id);
-      current.frame_count += 1;
-      if (frame.quality.verdict !== "ok") current.retake_count += 1;
-      renderFrame(frame);
-      renderProgress();
-      await loadSessions();
-    });
-    $("btn-close").onclick = () => run(async () => {
-      await api.closeSession(current.session_id);
-      toast(`会话 ${current.session_id} 已结束，共 ${current.frame_count} 帧`, "success");
-      setRunning(false);
-      await loadSessions();
-    });
+    $("btn-close").onclick = () => run(stopSession);
+    $("btn-webcam").onclick = () => toggleWebcam().catch(() => toast("无法打开本机摄像头，请检查浏览器权限", "danger"));
 
     run(async () => {
       const [camera] = await api.listCameras();
       $("camera").textContent = camera ? `· ${camera.name}` : "· 未检测到摄像头";
+      renderCounts([]);
+      $("count-total").textContent = "";
       await loadSessions();
     });
   </script>
