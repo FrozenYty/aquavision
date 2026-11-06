@@ -128,6 +128,16 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
   exactly that token. The two events therefore never ran, and a pull request that passed on its own
   branch but broke an earlier one would have gone unnoticed. A schedule needs no secret and cannot
   expire, which is why it was chosen over a personal token.
+- **`docs/handover-en.md` now carries the work that changed hands**, with acceptance written as
+  checks rather than adjectives. The `P1-02` section opens by listing what already exists, because the
+  most expensive mistake available on Monday is rebuilding it; the frontend section turns three
+  opinions into two mechanical tests and one page change. Items are deleted when accepted — a handover
+  document that lists finished work stops being read.
+- **The report is Markdown, and SRS V1.6 says so.** Scenario 5, FR-M5-04 and §7 described Word or PDF
+  output that this project was never going to produce; the repository keeps Markdown and converts
+  nothing. §7 now records that the Word, PDF and Excel column is a conversion target, not a second copy.
+- **CI moved to a daily 12:00 run** rather than a nightly one, so a red build is seen during the day
+  it happened rather than after a night of silence.
 - **The five blocked directories are gone**, by asking for the access instead of designing around it.
   The temporary ruff exclude is removed; the principle is now `AGENTS.md` §4.7.
 - **Prototype screen 6 done:** stats page with four hand-rolled SVG charts (species donut, daily

@@ -45,6 +45,7 @@ only single-language files above the line. Within `docs/`, the fastest route is 
 | `prototype-en/zh.md` | what the 11-06 walkthrough shows, screen by screen | the prototype is replaced by the real slice | @chemflowers |
 | `procurement-en/zh.md` | what to buy, why these parts, how to accept them | hardware changes | @FrozenYty |
 | `copy-review-en/zh.md` | findings on the interface copy, by page | the copy is rewritten or the page set changes | @FrozenYty |
+| `handover-en/zh.md` | work that changed hands, and the bar it must clear | an item is accepted or a new one opens | @FrozenYty |
 | `test-cases-en/zh.md` | one case per acceptance item, and how to run it | an acceptance item changes, or a case is executed | @IkeaFyj |
 | `glossary-en-zh.md` | the one word for each concept | a new concept appears | @FrozenYty |
 | `adr/01-08` | why a decision was taken and when to revisit it | never edited; superseded instead | the author of that ADR |

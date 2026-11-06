@@ -44,6 +44,7 @@
 | `prototype-en/zh.md` | 11-06 走查展示什么，逐屏说明 | 原型被正式切片取代 | @chemflowers |
 | `procurement-en/zh.md` | 买什么、为什么买这些、怎么验收 | 换硬件 | @FrozenYty |
 | `copy-review-en/zh.md` | 界面文案的审阅结论，按页面 | 文案重写或页面集合变化 | @FrozenYty |
+| `handover-en/zh.md` | 交接出去的工作，以及它必须达到的标准 | 有事项关闭或新增 | @FrozenYty |
 | `test-cases-en/zh.md` | 每条验收项一条用例，以及怎么跑 | 验收项变化，或某条用例被执行 | @IkeaFyj |
 | `glossary-en-zh.md` | 每个概念的唯一叫法 | 出现新概念 | @FrozenYty |
 | `adr/01-08` | 为什么这样定、什么时候该重审 | 不改写，只被新 ADR 取代 | 该篇作者 |
