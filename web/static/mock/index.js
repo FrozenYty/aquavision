@@ -12,7 +12,7 @@ import {
   STATS_TREND,
   STATS_CORRECTIONS,
 } from "./fixtures.js";
-import { TASKS } from "./catalog.js";
+import { HARD_SEEDS, TASKS } from "./catalog.js";
 
 class Fail extends Error {
   constructor(code, message) {
@@ -36,10 +36,16 @@ const captured = saved.frames ?? [];
 const REVIEWS = saved.reviews ?? {};
 FRAMES.unshift(...captured);
 if (saved.tasks) TASKS.splice(0, TASKS.length, ...saved.tasks);
+const removedHard = new Set(saved.removed_hard ?? []);
 
 function persist() {
   try {
-    sessionStorage.setItem(STORE, JSON.stringify({ frames: captured, reviews: REVIEWS, tasks: TASKS }));
+    sessionStorage.setItem(STORE, JSON.stringify({
+        frames: captured,
+        reviews: REVIEWS,
+        tasks: TASKS,
+        removed_hard: [...removedHard],
+      }));
   } catch {
     // Storage unavailable: the walk-through still works within one page.
   }
@@ -88,6 +94,24 @@ function advanceTasks() {
 function withQueue(tasks) {
   const queued = TASKS.filter((t) => t.status === 0).sort((a, b) => a.task_id - b.task_id);
   return tasks.map((t) => ({ ...t, queue_pos: t.status === 0 ? queued.indexOf(t) + 1 : null }));
+}
+
+// The pool: seeded samples on real frames, plus every frame corrected on the review page (FR-M4-03
+// says a modified frame enters the pool automatically). Source and reason fields are provisional.
+function hardSamples() {
+  const ok = FRAMES.filter((f) => f.quality.verdict === "ok" && !captured.includes(f));
+  const seeded = HARD_SEEDS.map((seed, i) => ({ ...seed, frame: ok[i * 2] })).filter((h) => h.frame);
+  const corrected = Object.entries(REVIEWS).map(([id, boxes]) => ({
+    source: "corrected",
+    class_code: boxes.find((b) => b.review_status === 2)?.class_code ?? boxes[0]?.class_code,
+    confidence: null,
+    reason: "复核时修改过框或类别",
+    frame: FRAMES.find((f) => f.frame_id === id),
+  }));
+  return [...corrected, ...seeded]
+    .filter((h) => h.frame && !removedHard.has(h.frame.frame_id))
+    .filter((h, i, all) => all.findIndex((o) => o.frame === h.frame) === i)
+    .map(({ frame, ...h }) => ({ ...h, frame_id: frame.frame_id, image_url: withImage(frame).image_url, added_at: frame.captured_at }));
 }
 
 function findFrame(id) {
@@ -208,6 +232,22 @@ const ROUTES = {
     TASKS.push(task);
     persist();
     return task;
+  },
+
+  // Hard-sample pool, provisional.
+  "GET /hard-samples": ({ query }) => {
+    const q = (query.q ?? "").toLowerCase();
+    const items = hardSamples().filter(
+      (h) => (!query.source || h.source === query.source) && (!q || h.frame_id.toLowerCase().includes(q)),
+    );
+    return paginate(items, query);
+  },
+
+  "DELETE /hard-samples/{id}": ({ id }) => {
+    if (!hardSamples().some((h) => h.frame_id === id)) throw new Fail(40401, "难例不存在");
+    removedHard.add(id);
+    persist();
+    return { frame_id: id };
   },
 
   // The task list and its two actions are provisional; GET /tasks/{id} is a contract route.

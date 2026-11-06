@@ -25,7 +25,7 @@ const MENU = [
     group: "复核与回流",
     items: [
       { id: "P-07", label: "复核工作台", href: "review.html" },
-      { id: "P-08", label: "难例池" },
+      { id: "P-08", label: "难例池", href: "hard-samples.html" },
       { id: "P-09", label: "数据集导出" },
     ],
   },
