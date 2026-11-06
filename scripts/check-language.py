@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
-"""Reject Chinese characters in English documents.
+"""Reject Chinese characters in English documents and in configuration files.
 
 An English document describes the thing in English. Chinese product names and search strings belong
 in its ``-zh`` counterpart, where the reader needs them verbatim. The single exception is the README
 language switcher: it is navigation, not prose.
 
+Configuration files are covered too — .gitignore, .gitattributes, pyproject.toml, requirements.txt and
+the GitHub workflows — because their comments are read by the same people. Product strings are not
+covered: the interface is Chinese by requirement (SRS §2.5.2), so web/ and the messages the capture
+code prints are legitimately Chinese.
+
 Usage: python scripts/check-language.py
-Exit code: 0 when every English document is clean, 1 otherwise.
+Exit code: 0 when every file checked is clean, 1 otherwise.
 """
 
 from __future__ import annotations
@@ -20,10 +25,20 @@ CJK = re.compile(r"[\u4e00-\u9fff]")
 SWITCHER = re.compile(r"\[中文\]\([^)]*-zh\.md\)")
 
 
+CONFIG_FILES = [".gitignore", ".gitattributes", "pyproject.toml", "requirements.txt"]
+CONFIG_GLOBS = [".github/**/*.yml", ".github/**/*.md"]
+
+
 def english_documents() -> list[Path]:
-    """Every Markdown file that is not a Chinese counterpart."""
+    """English Markdown that is not a Chinese counterpart, plus the configuration files."""
     files = sorted(ROOT.glob("*.md")) + sorted((ROOT / "docs").rglob("*.md"))
-    return [path for path in files if not path.name.endswith("-zh.md")]
+    english = [path for path in files if not path.name.endswith("-zh.md")]
+
+    config = [ROOT / name for name in CONFIG_FILES if (ROOT / name).is_file()]
+    for pattern in CONFIG_GLOBS:
+        config.extend(sorted(ROOT.glob(pattern)))
+
+    return [path for path in english + config if path.is_file()]
 
 
 def is_switcher(line: str) -> bool:
