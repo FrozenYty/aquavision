@@ -155,11 +155,18 @@ def test_every_route_but_login_needs_a_token(client):
 
 
 def test_a_role_cannot_reach_a_privileged_route(client):
+    """Every guarded surface is checked: it is the one defect a passing happy path never catches."""
     token = sign_in(client, "observer")
-    response = client.get("/api/users", headers=auth(token))
-    assert response.status_code == 403
-    assert response.json()["code"] == 40301
-    assert response.json()["data"] is None
+    attempts = [
+        ("GET", "/api/users", None),
+        ("GET", "/api/logs", None),
+        ("PATCH", "/api/params", {"max_concurrency": 3}),
+    ]
+    for method, path, payload in attempts:
+        response = client.request(method, path, json=payload, headers=auth(token))
+        assert response.status_code == 403, f"{method} {path} was not refused"
+        assert response.json()["code"] == 40301
+        assert response.json()["data"] is None
 
 
 def test_capture_scores_the_frame_and_is_idempotent(client):

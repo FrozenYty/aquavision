@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app import serializers
-from app.deps import SessionDep, UserDep, get_current_user
+from app.deps import SessionDep, UserDep, get_current_user, require
 from app.envelope import NOT_FOUND, ApiError, ok
 from app.models import DetectObject, MediaAsset, SysLog
 
@@ -41,7 +41,7 @@ class ReviewBody(BaseModel):
     note: str | None = Field(default=None, max_length=255)
 
 
-@router.post("/frames/{frame_id}")
+@router.post("/frames/{frame_id}", dependencies=[Depends(require("analyst", "algo", "admin"))])
 def submit(frame_id: str, body: ReviewBody, db: SessionDep, user: UserDep) -> dict[str, object]:
     asset = db.scalar(select(MediaAsset).where(MediaAsset.frame_id == frame_id))
     if asset is None:
