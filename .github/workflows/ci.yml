@@ -40,7 +40,10 @@ jobs:
         run: |
           if compgen -G "tests/test_*.py" > /dev/null; then
             # Only what the tests import; requirements.txt pulls torch via ultralytics.
-            pip install pytest numpy opencv-python-headless sqlalchemy
+            # Only what the tests import. requirements.txt pulls torch via ultralytics, which CI
+          # does not need to check an HTTP skeleton.
+          pip install pytest numpy opencv-python-headless sqlalchemy \
+                      fastapi uvicorn httpx pydantic-settings "python-jose[cryptography]" bcrypt
             pytest -q
           else
             echo "no tests yet"

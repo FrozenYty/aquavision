@@ -86,6 +86,24 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
   a lockout has a duration and a storage format, a capture source has an absence and an idempotence
   rule. Every case states precondition, steps, expected and `not implemented`, and each names the
   acceptance item it serves, so a failure lands on a case id rather than on a memory.
+- **P1-02 started and most of it landed, by hand, because the lane owner is away until Monday.** The
+  skeleton is real: settings, the response envelope and its error codes, JWT with server-side role
+  guards, the database session per request, and all 42 contract routes mounted. Twenty-one of them
+  answer with data read from the nine tables — accounts, sessions, frames, tasks, review, hard
+  examples, statistics, models, experiments, species, messages, the audit log.
+- **What answers 501, and why it is 501 rather than fake data.** Single-frame detection, batch
+  execution and the same-frame comparison need a weight file that does not exist yet. Datasets and
+  reports need something worse than effort: **the data model has no table for either**, and PATCH
+  params has nowhere to persist. Four routes therefore say what is missing instead of pretending.
+- **The contract test is the one that will age well.** It parses `docs/api-contract-en.md` and fails
+  when a route in the document is not mounted, so the contract stays the list of routes rather than a
+  description of last week. It also asserts the count is 42 — a deliberate tripwire for the next
+  person who edits one side only.
+- **Two drifts found and reported rather than fixed** (lane B): the data model has no `dataset`,
+  `report` or `param` table although the contract has four routes and a PATCH for them; and the
+  contract's frame object implies persisted quality *components* while `media_asset` stores only the
+  score and the flag. Capture returns the components it just measured and stores the score; the
+  storage question is the data model owner's.
 - **The five blocked directories are gone**, by asking for the access instead of designing around it.
   The temporary ruff exclude is removed; the principle is now `AGENTS.md` §4.7.
 - **Prototype screen 6 done:** stats page with four hand-rolled SVG charts (species donut, daily
