@@ -1,6 +1,6 @@
 // Mock server for api.js. Answers with the contract envelope and error codes (§2, §3).
 
-import { CAMERAS, FRAMES, SESSIONS, newFrame } from "./fixtures.js";
+import { CAMERAS, FRAMES, SESSIONS, newFrame, STATS_SPECIES, STATS_QUALITY, STATS_TREND, STATS_CORRECTIONS } from "./fixtures.js";
 
 class Fail extends Error {
   constructor(code, message) {
@@ -81,6 +81,13 @@ const ROUTES = {
     if (!body?.frame_ids?.length) throw new Fail(40001, "请至少选择一帧");
     return { task_id: nextTaskId++, status: 0, total: body.frame_ids.length };
   },
+
+  // Screen 6 statistics. species and quality are contract routes; trend and
+  // corrections are provisional pending lane B confirmation.
+  "GET /stats/species": () => STATS_SPECIES,
+  "GET /stats/quality": () => STATS_QUALITY,
+  "GET /stats/trend": () => STATS_TREND,
+  "GET /stats/corrections": () => STATS_CORRECTIONS,
 };
 
 function match(method, path) {
