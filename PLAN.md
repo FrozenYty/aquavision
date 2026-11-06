@@ -69,8 +69,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       when 20 frames are captured and file, score and `frame_id` all agree
 - [x] **P1-04** Thirteen static pages · @chemflowers · done when every page opens, uses mock data and
       shares one visual language
-- [ ] **P1-05** Test case draft against the 36 acceptance items · @IkeaFyj · done when each item has
-      at least one case, marked not-yet-implemented
+- [x] **P1-05** Test case draft against the 36 acceptance items · @IkeaFyj · done when each item has
+      at least one case, marked not-yet-implemented — 49 cases in `docs/test-cases-en.md`, all 36
+      items covered, every case marked not implemented
 - [ ] **P1-06** Hardware arrival check and rig assembly · @FrozenYty · done when
       `python scripts/test_exposure.py` exits 0 — the device opens, the picture answers the exposure
       property, and 20 pinned frames stay inside a 10 % spread — and the rig meets its numbers:

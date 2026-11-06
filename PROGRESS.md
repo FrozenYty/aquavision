@@ -80,6 +80,12 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
   deliberate mutations — forcing the lock verdict to true, swapping the backend order — each turned a
   test red, so the suite is not passing vacuously. Tomorrow's arrival now has one unknown left: does
   the device open at all.
+- **P1-05 delivered: 49 cases over the 36 acceptance items.** Written before the features, not after:
+  a case that cannot run yet still fixes what "done" means, which is the only moment anyone can argue
+  about it cheaply. Twelve items carried more than one case, because they hid two independent claims —
+  a lockout has a duration and a storage format, a capture source has an absence and an idempotence
+  rule. Every case states precondition, steps, expected and `not implemented`, and each names the
+  acceptance item it serves, so a failure lands on a case id rather than on a memory.
 - **The five blocked directories are gone**, by asking for the access instead of designing around it.
   The temporary ruff exclude is removed; the principle is now `AGENTS.md` §4.7.
 - **Prototype screen 6 done:** stats page with four hand-rolled SVG charts (species donut, daily
