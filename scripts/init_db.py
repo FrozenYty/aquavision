@@ -1,4 +1,4 @@
-"""Create the nine tables and seed the species dictionary (P1-01).
+"""Create the thirteen tables and seed the species dictionary (P1-01).
 
 Acceptance (PLAN.md P1-01): the script runs on an empty database and four
 classes are seeded. It is idempotent — safe to re-run on a database that
@@ -32,7 +32,7 @@ def init_db(dsn: str) -> None:
     engine = engine_from_dsn(dsn)
 
     # The model is the DDL: create_all issues CREATE TABLE IF NOT EXISTS for
-    # each of the nine tables, so an existing schema is left alone.
+    # each of the thirteen tables, so an existing schema is left alone.
     Base.metadata.create_all(engine)
 
     with Session(engine) as session:
@@ -65,7 +65,7 @@ def init_db(dsn: str) -> None:
             print(f"  mismatch: {problem}", file=sys.stderr)
         raise SystemExit(1)
 
-    print("OK: nine tables, four classes in labels.txt order")
+    print("OK: thirteen tables, four classes in labels.txt order")
 
 
 def main() -> None:

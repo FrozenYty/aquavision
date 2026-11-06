@@ -117,11 +117,16 @@ the number of routes is a consequence, not a target.
   "frame_id": "20261103T193012-0042",
   "session_id": "s-a3-001",
   "captured_at": "2026-11-03T19:30:12.418+08:00",
-  "quality": { "sharpness": 71, "brightness": 64, "colorcast": 58, "score": 66, "verdict": "ok" },
+  "quality": { "score": 66, "verdict": "ok" },
   "env": { "turbidity_rel": 12 },
   "width": 1920, "height": 1080
 }
 ```
+
+The three components behind the score — sharpness, brightness, colour cast — are returned by
+`POST /api/capture/sessions/{id}/frames` in `quality_components` and are **not stored**: the frame table
+keeps the score and the verdict, which is what every later decision reads. They are a diagnostic of the
+moment, not a property of the image.
 
 ### Detection box
 
@@ -154,6 +159,55 @@ diff would have to be merged against a version that may have moved on. `hard_sam
 frame entered the hard-example pool (FR-M4-03).
 
 Coordinates are normalised to `0..1`, relative to the image, origin at the top-left corner.
+
+### Dataset snapshot
+
+```json
+{
+  "dataset_id": 3,
+  "snapshot_name": "DS-V3",
+  "split_ratio": "7:2:1",
+  "seed": 42,
+  "frame_count": 7782,
+  "status": "ready",
+  "created_at": "2026-11-06T15:40:00+00:00"
+}
+```
+
+`status` is `building`, `ready` or `archived`. The per-frame membership lives in the snapshot table,
+not in the response: a snapshot with seven thousand frames is not a payload.
+
+### Report
+
+```json
+{
+  "report_id": 12,
+  "report_code": "RP261106-001",
+  "period_start": "2026-11-01T00:00:00+00:00",
+  "period_end": "2026-11-30T23:59:59+00:00",
+  "template": "standard",
+  "basis": "reviewed",
+  "model_version_id": 3,
+  "status": "ready",
+  "file_path": "reports/RP261106-001.md",
+  "created_at": "2026-11-06T15:41:00+00:00"
+}
+```
+
+### Parameters
+
+```json
+{
+  "retention_days": 30,
+  "max_concurrency": 2,
+  "detect_interval_ms": 300,
+  "quality_threshold": 60,
+  "camera_index": 0
+}
+```
+
+`PATCH` takes any subset of these keys and returns the full set. Every change is written to the audit
+log with its before and after value (AC-27).
 
 ## 7. WebSocket protocol
 

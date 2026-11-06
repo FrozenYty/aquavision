@@ -117,11 +117,15 @@ GET /api/frames?page=1&size=24&site=A3&from=2026-11-01&to=2026-11-03
   "frame_id": "20261103T193012-0042",
   "session_id": "s-a3-001",
   "captured_at": "2026-11-03T19:30:12.418+08:00",
-  "quality": { "sharpness": 71, "brightness": 64, "colorcast": 58, "score": 66, "verdict": "ok" },
+  "quality": { "score": 66, "verdict": "ok" },
   "env": { "turbidity_rel": 12 },
   "width": 1920, "height": 1080
 }
 ```
+
+总分背后的三个分项——清晰度、亮度、色偏——由
+`POST /api/capture/sessions/{id}/frames` 放在 `quality_components` 里返回，**不入库**：帧表只留总分与判定，
+那才是后续每一步实际读的东西。分项是拍摄当下的诊断量，不是图像的属性。
 
 ### 检测框
 
@@ -153,6 +157,53 @@ POST /api/review/frames/{frame_id}
 
 请求体提交**整份修正后的框集合**，不是增量差异：复核画布才是准，差异还要跟一个可能已经变过的版本合并。
 `hard_sample` 表示这一帧是否进入了难例池（FR-M4-03）。
+
+### 数据集快照
+
+```json
+{
+  "dataset_id": 3,
+  "snapshot_name": "DS-V3",
+  "split_ratio": "7:2:1",
+  "seed": 42,
+  "frame_count": 7782,
+  "status": "ready",
+  "created_at": "2026-11-06T15:40:00+00:00"
+}
+```
+
+`status` 取 `building`、`ready` 或 `archived`。帧级归属存在快照条目表里，不放进响应——七千帧不是载荷。
+
+### 巡检报告
+
+```json
+{
+  "report_id": 12,
+  "report_code": "RP261106-001",
+  "period_start": "2026-11-01T00:00:00+00:00",
+  "period_end": "2026-11-30T23:59:59+00:00",
+  "template": "standard",
+  "basis": "reviewed",
+  "model_version_id": 3,
+  "status": "ready",
+  "file_path": "reports/RP261106-001.md",
+  "created_at": "2026-11-06T15:41:00+00:00"
+}
+```
+
+### 系统参数
+
+```json
+{
+  "retention_days": 30,
+  "max_concurrency": 2,
+  "detect_interval_ms": 300,
+  "quality_threshold": 60,
+  "camera_index": 0
+}
+```
+
+`PATCH` 接受其中任意子集，返回完整的一组。每次改动都写入审计日志并记录前后值（AC-27）。
 
 ## 七、WebSocket 协议
 

@@ -104,6 +104,20 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
   contract's frame object implies persisted quality *components* while `media_asset` stores only the
   score and the flag. Capture returns the components it just measured and stores the score; the
   storage question is the data model owner's.
+- **Four tables added, and the nine-table decision revised rather than quietly worked around.** SRS
+  V1.5 records it and ADR 08 explains why: a snapshot exported before any experiment has nowhere to
+  live, a report history cannot be filtered out of a directory, and a parameter change has to persist
+  and stay audited. `dataset`, `dataset_item`, `report` and `sys_param` now exist, `EXPECTED_COLUMNS`
+  has thirteen entries, and the schema check caught the first defect of its own making — a declared
+  column count that did not match the model.
+- **Exports and reports are real.** A snapshot splits deterministically by seeded group, and the group
+  never straddles two splits, so two exports of the same frames with the same seed produce the same
+  assignment — that is AC-18, tested rather than asserted. A report writes a Markdown document from
+  the same queries the dashboard uses, and keeps the period, template, basis and model version in a
+  row the history can be filtered by.
+- **One uncertainty left standing, stated rather than hidden:** SRS §7 asks for Word or PDF and the
+  app writes Markdown, because neither format is reachable without a rendering dependency. The row
+  shape already carries everything a later export step needs.
 - **The five blocked directories are gone**, by asking for the access instead of designing around it.
   The temporary ruff exclude is removed; the principle is now `AGENTS.md` §4.7.
 - **Prototype screen 6 done:** stats page with four hand-rolled SVG charts (species donut, daily

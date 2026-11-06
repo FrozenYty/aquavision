@@ -24,6 +24,7 @@ from sqlalchemy import (
     SmallInteger,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -266,6 +267,108 @@ class SysMessage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
+class SysParam(Base):
+    """Runtime configuration with an audit trail (data model §3.10, FR-M7-01).
+
+    Key/value rather than one column per setting: adding a parameter must not need a migration, and
+    the settings are read by code that already knows their names. `value_type` is what lets the reader
+    cast a string back to the type it had, so the table stores what was set rather than a string that
+    happens to look like a number.
+    """
+
+    __tablename__ = "sys_param"
+
+    param_id: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
+    param_key: Mapped[str] = mapped_column(String(64), unique=True)
+    param_value: Mapped[str] = mapped_column(String(255))
+    value_type: Mapped[str] = mapped_column(String(16))  # int / float / bool / str
+    remark: Mapped[str | None] = mapped_column(String(255))
+    updated_by: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("sys_user.user_id"), index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class Dataset(Base):
+    """An exported dataset snapshot (data model §3.11, FR-M4-04).
+
+    It exists before any experiment references it: the export page produces a snapshot, and training
+    uses it days later. That gap is why the table exists at all — `train_experiment.dataset_snapshot`
+    can only name a snapshot that some experiment already used.
+    """
+
+    __tablename__ = "dataset"
+
+    dataset_id: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
+    snapshot_name: Mapped[str] = mapped_column(String(64), unique=True)  # DS-V3
+    manifest_path: Mapped[str] = mapped_column(String(512))  # human-readable copy
+    split_ratio: Mapped[str] = mapped_column(String(16))  # 7:2:1
+    seed: Mapped[int] = mapped_column(Integer)
+    frame_count: Mapped[int] = mapped_column(Integer)
+    status: Mapped[int] = mapped_column(
+        SmallInteger, server_default="1"
+    )  # 0 building, 1 ready, 2 archived
+    created_by: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("sys_user.user_id"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class DatasetItem(Base):
+    """One frame inside one snapshot, and the split it was assigned to (data model §3.12, AC-18).
+
+    Membership is a table rather than a JSON list because three questions depend on it and all three
+    are joins: which frames trained this model, may this frame be cleaned up, and are the groups
+    still separated. `group_key` is what keeps similar frames from straddling two splits.
+    """
+
+    __tablename__ = "dataset_item"
+    __table_args__ = (
+        UniqueConstraint("dataset_id", "asset_id", name="uq_dataset_item_asset"),
+        Index("ix_dataset_item_dataset_split", "dataset_id", "split"),
+    )
+
+    item_id: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
+    dataset_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("dataset.dataset_id"), index=True
+    )
+    asset_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("media_asset.asset_id"), index=True
+    )
+    split: Mapped[int] = mapped_column(SmallInteger)  # 1 train, 2 val, 3 test
+    group_key: Mapped[str | None] = mapped_column(String(64))
+
+
+class Report(Base):
+    """One generated inspection report and its file (data model §3.13, FR-M5-04, AC-22).
+
+    The period, template and basis are columns because the history is filtered by them; the document
+    itself is a file, exactly as a model's weights are. Without the row the history would be a pile of
+    files whose names encode what should have been queryable.
+    """
+
+    __tablename__ = "report"
+
+    report_id: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
+    report_code: Mapped[str] = mapped_column(String(32), unique=True)  # RPyyMMdd-serial
+    period_start: Mapped[datetime] = mapped_column(DateTime)
+    period_end: Mapped[datetime] = mapped_column(DateTime)
+    template: Mapped[str] = mapped_column(String(16))  # standard / brief
+    basis: Mapped[str] = mapped_column(String(16))  # reviewed / raw
+    model_version_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("model_version.model_id"), index=True
+    )
+    file_path: Mapped[str | None] = mapped_column(String(512))
+    status: Mapped[int] = mapped_column(
+        SmallInteger, server_default="0"
+    )  # 0 running, 1 ready, 2 failed
+    error_msg: Mapped[str | None] = mapped_column(String(255))
+    created_by: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("sys_user.user_id"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
 TABLES = (
     SysUser,
     SysLog,
@@ -276,6 +379,10 @@ TABLES = (
     ModelVersion,
     TrainExperiment,
     SysMessage,
+    SysParam,
+    Dataset,
+    DatasetItem,
+    Report,
 )
 
 # Column counts from data model §1 — the dictionary is the contract, and this
@@ -291,4 +398,8 @@ EXPECTED_COLUMNS = {
     "model_version": 14,
     "train_experiment": 18,
     "sys_message": 10,
+    "sys_param": 7,
+    "dataset": 9,
+    "dataset_item": 5,
+    "report": 12,
 }

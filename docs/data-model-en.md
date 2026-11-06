@@ -7,7 +7,9 @@
 
 ## 1. Entities
 
-Nine tables. Three of them carry the business core, the rest support it.
+Thirteen tables. Three of them carry the business core, the rest support it, and four were added
+after the skeleton proved the original nine could not hold what the requirements ask for — see ADR 08
+for why, and `srs-en.md` §4.1 for the revised decision.
 
 | Table | Purpose | Columns |
 |---|---|---|
@@ -20,6 +22,10 @@ Nine tables. Three of them carry the business core, the rest support it.
 | `model_version` | Weight file, metrics, online state | 14 |
 | `train_experiment` | Dataset snapshot, hyper-parameters, metrics | 18 |
 | `sys_message` | In-app notifications | 10 |
+| `sys_param` | Runtime configuration, key/value, audited | 7 |
+| `dataset` | An exported dataset snapshot | 9 |
+| `dataset_item` | One frame in one snapshot, and its split | 5 |
+| `report` | A generated inspection report and its file | 12 |
 
 ## 2. Naming and types
 
@@ -222,6 +228,67 @@ every result is mislabelled; the loader must verify both at startup and refuse t
 | `ref_id` | VARCHAR(64) | NULL | Referenced object id |
 | `is_read` | SMALLINT | DEFAULT 0 | 0 unread, 1 read |
 | `created_at` | TIMESTAMP | DEFAULT now() | Creation time |
+
+### 3.10 sys_param
+
+| Column | Type | Constraint / default | Notes |
+|---|---|---|---|
+| `param_id` | BIGINT | PK, auto increment | Primary key |
+| `param_key` | VARCHAR(64) | NOT NULL, unique | `retention_days`, `max_concurrency`, ... |
+| `param_value` | VARCHAR(255) | NOT NULL | Stored as text |
+| `value_type` | VARCHAR(16) | NOT NULL | int / float / bool / str — how to cast it back |
+| `remark` | VARCHAR(255) | NULL | What the parameter does |
+| `updated_by` | BIGINT | FK sys_user, NULL | Who changed it last |
+| `updated_at` | TIMESTAMP | DEFAULT now() | When |
+
+Key/value rather than one column per setting: adding a parameter must not require a migration.
+
+### 3.11 dataset
+
+| Column | Type | Constraint / default | Notes |
+|---|---|---|---|
+| `dataset_id` | BIGINT | PK, auto increment | Primary key |
+| `snapshot_name` | VARCHAR(64) | NOT NULL, unique | `DS-V3` |
+| `manifest_path` | VARCHAR(512) | NOT NULL | Human-readable copy of the list |
+| `split_ratio` | VARCHAR(16) | NOT NULL | `7:2:1` |
+| `seed` | INT | NOT NULL | Split seed; same seed, same splits (AC-18) |
+| `frame_count` | INT | NOT NULL | Size of the snapshot |
+| `status` | SMALLINT | DEFAULT 1 | 0 building / 1 ready / 2 archived |
+| `created_by` | BIGINT | FK sys_user, NULL | Who exported it |
+| `created_at` | TIMESTAMP | DEFAULT now() | When |
+
+A snapshot exists before any experiment references it: export happens now, training happens later.
+
+### 3.12 dataset_item
+
+| Column | Type | Constraint / default | Notes |
+|---|---|---|---|
+| `item_id` | BIGINT | PK, auto increment | Primary key |
+| `dataset_id` | BIGINT | FK dataset, NOT NULL | Owning snapshot |
+| `asset_id` | BIGINT | FK media_asset, NOT NULL | Frame in it |
+| `split` | SMALLINT | NOT NULL | 1 train / 2 val / 3 test |
+| `group_key` | VARCHAR(64) | NULL | Similarity group; never crosses splits |
+
+Unique on (`dataset_id`, `asset_id`); indexed on (`dataset_id`, `split`).
+
+### 3.13 report
+
+| Column | Type | Constraint / default | Notes |
+|---|---|---|---|
+| `report_id` | BIGINT | PK, auto increment | Primary key |
+| `report_code` | VARCHAR(32) | NOT NULL, unique | `RPyyMMdd-serial` |
+| `period_start` | TIMESTAMP | NOT NULL | Statistics period, inclusive |
+| `period_end` | TIMESTAMP | NOT NULL | Statistics period, inclusive |
+| `template` | VARCHAR(16) | NOT NULL | standard / brief |
+| `basis` | VARCHAR(16) | NOT NULL | reviewed / raw |
+| `model_version_id` | BIGINT | FK model_version, NULL | Version in force when generated |
+| `file_path` | VARCHAR(512) | NULL | The document itself |
+| `status` | SMALLINT | DEFAULT 0 | 0 generating / 1 ready / 2 failed |
+| `error_msg` | VARCHAR(255) | NULL | Why it failed |
+| `created_by` | BIGINT | FK sys_user, NULL | Who asked for it |
+| `created_at` | TIMESTAMP | DEFAULT now() | When |
+
+The document is a file; this row is what makes the history queryable by period, template and basis.
 
 ## 4. Indices
 

@@ -10,6 +10,7 @@ module is honestly not built.
 from __future__ import annotations
 
 import base64
+import json
 import re
 from pathlib import Path
 
@@ -43,6 +44,8 @@ def _mounted_operations(app) -> set[tuple[str, str]]:
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setenv("DB_DSN", f"sqlite:///{(tmp_path / 'api.db').as_posix()}")
+    # Reports and manifests land here, not in the repository.
+    monkeypatch.setenv("AV_DATA_DIR", str(tmp_path / "data"))
     get_settings.cache_clear()
 
     from app.main import create_app
@@ -231,14 +234,145 @@ def test_reviewing_a_frame_without_results_is_refused(client):
     assert body["code"] == 40401
 
 
-def test_modules_without_storage_say_so(client):
+def test_modules_that_need_a_model_say_so(client):
+    """The one remaining 501 is the one that genuinely cannot run: no weights, no detection."""
+    token = sign_in(client)
+    response = client.post("/api/detect/frames/any-frame", headers=auth(token))
+    assert response.status_code == 501
+    body = response.json()
+    assert body["code"] == 50100
+    assert "模型" in body["message"]
+
+
+def test_datasets_and_reports_start_empty_rather_than_failing(client):
     token = sign_in(client)
     for path in ("/api/datasets", "/api/reports"):
-        response = client.get(path, headers=auth(token))
-        assert response.status_code == 501
-        body = response.json()
-        assert body["code"] == 50100
-        assert "数据模型" in body["message"]
+        body = client.get(path, headers=auth(token)).json()
+        assert body["code"] == 0
+        assert body["data"]["items"] == []
+        assert body["data"]["total"] == 0
+
+
+def test_parameters_persist_and_are_audited(client):
+    token = sign_in(client)
+    before = client.get("/api/params", headers=auth(token)).json()["data"]
+    assert before["max_concurrency"] >= 1
+
+    changed = client.patch("/api/params", json={"max_concurrency": 4}, headers=auth(token)).json()
+    assert changed["code"] == 0
+    assert changed["data"]["params"]["max_concurrency"] == 4
+    assert changed["data"]["changed"]["max_concurrency"] == {
+        "before": before["max_concurrency"],
+        "after": 4,
+    }
+
+    # Read back through a fresh request: the value came from the table, not from memory.
+    assert client.get("/api/params", headers=auth(token)).json()["data"]["max_concurrency"] == 4
+
+    log = client.get("/api/logs?action=config", headers=auth(token)).json()["data"]["items"]
+    assert log and log[0]["target_id"] == "max_concurrency"
+    assert log[0]["before_value"] == str(before["max_concurrency"])
+    assert log[0]["after_value"] == "4"
+
+    # No-op patch is a conflict, not a silent success.
+    assert (
+        client.patch("/api/params", json={"max_concurrency": 4}, headers=auth(token)).json()["code"]
+        == 40901
+    )
+
+
+def test_dataset_export_is_deterministic_and_keeps_groups_together(client, tmp_path):
+    token = sign_in(client)
+    session = client.post("/api/capture/sessions", headers=auth(token)).json()["data"]
+
+    # Three visually different frames, so the hash-based dedup keeps all three.
+    for seed in (1, 2, 3):
+        image = np.random.default_rng(seed).integers(0, 255, (90, 120, 3), dtype=np.uint8)
+        ok, buffer = cv2.imencode(".jpg", image)
+        client.post(
+            f"/api/capture/sessions/{session['session_id']}/frames",
+            json={"point_code": "A3", "image_b64": base64.b64encode(buffer.tobytes()).decode()},
+            headers=auth(token),
+        )
+
+    first = client.post(
+        "/api/datasets",
+        json={"snapshot_name": "DS-T1", "split_ratio": "7:2:1", "seed": 7, "only_reviewed": False},
+        headers=auth(token),
+    ).json()
+    assert first["code"] == 0, first
+    assert first["data"]["frame_count"] == 3
+    assert sum(first["data"]["splits"].values()) == 3
+
+    second = client.post(
+        "/api/datasets",
+        json={"snapshot_name": "DS-T2", "split_ratio": "7:2:1", "seed": 7, "only_reviewed": False},
+        headers=auth(token),
+    ).json()
+    assert second["code"] == 0
+
+    one = json.loads(Path(first["data"]["manifest_path"]).read_text(encoding="utf-8"))
+    two = json.loads(Path(second["data"]["manifest_path"]).read_text(encoding="utf-8"))
+    assert [f["split"] for f in one["frames"]] == [f["split"] for f in two["frames"]], (
+        "同样的帧与种子必须给出同样的划分"
+    )
+
+    listed = client.get("/api/datasets", headers=auth(token)).json()["data"]
+    assert listed["total"] == 2
+
+
+def test_export_without_reviewed_frames_is_refused(client):
+    token = sign_in(client)
+    session = client.post("/api/capture/sessions", headers=auth(token)).json()["data"]
+    client.post(
+        f"/api/capture/sessions/{session['session_id']}/frames",
+        json={"point_code": "A3", "image_b64": a_frame()},
+        headers=auth(token),
+    )
+    body = client.post(
+        "/api/datasets",
+        json={"snapshot_name": "DS-UNREVIEWED", "seed": 1},
+        headers=auth(token),
+    ).json()
+    assert body["code"] == 40002
+    assert "没有符合条件的帧" in body["message"]
+
+
+def test_report_is_generated_from_the_same_figures_as_the_dashboard(client):
+    token = sign_in(client)
+    body = client.post(
+        "/api/reports",
+        json={
+            "period_start": "2026-01-01T00:00:00+00:00",
+            "period_end": "2026-12-31T00:00:00+00:00",
+            "template": "standard",
+            "basis": "reviewed",
+        },
+        headers=auth(token),
+    ).json()
+    assert body["code"] == 0, body
+    assert body["data"]["status"] == "ready"
+
+    document = Path(body["data"]["file_path"]).read_text(encoding="utf-8")
+    assert "巡检报告" in document
+    assert "模型版本" in document and "统计口径" in document
+
+    history = client.get("/api/reports", headers=auth(token)).json()["data"]
+    assert history["total"] == 1
+    assert history["items"][0]["report_code"].startswith("RP")
+
+
+def test_a_reversed_period_is_refused(client):
+    token = sign_in(client)
+    body = client.post(
+        "/api/reports",
+        json={
+            "period_start": "2026-12-31T00:00:00+00:00",
+            "period_end": "2026-01-01T00:00:00+00:00",
+        },
+        headers=auth(token),
+    ).json()
+    assert body["code"] == 40002
 
 
 def test_statistics_answer_with_real_figures(client):
