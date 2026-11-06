@@ -693,6 +693,13 @@ body {
 }
 
 /* Low confidence: translucent fill plus a corner tag, never colour alone (SRS §5.1). */
+/* Frame detail: hovering a list row lights its box. */
+.av-box.is-hot {
+  z-index: 2;
+  outline: 2px solid var(--av-text-inverse);
+  outline-offset: 1px;
+}
+
 .av-box.is-low {
   background: color-mix(in srgb, var(--av-class-color) calc(var(--av-box-fill-alpha) * 100%), transparent);
 }

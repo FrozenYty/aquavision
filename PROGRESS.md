@@ -50,6 +50,23 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
 - **Flagged for later, not fixed here:** the prototype badge lives in `stats.html` only — the other
   pages need it from the shared shell; and `.av-page-actions` stretches non-button children, so a
   badge's text sits high unless it centres itself.
+- **Prototype screens 3-5 delivered** (#43 shared layer, #44 capture, #45 review, detail in the PR
+  that adds this line). The walk-through clicks end to end: start capture, open a frame from the
+  strip, see the 0.42 box flagged, go to review, drag and relabel it, submit, and the detail page
+  shows the change. Box overlay, class colours and the low-confidence style live in one module,
+  `web/static/js/boxes.js`, so the three screens cannot drift apart.
+- **The badge item above is resolved**: the shell now puts "prototype · mock data" on every page.
+- **Page ids now follow SRS §5.2.** Screen 6 had taken P-06, which the SRS gives to the
+  detection-result page (screen 4); statistics is P-10. The seven pages the prototype skips stay in
+  the menu, greyed and tagged P2, as prototype §1 asks.
+- **The mock holds a walk-through together.** Every page load restarts it, so captured frames and
+  submitted reviews are kept in `sessionStorage`. Live frames follow a fixed quality script
+  (86, 82, 87, 79, then 49) instead of the seeded dice, which had opened the demo on a retake.
+- **Open for lane B:** fields the screens need that the contract does not list yet — `image_url` on a
+  frame; `object_id`, `is_manual`, `review_status` on a box (all in the data model); the review body
+  `{ objects }` and its `{ count_before, count_after }` reply.
+- **Unverified here:** the "try the laptop camera" button. The Browser pane blocks camera access, so
+  only the failure path (a toast, the samples stay) was seen; the real camera needs a check in Chrome.
 
 ## 2026-11-05
 
