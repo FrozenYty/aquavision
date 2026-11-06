@@ -1,0 +1,33 @@
+name: branch-cleanup
+
+# Auto-merge does not honour `gh pr merge --delete-branch`: the flag is applied when the merge is
+# requested, but with auto-merge the merge happens later, and the branch is left behind. This job
+# deletes it on the closed event instead, which is the only reliable moment.
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  delete:
+    # Only merged pull requests, and only branches that live in this repository: a fork's branch is
+    # not ours to delete.
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete the merged branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if gh api -X DELETE "repos/$GH_REPO/git/refs/heads/$BRANCH" 2>/dev/null; then
+            echo "deleted $BRANCH"
+          else
+            # A branch deleted by hand, or one that never existed any more: not a failure.
+            echo "::notice::$BRANCH was already gone"
+          fi

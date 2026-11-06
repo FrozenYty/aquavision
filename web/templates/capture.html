@@ -17,7 +17,7 @@
           <option value="A3">点位 A3</option><option value="B1">点位 B1</option>
         </select>
         <button class="btn btn-primary text-nowrap" id="btn-open" type="button">开始采集</button>
-        <button class="btn btn-outline-secondary text-nowrap" id="btn-close" type="button" disabled>停止</button>
+        <button class="btn btn-outline-secondary text-nowrap" id="btn-close" type="button" disabled>结束采集</button>
         <button class="btn btn-outline-primary text-nowrap" id="btn-webcam" type="button">试一下本机摄像头</button>
       </div>
     </div>
@@ -203,7 +203,7 @@
       $("webcam").hidden = false;
       $("live").hidden = true;
       $("btn-webcam").textContent = "返回样张";
-      $("frame-meta").textContent = "本机摄像头实时画面，此模式不叠检测框";
+      $("frame-meta").textContent = "本机摄像头实时画面，此模式不叠加目标框";
     }
 
     $("btn-open").onclick = () => run(async () => {
