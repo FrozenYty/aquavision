@@ -53,6 +53,30 @@ export const listFrames = (query) => request("GET", "/frames", { query });
 // Body shape is provisional; the contract names the route only.
 export const startBatch = (frameIds) =>
   request("POST", "/detect/batches", { body: { frame_ids: frameIds } });
+export const listTasks = (query) => request("GET", "/tasks", { query }); // provisional
+export const cancelTask = (id) => request("POST", `/tasks/${id}/cancel`); // provisional
+export const retryTask = (id) => request("POST", `/tasks/${id}/retry`); // provisional
+export const listHardSamples = (query) => request("GET", "/hard-samples", { query }); // provisional
+export const removeHardSample = (frameId) => request("DELETE", `/hard-samples/${frameId}`); // provisional
+export const listDatasets = () => request("GET", "/datasets"); // provisional
+export const exportDataset = (body) => request("POST", "/datasets", { body }); // provisional
+export const listReports = () => request("GET", "/reports"); // provisional
+export const createReport = (body) => request("POST", "/reports", { body }); // provisional
+export const listModels = () => request("GET", "/models");
+export const activateModel = (id) => request("POST", `/models/${id}/activate`);
+export const listExperiments = () => request("GET", "/experiments"); // provisional
+export const listSpecies = () => request("GET", "/species"); // provisional
+export const updateSpecies = (code, body) => request("PATCH", `/species/${code}`, { body }); // provisional
+// ---- System administration (all provisional) ----
+export const listUsers = () => request("GET", "/users");
+export const setUserStatus = (id, status) => request("POST", `/users/${id}/status`, { body: { status } });
+export const resetPassword = (id) => request("POST", `/users/${id}/reset-password`);
+export const getParams = () => request("GET", "/params");
+export const updateParams = (body) => request("PATCH", "/params", { body });
+export const getMonitor = () => request("GET", "/monitor");
+export const listLogs = (query) => request("GET", "/logs", { query });
+export const listMessages = () => request("GET", "/messages");
+export const markRead = (id) => request("POST", `/messages/${id}/read`);
 export const getFrame = (frameId) => request("GET", `/frames/${frameId}`);
 export const getObjects = (frameId) => request("GET", `/frames/${frameId}/objects`);
 

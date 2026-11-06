@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>识别任务 · AquaVision</title>
+  <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
+  <link rel="stylesheet" href="../static/css/tokens.css">
+  <link rel="stylesheet" href="../static/css/app.css">
+</head>
+<body>
+  <main class="av-content">
+    <div class="av-page-header">
+      <h1>识别任务</h1>
+      <div class="av-page-actions">
+        <a class="btn btn-outline-primary text-nowrap" href="frames.html">从影像浏览发起批量识别</a>
+      </div>
+    </div>
+
+    <form class="av-card mb-3 row g-2 align-items-end mx-0" id="filters">
+      <div class="col-12 col-md-5">
+        <label class="form-label small" for="f-q">关键词</label>
+        <input class="form-control form-control-sm" id="f-q" name="q" placeholder="任务号、会话或帧号">
+      </div>
+      <div class="col-8 col-md-3">
+        <label class="form-label small" for="f-status">状态</label>
+        <select class="form-select form-select-sm" id="f-status" name="status">
+          <option value="">全部</option><option value="0">排队中</option><option value="1">运行中</option>
+          <option value="2">已完成</option><option value="3">已失败</option>
+        </select>
+      </div>
+      <div class="col-4 col-md-2 d-grid">
+        <button class="btn btn-sm btn-outline-primary" type="submit">查询</button>
+      </div>
+    </form>
+
+    <section class="av-card">
+      <h2 class="av-card-title">任务列表 <small class="text-secondary fw-normal" id="live-note"></small></h2>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead><tr><th>任务</th><th>类型</th><th>来源</th><th>进度</th><th>状态</th><th>模型</th><th>创建时间</th><th>操作</th></tr></thead>
+          <tbody id="tasks"></tbody>
+        </table>
+      </div>
+      <div class="av-pager" id="pager"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { renderShell } from "../static/js/layout.js";
+    import * as api from "../static/js/api.js";
+    import { confirmAction, esc, fmtTime, renderPager, toast } from "../static/js/ui.js";
+
+    renderShell("P-05");
+
+    const $ = (id) => document.getElementById(id);
+    const POLL_MS = 2000;
+    // Glossary §3 task states.
+    const STATUS = [
+      ["排队中", "secondary"],
+      ["运行中", "info"],
+      ["已完成", "success"],
+      ["已失败", "danger"],
+    ];
+    let page = 1;
+    let timer = null;
+
+    function statusCell(t) {
+      const [label, kind] = STATUS[t.status];
+      const queue = t.status === 0 ? `<div class="text-secondary">排队第 ${t.queue_pos} 位</div>` : "";
+      const error = t.error ? `<div class="text-danger">${esc(t.error)}</div>` : "";
+      return `<span class="badge text-bg-${kind}">${label}</span>${queue}${error}`;
+    }
+
+    function actions(t) {
+      if (t.status <= 1) return `<button class="btn btn-sm btn-outline-danger" data-act="cancel" data-task="${t.task_id}" type="button">取消</button>`;
+      if (t.status === 3) return `<button class="btn btn-sm btn-outline-primary" data-act="retry" data-task="${t.task_id}" type="button">重试</button>`;
+      if (t.kind === "single") return `<a class="btn btn-sm btn-outline-secondary" href="frame.html?id=${encodeURIComponent(t.source)}">查看结果</a>`;
+      return "";
+    }
+
+    function progress(t) {
+      const pct = Math.round((t.done / t.total) * 100);
+      return `<div class="d-flex align-items-center gap-2"><div class="progress av-progress flex-grow-1">
+        <div class="progress-bar${t.status === 3 ? " bg-danger" : ""}" style="width: ${pct}%"></div></div>
+        <span class="av-mono">${t.done}/${t.total}</span></div>`;
+    }
+
+    async function load() {
+      const filters = Object.fromEntries(new FormData($("filters")));
+      const data = await api.listTasks({ ...filters, page, size: 8 });
+      $("tasks").innerHTML = data.items.length
+        ? data.items.map((t) => `<tr>
+            <td class="av-mono">#${t.task_id}</td>
+            <td>${t.kind === "batch" ? "批量" : "单帧"}</td>
+            <td class="av-mono">${esc(t.source)}</td>
+            <td>${progress(t)}</td>
+            <td>${statusCell(t)}</td>
+            <td class="av-mono">${esc(t.model_version)}</td>
+            <td>${fmtTime(t.created_at)}</td>
+            <td>${actions(t)}</td></tr>`).join("")
+        : '<tr><td colspan="8" class="av-empty">没有符合条件的任务。可以到 <a href="frames.html">影像浏览</a> 选帧发起识别。</td></tr>';
+      renderPager($("pager"), data, (n) => { page = n; load(); });
+
+      // Keep polling while anything is still moving; stop when the list is at rest.
+      const moving = data.items.some((t) => t.status <= 1);
+      $("live-note").textContent = moving ? "· 每 2 秒刷新进度" : "";
+      clearTimeout(timer);
+      if (moving) timer = setTimeout(() => load().catch(fail), POLL_MS);
+    }
+
+    const fail = (err) => toast(err.message, "danger");
+
+    $("tasks").addEventListener("click", async (event) => {
+      const btn = event.target.closest("button[data-act]");
+      if (!btn) return;
+      const id = btn.dataset.task;
+      try {
+        if (btn.dataset.act === "cancel") {
+          if (!confirmAction(`确定取消任务 #${id}？已识别的帧会保留。`)) return;
+          await api.cancelTask(id);
+          toast(`任务 #${id} 已取消`, "success");
+        } else {
+          await api.retryTask(id);
+          toast(`任务 #${id} 已重新排队`, "success");
+        }
+        await load();
+      } catch (err) {
+        fail(err);
+      }
+    });
+
+    $("filters").addEventListener("submit", (event) => {
+      event.preventDefault();
+      page = 1;
+      load().catch(fail);
+    });
+
+    load().catch(fail);
+  </script>
+</body>
+</html>

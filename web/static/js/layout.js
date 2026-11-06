@@ -17,7 +17,7 @@ const MENU = [
   {
     group: "识别",
     items: [
-      { id: "P-05", label: "识别任务" },
+      { id: "P-05", label: "识别任务", href: "tasks.html" },
       { id: "P-06", label: "识别结果", href: "frame.html" },
     ],
   },
@@ -25,22 +25,22 @@ const MENU = [
     group: "复核与回流",
     items: [
       { id: "P-07", label: "复核工作台", href: "review.html" },
-      { id: "P-08", label: "难例池" },
-      { id: "P-09", label: "数据集导出" },
+      { id: "P-08", label: "难例池", href: "hard-samples.html" },
+      { id: "P-09", label: "数据集导出", href: "dataset-export.html" },
     ],
   },
   {
     group: "统计与报告",
     items: [
       { id: "P-10", label: "统计与报告", href: "stats.html" },
-      { id: "P-11", label: "巡检报告" },
+      { id: "P-11", label: "巡检报告", href: "reports.html" },
     ],
   },
   {
     group: "模型与系统",
     items: [
-      { id: "P-12", label: "模型与实验" },
-      { id: "P-13", label: "系统管理" },
+      { id: "P-12", label: "模型与实验", href: "models.html" },
+      { id: "P-13", label: "系统管理", href: "admin.html" },
     ],
   },
 ];
@@ -57,7 +57,7 @@ function topbarHtml() {
     </a>
     <div class="av-topbar-actions">
       <span class="av-clock" aria-hidden="true"></span>
-      <a href="#" title="站内消息">消息 <span class="badge rounded-pill text-bg-info">0</span></a>
+      <a href="admin.html?tab=messages" title="站内消息">消息 <span class="badge rounded-pill text-bg-info">0</span></a>
       <span class="av-topbar-user"><span class="av-avatar" aria-hidden="true">演</span> 演示账号</span>
       <a href="login.html">退出</a>
     </div>`;

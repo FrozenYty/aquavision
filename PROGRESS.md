@@ -50,7 +50,6 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
 - **Flagged for later, not fixed here:** the prototype badge lives in `stats.html` only — the other
   pages need it from the shared shell; and `.av-page-actions` stretches non-button children, so a
   badge's text sits high unless it centres itself.
-<<<<<<< HEAD
 - **Prototype screens 3-5 delivered** (#43 shared layer, #44 capture, #45 review, detail in the PR
   that adds this line). The walk-through clicks end to end: start capture, open a frame from the
   strip, see the 0.42 box flagged, go to review, drag and relabel it, submit, and the detail page
@@ -74,6 +73,19 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
   (media_asset 18, detect_object 19); the SRS core tables were synced to it: `frame_id`,
   `captured_at`, `class_code`, `x`/`y`/`w`/`h`, `map50`/`map50_95`. `detect_task.class_filter`
   stores a JSON array — the one documented exception to the no-lists rule.
+- **P1-04 done: all 13 pages open on mock data** (#48 tasks, #49 hard samples, #50 dataset export,
+  #51 reports, #52 models, and system administration in the PR that ticks the box). No menu entry is
+  greyed any more. Checked page by page: each opens, the menu highlights the right entry, nothing
+  scrolls sideways at 1280 or 1920, and all 31 links the pages render resolve.
+- **Mock data for those pages lives in `web/static/mock/catalog.js`**, apart from `fixtures.js`.
+  Figures are tied to what already exists: DS-V2 is the P0-01 split, E0 and E3 are the SRS scenario-4
+  numbers, the report preview reads the same stats calls as screen 6, monitoring counts the task list.
+- **Open for lane B:** every collection route these pages call is provisional and marked in
+  `api.js` — tasks, hard samples, datasets, reports, experiments, species, users, parameters,
+  monitoring, logs, messages. Roles use the contract codes; `observer` is read as the SRS capture
+  operator, which nobody has confirmed.
+- **Known limitation:** after a rollback on P-12, the dashboard and report footer still say v8n-E3 for
+  that tab; their figure is fixed in the fixtures.
 
 ## 2026-11-05
 

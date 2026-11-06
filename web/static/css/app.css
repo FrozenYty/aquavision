@@ -470,6 +470,44 @@ body {
   border-bottom-color: var(--av-text);
 }
 
+/* Report preview: a page of paper inside the card. */
+.av-paper {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--av-space-6);
+  border: 1px solid var(--av-border);
+  border-radius: var(--av-radius-sm);
+  background: var(--av-surface);
+  box-shadow: var(--av-shadow);
+}
+
+.av-paper h3 {
+  margin-bottom: var(--av-space-1);
+  font-size: var(--av-fs-lg);
+  font-weight: 700;
+}
+
+.av-paper h4 {
+  margin-top: var(--av-space-4);
+  font-size: var(--av-fs-sm);
+  font-weight: 700;
+}
+
+.av-paper footer {
+  margin-top: var(--av-space-5);
+  padding-top: var(--av-space-2);
+  border-top: 1px solid var(--av-border);
+  color: var(--av-text-muted);
+  font-size: var(--av-fs-xs);
+}
+
+/* Thin progress bar for task and export rows. */
+.av-progress {
+  min-width: calc(var(--av-space-6) * 3);
+  height: var(--av-space-2);
+  --bs-progress-bar-bg: var(--av-accent);
+}
+
 .av-pager {
   display: flex;
   align-items: center;

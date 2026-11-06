@@ -66,7 +66,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       `/api/health` returns `{code, message, data, request_id}`
 - [ ] **P1-03** Capture module: open device, lock exposure, grab, score, persist · @FrozenYty · done
       when 20 frames are captured and file, score and `frame_id` all agree
-- [ ] **P1-04** Thirteen static pages · @chemflowers · done when every page opens, uses mock data and
+- [x] **P1-04** Thirteen static pages · @chemflowers · done when every page opens, uses mock data and
       shares one visual language
 - [ ] **P1-05** Test case draft against the 36 acceptance items · @IkeaFyj · done when each item has
       at least one case, marked not-yet-implemented
