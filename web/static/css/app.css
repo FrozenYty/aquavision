@@ -709,6 +709,96 @@ body {
   font-weight: 700;
 }
 
+/* ---- Capture screen: live view, latency, quality ring, recent-frame strip ---- */
+
+.av-live-view {
+  position: relative;
+}
+
+.av-latency {
+  position: absolute;
+  top: var(--av-space-3);
+  right: var(--av-space-3);
+  padding: 2px var(--av-space-2);
+  border-radius: var(--av-radius-sm);
+  background: var(--av-abyss);
+  color: var(--av-accent);
+  font-family: var(--av-font-mono);
+  font-size: var(--av-fs-xs);
+}
+
+.av-webcam {
+  display: block;
+  width: 100%;
+  border-radius: var(--av-radius);
+  background: var(--av-abyss);
+}
+
+/* A frame below the quality threshold looks the part: washed out, and no boxes on it. */
+.is-retake > .av-stage img {
+  filter: grayscale(0.6) blur(1.5px) brightness(0.85);
+}
+
+.av-ring {
+  flex: none;
+  width: 104px;
+  height: 104px;
+  transform: rotate(-90deg);
+}
+
+.av-ring circle {
+  fill: none;
+  stroke-width: 10;
+}
+
+.av-ring-track {
+  stroke: var(--av-surface-muted);
+}
+
+.av-ring-value {
+  stroke: var(--av-accent);
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.6s var(--av-ease);
+}
+
+.av-ring.is-low .av-ring-value {
+  stroke: var(--av-warning);
+}
+
+.av-strip {
+  display: flex;
+  gap: var(--av-space-3);
+  overflow-x: auto;
+  padding-bottom: var(--av-space-1);
+}
+
+.av-strip-item {
+  flex: none;
+  width: 156px;
+  display: grid;
+  gap: 2px;
+  color: var(--av-text-muted);
+  font-size: var(--av-fs-xs);
+  text-decoration: none;
+  animation: av-rise 0.3s var(--av-ease) both;
+}
+
+.av-strip-item img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border: 1px solid var(--av-border);
+  border-radius: var(--av-radius-sm);
+}
+
+.av-strip-item:hover img {
+  border-color: var(--av-accent);
+}
+
+.av-strip-item.is-retake img {
+  filter: grayscale(0.8);
+}
+
 /* ---- Class swatches, one per class_code ---- */
 
 .av-class {
