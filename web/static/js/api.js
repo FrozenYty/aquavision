@@ -62,6 +62,11 @@ export const listDatasets = () => request("GET", "/datasets"); // provisional
 export const exportDataset = (body) => request("POST", "/datasets", { body }); // provisional
 export const listReports = () => request("GET", "/reports"); // provisional
 export const createReport = (body) => request("POST", "/reports", { body }); // provisional
+export const listModels = () => request("GET", "/models");
+export const activateModel = (id) => request("POST", `/models/${id}/activate`);
+export const listExperiments = () => request("GET", "/experiments"); // provisional
+export const listSpecies = () => request("GET", "/species"); // provisional
+export const updateSpecies = (code, body) => request("PATCH", `/species/${code}`, { body }); // provisional
 export const getFrame = (frameId) => request("GET", `/frames/${frameId}`);
 export const getObjects = (frameId) => request("GET", `/frames/${frameId}/objects`);
 

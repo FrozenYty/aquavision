@@ -55,3 +55,28 @@ export const REPORTS = [
     basis: "reviewed", model_version: "v8n-E2", created_at: "2026-11-01T08:30:00+08:00", status: "done", progress: 100,
   },
 ];
+
+// model_version, train_experiment and species_dict. Figures follow SRS scenario 4 (baseline
+// mAP@0.5 0.76 at 42 FPS, improved 0.83 at 39 FPS) and the dashboard's online model v8n-E3.
+export const MODELS = [
+  { model_id: 4, version_name: "v8n-E3", dataset: "DS-V2", map50: 0.83, map5095: 0.55, recall: 0.77, fps: 39, params_m: 3.4, is_online: 1, registered_at: "2026-11-05T18:00:00+08:00" },
+  { model_id: 3, version_name: "v8n-E2", dataset: "DS-V2", map50: 0.81, map5095: 0.53, recall: 0.75, fps: 40, params_m: 3.4, is_online: 0, registered_at: "2026-11-05T11:20:00+08:00" },
+  { model_id: 2, version_name: "v8n-E1", dataset: "DS-V2", map50: 0.79, map5095: 0.51, recall: 0.73, fps: 41, params_m: 3.2, is_online: 0, registered_at: "2026-11-04T21:40:00+08:00" },
+  { model_id: 1, version_name: "v8n-E0", dataset: "DS-V2", map50: 0.76, map5095: 0.49, recall: 0.71, fps: 42, params_m: 3.2, is_online: 0, registered_at: "2026-11-04T15:10:00+08:00" },
+];
+
+// Ablation order: each experiment adds one improvement to the one before (README stack).
+export const EXPERIMENTS = [
+  { exp_id: "E0", model_id: 1, change: "基线 YOLOv8n", seed: 42, baseline: true },
+  { exp_id: "E1", model_id: 2, change: "+ 水下色彩校正", seed: 42 },
+  { exp_id: "E2", model_id: 3, change: "+ EMA 注意力", seed: 42 },
+  { exp_id: "E3", model_id: 4, change: "+ WIoU v3 损失", seed: 42 },
+];
+
+// category: 1 economic, 2 pest (glossary §4).
+export const SPECIES = [
+  { class_code: "holothurian", cn_name: "海参", category: 1, conf_thr: 0.5, in_stat: 1 },
+  { class_code: "strongylocentrotus", cn_name: "海胆", category: 1, conf_thr: 0.5, in_stat: 1 },
+  { class_code: "chlamys", cn_name: "扇贝", category: 1, conf_thr: 0.45, in_stat: 1 },
+  { class_code: "asterias", cn_name: "海星", category: 2, conf_thr: 0.5, in_stat: 1 },
+];
