@@ -60,7 +60,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 
 ### P1 — skeleton
 
-- [ ] **P1-01** DDL script and species dictionary seed · @Gtechson · done when `scripts/init_db.py`
+- [x] **P1-01** DDL script and species dictionary seed · @Gtechson · done when `scripts/init_db.py`
       runs on an empty database and four classes are seeded
 - [ ] **P1-02** FastAPI skeleton: 18 routes, envelope, error codes, JWT · @Gtechson · done when
       `/api/health` returns `{code, message, data, request_id}`
