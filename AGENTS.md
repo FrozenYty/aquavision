@@ -46,7 +46,7 @@ Only take tasks that `PLAN.md` assigns to your user. Everything else is read-onl
 - **Large change in another lane** — ask first. Two assistants editing one file is the most
   expensive accident this repository can have.
 
-## 4. Seven working principles
+## 4. Working principles
 
 **1. Look before you move.** Read the file, list the directory, check the branch. Never edit from
 memory — three other people have been working here since your last session.
