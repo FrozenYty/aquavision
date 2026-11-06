@@ -66,7 +66,7 @@ class ParamUpdate(BaseModel):
     camera_index: int | None = Field(default=None, ge=0, le=9)
 
 
-@router.patch("/params")
+@router.patch("/params", dependencies=[Depends(require("algo", "admin"))])
 def update_params(
     body: ParamUpdate, db: SessionDep, settings: SettingsDep, user: UserDep
 ) -> dict[str, object]:

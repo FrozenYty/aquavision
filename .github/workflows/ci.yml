@@ -4,6 +4,13 @@ on:
   pull_request:
   push:
     branches: [main]
+  # A push caused by GITHUB_TOKEN does not start a workflow, and merges are performed by the
+  # auto-merge bot holding exactly that token. So the post-merge run on main silently never happens
+  # for bot-merged pull requests, and a change that passed its own PR but breaks an earlier one would
+  # go unnoticed. This schedule is the backstop: it needs no secret and cannot expire.
+  schedule:
+    - cron: "0 19 * * *"  # 03:00 Asia/Shanghai
+  workflow_dispatch:
 
 jobs:
   check:

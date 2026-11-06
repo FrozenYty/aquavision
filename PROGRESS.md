@@ -118,6 +118,16 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
 - **One uncertainty left standing, stated rather than hidden:** SRS §7 asks for Word or PDF and the
   app writes Markdown, because neither format is reachable without a rendering dependency. The row
   shape already carries everything a later export step needs.
+- **Two permission holes in the skeleton, closed the same day.** `PATCH /api/params` had no role guard,
+  so any signed-in account could change the retention period; `POST /api/review/frames/{id}` was open
+  to the collector role, which owns the camera and not the judgement. Both now require the roles SRS
+  FR-M1-02 names, and the role test covers three guarded surfaces instead of one — a happy path never
+  finds the surface somebody forgot to guard.
+- **A nightly run on `main`, because the post-merge run was silently skipped.** A push made with
+  `GITHUB_TOKEN` does not start a workflow, and every merge is performed by the auto-merge bot holding
+  exactly that token. The two events therefore never ran, and a pull request that passed on its own
+  branch but broke an earlier one would have gone unnoticed. A schedule needs no secret and cannot
+  expire, which is why it was chosen over a personal token.
 - **The five blocked directories are gone**, by asking for the access instead of designing around it.
   The temporary ruff exclude is removed; the principle is now `AGENTS.md` §4.7.
 - **Prototype screen 6 done:** stats page with four hand-rolled SVG charts (species donut, daily
