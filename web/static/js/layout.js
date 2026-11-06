@@ -32,7 +32,7 @@ const MENU = [
   {
     group: "统计与报告",
     items: [
-      { id: "P-10", label: "统计与报告", href: "stats.html" },
+      { id: "P-10", label: "统计看板", href: "stats.html" },
       { id: "P-11", label: "巡检报告", href: "reports.html" },
     ],
   },
