@@ -43,3 +43,15 @@ export const DATASETS = [
     status: "done", progress: 100,
   },
 ];
+
+// Inspection reports (FR-M5-04). Fields are provisional.
+export const REPORTS = [
+  {
+    report_id: 12, title: "11 月第 1 周巡检报告", period: "2026-11-01 ~ 2026-11-06", template: "standard",
+    basis: "reviewed", model_version: "v8n-E3", created_at: "2026-11-06T09:00:00+08:00", status: "done", progress: 100,
+  },
+  {
+    report_id: 11, title: "10 月巡检报告", period: "2026-10-01 ~ 2026-10-31", template: "standard",
+    basis: "reviewed", model_version: "v8n-E2", created_at: "2026-11-01T08:30:00+08:00", status: "done", progress: 100,
+  },
+];

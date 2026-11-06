@@ -12,7 +12,7 @@ import {
   STATS_TREND,
   STATS_CORRECTIONS,
 } from "./fixtures.js";
-import { DATASETS, HARD_SEEDS, TASKS } from "./catalog.js";
+import { DATASETS, HARD_SEEDS, REPORTS, TASKS } from "./catalog.js";
 
 class Fail extends Error {
   constructor(code, message) {
@@ -38,6 +38,7 @@ FRAMES.unshift(...captured);
 if (saved.tasks) TASKS.splice(0, TASKS.length, ...saved.tasks);
 const removedHard = new Set(saved.removed_hard ?? []);
 if (saved.datasets) DATASETS.splice(0, DATASETS.length, ...saved.datasets);
+if (saved.reports) REPORTS.splice(0, REPORTS.length, ...saved.reports);
 
 function persist() {
   try {
@@ -47,6 +48,7 @@ function persist() {
         tasks: TASKS,
         removed_hard: [...removedHard],
         datasets: DATASETS,
+        reports: REPORTS,
       }));
   } catch {
     // Storage unavailable: the walk-through still works within one page.
@@ -234,6 +236,34 @@ const ROUTES = {
     TASKS.push(task);
     persist();
     return task;
+  },
+
+  // Inspection reports, provisional. Generation runs over a few reads, like the dataset export.
+  "GET /reports": () => {
+    for (const r of REPORTS.filter((x) => x.status === "running")) {
+      r.progress = Math.min(100, r.progress + 34);
+      if (r.progress === 100) r.status = "done";
+    }
+    persist();
+    return REPORTS;
+  },
+
+  "POST /reports": ({ body }) => {
+    if (!body?.period) throw new Fail(40001, "请选择统计周期");
+    const report = {
+      report_id: Math.max(...REPORTS.map((r) => r.report_id)) + 1,
+      title: `${body.label}巡检报告`,
+      period: body.period,
+      template: body.template,
+      basis: body.basis,
+      model_version: "v8n-E3",
+      created_at: new Date().toISOString(),
+      status: "running",
+      progress: 0,
+    };
+    REPORTS.unshift(report);
+    persist();
+    return report;
   },
 
   // Dataset export, provisional. An export runs over a few reads, like a background job would.
