@@ -10,6 +10,13 @@ the GitHub workflows — because their comments are read by the same people. Pro
 covered: the interface is Chinese by requirement (SRS §2.5.2), so web/ and the messages the capture
 code prints are legitimately Chinese.
 
+A document whose *subject* is Chinese text — a copy review, for instance — cannot discuss it without
+quoting it. Such a file declares itself on one of its first five lines:
+
+    <!-- allow-chinese: reviews the interface copy, quotations are the material -->
+
+The marker is printed by this script, so an exemption is visible in the CI log rather than silent.
+
 Usage: python scripts/check-language.py
 Exit code: 0 when every file checked is clean, 1 otherwise.
 """
@@ -23,6 +30,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CJK = re.compile(r"[\u4e00-\u9fff]")
 SWITCHER = re.compile(r"\[中文\]\([^)]*-zh\.md\)")
+ALLOW = re.compile(r"<!--\s*allow-chinese:\s*(.+?)\s*-->")
 
 
 CONFIG_FILES = [".gitignore", ".gitattributes", "pyproject.toml", "requirements.txt"]
@@ -41,6 +49,15 @@ def english_documents() -> list[Path]:
     return [path for path in english + config if path.is_file()]
 
 
+def exemption(path: Path) -> str | None:
+    """The declared reason for a file that quotes Chinese on purpose, if it has one."""
+    for line in path.read_text(encoding="utf-8").splitlines()[:5]:
+        match = ALLOW.match(line)
+        if match:
+            return match.group(1).strip()
+    return None
+
+
 def is_switcher(line: str) -> bool:
     """True when the only Chinese on the line sits inside a language switcher link."""
     stripped = SWITCHER.sub("", line)
@@ -50,6 +67,10 @@ def is_switcher(line: str) -> bool:
 def main() -> int:
     problems = 0
     for path in english_documents():
+        reason = exemption(path)
+        if reason:
+            print(f"  exempt: {path.relative_to(ROOT)} ({reason})")
+            continue
         text = path.read_text(encoding="utf-8")
         for number, line in enumerate(text.splitlines(), start=1):
             if not CJK.search(line) or is_switcher(line):
