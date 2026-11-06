@@ -470,6 +470,13 @@ body {
   border-bottom-color: var(--av-text);
 }
 
+/* Thin progress bar for task and export rows. */
+.av-progress {
+  min-width: calc(var(--av-space-6) * 3);
+  height: var(--av-space-2);
+  --bs-progress-bar-bg: var(--av-accent);
+}
+
 .av-pager {
   display: flex;
   align-items: center;

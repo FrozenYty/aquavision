@@ -1,0 +1,17 @@
+// Mock data for the pages beyond the prototype walk-through (P-05, P-08, P-09, P-11, P-12, P-13).
+// Hand-set and fixed, like fixtures.js: a demo that changes on every reload looks broken.
+// Field names follow the data model; collection routes for these pages are provisional (not in
+// docs/api-contract-en.md yet) and marked as such in api.js.
+
+// detect_task. status: 0 queued, 1 running, 2 done, 3 failed (glossary §3). kind, source, total,
+// done and error are provisional: the data model keeps them on the task row in some form, the
+// contract does not list them yet.
+export const TASKS = [
+  { task_id: 2046, kind: "batch", source: "s-b1-001", total: 20, done: 7, status: 1, model_version: "v8n-E3", created_at: "2026-11-06T10:42:00+08:00", error: null },
+  { task_id: 2047, kind: "batch", source: "s-a3-002", total: 15, done: 0, status: 0, model_version: "v8n-E3", created_at: "2026-11-06T10:44:00+08:00", error: null },
+  { task_id: 2048, kind: "single", source: "20261103T091003-0004", total: 1, done: 0, status: 0, model_version: "v8n-E3", created_at: "2026-11-06T10:45:00+08:00", error: null },
+  { task_id: 2045, kind: "batch", source: "s-a3-001", total: 14, done: 14, status: 2, model_version: "v8n-E3", created_at: "2026-11-06T09:20:00+08:00", error: null },
+  { task_id: 2044, kind: "batch", source: "s-a3-001", total: 14, done: 9, status: 3, model_version: "v8n-E3", created_at: "2026-11-06T09:05:00+08:00", error: "推理超时：单帧超过 5 秒" },
+  { task_id: 2043, kind: "single", source: "20261103T143000-0001", total: 1, done: 1, status: 2, model_version: "v8n-E2", created_at: "2026-11-05T16:12:00+08:00", error: null },
+  { task_id: 2042, kind: "batch", source: "s-b1-001", total: 20, done: 20, status: 2, model_version: "v8n-E2", created_at: "2026-11-05T15:30:00+08:00", error: null },
+];
