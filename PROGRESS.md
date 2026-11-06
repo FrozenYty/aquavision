@@ -50,6 +50,7 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
 - **Flagged for later, not fixed here:** the prototype badge lives in `stats.html` only — the other
   pages need it from the shared shell; and `.av-page-actions` stretches non-button children, so a
   badge's text sits high unless it centres itself.
+<<<<<<< HEAD
 - **Prototype screens 3-5 delivered** (#43 shared layer, #44 capture, #45 review, detail in the PR
   that adds this line). The walk-through clicks end to end: start capture, open a frame from the
   strip, see the 0.42 box flagged, go to review, drag and relabel it, submit, and the detail page
@@ -67,6 +68,12 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
   `{ objects }` and its `{ count_before, count_after }` reply.
 - **Unverified here:** the "try the laptop camera" button. The Browser pane blocks camera access, so
   only the failure path (a toast, the samples stay) was seen; the real camera needs a check in Chrome.
+- **Data model completed before P1-01.** data-model carried only the 3 core tables while SRS 4.2
+  held the full dictionary — with stale names (`asset_code`/`species_code`/`x_center`) that
+  disagreed with api-contract and the mocks. data-model now defines all 9 tables field by field
+  (media_asset 18, detect_object 19); the SRS core tables were synced to it: `frame_id`,
+  `captured_at`, `class_code`, `x`/`y`/`w`/`h`, `map50`/`map50_95`. `detect_task.class_filter`
+  stores a JSON array — the one documented exception to the no-lists rule.
 
 ## 2026-11-05
 
