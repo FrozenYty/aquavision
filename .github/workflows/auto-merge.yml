@@ -2,6 +2,10 @@ name: auto-merge
 
 # Fires once per pull request, not on every push to its branch: auto-merge stays armed after the first
 # call, so a synchronize trigger would only add runs and notifications.
+#
+# GitHub has no repository-level "merge everything automatically" switch — auto-merge is a per-PR
+# state, and this job sets it so nobody has to click. Branch deletion is NOT done here: see the note
+# in the step below.
 on:
   pull_request:
     types: [opened, reopened, ready_for_review]
@@ -21,9 +25,12 @@ jobs:
           GH_REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
         run: |
-          # Succeeds only if "Allow auto-merge" is enabled in Settings -> General.
-          # The merge itself still waits for the required "check" status.
-          gh pr merge "$PR" --auto --squash --delete-branch || {
+          # The merge still waits for the required "check" status; this only removes the click.
+          # `--delete-branch` is deliberately absent: it is read when the merge is *requested*, and
+          # with auto-merge the merge happens minutes later, so the flag is dropped. Branch deletion
+          # is handled natively by Settings -> General -> "Automatically delete head branches",
+          # which applies no matter who or what performs the merge.
+          gh pr merge "$PR" --auto --squash || {
             echo "::warning::auto-merge was not enabled for PR #$PR."
             echo "::warning::Check Settings -> General -> Allow auto-merge."
           }
