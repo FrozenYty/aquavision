@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>巡检报告 · AquaVision</title>
+  <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
+  <link rel="stylesheet" href="../static/css/tokens.css">
+  <link rel="stylesheet" href="../static/css/app.css">
+</head>
+<body>
+  <main class="av-content">
+    <div class="av-page-header">
+      <h1>巡检报告</h1>
+      <div class="av-page-actions">
+        <a class="btn btn-outline-primary text-nowrap" href="stats.html">查看统计看板</a>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-xl-4">
+        <form class="av-card" id="report-form" novalidate>
+          <h2 class="av-card-title">生成设置</h2>
+          <label class="form-label small" for="period">统计周期</label>
+          <select class="form-select form-select-sm mb-2" id="period">
+            <option value="week">本周</option><option value="month">本月</option><option value="custom">自定义</option>
+          </select>
+          <div class="row g-2 mb-2" id="custom-range" hidden>
+            <div class="col-6"><input class="form-control form-control-sm" id="from" type="date" aria-label="开始日期"></div>
+            <div class="col-6"><input class="form-control form-control-sm" id="to" type="date" aria-label="结束日期">
+              <div class="invalid-feedback">结束日期不能早于开始日期</div></div>
+          </div>
+          <label class="form-label small" for="template">模板</label>
+          <select class="form-select form-select-sm mb-2" id="template">
+            <option value="standard">标准巡检（物种组成、质量拦截、模型信息）</option>
+            <option value="brief">简版（只含物种组成）</option>
+          </select>
+          <label class="form-label small" for="basis">统计口径</label>
+          <select class="form-select form-select-sm mb-3" id="basis">
+            <option value="reviewed">复核后结果</option><option value="raw">原始识别结果</option>
+          </select>
+          <button class="btn btn-primary w-100" id="btn-generate" type="submit">生成报告</button>
+        </form>
+      </div>
+      <div class="col-xl-8">
+        <section class="av-card">
+          <h2 class="av-card-title">模板预览</h2>
+          <article class="av-paper" id="preview"></article>
+        </section>
+      </div>
+      <div class="col-12">
+        <section class="av-card">
+          <h2 class="av-card-title">历史报告 <small class="text-secondary fw-normal">保留全部版本，可回溯</small></h2>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+              <thead><tr><th>报告</th><th>周期</th><th>模板</th><th>口径</th><th>模型</th><th>生成时间</th><th>状态</th><th>下载</th></tr></thead>
+              <tbody id="history"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { renderShell } from "../static/js/layout.js";
+    import * as api from "../static/js/api.js";
+    import { esc, fmtTime, toast } from "../static/js/ui.js";
+    import { CLASSES } from "../static/js/boxes.js";
+
+    renderShell("P-11");
+
+    const $ = (id) => document.getElementById(id);
+    const POLL_MS = 1000;
+    const TEMPLATE = { standard: "标准巡检", brief: "简版" };
+    const BASIS = { reviewed: "复核后结果", raw: "原始识别结果" };
+    let species = [];
+    let quality = [];
+    let timer = null;
+
+    const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+    // Returns { label, from, to } for the chosen period, or null when a custom range is invalid.
+    function period() {
+      const today = new Date();
+      if ($("period").value === "week") {
+        const monday = new Date(today);
+        monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+        return { label: "本周", from: iso(monday), to: iso(today) };
+      }
+      if ($("period").value === "month") {
+        return { label: `${today.getMonth() + 1} 月`, from: iso(new Date(today.getFullYear(), today.getMonth(), 1)), to: iso(today) };
+      }
+      const from = $("from").value;
+      const to = $("to").value;
+      const ok = from && to && from <= to;
+      $("to").classList.toggle("is-invalid", Boolean(from && to) && !ok);
+      return ok ? { label: `${from} 至 ${to} `, from, to } : null;
+    }
+
+    function renderPreview() {
+      const p = period();
+      const total = species.reduce((sum, s) => sum + s.box_count, 0);
+      const frames = quality.reduce((sum, q) => sum + q.total, 0);
+      const intercepted = quality.reduce((sum, q) => sum + q.intercepted, 0);
+      const rows = species.map((s) => `<tr><td><span class="av-class av-class-${s.class_code}">${CLASSES[s.class_code]}</span></td>
+        <td class="av-mono">${s.box_count}</td><td class="av-mono">${((s.box_count / total) * 100).toFixed(1)}%</td></tr>`).join("");
+      const standard = $("template").value === "standard";
+      $("preview").innerHTML = `
+        <h3>${esc(p ? `${p.label}巡检报告` : "巡检报告")}</h3>
+        <p class="text-secondary small">统计周期：${p ? `${p.from} 至 ${p.to}` : "请选择有效的日期范围"}</p>
+        <h4>一、物种组成</h4>
+        <table class="table table-sm small mb-3"><thead><tr><th>物种</th><th>目标数</th><th>占比</th></tr></thead><tbody>${rows}</tbody></table>
+        ${standard ? `<h4>二、质量拦截</h4>
+        <p class="small">近 7 日共采集 <strong>${frames}</strong> 帧，拦截低质量帧 <strong>${intercepted}</strong> 帧，
+          拦截率 <strong>${((intercepted / frames) * 100).toFixed(1)}%</strong>。被拦截的帧只入库、不识别。</p>
+        <h4>三、模型信息</h4>
+        <p class="small">在线模型 v8n-E3，结果均可追溯到帧、模型版本与参数。</p>` : ""}
+        <footer>模型版本 v8n-E3 · 统计口径：${BASIS[$("basis").value]} · 数据为演示数据，非真实运行结果</footer>`;
+    }
+
+    function statusCell(r) {
+      if (r.status === "done") return '<span class="badge text-bg-success">已生成</span>';
+      return `<div class="progress av-progress"><div class="progress-bar" style="width: ${r.progress}%"></div></div>`;
+    }
+
+    async function loadHistory() {
+      const list = await api.listReports();
+      $("history").innerHTML = list.map((r) => `<tr>
+        <td>${esc(r.title)}</td><td class="av-mono">${esc(r.period)}</td><td>${TEMPLATE[r.template]}</td>
+        <td>${BASIS[r.basis]}</td><td class="av-mono">${esc(r.model_version)}</td><td>${fmtTime(r.created_at).slice(0, -3)}</td>
+        <td>${statusCell(r)}</td>
+        <td>${r.status === "done" ? '<div class="d-flex gap-1"><button class="btn btn-sm btn-outline-secondary" data-format="Word" type="button">Word</button><button class="btn btn-sm btn-outline-secondary" data-format="PDF" type="button">PDF</button></div>' : ""}</td></tr>`).join("");
+      const running = list.some((r) => r.status === "running");
+      $("btn-generate").disabled = running;
+      clearTimeout(timer);
+      if (running) timer = setTimeout(() => loadHistory().catch(fail), POLL_MS);
+    }
+
+    const fail = (err) => toast(err.message, "danger");
+
+    $("period").addEventListener("change", () => {
+      $("custom-range").hidden = $("period").value !== "custom";
+      renderPreview();
+    });
+    ["from", "to", "template", "basis"].forEach((id) => $(id).addEventListener("change", renderPreview));
+
+    $("report-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const p = period();
+      if (!p) return toast("请先选好有效的日期范围", "warning");
+      try {
+        await api.createReport({ label: p.label, period: `${p.from} ~ ${p.to}`, template: $("template").value, basis: $("basis").value });
+        toast("报告生成中，可以离开本页，完成后在历史里下载", "success");
+        await loadHistory();
+      } catch (err) {
+        fail(err);
+      }
+    });
+
+    $("history").addEventListener("click", (event) => {
+      const format = event.target.closest("[data-format]")?.dataset.format;
+      if (format) toast(`原型阶段不生成真实文件；正式版下载 ${format} 格式报告`, "info");
+    });
+
+    Promise.all([api.statsSpecies(), api.statsQuality()])
+      .then(([s, q]) => { species = s; quality = q; renderPreview(); })
+      .catch(fail);
+    loadHistory().catch(fail);
+  </script>
+</body>
+</html>
