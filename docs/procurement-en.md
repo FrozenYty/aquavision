@@ -39,7 +39,7 @@ in English.
 
 ## 3. Things to verify before assembly
 
-- **Camera exposure lock.** The seller confirms the module locks exposure over UVC. `test_exposure.py`
+- **Camera exposure lock.** The seller confirms the module locks exposure over UVC. `python scripts/test_exposure.py`
   still runs on arrival and its output is kept as evidence; if the driver disagrees with the seller,
   fall back to fixed lighting with a 15 % brightness tolerance and record the change.
 - **Button.** A through-hole momentary push button is already on hand. Check its legs are straight: the

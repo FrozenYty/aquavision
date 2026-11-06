@@ -162,6 +162,26 @@ class CameraSource:
             reason="" if locked else f"帧间亮度波动 {spread:.1%}，超过 10%，曝光可能未真正锁定",
         )
 
+    def get_exposure(self) -> float | None:
+        """Current exposure value, or None when the driver does not expose one.
+
+        The unit is backend-specific: log2 seconds on DirectShow, absolute time on V4L2. Callers must
+        treat it as an opaque handle they can nudge, never as a duration.
+        """
+        if self._cap is None:
+            raise CaptureError("摄像头尚未打开")
+        value = self._cap.get(cv2.CAP_PROP_EXPOSURE)
+        if value is None or value == 0.0:
+            return None
+        return float(value)
+
+    def set_exposure(self, value: float) -> float:
+        """Write an exposure value and return what the driver reports back."""
+        if self._cap is None:
+            raise CaptureError("摄像头尚未打开")
+        self._cap.set(cv2.CAP_PROP_EXPOSURE, value)
+        return float(self._cap.get(cv2.CAP_PROP_EXPOSURE))
+
     def read(self) -> np.ndarray:
         if self._cap is None:
             raise CaptureError("摄像头尚未打开")

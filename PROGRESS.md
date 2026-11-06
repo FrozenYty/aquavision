@@ -35,6 +35,11 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
   point nowhere. Proven by planting all three faults in one template and watching them fail.
 - **`scripts/make_samples.py` added**: deterministic synthetic frames for running the capture pipeline
   where no camera exists. Five of them ran the whole path end to end and the manifest verified.
+- **`python scripts/test_exposure.py` now exists.** The procurement document had told people to run it
+  for weeks; the file never did. It answers three questions in order: does the device open, does the
+  picture actually change when the exposure property moves, and do 20 pinned frames stay inside the
+  10 % spread. Exit codes separate "no camera" (2) from "camera fails the check" (1), so nobody
+  mistakes an unplugged cable for a broken module.
 - **The five blocked directories are gone**, by asking for the access instead of designing around it.
   The temporary ruff exclude is removed; the principle is now `AGENTS.md` §4.7.
 - **Prototype screen 6 done:** stats page with four hand-rolled SVG charts (species donut, daily
