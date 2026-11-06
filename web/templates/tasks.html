@@ -73,8 +73,8 @@
     }
 
     function actions(t) {
-      if (t.status <= 1) return `<button class="btn btn-sm btn-outline-danger" data-act="cancel" data-id="${t.task_id}" type="button">取消</button>`;
-      if (t.status === 3) return `<button class="btn btn-sm btn-outline-primary" data-act="retry" data-id="${t.task_id}" type="button">重试</button>`;
+      if (t.status <= 1) return `<button class="btn btn-sm btn-outline-danger" data-act="cancel" data-task="${t.task_id}" type="button">取消</button>`;
+      if (t.status === 3) return `<button class="btn btn-sm btn-outline-primary" data-act="retry" data-task="${t.task_id}" type="button">重试</button>`;
       if (t.kind === "single") return `<a class="btn btn-sm btn-outline-secondary" href="frame.html?id=${encodeURIComponent(t.source)}">查看结果</a>`;
       return "";
     }
@@ -114,7 +114,7 @@
     $("tasks").addEventListener("click", async (event) => {
       const btn = event.target.closest("button[data-act]");
       if (!btn) return;
-      const id = btn.dataset.id;
+      const id = btn.dataset.task;
       try {
         if (btn.dataset.act === "cancel") {
           if (!confirmAction(`确定取消任务 #${id}？已识别的帧会保留。`)) return;
