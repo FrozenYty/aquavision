@@ -117,6 +117,14 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
   already import from there). The overlay now clamps each box to the frame at draw time, so an
   annotation that pokes past the image edge can never render outside it. Two other review items
   were already resolved by #43-#46 (P-10 id, badge in the shell).
+- **P1-01 delivered** (`feat/init-db`): the nine tables exist as SQLAlchemy models in
+  `server/app/models.py`, transcribed column by column from the dictionary, and
+  `scripts/init_db.py` creates them and seeds the four species on an empty database. The DSN
+  order is `--dsn`, then `$DB_DSN`, then a gitignored SQLite default — no path lives in code
+  (architecture §8). `EXPECTED_COLUMNS` mirrors the dictionary's column counts and the script
+  fails loudly if model and dictionary ever drift apart. Tests run on SQLite (CI stays
+  database-server-free) and once as a subprocess, because PLAN words the acceptance as "the
+  script runs". Seed categories follow SRS §3.5.1: three economic species, starfish as the pest.
 
 ## 2026-11-05
 
