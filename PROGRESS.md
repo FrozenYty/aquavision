@@ -40,6 +40,24 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
   picture actually change when the exposure property moves, and do 20 pinned frames stay inside the
   10 % spread. Exit codes separate "no camera" (2) from "camera fails the check" (1), so nobody
   mistakes an unplugged cable for a broken module.
+- **Merged branches now delete themselves.** `gh pr merge --auto --delete-branch` does not work: the
+  flag is read when the merge is *requested*, and with auto-merge the merge happens later. Twelve
+  branches had piled up. A `pull_request: closed` job deletes the head branch instead, after checking
+  the PR actually merged and that the branch belongs to this repository.
+- **Copy pass over the thirteen pages.** The mechanical layer was already clean — no doubled
+  characters, no half-width punctuation inside Chinese, no missing spaces around Latin text — so the
+  edits were about meaning, all in the interface language, which is Chinese by requirement:
+  - the drawn box is now a *target* box, not a *detection* box: the pipeline does detection, the
+    artefact on the image is a target, and the data table is named for the target;
+  - an out-of-range field now says it will be marked and refused, rather than "marked red on the
+    spot", which is developer shorthand for a validation pattern;
+  - the seed hint and the hard-example caption were split into two sentences each, because a colon
+    list of three conditions inside one line reads as homework;
+  - the capture button reads "end capture" instead of a bare "stop", which could equally mean
+    pausing the preview.
+- **Deferred: the `P-xx` eyebrow above each page title.** It is development scaffolding, and the
+  request is to remove it at design polish. It stays until then because it is the only anchor tying a
+  screen to its row in SRS §5.2, and reviewers are still tracing screens to requirements.
 - **The five blocked directories are gone**, by asking for the access instead of designing around it.
   The temporary ruff exclude is removed; the principle is now `AGENTS.md` §4.7.
 - **Prototype screen 6 done:** stats page with four hand-rolled SVG charts (species donut, daily
