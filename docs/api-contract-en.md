@@ -61,26 +61,54 @@ GET /api/frames?page=1&size=24&site=A3&from=2026-11-01&to=2026-11-03
 
 ## 6. REST endpoints
 
-| Method | Path | Purpose |
-|---|---|---|
-| POST | `/api/auth/login` | Obtain a token |
-| GET | `/api/auth/me` | Current user and role |
-| GET | `/api/cameras` | Enumerate usable cameras |
-| POST | `/api/capture/sessions` | Open a capture session |
-| POST | `/api/capture/sessions/{id}/frames` | Grab one frame |
-| POST | `/api/capture/sessions/{id}/close` | Close the session |
-| POST | `/api/detect/frames/{frame_id}` | Detect on one frame |
-| POST | `/api/detect/batches` | Start a batch task |
-| GET | `/api/tasks/{task_id}` | Task progress |
-| GET | `/api/frames` | Query frames |
-| GET | `/api/frames/{frame_id}` | Frame detail |
-| GET | `/api/frames/{frame_id}/objects` | Detection boxes |
-| POST | `/api/review/frames/{frame_id}` | Submit a review |
-| POST | `/api/compare/frames/{frame_id}` | Baseline vs improved, same frame |
-| GET | `/api/stats/species` | Species composition |
-| GET | `/api/stats/quality` | Quality rejection rate |
-| GET | `/api/models` | Model versions |
-| POST | `/api/models/{id}/activate` | Switch the online model |
+Every route names the requirement it serves, and inherits that requirement's priority from SRS
+Table 3-1. Scope questions are therefore answered by reading the SRS, not by counting rows here:
+the number of routes is a consequence, not a target.
+
+| Method | Path | Purpose | Requirement | Priority |
+|---|---|---|---|---|
+| POST | `/api/auth/login` | Obtain a token | FR-M1-01 | P0 |
+| GET | `/api/auth/me` | Current user and role | FR-M1-01 | P0 |
+| GET | `/api/users` | Accounts | FR-M1-03 | P1 |
+| POST | `/api/users/{id}/status` | Disable or restore an account | FR-M1-03 | P1 |
+| POST | `/api/users/{id}/reset-password` | Reset a password | FR-M1-03 | P1 |
+| GET | `/api/logs` | Operation log | FR-M1-04 | P1 |
+| GET | `/api/cameras` | Enumerate usable cameras | FR-M2-01 | P0 |
+| POST | `/api/capture/sessions` | Open a capture session | FR-M2-01 | P0 |
+| GET | `/api/capture/sessions` | List capture sessions | FR-M2-04 | P1 |
+| POST | `/api/capture/sessions/{id}/frames` | Grab one frame | FR-M2-01 | P0 |
+| POST | `/api/capture/sessions/{id}/close` | Close the session | FR-M2-01 | P0 |
+| GET | `/api/frames` | Query frames | FR-M2-04 | P1 |
+| GET | `/api/stats/quality` | Quality rejection rate | FR-M2-03 | P0 |
+| POST | `/api/detect/frames/{frame_id}` | Detect on one frame | FR-M3-01 | P0 |
+| POST | `/api/detect/batches` | Start a batch task | FR-M3-02 | P0 |
+| GET | `/api/tasks` | List detection tasks | FR-M3-02 | P0 |
+| GET | `/api/tasks/{task_id}` | Task progress | FR-M3-02 | P0 |
+| POST | `/api/tasks/{id}/cancel` | Cancel a task | FR-M3-02 | P0 |
+| POST | `/api/tasks/{id}/retry` | Retry a failed task | FR-M3-02 | P0 |
+| GET | `/api/frames/{frame_id}` | Frame detail | FR-M3-04 | P0 |
+| GET | `/api/frames/{frame_id}/objects` | Detection boxes | FR-M3-04 | P0 |
+| POST | `/api/review/frames/{frame_id}` | Submit a review | FR-M4-01 | P0 |
+| GET | `/api/hard-samples` | Hard-example pool | FR-M4-03 | P1 |
+| DELETE | `/api/hard-samples/{frame_id}` | Remove a hard example | FR-M4-03 | P1 |
+| GET | `/api/datasets` | Dataset snapshots | FR-M4-04 | P1 |
+| POST | `/api/datasets` | Export a dataset snapshot | FR-M4-04 | P1 |
+| GET | `/api/stats/corrections` | Review correction distribution | FR-M4-02 | P1 |
+| GET | `/api/stats/species` | Species composition | FR-M5-01 | P1 |
+| GET | `/api/stats/trend` | Daily capture volume | FR-M5-03 | P2 |
+| GET | `/api/reports` | Report history | FR-M5-04 | P1 |
+| POST | `/api/reports` | Generate a report | FR-M5-04 | P1 |
+| GET | `/api/models` | Model versions | FR-M6-01 | P0 |
+| POST | `/api/models/{id}/activate` | Switch the online model | FR-M6-02 | P1 |
+| GET | `/api/experiments` | Training experiments | FR-M6-03 | P0 |
+| POST | `/api/compare/frames/{frame_id}` | Baseline vs improved, same frame | FR-M6-03 | P0 |
+| GET | `/api/species` | Species dictionary and thresholds | FR-M6-04 | P0 |
+| PATCH | `/api/species/{class_code}` | Update a species threshold | FR-M6-04 | P0 |
+| GET | `/api/params` | System parameters | FR-M7-01 | P1 |
+| PATCH | `/api/params` | Update system parameters | FR-M7-01 | P1 |
+| GET | `/api/monitor` | Runtime monitoring | FR-M8-01 | P1 |
+| GET | `/api/messages` | In-app messages | FR-M8-02 | P2 |
+| POST | `/api/messages/{id}/read` | Mark a message read | FR-M8-02 | P2 |
 
 ### Frame object
 
@@ -98,8 +126,32 @@ GET /api/frames?page=1&size=24&site=A3&from=2026-11-01&to=2026-11-03
 ### Detection box
 
 ```json
-{ "class_code": "holothurian", "confidence": 0.87, "x": 0.41, "y": 0.52, "w": 0.12, "h": 0.09 }
+{
+  "object_id": 10231,
+  "class_code": "holothurian",
+  "confidence": 0.87,
+  "x": 0.41, "y": 0.52, "w": 0.12, "h": 0.09,
+  "is_manual": 0,
+  "review_status": 0
+}
 ```
+
+- `object_id` — primary key of `detect_object`; the review page needs a stable handle to edit a box.
+- `is_manual` — `0` detected, `1` drawn by a reviewer.
+- `review_status` — `0` pending, `1` confirmed, `2` modified, `3` rejected.
+
+### Review submission
+
+```
+POST /api/review/frames/{frame_id}
+{ "objects": [ <Detection box> ], "note": "rock read as a sea cucumber, removed" }
+
+→ { "version_no": 2, "object_count": 11, "hard_sample": true }
+```
+
+The request carries the full corrected set, not a diff: the reviewer's canvas is the authority, and a
+diff would have to be merged against a version that may have moved on. `hard_sample` says whether the
+frame entered the hard-example pool (FR-M4-03).
 
 Coordinates are normalised to `0..1`, relative to the image, origin at the top-left corner.
 
