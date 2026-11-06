@@ -12,7 +12,7 @@ import {
   STATS_TREND,
   STATS_CORRECTIONS,
 } from "./fixtures.js";
-import { HARD_SEEDS, TASKS } from "./catalog.js";
+import { DATASETS, HARD_SEEDS, TASKS } from "./catalog.js";
 
 class Fail extends Error {
   constructor(code, message) {
@@ -37,6 +37,7 @@ const REVIEWS = saved.reviews ?? {};
 FRAMES.unshift(...captured);
 if (saved.tasks) TASKS.splice(0, TASKS.length, ...saved.tasks);
 const removedHard = new Set(saved.removed_hard ?? []);
+if (saved.datasets) DATASETS.splice(0, DATASETS.length, ...saved.datasets);
 
 function persist() {
   try {
@@ -45,6 +46,7 @@ function persist() {
         reviews: REVIEWS,
         tasks: TASKS,
         removed_hard: [...removedHard],
+        datasets: DATASETS,
       }));
   } catch {
     // Storage unavailable: the walk-through still works within one page.
@@ -232,6 +234,38 @@ const ROUTES = {
     TASKS.push(task);
     persist();
     return task;
+  },
+
+  // Dataset export, provisional. An export runs over a few reads, like a background job would.
+  "GET /datasets": () => {
+    for (const ds of DATASETS.filter((d) => d.status === "running")) {
+      ds.progress = Math.min(100, ds.progress + 25);
+      if (ds.progress === 100) ds.status = "done";
+    }
+    persist();
+    return DATASETS;
+  },
+
+  "POST /datasets": ({ body }) => {
+    const { train, val, test } = body?.ratio ?? {};
+    if (train + val + test !== 100) throw new Fail(40001, "划分比例之和必须为 100");
+    if (DATASETS.some((d) => d.status === "running")) throw new Fail(40901, "已有导出任务在进行中");
+    const images = 7782 + (body.include_hard ? hardSamples().length : 0) + Object.keys(REVIEWS).length;
+    const valCount = Math.round((images * val) / 100);
+    const testCount = Math.round((images * test) / 100);
+    const ds = {
+      version: `DS-V${DATASETS.length + 1}`,
+      created_at: new Date().toISOString(),
+      images,
+      split: { train: images - valCount - testCount, val: valCount, test: testCount },
+      seed: body.seed,
+      scope: [body.reviewed_only ? "仅复核后结果" : "全部结果", body.include_hard ? "含难例" : "不含难例"].join("，"),
+      status: "running",
+      progress: 0,
+    };
+    DATASETS.unshift(ds);
+    persist();
+    return ds;
   },
 
   // Hard-sample pool, provisional.

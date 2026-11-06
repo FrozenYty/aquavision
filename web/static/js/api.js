@@ -58,6 +58,8 @@ export const cancelTask = (id) => request("POST", `/tasks/${id}/cancel`); // pro
 export const retryTask = (id) => request("POST", `/tasks/${id}/retry`); // provisional
 export const listHardSamples = (query) => request("GET", "/hard-samples", { query }); // provisional
 export const removeHardSample = (frameId) => request("DELETE", `/hard-samples/${frameId}`); // provisional
+export const listDatasets = () => request("GET", "/datasets"); // provisional
+export const exportDataset = (body) => request("POST", "/datasets", { body }); // provisional
 export const getFrame = (frameId) => request("GET", `/frames/${frameId}`);
 export const getObjects = (frameId) => request("GET", `/frames/${frameId}/objects`);
 

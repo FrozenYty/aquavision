@@ -28,3 +28,18 @@ export const HARD_SEEDS = [
   { source: "low_conf", class_code: "strongylocentrotus", confidence: 0.44, reason: "画面边缘，目标只露一半" },
   { source: "corrected", class_code: "asterias", confidence: 0.58, reason: "海星被改为扇贝" },
 ];
+
+// Dataset snapshots (FR-M4-04). DS-V2 is the cleaned DUO set from P0-01: 7782 images, test 1111,
+// split by perceptual-hash group. Fields are provisional.
+export const DATASETS = [
+  {
+    version: "DS-V2", created_at: "2026-11-04T16:20:00+08:00", images: 7782,
+    split: { train: 5447, val: 1224, test: 1111 }, seed: 42, scope: "DUO 清洗后全集",
+    status: "done", progress: 100,
+  },
+  {
+    version: "DS-V1", created_at: "2026-10-30T10:05:00+08:00", images: 6200,
+    split: { train: 4340, val: 1240, test: 620 }, seed: 42, scope: "DUO 首批，未去重",
+    status: "done", progress: 100,
+  },
+];
