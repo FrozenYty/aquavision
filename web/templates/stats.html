@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>统计与报告 · AquaVision</title>
+  <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
+  <link rel="stylesheet" href="../static/css/tokens.css">
+  <link rel="stylesheet" href="../static/css/app.css">
+</head>
+<body>
+  <main class="av-content">
+    <div class="av-page-header">
+      <h1>统计与报告</h1>
+      <div class="av-page-actions">
+        <span
+          class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning"
+          style="align-self: center; display: inline-flex; align-items: center; padding: 5px 14px"
+          title="原型阶段，页面数字来自模拟数据"
+          >原型演示 · 模拟数据</span
+        >
+        <button class="btn btn-primary text-nowrap" id="btn-report" type="button">生成报告</button>
+        <button class="btn btn-outline-primary text-nowrap" id="btn-export" type="button">导出 PDF</button>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-lg-6">
+        <section class="av-card">
+          <h2 class="av-card-title">物种组成 <small class="text-secondary fw-normal">近 7 日检测框</small></h2>
+          <div id="chart-species"></div>
+        </section>
+      </div>
+      <div class="col-lg-6">
+        <section class="av-card">
+          <h2 class="av-card-title">采集量趋势 <small class="text-secondary fw-normal">每日收帧</small></h2>
+          <div id="chart-trend"></div>
+        </section>
+      </div>
+      <div class="col-lg-6">
+        <section class="av-card">
+          <h2 class="av-card-title">质量拦截率 <small class="text-secondary fw-normal">低质量帧占比</small></h2>
+          <div id="chart-quality"></div>
+        </section>
+      </div>
+      <div class="col-lg-6">
+        <section class="av-card">
+          <h2 class="av-card-title">复核修正分布 <small class="text-secondary fw-normal">人工改动汇总</small></h2>
+          <div id="chart-corrections"></div>
+        </section>
+      </div>
+    </div>
+
+    <p class="text-secondary small mt-2 mb-0">数字为演示数据，非真实运行结果。</p>
+  </main>
+
+  <script type="module">
+    import { renderShell } from "../static/js/layout.js";
+    import * as api from "../static/js/api.js";
+    import { toast } from "../static/js/ui.js";
+    import {
+      renderSpeciesDonut,
+      renderTrendLine,
+      renderInterceptBars,
+      renderCorrectionStack,
+    } from "../static/js/charts.js";
+
+    renderShell("P-06");
+
+    const $ = (id) => document.getElementById(id);
+
+    // Prototype scope: the buttons only confirm with a light toast, no real file.
+    $("btn-report").onclick = () =>
+      toast("报告已生成（演示）：按当前统计口径生成摘要", "success");
+    $("btn-export").onclick = () =>
+      toast("导出 PDF（演示）：正式版将下载完整报告", "info");
+
+    (async () => {
+      const [species, quality, trend, corrections] = await Promise.all([
+        api.statsSpecies(),
+        api.statsQuality(),
+        api.statsTrend(),
+        api.statsCorrections(),
+      ]);
+      renderSpeciesDonut($("chart-species"), species);
+      renderTrendLine($("chart-trend"), trend);
+      renderInterceptBars($("chart-quality"), quality);
+      renderCorrectionStack($("chart-corrections"), corrections);
+    })();
+  </script>
+</body>
+</html>

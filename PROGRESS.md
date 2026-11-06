@@ -37,6 +37,19 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
   where no camera exists. Five of them ran the whole path end to end and the manifest verified.
 - **The five blocked directories are gone**, by asking for the access instead of designing around it.
   The temporary ruff exclude is removed; the principle is now `AGENTS.md` §4.7.
+- **Prototype screen 6 done:** stats page with four hand-rolled SVG charts (species donut, daily
+  trend line, interception bars, correction stack), report/export buttons answering with a toast,
+  and both demo-data notices (header badge, footer note). No chart library — ADR 05 keeps front-end
+  assets local.
+- **Mock:** `STILLS` uses DUO ground-truth boxes normalised onto four 1280x720 test frames, so every
+  box sits on a real target; one deliberate 0.42-confidence false positive (rock read as a sea
+  cucumber) drives the review demo. Stats fixtures are hand-set and share the dashboard figures
+  (`DASHBOARD.daily` is `STATS_TREND`, `rejected_today` is today's intercepted count), so screens
+  2 and 6 cannot disagree. `/stats/species` and `/stats/quality` follow the contract; trend and
+  corrections are provisional.
+- **Flagged for later, not fixed here:** the prototype badge lives in `stats.html` only — the other
+  pages need it from the shared shell; and `.av-page-actions` stretches non-button children, so a
+  badge's text sits high unless it centres itself.
 
 ## 2026-11-05
 

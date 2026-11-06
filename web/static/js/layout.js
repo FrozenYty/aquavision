@@ -12,6 +12,10 @@ const MENU = [
       { id: "P-04", label: "影像浏览", href: "frames.html" },
     ],
   },
+  {
+    group: "统计",
+    items: [{ id: "P-06", label: "统计与报告", href: "stats.html" }],
+  },
 ];
 
 const DATA_SOURCE = "数据来源：公开水下数据集与教学演示水箱影像，不含真实海域位置信息。";
