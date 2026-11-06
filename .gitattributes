@@ -1,12 +1,31 @@
-# 文本文件统一 LF，避免 Windows 与 CI 之间反复改动
+# One line-ending rule for the whole repository: store LF, check out LF. Git normalises on commit,
+# so a Windows editor that writes CRLF still produces a clean diff against CI, and a contributor on
+# any OS sees the same bytes. Without this, every commit from Windows rewrites whole files.
 * text=auto eol=lf
 
-# 文档按二进制处理，避免 git 试图做文本 diff
-*.docx  binary
-*.doc    binary
-*.xlsx  binary
-*.xls    binary
-*.pdf    binary
-*.pptx   binary
-*.png    binary
-*.jpg    binary
+# Binary containers. `binary` is shorthand for `-text -diff -merge`:
+#   -text    never convert line endings. A CRLF rewrite inside a zip-based file corrupts it beyond
+#            repair, and git would not notice because the damage is inside the compressed stream.
+#   -diff    never attempt a textual diff. On a zip the output is either "Binary files differ" or,
+#            worse, a wall of noise that hides the real change.
+#   -merge   never attempt a three-way merge. Two people editing one binary is a choice, not a patch:
+#            take one side, then redo the edit.
+#
+# Git guesses binary-ness by looking for NUL bytes and would usually get these right on its own.
+# Declaring them removes the guess, which still matters for a file added with `git add --force`.
+#
+# Documents are deliberately absent from the repository (*.docx in .gitignore), but the attributes
+# stay: a forced add must not be able to corrupt one.
+*.docx binary
+*.doc binary
+*.xlsx binary
+*.xls binary
+*.pptx binary
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff2 binary
+*.woff binary

@@ -1,4 +1,5 @@
-# --- 模型与数据：不进仓库 ---
+# Model weights, datasets and video: never in the repository. They live in Releases or external
+# storage, linked from the README with a checksum.
 *.pt
 *.onnx
 *.engine
@@ -8,21 +9,21 @@ datasets/
 *.avi
 *.mov
 
-# --- 密钥与本地配置 ---
+# Secrets and local configuration.
 .env
 .env.*
 !.env.example
 
-# --- Word / Office 临时文件 ---
+# Office lock files and editor scratch.
 ~$*
 *.tmp
 
-# --- 系统文件 ---
+# OS clutter.
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# --- Python ---
+# Python.
 __pycache__/
 *.py[cod]
 .venv/
@@ -31,16 +32,17 @@ venv/
 .ruff_cache/
 *.egg-info/
 
-# --- 编辑器 ---
+# Editors.
 .vscode/
 .idea/
 
-# --- 渲染与调试产物 ---
+# Rendering and debug by-products.
 _probe.pdf
 *.pdf.tmp
 
-# Submission artefacts live outside the repository
+# Submission artefacts: the frozen .docx and its generated PDFs live outside the repository, in a
+# folder beside it. The Markdown in docs/ is what continues to change; see CONTRIBUTING §6.
 *.docx
 
-# pytest scratch space (see tests/conftest.py)
+# pytest scratch space, created by tests/conftest.py.
 tests/tmp/
