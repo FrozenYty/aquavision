@@ -12,6 +12,7 @@ import {
   STATS_TREND,
   STATS_CORRECTIONS,
 } from "./fixtures.js";
+import { TASKS } from "./catalog.js";
 
 class Fail extends Error {
   constructor(code, message) {
@@ -20,7 +21,6 @@ class Fail extends Error {
   }
 }
 
-let nextTaskId = 1001;
 
 // Every page load starts the mock afresh, but screens 3-5 hand a frame from page to page. Frames
 // captured and reviews submitted are kept for the browser tab so the walk-through holds together.
@@ -35,10 +35,11 @@ const saved = (() => {
 const captured = saved.frames ?? [];
 const REVIEWS = saved.reviews ?? {};
 FRAMES.unshift(...captured);
+if (saved.tasks) TASKS.splice(0, TASKS.length, ...saved.tasks);
 
 function persist() {
   try {
-    sessionStorage.setItem(STORE, JSON.stringify({ frames: captured, reviews: REVIEWS }));
+    sessionStorage.setItem(STORE, JSON.stringify({ frames: captured, reviews: REVIEWS, tasks: TASKS }));
   } catch {
     // Storage unavailable: the walk-through still works within one page.
   }
@@ -62,6 +63,32 @@ const LIVE_QUALITY = [
   { sharpness: 76, brightness: 83, colorcast: 78, score: 79, verdict: "ok" },
   { sharpness: 38, brightness: 64, colorcast: 55, score: 49, verdict: "retake" },
 ];
+
+function findTask(id) {
+  const task = TASKS.find((t) => t.task_id === Number(id));
+  if (!task) throw new Fail(40401, "识别任务不存在");
+  return task;
+}
+
+// Each read moves the running task one frame on, so a page that polls shows real progress. When it
+// finishes, the oldest queued task starts (two workers in the design, one here keeps it readable).
+function advanceTasks() {
+  let running = TASKS.find((t) => t.status === 1);
+  if (running) {
+    running.done = Math.min(running.total, running.done + 1);
+    if (running.done === running.total) running.status = 2;
+  }
+  if (!TASKS.some((t) => t.status === 1)) {
+    running = TASKS.filter((t) => t.status === 0).sort((a, b) => a.task_id - b.task_id)[0];
+    if (running) running.status = 1;
+  }
+  persist();
+}
+
+function withQueue(tasks) {
+  const queued = TASKS.filter((t) => t.status === 0).sort((a, b) => a.task_id - b.task_id);
+  return tasks.map((t) => ({ ...t, queue_pos: t.status === 0 ? queued.indexOf(t) + 1 : null }));
+}
 
 function findFrame(id) {
   const frame = FRAMES.find((f) => f.frame_id === id);
@@ -167,7 +194,51 @@ const ROUTES = {
 
   "POST /detect/batches": ({ body }) => {
     if (!body?.frame_ids?.length) throw new Fail(40001, "请至少选择一帧");
-    return { task_id: nextTaskId++, status: 0, total: body.frame_ids.length };
+    const task = {
+      task_id: Math.max(...TASKS.map((t) => t.task_id)) + 1,
+      kind: "batch",
+      source: `${body.frame_ids.length} 帧（影像浏览）`,
+      total: body.frame_ids.length,
+      done: 0,
+      status: 0,
+      model_version: "v8n-E3",
+      created_at: new Date().toISOString(),
+      error: null,
+    };
+    TASKS.push(task);
+    persist();
+    return task;
+  },
+
+  // The task list and its two actions are provisional; GET /tasks/{id} is a contract route.
+  "GET /tasks": ({ query }) => {
+    advanceTasks();
+    const q = (query.q ?? "").toLowerCase();
+    const items = TASKS.filter(
+      (t) =>
+        (query.status === undefined || t.status === Number(query.status)) &&
+        (!q || String(t.task_id).includes(q) || t.source.toLowerCase().includes(q)),
+    ).sort((a, b) => b.task_id - a.task_id);
+    const result = paginate(items, query);
+    return { ...result, items: withQueue(result.items) };
+  },
+
+  "GET /tasks/{id}": ({ id }) => withQueue([findTask(id)])[0],
+
+  "POST /tasks/{id}/cancel": ({ id }) => {
+    const task = findTask(id);
+    if (task.status > 1) throw new Fail(40901, "任务已结束，不能取消");
+    Object.assign(task, { status: 3, error: "已取消" });
+    persist();
+    return task;
+  },
+
+  "POST /tasks/{id}/retry": ({ id }) => {
+    const task = findTask(id);
+    if (task.status !== 3) throw new Fail(40901, "只有失败的任务可以重试");
+    Object.assign(task, { status: 0, done: 0, error: null });
+    persist();
+    return task;
   },
 
   // Screen 6 statistics. species and quality are contract routes; trend and

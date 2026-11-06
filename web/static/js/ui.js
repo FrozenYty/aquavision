@@ -31,6 +31,9 @@ export function toast(message, kind = "info") {
   setTimeout(() => item.remove(), 3500);
 }
 
+// Destructive actions (cancel, remove, roll back, disable) ask twice (SRS §5.1).
+export const confirmAction = (message) => window.confirm(message);
+
 // Bootstrap pagination for a {total, page, size} block; calls onPage(n) on click.
 export function renderPager(el, { total, page, size }, onPage) {
   const pages = Math.max(1, Math.ceil(total / size));

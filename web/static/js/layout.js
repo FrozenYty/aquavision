@@ -17,7 +17,7 @@ const MENU = [
   {
     group: "识别",
     items: [
-      { id: "P-05", label: "识别任务" },
+      { id: "P-05", label: "识别任务", href: "tasks.html" },
       { id: "P-06", label: "识别结果", href: "frame.html" },
     ],
   },

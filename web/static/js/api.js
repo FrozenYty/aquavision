@@ -53,6 +53,9 @@ export const listFrames = (query) => request("GET", "/frames", { query });
 // Body shape is provisional; the contract names the route only.
 export const startBatch = (frameIds) =>
   request("POST", "/detect/batches", { body: { frame_ids: frameIds } });
+export const listTasks = (query) => request("GET", "/tasks", { query }); // provisional
+export const cancelTask = (id) => request("POST", `/tasks/${id}/cancel`); // provisional
+export const retryTask = (id) => request("POST", `/tasks/${id}/retry`); // provisional
 export const getFrame = (frameId) => request("GET", `/frames/${frameId}`);
 export const getObjects = (frameId) => request("GET", `/frames/${frameId}/objects`);
 
