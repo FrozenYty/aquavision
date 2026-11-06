@@ -53,6 +53,13 @@ export const listFrames = (query) => request("GET", "/frames", { query });
 // Body shape is provisional; the contract names the route only.
 export const startBatch = (frameIds) =>
   request("POST", "/detect/batches", { body: { frame_ids: frameIds } });
+export const getFrame = (frameId) => request("GET", `/frames/${frameId}`);
+export const getObjects = (frameId) => request("GET", `/frames/${frameId}/objects`);
+
+// ---- Review ----
+// Body shape is provisional: the full box list after review.
+export const submitReview = (frameId, objects) =>
+  request("POST", `/review/frames/${frameId}`, { body: { objects } });
 
 // ---- Stats (screen 6) ----
 export const statsSpecies = () => request("GET", "/stats/species");

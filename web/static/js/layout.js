@@ -3,6 +3,8 @@
 
 import { USE_MOCK } from "./api.js";
 
+// Page ids follow SRS §5.2. Entries without href are not built in the prototype: they stay in the
+// menu, greyed and tagged P2, so the full system reads as a schedule rather than as missing pages.
 const MENU = [
   { group: "概览", items: [{ id: "P-02", label: "工作台", href: "home.html" }] },
   {
@@ -13,8 +15,33 @@ const MENU = [
     ],
   },
   {
-    group: "统计",
-    items: [{ id: "P-06", label: "统计与报告", href: "stats.html" }],
+    group: "识别",
+    items: [
+      { id: "P-05", label: "识别任务" },
+      { id: "P-06", label: "识别结果" },
+    ],
+  },
+  {
+    group: "复核与回流",
+    items: [
+      { id: "P-07", label: "复核工作台" },
+      { id: "P-08", label: "难例池" },
+      { id: "P-09", label: "数据集导出" },
+    ],
+  },
+  {
+    group: "统计与报告",
+    items: [
+      { id: "P-10", label: "统计与报告", href: "stats.html" },
+      { id: "P-11", label: "巡检报告" },
+    ],
+  },
+  {
+    group: "模型与系统",
+    items: [
+      { id: "P-12", label: "模型与实验" },
+      { id: "P-13", label: "系统管理" },
+    ],
   },
 ];
 
@@ -29,7 +56,6 @@ function topbarHtml() {
       <small>水下物种识别与监测</small>
     </a>
     <div class="av-topbar-actions">
-      ${USE_MOCK ? '<span class="av-status" title="页面数据来自本地模拟">MOCK</span>' : ""}
       <span class="av-clock" aria-hidden="true"></span>
       <a href="#" title="站内消息">消息 <span class="badge rounded-pill text-bg-info">0</span></a>
       <span class="av-topbar-user"><span class="av-avatar" aria-hidden="true">演</span> 演示账号</span>
@@ -37,19 +63,26 @@ function topbarHtml() {
     </div>`;
 }
 
+function menuLinkHtml(item, pageId) {
+  if (!item.href) {
+    return (
+      `<span class="av-menu-link is-planned" aria-disabled="true" title="${item.id} 排在 P2 阶段">` +
+      `${item.label}<span class="av-mono">P2</span></span>`
+    );
+  }
+  const active = item.id === pageId;
+  return (
+    `<a class="av-menu-link${active ? " active" : ""}" href="${item.href}"` +
+    `${active ? ' aria-current="page"' : ""}>${item.label}<span class="av-mono">${item.id}</span></a>`
+  );
+}
+
 function sidebarHtml(pageId) {
   return MENU.map(
     ({ group, items }, i) => `
     <details class="av-menu-group" open>
       <summary><span class="av-mono">${String(i + 1).padStart(2, "0")}</span>${group}</summary>
-      ${items
-        .map(
-          (item) =>
-            `<a class="av-menu-link${item.id === pageId ? " active" : ""}" href="${item.href}"` +
-            `${item.id === pageId ? ' aria-current="page"' : ""}>` +
-            `${item.label}<span class="av-mono">${item.id}</span></a>`,
-        )
-        .join("")}
+      ${items.map((item) => menuLinkHtml(item, pageId)).join("")}
     </details>`,
   ).join("");
 }
@@ -63,6 +96,17 @@ function addEyebrow(pageId) {
   eyebrow.className = "av-eyebrow";
   eyebrow.textContent = `${pageId} / ${group.group}`;
   h1.prepend(eyebrow);
+}
+
+// Every page says plainly that its numbers are not real while the mock is on (prototype §4).
+function addPrototypeBadge() {
+  const h1 = document.querySelector(".av-page-header h1");
+  if (!USE_MOCK || !h1) return;
+  const badge = document.createElement("span");
+  badge.className = "av-proto-badge";
+  badge.title = "原型阶段，页面数据来自模拟";
+  badge.textContent = "原型演示 · 模拟数据";
+  h1.after(badge);
 }
 
 function startClock(el) {
@@ -92,6 +136,7 @@ export function renderShell(pageId) {
   content.append(footer);
 
   addEyebrow(pageId);
+  addPrototypeBadge();
   startClock(topbar.querySelector(".av-clock"));
 
   // Stagger the page blocks (and each card inside a grid row) on first paint.

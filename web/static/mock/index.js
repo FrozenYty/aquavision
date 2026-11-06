@@ -1,6 +1,17 @@
 // Mock server for api.js. Answers with the contract envelope and error codes (§2, §3).
 
-import { CAMERAS, FRAMES, SESSIONS, newFrame, STATS_SPECIES, STATS_QUALITY, STATS_TREND, STATS_CORRECTIONS } from "./fixtures.js";
+import {
+  CAMERAS,
+  FALSE_POSITIVE,
+  FRAMES,
+  SESSIONS,
+  STILLS,
+  newFrame,
+  STATS_SPECIES,
+  STATS_QUALITY,
+  STATS_TREND,
+  STATS_CORRECTIONS,
+} from "./fixtures.js";
 
 class Fail extends Error {
   constructor(code, message) {
@@ -10,6 +21,66 @@ class Fail extends Error {
 }
 
 let nextTaskId = 1001;
+
+// Every page load starts the mock afresh, but screens 3-5 hand a frame from page to page. Frames
+// captured and reviews submitted are kept for the browser tab so the walk-through holds together.
+const STORE = "av-mock-state";
+const saved = (() => {
+  try {
+    return JSON.parse(sessionStorage.getItem(STORE)) ?? {};
+  } catch {
+    return {};
+  }
+})();
+const captured = saved.frames ?? [];
+const REVIEWS = saved.reviews ?? {};
+FRAMES.unshift(...captured);
+
+function persist() {
+  try {
+    sessionStorage.setItem(STORE, JSON.stringify({ frames: captured, reviews: REVIEWS }));
+  } catch {
+    // Storage unavailable: the walk-through still works within one page.
+  }
+}
+
+// Each frame shows one DUO still, picked by its sequence number, so the first frame of a session is
+// always sample-01 - the one carrying the deliberate false positive.
+function stillOf(frame) {
+  return STILLS[(Number(frame.frame_id.slice(-4)) - 1) % STILLS.length];
+}
+
+// image_url is provisional: the contract's frame object does not say where the picture is served.
+const withImage = (frame) => ({ ...frame, image_url: new URL(stillOf(frame).image, import.meta.url).href });
+
+// Live frames follow a script instead of the dice: four good frames, then one below the threshold,
+// so the walk-through always opens on a detected frame and still shows an interception.
+const LIVE_QUALITY = [
+  { sharpness: 84, brightness: 91, colorcast: 83, score: 86, verdict: "ok" },
+  { sharpness: 79, brightness: 88, colorcast: 80, score: 82, verdict: "ok" },
+  { sharpness: 88, brightness: 86, colorcast: 85, score: 87, verdict: "ok" },
+  { sharpness: 76, brightness: 83, colorcast: 78, score: 79, verdict: "ok" },
+  { sharpness: 38, brightness: 64, colorcast: 55, score: 49, verdict: "retake" },
+];
+
+function findFrame(id) {
+  const frame = FRAMES.find((f) => f.frame_id === id);
+  if (!frame) throw new Fail(40401, "帧不存在");
+  return frame;
+}
+
+// object_id, is_manual and review_status are provisional fields (data model, not yet in the contract).
+function detectedObjects(frame) {
+  if (frame.quality.verdict !== "ok") return []; // needs retake: stored, never detected
+  const still = stillOf(frame);
+  const extra = still.image === FALSE_POSITIVE.image ? FALSE_POSITIVE.boxes : [];
+  return [...still.boxes, ...extra].map((box, i) => ({
+    object_id: i + 1,
+    ...box,
+    is_manual: 0,
+    review_status: 0,
+  }));
+}
 
 function paginate(items, query) {
   const page = Number(query.page ?? 1);
@@ -53,10 +124,13 @@ const ROUTES = {
       { ...session, started_at: new Date().toISOString() },
       session.frame_count,
     );
+    frame.quality = LIVE_QUALITY[session.frame_count % LIVE_QUALITY.length];
     session.frame_count += 1;
     if (frame.quality.verdict === "retake") session.retake_count += 1;
     FRAMES.unshift(frame);
-    return frame;
+    captured.unshift(frame);
+    persist();
+    return withImage(frame);
   },
 
   "POST /capture/sessions/{id}/close": ({ id }) => {
@@ -74,7 +148,21 @@ const ROUTES = {
         (!query.from || f.captured_at.slice(0, 10) >= query.from) &&
         (!query.to || f.captured_at.slice(0, 10) <= query.to),
     );
-    return paginate(items, query);
+    const result = paginate(items, query);
+    return { ...result, items: result.items.map(withImage) };
+  },
+
+  "GET /frames/{id}": ({ id }) => withImage(findFrame(id)),
+
+  "GET /frames/{id}/objects": ({ id }) => REVIEWS[id] ?? detectedObjects(findFrame(id)),
+
+  // Body shape is provisional: { objects: [...] }, the full box list after review.
+  "POST /review/frames/{id}": ({ id, body }) => {
+    if (!Array.isArray(body?.objects)) throw new Fail(40001, "缺少复核结果");
+    const before = (REVIEWS[id] ?? detectedObjects(findFrame(id))).length;
+    REVIEWS[id] = body.objects;
+    persist();
+    return { frame_id: id, count_before: before, count_after: body.objects.length };
   },
 
   "POST /detect/batches": ({ body }) => {
