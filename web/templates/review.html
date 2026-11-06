@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>复核工作台 · AquaVision</title>
+  <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
+  <link rel="stylesheet" href="../static/css/tokens.css">
+  <link rel="stylesheet" href="../static/css/app.css">
+</head>
+<body>
+  <main class="av-content">
+    <div class="av-page-header">
+      <h1>复核工作台</h1>
+      <div class="av-page-actions">
+        <a class="btn btn-outline-secondary text-nowrap" id="btn-back" href="frames.html">返回识别结果</a>
+        <button class="btn btn-primary text-nowrap" id="btn-submit" type="button">提交复核</button>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-xl-8">
+        <section class="av-card">
+          <div class="av-toolbar mb-3">
+            <div class="btn-group btn-group-sm" role="group" aria-label="工具">
+              <button class="btn btn-outline-primary active" id="tool-select" type="button" title="选择并拖动框（V）">选择</button>
+              <button class="btn btn-outline-primary" id="tool-draw" type="button" title="在画面上拖出新框（B）">画框</button>
+              <button class="btn btn-outline-primary" id="tool-delete" type="button" title="删除选中的框（Delete）">删除</button>
+              <button class="btn btn-outline-primary" id="tool-undo" type="button" title="撤销上一步" disabled>撤销</button>
+            </div>
+            <select class="form-select form-select-sm w-auto" id="class-select" aria-label="类别"></select>
+            <span class="av-mono small text-secondary" title="原型不做缩放">100%</span>
+            <span class="ms-auto small">计数 <strong class="av-mono" id="count-change">—</strong></span>
+          </div>
+          <div id="canvas" class="av-empty">正在载入…</div>
+          <div class="small text-secondary mt-2">选中框后拖动可移动，拖四角手柄可调整大小；改类别用上方下拉框。</div>
+        </section>
+      </div>
+      <div class="col-xl-4">
+        <section class="av-card">
+          <h2 class="av-card-title">目标列表
+            <button class="btn btn-sm btn-outline-primary ms-auto text-nowrap" id="btn-add" type="button">新增</button></h2>
+          <div class="av-mono small text-secondary mb-2" id="frame-id"></div>
+          <ul class="list-unstyled mb-0 d-grid gap-1" id="objects"></ul>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { renderShell } from "../static/js/layout.js";
+    import * as api from "../static/js/api.js";
+    import { esc, toast } from "../static/js/ui.js";
+    import { CLASSES, boxHtml, statusBadge } from "../static/js/boxes.js";
+
+    renderShell("P-07");
+
+    const $ = (id) => document.getElementById(id);
+    const MODIFIED = 2;
+    const CONFIRMED = 1;
+    const HANDLES = ["nw", "ne", "sw", "se"];
+    const clamp = (v) => Math.min(1, Math.max(0, v));
+
+    let frameId = null;
+    let imageUrl = "";
+    let objects = [];
+    let initialCount = 0;
+    let selected = null;
+    let mode = "select";
+    let previous = null; // one step of undo, not a stack (prototype §3)
+
+    $("class-select").innerHTML = Object.entries(CLASSES)
+      .map(([code, name]) => `<option value="${code}">${name}</option>`).join("");
+
+    const find = (id) => objects.find((o) => o.object_id === id);
+
+    function remember() {
+      previous = structuredClone(objects);
+      $("tool-undo").disabled = false;
+    }
+
+    function render() {
+      $("canvas").className = `av-stage is-editing${mode === "draw" ? " is-drawing" : ""}`;
+      $("canvas").innerHTML = `<img src="${esc(imageUrl)}" alt="帧画面" draggable="false">` + objects.map(boxHtml).join("");
+      const box = selected && $("canvas").querySelector(`.av-box[data-id="${selected}"]`);
+      if (box) {
+        box.classList.add("is-selected");
+        box.insertAdjacentHTML("beforeend", HANDLES.map((h) => `<span class="av-handle" data-h="${h}"></span>`).join(""));
+      }
+      $("count-change").textContent = `${initialCount} → ${objects.length}`;
+      $("objects").innerHTML = objects.map((o) => `
+        <li class="av-object-row${o.object_id === selected ? " is-selected" : ""}" data-id="${o.object_id}">
+          <span class="av-class av-class-${o.class_code}">${CLASSES[o.class_code]}</span>
+          <span class="av-mono small">${o.is_manual ? "人工" : o.confidence.toFixed(2)}</span>
+          ${statusBadge(o)}
+          <span class="ms-auto d-flex gap-1">
+            <button class="btn btn-sm btn-outline-success" data-act="confirm" type="button">确认</button>
+            <button class="btn btn-sm btn-outline-danger" data-act="delete" type="button">删除</button>
+          </span>
+        </li>`).join("") || '<li class="text-secondary small">没有目标，用“画框”新增。</li>';
+    }
+
+    function select(id) {
+      selected = id;
+      if (id) $("class-select").value = find(id).class_code;
+      render();
+    }
+
+    function setMode(next) {
+      mode = next;
+      $("tool-select").classList.toggle("active", mode === "select");
+      $("tool-draw").classList.toggle("active", mode === "draw");
+      render();
+    }
+
+    function removeSelected() {
+      if (!selected) return;
+      remember();
+      objects = objects.filter((o) => o.object_id !== selected);
+      selected = null;
+      render();
+    }
+
+    // Pointer position in normalised image coordinates.
+    function point(event) {
+      const r = $("canvas").getBoundingClientRect();
+      return { x: clamp((event.clientX - r.left) / r.width), y: clamp((event.clientY - r.top) / r.height) };
+    }
+
+    let drag = null;
+
+    $("canvas").addEventListener("pointerdown", (event) => {
+      if (!imageUrl) return;
+      const p = point(event);
+      if (mode === "draw") {
+        remember();
+        const id = Math.max(0, ...objects.map((o) => o.object_id)) + 1;
+        objects.push({ object_id: id, class_code: $("class-select").value, confidence: 1, is_manual: 1,
+          review_status: MODIFIED, x: p.x, y: p.y, w: 0, h: 0 });
+        drag = { id, kind: "draw", start: p };
+        selected = id;
+      } else {
+        const boxEl = event.target.closest(".av-box");
+        if (!boxEl) return select(null);
+        const id = Number(boxEl.dataset.id);
+        if (id !== selected) select(id);
+        remember();
+        drag = { id, kind: event.target.dataset.h ?? "move", start: p, from: { ...find(id) } };
+      }
+      $("canvas").setPointerCapture(event.pointerId);
+    });
+
+    $("canvas").addEventListener("pointermove", (event) => {
+      if (!drag) return;
+      const p = point(event);
+      const o = find(drag.id);
+      const f = drag.from;
+      const dx = p.x - drag.start.x;
+      const dy = p.y - drag.start.y;
+      if (drag.kind === "draw") {
+        Object.assign(o, { x: Math.min(p.x, drag.start.x), y: Math.min(p.y, drag.start.y),
+          w: Math.abs(dx), h: Math.abs(dy) });
+      } else if (drag.kind === "move") {
+        o.x = clamp(Math.min(f.x + dx, 1 - f.w));
+        o.y = clamp(Math.min(f.y + dy, 1 - f.h));
+      } else {
+        // Resize from a corner: the opposite corner stays put.
+        const left = drag.kind.endsWith("w") ? f.x + dx : f.x;
+        const right = drag.kind.endsWith("e") ? f.x + f.w + dx : f.x + f.w;
+        const top = drag.kind.startsWith("n") ? f.y + dy : f.y;
+        const bottom = drag.kind.startsWith("s") ? f.y + f.h + dy : f.y + f.h;
+        Object.assign(o, { x: clamp(Math.min(left, right)), y: clamp(Math.min(top, bottom)),
+          w: Math.abs(right - left), h: Math.abs(bottom - top) });
+      }
+      o.review_status = MODIFIED;
+      render();
+    });
+
+    $("canvas").addEventListener("pointerup", () => {
+      if (drag?.kind === "draw") {
+        const o = find(drag.id);
+        if (o.w < 0.01 || o.h < 0.01) {
+          objects = objects.filter((b) => b !== o); // a click, not a drag: no box
+          selected = null;
+        }
+        setMode("select");
+      }
+      drag = null;
+    });
+
+    $("objects").addEventListener("click", (event) => {
+      const row = event.target.closest(".av-object-row");
+      if (!row) return;
+      const id = Number(row.dataset.id);
+      const act = event.target.dataset.act;
+      if (act === "delete") { selected = id; return removeSelected(); }
+      if (act === "confirm") { remember(); find(id).review_status = CONFIRMED; }
+      select(id);
+    });
+
+    $("class-select").addEventListener("change", () => {
+      if (!selected) return;
+      remember();
+      Object.assign(find(selected), { class_code: $("class-select").value, review_status: MODIFIED });
+      render();
+    });
+
+    $("tool-select").onclick = () => setMode("select");
+    $("tool-draw").onclick = () => { selected = null; setMode("draw"); };
+    $("btn-add").onclick = $("tool-draw").onclick;
+    $("tool-delete").onclick = removeSelected;
+    $("tool-undo").onclick = () => {
+      objects = previous;
+      previous = null;
+      selected = null;
+      $("tool-undo").disabled = true;
+      render();
+    };
+
+    document.addEventListener("keydown", (event) => {
+      if (event.target.closest("select, input")) return;
+      if (event.key === "Delete" || event.key === "Backspace") removeSelected();
+      if (event.key === "v" || event.key === "Escape") setMode("select");
+      if (event.key === "b") { selected = null; setMode("draw"); }
+    });
+
+    $("btn-submit").onclick = async () => {
+      try {
+        const result = await api.submitReview(frameId, objects);
+        toast(`复核已提交，计数 ${result.count_before} → ${result.count_after}`, "success");
+        initialCount = result.count_after;
+        render();
+      } catch (err) {
+        toast(err.message, "danger");
+      }
+    };
+
+    async function load() {
+      // Without ?id= the page opens the first frame, so the menu entry is never a dead end.
+      frameId = new URLSearchParams(location.search).get("id")
+        ?? (await api.listFrames({ page: 1, size: 1 })).items[0].frame_id;
+      const [frame, boxes] = await Promise.all([api.getFrame(frameId), api.getObjects(frameId)]);
+      imageUrl = frame.image_url;
+      objects = boxes;
+      initialCount = boxes.length;
+      $("frame-id").textContent = frame.frame_id;
+      $("btn-back").href = `frame.html?id=${encodeURIComponent(frame.frame_id)}`;
+      // Open on the box most likely to be wrong: the lowest confidence.
+      const doubtful = [...boxes].sort((a, b) => a.confidence - b.confidence)[0];
+      select(doubtful?.object_id ?? null);
+    }
+
+    load().catch((err) => toast(err.message, "danger"));
+  </script>
+</body>
+</html>
