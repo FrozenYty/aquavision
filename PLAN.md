@@ -65,6 +65,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P1-02** FastAPI skeleton: every contract route, envelope, error codes, JWT · @Gtechson ·
       done when `/api/health` answers in the envelope, every route in `docs/api-contract-en.md` §6 is
       mounted, and the ones marked P0 return real data while the rest return 501 in the same envelope
+      - mounted by @FrozenYty on 11-06: envelope, guards, all 42 routes, 21 of them returning real
+        data. What remains is detection, the queue consumer and the reviewed statistics — the
+        acceptance list for those is `docs/handover-en.md` §2
 - [ ] **P1-03** Capture module: open device, lock exposure, grab, score, persist · @FrozenYty · done
       when 20 frames are captured and file, score and `frame_id` all agree
 - [x] **P1-04** Thirteen static pages · @chemflowers · done when every page opens, uses mock data and

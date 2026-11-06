@@ -9,9 +9,9 @@
 | Item | Content |
 |---|---|
 | Document title | Underwater Species Detection and Monitoring for Marine Ranching Based on an Improved YOLOv8 — Software Project Requirements Specification |
-| Document number | SRS-PRJ14-V1.5-2026 |
+| Document number | SRS-PRJ14-V1.6-2026 |
 | Project number | PRJ-14 |
-| Document version | V1.5 |
+| Document version | V1.6 |
 | Phase | Phase 1: requirements analysis |
 | Prepared by | Training Group 14 |
 | Project lead | Yao Tianyu (group lead); supervisor: Wu Jianguang |
@@ -1369,6 +1369,10 @@ Interaction rules: every list page offers keyword search, filters and paging; ev
 | Week 16 (from 12-14) | Integration testing | Functional and performance cases; accuracy acceptance; defect fixing and regression; traceability check | Test cases, defect report, summary | Fu Yijia / all |
 | Week 17 (from 12-21) | Deployment and acceptance | Deployment drill and seed data; acceptance testing and closing materials; defence rehearsal | Deployment manual, acceptance report, defence material | All / Yao Tianyu |
 
+Every document in this repository is Markdown, and the inspection report the system produces is
+Markdown too. The Word, PDF and Excel formats in the table above describe what may be handed to the
+supervisor; nothing is converted unless it is asked for, and the Markdown is the copy that is kept.
+
 ### 7.3 Deliverables
 
 **Table 7-3 Project deliverables**
@@ -1520,6 +1524,7 @@ Defects found in acceptance testing are handled by severity. Critical (system un
 | V1.1 | 2026-11-03 | Yao Tianyu | Switched to direct capture from the local camera; capture-terminal modules and tables removed; 3.5 algorithm requirements and 2.4 architecture added; NFR numbering conflicts fixed; 2.3 scenarios, UC-01/UC-09 and 5.3 flows rewritten; wording inconsistent with the new architecture removed. | Implements the annotations on the final revision of 09. | Internal group review |
 | V1.2 | 2026-11-03 | Yao Tianyu | Marine-debris class and per-class metrics added; capture hardware list added (trigger board, temperature and turbidity sensors, status display); environment reporting added to the capture interface; streaming wording, team size and baseline-freeze week corrected; dataset size and acquisition risk added. | Implements the capture plan change and settles the requirements baseline. | Internal group review |
 | V1.3 | 2026-11-04 | Yao Tianyu | Marine-debris class removed and four classes restored; dataset wording unified to DUO; AL-08 and AL-09 deleted from the metric table and AL-03 limited to per-class recall; scenery list in Table 2-3 and class palette in 5.1 adjusted. | No public labels exist for that class and in-house data cannot support an independent accuracy metric; focus on four commercial and predator species to keep the metric basis consistent. | Internal group review |
+| V1.6 | 2026-11-06 | Yao Tianyu | The inspection report is produced as Markdown; scenario 5, FR-M5-04 and §7 say so, and §7 records that the Word, PDF and Excel formats are conversion targets only. | Every document in the repository is Markdown and none of them is submitted as a converted file; keeping two formats would mean keeping two copies, one of which is always stale. | Internal group review |
 | V1.5 | 2026-11-06 | Yao Tianyu | Four tables added to §4.1: `dataset`, `dataset_item`, `report`, `sys_param`; the nine-table decision of V1.1 revised with the reason recorded in ADR 08. | Building the skeleton showed three requirements had no storage: a snapshot exported before any experiment, a report history filtered by period and basis, and parameter changes that must persist and stay audited. | Internal group review |
 | V1.4 | 2026-11-05 | Yao Tianyu | Water-temperature field, probe and status display removed; turbidity changed from NTU to a 0-100 relative value and renamed turbidity_rel; Table 2-3 updated to the selected parts (desk lamp, ultra-clear glass tank, real seafood targets, ME2100A-IIC). Correction of 11-05: the tank material in 2.6 changed from acrylic to ultra-clear glass to match Table 2-3. | Purchase plan settled: meet capture and cleanliness needs at minimum cost, keeping turbidity as the only sensor. | Internal group review |
 
