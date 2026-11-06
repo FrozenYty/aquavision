@@ -16,40 +16,97 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
+from sqlalchemy.orm import Session
 
 from app import serializers
+from app.config import Settings
 from app.deps import SessionDep, SettingsDep, UserDep, get_current_user, require
-from app.envelope import NOT_FOUND, ApiError, not_built, ok
-from app.models import DetectTask, MediaAsset, SysLog, SysMessage
+from app.envelope import CONFLICT, NOT_FOUND, ApiError, ok
+from app.models import DetectTask, MediaAsset, SysLog, SysMessage, SysParam
 
 router = APIRouter(prefix="/api", tags=["system"], dependencies=[Depends(get_current_user)])
 
 
+#: The parameters that may be changed at runtime, and how their stored text is cast back.
+#: Anything not listed here is deployment configuration and stays in the environment.
+PARAMS: dict[str, type] = {
+    "retention_days": int,
+    "max_concurrency": int,
+    "detect_interval_ms": int,
+    "quality_threshold": int,
+    "camera_index": int,
+}
+
+
+def _current(db: Session, settings: Settings) -> dict[str, object]:
+    """Defaults from the environment, overridden by rows. A row that vanished falls back again."""
+    values = {key: getattr(settings, key) for key in PARAMS}
+    for row in db.scalars(select(SysParam)).all():
+        if row.param_key not in PARAMS:
+            continue
+        caster = PARAMS[row.param_key]
+        try:
+            values[row.param_key] = caster(row.param_value)
+        except (TypeError, ValueError):
+            # A corrupt row must not take the settings page down with it.
+            continue
+    return values
+
+
 @router.get("/params")
-def get_params(settings: SettingsDep) -> dict[str, object]:
-    return ok(
-        {
-            "retention_days": settings.retention_days,
-            "max_concurrency": settings.max_concurrency,
-            "detect_interval_ms": settings.detect_interval_ms,
-            "quality_threshold": settings.quality_threshold,
-            "camera_index": settings.camera_index,
-        }
-    )
+def get_params(db: SessionDep, settings: SettingsDep) -> dict[str, object]:
+    return ok(_current(db, settings))
 
 
 class ParamUpdate(BaseModel):
-    """The shape a future implementation validates; declared now so the contract is visible."""
-
     retention_days: int | None = Field(default=None, ge=1, le=3650)
     max_concurrency: int | None = Field(default=None, ge=1, le=32)
     detect_interval_ms: int | None = Field(default=None, ge=50, le=10000)
     quality_threshold: int | None = Field(default=None, ge=0, le=100)
+    camera_index: int | None = Field(default=None, ge=0, le=9)
 
 
 @router.patch("/params")
-def update_params(_body: ParamUpdate) -> dict[str, object]:
-    raise not_built("系统参数修改（数据模型中还没有 param 表，改了就重启丢失）")
+def update_params(
+    body: ParamUpdate, db: SessionDep, settings: SettingsDep, user: UserDep
+) -> dict[str, object]:
+    """Write the supplied subset, one audit row per changed key (AC-27).
+
+    One row per key rather than one row per request: the log is read by key ("who changed the
+    concurrency limit"), and a single row holding five fields answers that question badly.
+    """
+    before = _current(db, settings)
+    changed: dict[str, dict[str, object]] = {}
+
+    for key, value in body.model_dump(exclude_none=True).items():
+        if value == before.get(key):
+            continue
+        row = db.scalar(select(SysParam).where(SysParam.param_key == key))
+        if row is None:
+            row = SysParam(param_key=key, param_value=str(value), value_type=type(value).__name__)
+            db.add(row)
+        else:
+            row.param_value = str(value)
+            row.value_type = type(value).__name__
+        row.updated_by = user.user_id
+        row.updated_at = datetime.now(UTC).replace(tzinfo=None)
+        db.add(
+            SysLog(
+                user_id=user.user_id,
+                module="system",
+                action="config",
+                target_type="sys_param",
+                target_id=key,
+                before_value=str(before.get(key)),
+                after_value=str(value),
+            )
+        )
+        changed[key] = {"before": before.get(key), "after": value}
+
+    if not changed:
+        raise ApiError(CONFLICT, "没有改动")
+    db.commit()
+    return ok({"params": _current(db, settings), "changed": changed})
 
 
 @router.get("/monitor")

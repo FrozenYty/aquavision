@@ -9,9 +9,9 @@
 | Item | Content |
 |---|---|
 | Document title | Underwater Species Detection and Monitoring for Marine Ranching Based on an Improved YOLOv8 — Software Project Requirements Specification |
-| Document number | SRS-PRJ14-V1.4-2026 |
+| Document number | SRS-PRJ14-V1.5-2026 |
 | Project number | PRJ-14 |
-| Document version | V1.4 |
+| Document version | V1.5 |
 | Phase | Phase 1: requirements analysis |
 | Prepared by | Training Group 14 |
 | Project lead | Yao Tianyu (group lead); supervisor: Wu Jianguang |
@@ -978,7 +978,18 @@ Every activation delivers five things together: `best.pt`, the exported `best.on
 
 ### 4.1 Core entities
 
-Nine tables. Against the first draft, the site table, annotation table, dataset-version table, alert table and training-job table are gone; the training-experiment table and the message table are new. Site is now a column on the image table, the dataset snapshot and training parameters merged into the experiment table, and annotation moved to an offline tool so no longer needs a table.
+Thirteen tables. Against the first draft, the site table, annotation table, dataset-version table,
+alert table and training-job table are gone; the training-experiment table and the message table are new. Site is now a column on the image table, the dataset snapshot and training parameters merged into the experiment table, and annotation moved to an offline tool so no longer needs a table.
+
+**Revision in V1.5.** Four tables were added after the skeleton was built on the nine. The merge of the
+dataset snapshot into the experiment table assumed export and training happen together; they do not,
+and a snapshot that no experiment references yet had nowhere to live, so `dataset` and `dataset_item`
+now hold it — `dataset_item` also answers which frames trained a model, and lets a retained frame be
+cleared rather than silently orphaning a snapshot (AC-09). `report` exists because the report history
+is filtered by period, template and basis (FR-M5-04, AC-22); a pile of files cannot be queried, and the
+audit log is not a domain index. `sys_param` exists because FR-M7-01 and AC-27 require parameter changes
+to persist and stay auditable, which environment variables cannot do. The decision is recorded in ADR
+08.
 
 **Table 4-1 Entity list**
 
@@ -993,6 +1004,10 @@ Nine tables. Against the first draft, the site table, annotation table, dataset-
 | model_version | Model version | Weights, metrics and activation state. | 14 |
 | train_experiment | Training experiment | Dataset snapshot, hyperparameters and metrics, with a baseline flag. | 18 |
 | sys_message | Message | Role-targeted messages generated from events, with read state. | 10 |
+| sys_param | Parameter | Runtime configuration as key/value pairs, with who changed it and when. | 7 |
+| dataset | Dataset snapshot | An exported snapshot: split ratio, seed, size and manifest. | 9 |
+| dataset_item | Snapshot item | One frame in one snapshot and the split it belongs to. | 5 |
+| report | Inspection report | Period, template, basis, model version and the generated file. | 12 |
 
 ### 4.2 Data dictionary
 
@@ -1505,6 +1520,7 @@ Defects found in acceptance testing are handled by severity. Critical (system un
 | V1.1 | 2026-11-03 | Yao Tianyu | Switched to direct capture from the local camera; capture-terminal modules and tables removed; 3.5 algorithm requirements and 2.4 architecture added; NFR numbering conflicts fixed; 2.3 scenarios, UC-01/UC-09 and 5.3 flows rewritten; wording inconsistent with the new architecture removed. | Implements the annotations on the final revision of 09. | Internal group review |
 | V1.2 | 2026-11-03 | Yao Tianyu | Marine-debris class and per-class metrics added; capture hardware list added (trigger board, temperature and turbidity sensors, status display); environment reporting added to the capture interface; streaming wording, team size and baseline-freeze week corrected; dataset size and acquisition risk added. | Implements the capture plan change and settles the requirements baseline. | Internal group review |
 | V1.3 | 2026-11-04 | Yao Tianyu | Marine-debris class removed and four classes restored; dataset wording unified to DUO; AL-08 and AL-09 deleted from the metric table and AL-03 limited to per-class recall; scenery list in Table 2-3 and class palette in 5.1 adjusted. | No public labels exist for that class and in-house data cannot support an independent accuracy metric; focus on four commercial and predator species to keep the metric basis consistent. | Internal group review |
+| V1.5 | 2026-11-06 | Yao Tianyu | Four tables added to §4.1: `dataset`, `dataset_item`, `report`, `sys_param`; the nine-table decision of V1.1 revised with the reason recorded in ADR 08. | Building the skeleton showed three requirements had no storage: a snapshot exported before any experiment, a report history filtered by period and basis, and parameter changes that must persist and stay audited. | Internal group review |
 | V1.4 | 2026-11-05 | Yao Tianyu | Water-temperature field, probe and status display removed; turbidity changed from NTU to a 0-100 relative value and renamed turbidity_rel; Table 2-3 updated to the selected parts (desk lamp, ultra-clear glass tank, real seafood targets, ME2100A-IIC). Correction of 11-05: the tank material in 2.6 changed from acrylic to ultra-clear glass to match Table 2-3. | Purchase plan settled: meet capture and cleanliness needs at minimum cost, keeping turbidity as the only sensor. | Internal group review |
 
 ## Appendix C Terminology consistency

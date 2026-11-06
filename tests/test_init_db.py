@@ -39,8 +39,8 @@ def species_rows(eng: Engine) -> list[SpeciesDict]:
         return list(session.scalars(select(SpeciesDict).order_by(SpeciesDict.species_id)))
 
 
-def test_all_nine_tables_exist(engine: Engine):
-    """The dictionary counts nine tables; the schema must agree, column by column."""
+def test_all_thirteen_tables_exist(engine: Engine):
+    """The dictionary counts thirteen tables; the schema must agree, column by column."""
     inspector = inspect(engine)
     names = set(inspector.get_table_names())
     expected = {table.__tablename__ for table in TABLES}
@@ -93,11 +93,11 @@ def test_script_runs_on_an_empty_database(tmp_path: Path):
         check=False,
     )
     assert result.returncode == 0, result.stderr
-    assert "OK: nine tables, four classes" in result.stdout
+    assert "OK: thirteen tables, four classes" in result.stdout
 
     eng = create_engine(f"sqlite:///{db}")
     try:
-        assert len(inspect(eng).get_table_names()) == 9
+        assert len(inspect(eng).get_table_names()) == len(EXPECTED_COLUMNS)
         assert len(species_rows(eng)) == 4
     finally:
         eng.dispose()

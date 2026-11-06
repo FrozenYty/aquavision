@@ -14,11 +14,11 @@ is not started yet.
 | Document | Notes |
 |---|---|
 | [Documentation index](docs/INDEX-en.md) | Which document answers what, and what else changes with it |
-| [SRS v1.4](docs/srs-en.md) | 29 functional requirements, 9 use cases, 9 tables, 36 acceptance items |
+| [SRS v1.5](docs/srs-en.md) | 29 functional requirements, 9 use cases, 9 tables, 36 acceptance items |
 | [Plan](PLAN.md) | Phases, tasks and gates — the task contract for the team |
 | [Architecture](docs/architecture-en.md) | Layers, dependency rules, runtime model, frame lifecycle |
 | [API contract](docs/api-contract-en.md) | REST paths, response envelope, error codes, WebSocket protocol |
-| [Data model](docs/data-model-en.md) | Nine tables, fields, indexes, file storage |
+| [Data model](docs/data-model-en.md) | Thirteen tables, fields, indexes, file storage |
 | [Test plan](docs/test-plan-en.md) | Test levels, dataset splitting, metrics and acceptance |
 | [Glossary](docs/glossary-en-zh.md) | English ↔ Chinese, the single word list shared by code and docs |
 | [Decisions](docs/adr/) | Seven accepted decisions and their reasoning |

@@ -33,7 +33,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 | Phase | Goal | Gate |
 |---|---|---|
 | P0 | Decisions made and external dependencies committed | dataset ≥ 3000 images and split; three environments identical; purchase list final; rig design final |
-| P1 | Every layer has a minimal implementation | `uvicorn` starts, `/api/health` returns the envelope, 9 tables created, 13 pages open |
+| P1 | Every layer has a minimal implementation | `uvicorn` starts, `/api/health` returns the envelope, 13 tables created, 13 pages open |
 | P2 | One real end-to-end slice | press capture → boxes and counts on screen within 3 s; edit one box → count changes |
 | P3 | All 29 requirements implemented | the 36 acceptance items can each be demonstrated live |
 | P4 | Metrics, tests, defence | nine metrics recorded; blocker defects at zero; three rehearsals |
@@ -77,7 +77,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       property, and 20 pinned frames stay inside a 10 % spread — and the rig meets its numbers:
       left/right brightness ratio ≥ 0.7, a 5 cm target ≥ 45 px at 640 input, no flicker
 
-- [ ] **GATE P1** — `uvicorn app.main:app` starts on a clean machine, `/api/health` answers, 9 tables
+- [ ] **GATE P1** — `uvicorn app.main:app` starts on a clean machine, `/api/health` answers, 13 tables
       exist, 13 pages render
 
 ### P2 — vertical slice

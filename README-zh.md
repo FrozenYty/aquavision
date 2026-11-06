@@ -15,11 +15,11 @@
 | 文档 | 说明 |
 |---|---|
 | [文档索引](docs/INDEX-zh.md) | 哪份文档回答什么，以及改一处要连带改哪些 |
-| [需求定义书 V1.4](docs/srs-zh.md) | 功能需求 29 条、用例 9 个、数据表 9 张、验收项 36 条 |
+| [需求定义书 V1.5](docs/srs-zh.md) | 功能需求 29 条、用例 9 个、数据表 13 张、验收项 36 条 |
 | [任务计划](PLAN.md) | 阶段、任务与门禁，团队的任务契约 |
 | [总体架构](docs/architecture-zh.md) · [English](docs/architecture-en.md) | 分层、依赖规则、运行时模型、一帧的生命周期 |
 | [接口约定](docs/api-contract-zh.md) · [English](docs/api-contract-en.md) | REST 路径、响应封装、错误码、WebSocket 协议 |
-| [数据模型](docs/data-model-zh.md) · [English](docs/data-model-en.md) | 九张表、字段、索引、文件存储 |
+| [数据模型](docs/data-model-zh.md) · [English](docs/data-model-en.md) | 十三张表、字段、索引、文件存储 |
 | [测试计划](docs/test-plan-zh.md) · [English](docs/test-plan-en.md) | 测试分层、数据集划分、指标与验收 |
 | [术语表](docs/glossary-en-zh.md) | 中英对照，代码与文档共用的唯一词表 |
 | [决策记录](docs/adr/) | 七条已采纳的决定及其理由 |

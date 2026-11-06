@@ -7,7 +7,8 @@
 
 ## 一、实体
 
-九张表。三张承载业务主干，其余是支撑。
+十三张表。三张承载业务主干，其余是支撑；其中四张是骨架落地后补的——原来那九张装不下需求要的东西，
+原因见 ADR 08，修订后的决策见 `srs-zh.md` §4.1。
 
 | 表 | 作用 | 字段数 |
 |---|---|---|
@@ -20,6 +21,10 @@
 | `model_version` | 权重、指标与上线状态 | 14 |
 | `train_experiment` | 数据集快照、超参与指标 | 18 |
 | `sys_message` | 站内消息 | 10 |
+| `sys_param` | 运行参数，键值形式，带审计 | 7 |
+| `dataset` | 一次导出的数据集快照 | 9 |
+| `dataset_item` | 快照中的一帧及其归属集合 | 5 |
+| `report` | 一份生成的巡检报告及其文件 | 12 |
 
 ## 二、命名与类型
 
@@ -218,6 +223,67 @@
 | `ref_id` | VARCHAR(64) | NULL | 关联对象编号 |
 | `is_read` | SMALLINT | DEFAULT 0 | 0 未读／1 已读 |
 | `created_at` | TIMESTAMP | DEFAULT now() | 生成时间 |
+
+### 3.10 sys_param
+
+| 列 | 类型 | 约束 / 默认 | 说明 |
+|---|---|---|---|
+| `param_id` | BIGINT | 主键，自增 | 主键 |
+| `param_key` | VARCHAR(64) | NOT NULL，唯一 | `retention_days`、`max_concurrency` 等 |
+| `param_value` | VARCHAR(255) | NOT NULL | 以文本存储 |
+| `value_type` | VARCHAR(16) | NOT NULL | int / float / bool / str，用于还原类型 |
+| `remark` | VARCHAR(255) | NULL | 参数用途 |
+| `updated_by` | BIGINT | 外键 sys_user，NULL | 最后修改人 |
+| `updated_at` | TIMESTAMP | 默认 now() | 修改时间 |
+
+键值形式而不是一个参数一列：**加参数不该需要一次迁移。**
+
+### 3.11 dataset
+
+| 列 | 类型 | 约束 / 默认 | 说明 |
+|---|---|---|---|
+| `dataset_id` | BIGINT | 主键，自增 | 主键 |
+| `snapshot_name` | VARCHAR(64) | NOT NULL，唯一 | `DS-V3` |
+| `manifest_path` | VARCHAR(512) | NOT NULL | 给人看的清单副本 |
+| `split_ratio` | VARCHAR(16) | NOT NULL | `7:2:1` |
+| `seed` | INT | NOT NULL | 划分种子，同种子同划分（AC-18） |
+| `frame_count` | INT | NOT NULL | 快照帧数 |
+| `status` | SMALLINT | 默认 1 | 0 生成中 / 1 就绪 / 2 归档 |
+| `created_by` | BIGINT | 外键 sys_user，NULL | 导出人 |
+| `created_at` | TIMESTAMP | 默认 now() | 导出时间 |
+
+**快照先于任何实验存在**：今天导出，几天后才训练。
+
+### 3.12 dataset_item
+
+| 列 | 类型 | 约束 / 默认 | 说明 |
+|---|---|---|---|
+| `item_id` | BIGINT | 主键，自增 | 主键 |
+| `dataset_id` | BIGINT | 外键 dataset，NOT NULL | 所属快照 |
+| `asset_id` | BIGINT | 外键 media_asset，NOT NULL | 快照中的帧 |
+| `split` | SMALLINT | NOT NULL | 1 训练 / 2 验证 / 3 测试 |
+| `group_key` | VARCHAR(64) | NULL | 相似帧分组，同组不跨集合 |
+
+(`dataset_id`, `asset_id`) 唯一；(`dataset_id`, `split`) 建索引。
+
+### 3.13 report
+
+| 列 | 类型 | 约束 / 默认 | 说明 |
+|---|---|---|---|
+| `report_id` | BIGINT | 主键，自增 | 主键 |
+| `report_code` | VARCHAR(32) | NOT NULL，唯一 | `RPyyMMdd-序号` |
+| `period_start` | TIMESTAMP | NOT NULL | 统计周期，含首日 |
+| `period_end` | TIMESTAMP | NOT NULL | 统计周期，含末日 |
+| `template` | VARCHAR(16) | NOT NULL | standard / brief |
+| `basis` | VARCHAR(16) | NOT NULL | reviewed / raw |
+| `model_version_id` | BIGINT | 外键 model_version，NULL | 生成时生效的版本 |
+| `file_path` | VARCHAR(512) | NULL | 文档文件本身 |
+| `status` | SMALLINT | 默认 0 | 0 生成中 / 1 就绪 / 2 失败 |
+| `error_msg` | VARCHAR(255) | NULL | 失败原因 |
+| `created_by` | BIGINT | 外键 sys_user，NULL | 发起人 |
+| `created_at` | TIMESTAMP | 默认 now() | 创建时间 |
+
+文档是文件；**这一行才是让历史可按周期、模板、口径查询的东西。**
 
 ## 四、索引
 
