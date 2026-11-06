@@ -12,7 +12,19 @@ import {
   STATS_TREND,
   STATS_CORRECTIONS,
 } from "./fixtures.js";
-import { DATASETS, EXPERIMENTS, HARD_SEEDS, MODELS, REPORTS, SPECIES, TASKS } from "./catalog.js";
+import {
+  DATASETS,
+  EXPERIMENTS,
+  HARD_SEEDS,
+  LOGS,
+  MESSAGES,
+  MODELS,
+  PARAMS,
+  REPORTS,
+  SPECIES,
+  TASKS,
+  USERS,
+} from "./catalog.js";
 
 class Fail extends Error {
   constructor(code, message) {
@@ -240,6 +252,57 @@ const ROUTES = {
     TASKS.push(task);
     persist();
     return task;
+  },
+
+  // System administration, all provisional.
+  "GET /users": () => USERS,
+
+  "POST /users/{id}/status": ({ id, body }) => {
+    const user = USERS.find((u) => u.user_id === Number(id));
+    if (!user) throw new Fail(40401, "账号不存在");
+    if (user.role === "admin" && !body.status) throw new Fail(40301, "不能停用管理员账号");
+    user.status = body.status ? 1 : 0;
+    return user;
+  },
+
+  "POST /users/{id}/reset-password": ({ id }) => {
+    if (!USERS.some((u) => u.user_id === Number(id))) throw new Fail(40401, "账号不存在");
+    return { reset: true };
+  },
+
+  "GET /params": () => PARAMS,
+
+  "PATCH /params": ({ body }) => {
+    if (!(body.quality_threshold >= 0 && body.quality_threshold <= 100)) throw new Fail(40001, "质量阈值须在 0 到 100 之间");
+    return Object.assign(PARAMS, body);
+  },
+
+  // Monitoring figures: queue and failure rate from the task list, the rest fixed.
+  "GET /monitor": () => {
+    const finished = TASKS.filter((t) => t.status >= 2);
+    return {
+      queue: TASKS.filter((t) => t.status === 0).length,
+      running: TASKS.filter((t) => t.status === 1).length,
+      failure_rate: finished.length ? TASKS.filter((t) => t.status === 3).length / finished.length : 0,
+      gpu_mem_gb: 3.8,
+      gpu_mem_total_gb: 8,
+      disk_used_pct: 41,
+      checked_at: new Date().toISOString(),
+    };
+  },
+
+  "GET /logs": ({ query }) => {
+    const q = (query.q ?? "").toLowerCase();
+    return LOGS.filter((l) => !q || `${l.account}${l.action}${l.before}${l.after}`.toLowerCase().includes(q));
+  },
+
+  "GET /messages": () => MESSAGES,
+
+  "POST /messages/{id}/read": ({ id }) => {
+    const msg = MESSAGES.find((m) => m.msg_id === Number(id));
+    if (!msg) throw new Fail(40401, "消息不存在");
+    msg.is_read = 1;
+    return msg;
   },
 
   // Model versions: both routes are in the contract. Exactly one model is online (P3-03).

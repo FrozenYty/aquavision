@@ -67,6 +67,19 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
   `{ objects }` and its `{ count_before, count_after }` reply.
 - **Unverified here:** the "try the laptop camera" button. The Browser pane blocks camera access, so
   only the failure path (a toast, the samples stay) was seen; the real camera needs a check in Chrome.
+- **P1-04 done: all 13 pages open on mock data** (#48 tasks, #49 hard samples, #50 dataset export,
+  #51 reports, #52 models, and system administration in the PR that ticks the box). No menu entry is
+  greyed any more. Checked page by page: each opens, the menu highlights the right entry, nothing
+  scrolls sideways at 1280 or 1920, and all 31 links the pages render resolve.
+- **Mock data for those pages lives in `web/static/mock/catalog.js`**, apart from `fixtures.js`.
+  Figures are tied to what already exists: DS-V2 is the P0-01 split, E0 and E3 are the SRS scenario-4
+  numbers, the report preview reads the same stats calls as screen 6, monitoring counts the task list.
+- **Open for lane B:** every collection route these pages call is provisional and marked in
+  `api.js` — tasks, hard samples, datasets, reports, experiments, species, users, parameters,
+  monitoring, logs, messages. Roles use the contract codes; `observer` is read as the SRS capture
+  operator, which nobody has confirmed.
+- **Known limitation:** after a rollback on P-12, the dashboard and report footer still say v8n-E3 for
+  that tab; their figure is fixed in the fixtures.
 
 ## 2026-11-05
 

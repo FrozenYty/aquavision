@@ -67,6 +67,16 @@ export const activateModel = (id) => request("POST", `/models/${id}/activate`);
 export const listExperiments = () => request("GET", "/experiments"); // provisional
 export const listSpecies = () => request("GET", "/species"); // provisional
 export const updateSpecies = (code, body) => request("PATCH", `/species/${code}`, { body }); // provisional
+// ---- System administration (all provisional) ----
+export const listUsers = () => request("GET", "/users");
+export const setUserStatus = (id, status) => request("POST", `/users/${id}/status`, { body: { status } });
+export const resetPassword = (id) => request("POST", `/users/${id}/reset-password`);
+export const getParams = () => request("GET", "/params");
+export const updateParams = (body) => request("PATCH", "/params", { body });
+export const getMonitor = () => request("GET", "/monitor");
+export const listLogs = (query) => request("GET", "/logs", { query });
+export const listMessages = () => request("GET", "/messages");
+export const markRead = (id) => request("POST", `/messages/${id}/read`);
 export const getFrame = (frameId) => request("GET", `/frames/${frameId}`);
 export const getObjects = (frameId) => request("GET", `/frames/${frameId}/objects`);
 
