@@ -313,6 +313,18 @@ body {
   box-shadow: 0 0 8px var(--av-accent);
 }
 
+/* Not built in the prototype: visible as a schedule, not clickable. */
+.av-menu-link.is-planned {
+  color: var(--av-frame-muted);
+  opacity: 0.55;
+  cursor: default;
+}
+
+.av-menu-link.is-planned:hover {
+  background: none;
+  color: var(--av-frame-muted);
+}
+
 /* ---- Content ---- */
 
 .av-content {
@@ -348,6 +360,17 @@ body {
   font-size: var(--av-fs-xl);
   font-weight: 700;
   letter-spacing: 0.02em;
+}
+
+.av-proto-badge {
+  align-self: center;
+  padding: 3px var(--av-space-3);
+  border: 1px solid var(--av-warning);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--av-warning) 12%, transparent);
+  color: var(--av-text);
+  font-size: var(--av-fs-xs);
+  white-space: nowrap;
 }
 
 .av-page-header .av-page-actions {
@@ -616,6 +639,74 @@ body {
 
 @keyframes av-blink {
   to { visibility: hidden; }
+}
+
+/* ---- Frame stage: an image with normalised boxes on top (boxes.js) ---- */
+
+.av-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--av-radius);
+  background: var(--av-abyss);
+  line-height: 0;
+  user-select: none;
+}
+
+.av-stage img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.av-box {
+  position: absolute;
+  border: var(--av-box-stroke) solid var(--av-class-color);
+  border-radius: var(--av-radius-sm);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35);
+  line-height: normal;
+  animation: av-box-in 0.35s var(--av-ease) both;
+  animation-delay: calc(var(--i, 0) * 140ms);
+}
+
+@keyframes av-box-in {
+  from { opacity: 0; transform: scale(1.08); }
+}
+
+.av-box-label {
+  position: absolute;
+  left: calc(-1 * var(--av-box-stroke));
+  bottom: 100%;
+  padding: 1px var(--av-space-2) 1px var(--av-space-1);
+  border-left: 3px solid var(--av-class-color);
+  border-radius: var(--av-radius-sm) var(--av-radius-sm) 0 0;
+  background: var(--av-abyss);
+  color: var(--av-text-inverse);
+  font-family: var(--av-font-mono);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.av-box.is-top .av-box-label {
+  top: 0;
+  bottom: auto;
+  border-radius: 0 0 var(--av-radius-sm) 0;
+}
+
+/* Low confidence: translucent fill plus a corner tag, never colour alone (SRS §5.1). */
+.av-box.is-low {
+  background: color-mix(in srgb, var(--av-class-color) calc(var(--av-box-fill-alpha) * 100%), transparent);
+}
+
+.av-box.is-low::after {
+  content: "待复核";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 0 var(--av-space-1);
+  background: var(--av-warning);
+  color: var(--av-abyss);
+  font-size: 0.65rem;
+  font-weight: 700;
 }
 
 /* ---- Class swatches, one per class_code ---- */
