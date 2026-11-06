@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>模型与实验 · AquaVision</title>
+  <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
+  <link rel="stylesheet" href="../static/css/tokens.css">
+  <link rel="stylesheet" href="../static/css/app.css">
+</head>
+<body>
+  <main class="av-content">
+    <div class="av-page-header">
+      <h1>模型与实验</h1>
+      <div class="av-page-actions">
+        <span class="small text-secondary align-self-center">在线模型 <strong class="av-mono text-body" id="online"></strong></span>
+      </div>
+    </div>
+
+    <section class="av-card" id="tabs">
+      <ul class="nav nav-tabs mb-3">
+        <li class="nav-item"><button class="nav-link active" data-tab="versions" type="button">版本列表</button></li>
+        <li class="nav-item"><button class="nav-link" data-tab="experiments" type="button">实验对比</button></li>
+        <li class="nav-item"><button class="nav-link" data-tab="species" type="button">物种字典与阈值</button></li>
+      </ul>
+
+      <div data-panel="versions">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead><tr><th>版本</th><th>数据集</th><th>mAP@0.5</th><th>mAP@0.5:0.95</th><th>平均召回</th><th>FPS</th><th>参数量</th><th>登记时间</th><th>状态</th><th></th></tr></thead>
+            <tbody id="versions"></tbody>
+          </table>
+        </div>
+        <p class="small text-secondary mt-2 mb-0">同一时间只有一个模型在线；切换后新建的识别任务使用新版本，旧结果仍记录原版本号。</p>
+      </div>
+
+      <div data-panel="experiments" hidden>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0 small">
+            <thead><tr><th>实验</th><th>改动</th><th>种子</th><th>mAP@0.5</th><th>mAP@0.5:0.95</th><th>平均召回</th><th>FPS</th><th>参数量</th></tr></thead>
+            <tbody id="experiments"></tbody>
+          </table>
+        </div>
+        <p class="small text-secondary mt-2 mb-0">消融顺序：每个实验在上一个基础上只加一项改进，括号内为相对基线 E0 的变化。基线实验不可删除。</p>
+      </div>
+
+      <div data-panel="species" hidden>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0 small">
+            <thead><tr><th>类别码</th><th>名称</th><th>大类</th><th>置信度阈值</th><th>计入统计</th><th></th></tr></thead>
+            <tbody id="species"></tbody>
+          </table>
+        </div>
+        <p class="small text-secondary mt-2 mb-0">类别码顺序与模型 labels.txt 一致，不能在这里增删或调序。</p>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { renderShell } from "../static/js/layout.js";
+    import * as api from "../static/js/api.js";
+    import { bindTabs, confirmAction, esc, fmtTime, toast } from "../static/js/ui.js";
+
+    renderShell("P-12");
+    bindTabs($("tabs"));
+
+    function $(id) { return document.getElementById(id); }
+    const CATEGORY = { 1: "经济种", 2: "敌害种" };
+    const delta = (v, base, digits) => {
+      const d = v - base;
+      if (!d) return "";
+      return ` <span class="${d > 0 ? "text-success" : "text-danger"}">(${d > 0 ? "+" : ""}${d.toFixed(digits)})</span>`;
+    };
+    let models = [];
+
+    function renderVersions() {
+      const online = models.find((m) => m.is_online);
+      $("online").textContent = online?.version_name ?? "—";
+      $("versions").innerHTML = models.map((m) => `<tr>
+        <td class="av-mono fw-bold">${esc(m.version_name)}</td><td class="av-mono">${esc(m.dataset)}</td>
+        <td class="av-mono">${m.map50.toFixed(2)}</td><td class="av-mono">${m.map5095.toFixed(2)}</td>
+        <td class="av-mono">${m.recall.toFixed(2)}</td><td class="av-mono">${m.fps}</td><td class="av-mono">${m.params_m} M</td>
+        <td>${fmtTime(m.registered_at).slice(0, -3)}</td>
+        <td>${m.is_online ? '<span class="badge text-bg-success">在线</span>' : '<span class="badge text-bg-secondary">离线</span>'}</td>
+        <td>${m.is_online ? "" : `<button class="btn btn-sm btn-outline-primary" data-model="${m.model_id}" type="button">${m.model_id < online.model_id ? "回滚到此版本" : "上线"}</button>`}</td></tr>`).join("");
+    }
+
+    async function loadVersions() {
+      models = await api.listModels();
+      renderVersions();
+    }
+
+    async function loadExperiments() {
+      const experiments = await api.listExperiments();
+      const byId = Object.fromEntries(models.map((m) => [m.model_id, m]));
+      const base = byId[experiments.find((e) => e.baseline).model_id];
+      $("experiments").innerHTML = experiments.map((e) => {
+        const m = byId[e.model_id];
+        return `<tr><td class="av-mono fw-bold">${e.exp_id}${e.baseline ? ' <span class="badge text-bg-secondary">基线</span>' : ""}</td>
+          <td>${esc(e.change)}</td><td class="av-mono">${e.seed}</td>
+          <td class="av-mono">${m.map50.toFixed(2)}${delta(m.map50, base.map50, 2)}</td>
+          <td class="av-mono">${m.map5095.toFixed(2)}${delta(m.map5095, base.map5095, 2)}</td>
+          <td class="av-mono">${m.recall.toFixed(2)}${delta(m.recall, base.recall, 2)}</td>
+          <td class="av-mono">${m.fps}${delta(m.fps, base.fps, 0)}</td>
+          <td class="av-mono">${m.params_m} M</td></tr>`;
+      }).join("");
+    }
+
+    async function loadSpecies() {
+      const rows = await api.listSpecies();
+      $("species").innerHTML = rows.map((s) => `<tr data-code="${s.class_code}">
+        <td class="av-mono">${s.class_code}</td>
+        <td><span class="av-class av-class-${s.class_code}">${esc(s.cn_name)}</span></td>
+        <td>${CATEGORY[s.category]}</td>
+        <td><input class="form-control form-control-sm w-auto" type="number" step="0.05" min="0.05" max="0.95" value="${s.conf_thr}" aria-label="${esc(s.cn_name)}阈值">
+          <div class="invalid-feedback">0.05 到 0.95 之间</div></td>
+        <td><input class="form-check-input" type="checkbox" ${s.in_stat ? "checked" : ""} aria-label="${esc(s.cn_name)}计入统计"></td>
+        <td><button class="btn btn-sm btn-outline-primary" data-save type="button">保存</button></td></tr>`).join("");
+    }
+
+    const fail = (err) => toast(err.message, "danger");
+
+    $("versions").addEventListener("click", async (event) => {
+      const id = Number(event.target.closest("[data-model]")?.dataset.model);
+      if (!id) return;
+      const target = models.find((m) => m.model_id === id);
+      if (!confirmAction(`把在线模型切换到 ${target.version_name}？之后新建的识别任务都会使用它。`)) return;
+      try {
+        await api.activateModel(id);
+        toast(`${target.version_name} 已上线`, "success");
+        await loadVersions();
+      } catch (err) {
+        fail(err);
+      }
+    });
+
+    $("species").addEventListener("click", async (event) => {
+      if (!event.target.closest("[data-save]")) return;
+      const row = event.target.closest("tr");
+      const input = row.querySelector('input[type="number"]');
+      const thr = Number(input.value);
+      const ok = thr >= 0.05 && thr <= 0.95;
+      input.classList.toggle("is-invalid", !ok);
+      if (!ok) return;
+      try {
+        await api.updateSpecies(row.dataset.code, { conf_thr: thr, in_stat: row.querySelector('input[type="checkbox"]').checked ? 1 : 0 });
+        toast("已保存，新任务按新阈值过滤", "success");
+      } catch (err) {
+        fail(err);
+      }
+    });
+
+    loadVersions().then(loadExperiments).then(loadSpecies).catch(fail);
+  </script>
+</body>
+</html>

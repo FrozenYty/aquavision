@@ -39,7 +39,7 @@ const MENU = [
   {
     group: "模型与系统",
     items: [
-      { id: "P-12", label: "模型与实验" },
+      { id: "P-12", label: "模型与实验", href: "models.html" },
       { id: "P-13", label: "系统管理" },
     ],
   },

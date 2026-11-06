@@ -34,6 +34,16 @@ export function toast(message, kind = "info") {
 // Destructive actions (cancel, remove, roll back, disable) ask twice (SRS §5.1).
 export const confirmAction = (message) => window.confirm(message);
 
+// Tabs without Bootstrap's script: buttons carry data-tab, panels carry data-panel.
+export function bindTabs(root) {
+  root.addEventListener("click", (event) => {
+    const tab = event.target.closest("[data-tab]")?.dataset.tab;
+    if (!tab) return;
+    root.querySelectorAll("[data-tab]").forEach((el) => el.classList.toggle("active", el.dataset.tab === tab));
+    root.querySelectorAll("[data-panel]").forEach((el) => { el.hidden = el.dataset.panel !== tab; });
+  });
+}
+
 // Bootstrap pagination for a {total, page, size} block; calls onPage(n) on click.
 export function renderPager(el, { total, page, size }, onPage) {
   const pages = Math.max(1, Math.ceil(total / size));

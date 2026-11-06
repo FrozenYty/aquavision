@@ -12,7 +12,7 @@ import {
   STATS_TREND,
   STATS_CORRECTIONS,
 } from "./fixtures.js";
-import { DATASETS, HARD_SEEDS, REPORTS, TASKS } from "./catalog.js";
+import { DATASETS, EXPERIMENTS, HARD_SEEDS, MODELS, REPORTS, SPECIES, TASKS } from "./catalog.js";
 
 class Fail extends Error {
   constructor(code, message) {
@@ -39,6 +39,8 @@ if (saved.tasks) TASKS.splice(0, TASKS.length, ...saved.tasks);
 const removedHard = new Set(saved.removed_hard ?? []);
 if (saved.datasets) DATASETS.splice(0, DATASETS.length, ...saved.datasets);
 if (saved.reports) REPORTS.splice(0, REPORTS.length, ...saved.reports);
+if (saved.models) MODELS.splice(0, MODELS.length, ...saved.models);
+if (saved.species) SPECIES.splice(0, SPECIES.length, ...saved.species);
 
 function persist() {
   try {
@@ -49,6 +51,8 @@ function persist() {
         removed_hard: [...removedHard],
         datasets: DATASETS,
         reports: REPORTS,
+        models: MODELS,
+        species: SPECIES,
       }));
   } catch {
     // Storage unavailable: the walk-through still works within one page.
@@ -236,6 +240,32 @@ const ROUTES = {
     TASKS.push(task);
     persist();
     return task;
+  },
+
+  // Model versions: both routes are in the contract. Exactly one model is online (P3-03).
+  "GET /models": () => MODELS,
+
+  "POST /models/{id}/activate": ({ id }) => {
+    const model = MODELS.find((m) => m.model_id === Number(id));
+    if (!model) throw new Fail(40401, "模型版本不存在");
+    if (model.is_online) throw new Fail(40901, "该版本已在线");
+    MODELS.forEach((m) => { m.is_online = m === model ? 1 : 0; });
+    persist();
+    return model;
+  },
+
+  // Experiments and the species dictionary, provisional.
+  "GET /experiments": () => EXPERIMENTS,
+
+  "GET /species": () => SPECIES,
+
+  "PATCH /species/{id}": ({ id, body }) => {
+    const row = SPECIES.find((s) => s.class_code === id);
+    if (!row) throw new Fail(40401, "类别不存在");
+    if (!(body.conf_thr >= 0.05 && body.conf_thr <= 0.95)) throw new Fail(40001, "阈值须在 0.05 到 0.95 之间");
+    Object.assign(row, { conf_thr: body.conf_thr, in_stat: body.in_stat });
+    persist();
+    return row;
   },
 
   // Inspection reports, provisional. Generation runs over a few reads, like the dataset export.
