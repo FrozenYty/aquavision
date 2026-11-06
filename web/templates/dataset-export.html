@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>数据集导出 · AquaVision</title>
+  <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
+  <link rel="stylesheet" href="../static/css/tokens.css">
+  <link rel="stylesheet" href="../static/css/app.css">
+</head>
+<body>
+  <main class="av-content">
+    <div class="av-page-header">
+      <h1>数据集导出</h1>
+      <div class="av-page-actions">
+        <a class="btn btn-outline-primary text-nowrap" href="hard-samples.html">查看难例池</a>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-xl-4">
+        <form class="av-card" id="export-form" novalidate>
+          <h2 class="av-card-title">样本范围</h2>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="reviewed-only" checked>
+            <label class="form-check-label" for="reviewed-only">只用复核后的结果</label>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="include-hard" checked>
+            <label class="form-check-label" for="include-hard">纳入难例池 <span class="text-secondary" id="hard-count"></span></label>
+          </div>
+
+          <h2 class="av-card-title">划分比例（%）</h2>
+          <div class="row g-2">
+            <div class="col-4"><label class="form-label small" for="r-train">训练</label>
+              <input class="form-control form-control-sm av-ratio" id="r-train" type="number" min="0" max="100" value="70"></div>
+            <div class="col-4"><label class="form-label small" for="r-val">验证</label>
+              <input class="form-control form-control-sm av-ratio" id="r-val" type="number" min="0" max="100" value="15"></div>
+            <div class="col-4"><label class="form-label small" for="r-test">测试</label>
+              <input class="form-control form-control-sm av-ratio" id="r-test" type="number" min="0" max="100" value="15"></div>
+          </div>
+          <div class="small mt-1" id="ratio-note"></div>
+
+          <div class="row g-2 mt-2">
+            <div class="col-6"><label class="form-label small" for="seed">随机种子</label>
+              <input class="form-control form-control-sm" id="seed" type="number" value="42" required>
+              <div class="invalid-feedback">请填写整数种子，同数据同种子可复现</div></div>
+            <div class="col-6"><span class="form-label small d-block">格式与划分方式</span>
+              <span class="small text-secondary">YOLO txt · 按相似帧分组，同组不跨集合</span></div>
+          </div>
+
+          <button class="btn btn-primary w-100 mt-3" id="btn-export" type="submit">导出新快照</button>
+        </form>
+      </div>
+      <div class="col-xl-8">
+        <section class="av-card">
+          <h2 class="av-card-title">快照记录 <small class="text-secondary fw-normal">训练实验按版本号引用</small></h2>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+              <thead><tr><th>版本</th><th>导出时间</th><th>图像</th><th>训练/验证/测试</th><th>种子</th><th>范围</th><th>状态</th><th></th></tr></thead>
+              <tbody id="snapshots"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { renderShell } from "../static/js/layout.js";
+    import * as api from "../static/js/api.js";
+    import { esc, fmtTime, toast } from "../static/js/ui.js";
+
+    renderShell("P-09");
+
+    const $ = (id) => document.getElementById(id);
+    const POLL_MS = 1000;
+    let timer = null;
+
+    const ratio = () => ({ train: Number($("r-train").value), val: Number($("r-val").value), test: Number($("r-test").value) });
+
+    // Field-level feedback as the numbers change (SRS §5.1: errors next to the field).
+    function checkRatio() {
+      const r = ratio();
+      const sum = r.train + r.val + r.test;
+      const ok = sum === 100;
+      document.querySelectorAll(".av-ratio").forEach((el) => el.classList.toggle("is-invalid", !ok));
+      $("ratio-note").className = `small mt-1 ${ok ? "text-secondary" : "text-danger"}`;
+      $("ratio-note").textContent = ok ? "合计 100%" : `合计 ${sum}%，三项之和必须为 100`;
+      return ok;
+    }
+
+    function statusCell(d) {
+      if (d.status === "done") return '<span class="badge text-bg-success">已完成</span>';
+      return `<div class="progress av-progress"><div class="progress-bar" style="width: ${d.progress}%"></div></div>
+        <span class="av-mono">${d.progress}%</span>`;
+    }
+
+    async function loadSnapshots() {
+      const list = await api.listDatasets();
+      $("snapshots").innerHTML = list.map((d) => `<tr>
+        <td class="av-mono fw-bold">${esc(d.version)}</td>
+        <td>${fmtTime(d.created_at).slice(0, -3)}</td>
+        <td class="av-mono">${d.images}</td>
+        <td class="av-mono">${d.split.train} / ${d.split.val} / ${d.split.test}</td>
+        <td class="av-mono">${d.seed}</td>
+        <td class="text-wrap">${esc(d.scope)}</td>
+        <td>${statusCell(d)}</td>
+        <td>${d.status === "done" ? '<button class="btn btn-sm btn-outline-secondary" data-download type="button">下载</button>' : ""}</td></tr>`).join("");
+      const running = list.some((d) => d.status === "running");
+      $("btn-export").disabled = running;
+      clearTimeout(timer);
+      if (running) timer = setTimeout(() => loadSnapshots().catch(fail), POLL_MS);
+    }
+
+    const fail = (err) => toast(err.message, "danger");
+
+    document.querySelectorAll(".av-ratio").forEach((el) => el.addEventListener("input", checkRatio));
+
+    $("export-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const seedOk = $("seed").value !== "" && Number.isInteger(Number($("seed").value));
+      $("seed").classList.toggle("is-invalid", !seedOk);
+      if (!checkRatio() || !seedOk) return;
+      try {
+        const ds = await api.exportDataset({
+          ratio: ratio(),
+          seed: Number($("seed").value),
+          reviewed_only: $("reviewed-only").checked,
+          include_hard: $("include-hard").checked,
+        });
+        toast(`开始导出 ${ds.version}，共 ${ds.images} 张`, "success");
+        await loadSnapshots();
+      } catch (err) {
+        fail(err);
+      }
+    });
+
+    $("snapshots").addEventListener("click", (event) => {
+      if (event.target.closest("[data-download]")) toast("原型阶段不生成真实文件；正式版下载 YOLO 格式压缩包", "info");
+    });
+
+    checkRatio();
+    api.listHardSamples({ size: 1 }).then((d) => { $("hard-count").textContent = `（当前 ${d.total} 帧）`; }).catch(fail);
+    loadSnapshots().catch(fail);
+  </script>
+</body>
+</html>
