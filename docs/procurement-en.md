@@ -22,10 +22,10 @@ in English.
 | 7 | Breadboard | DZYJ MB-102, 1660 tie points, with power rails | 1 | 23.70 | JD | Solderless assembly; the 405-hole board is too small once the ESP32 and shifter are seated |
 | 8 | Turbidity sensor | LIGHT ME2100A-IIC, I2C, reflective | 1 | 18.82 | LCSC | Reads water clarity |
 | 9 | Sensor cable | WHEELTEC GH1.25 4-pin to Dupont female, 200 mm | 1 | 7.84 | JD | Turbidity sensor to the level shifter pins |
-| 10 | Resistors | 330 Ω, 1/4 W metal film, 20 pieces | 1 | 3.00 | JD | LED current limiting; three 1 kΩ in parallel from the kit also work |
-| 11 | Trigger button | 16 mm metal momentary push button, normally open | 1 | 10.00 | JD | Panel mount; the kit's small tactile switches are awkward to press |
+| 10 | Resistors | LR1F330R metal film 330 Ω ±1% 600 mW, through-hole, 10 pieces | 1 | 5.10 | LCSC | LED current limiting; the rig needs two, the rest are spares |
+| 11 | Trigger button | XKB8080-W 8×8 through-hole **momentary** switch, blue cap, 13.65 mm tall, 5 pieces | 1 | 5.80 | LCSC | Panel mount; the larger cap and height fix the kit's hard-to-hit small switch |
 
-**Total ¥390.42.** The status display (0.96" OLED) and the green and yellow LEDs come from the STM32 kit on hand and are not bought. The fill light is the Midea MT-10T4 lamp already on hand: 10 W, 4000 K, Ra90,
+**Total ¥388.32.** The status display (0.96" OLED) and the green and yellow LEDs come from the STM32 kit on hand and are not bought. The fill light is the Midea MT-10T4 lamp already on hand: 10 W, 4000 K, Ra90,
 USB-powered (DC) and advertised as flicker-free. A strip was planned on 11-07 and withdrawn the same
 day after the lamp was checked — ADR 10.
 
@@ -54,7 +54,13 @@ day after the lamp was checked — ADR 10.
   white balance locked the red gain is raised to compensate, which lifts noise on exactly the dark
   targets this project has to see. Buy both runs from the same batch; mixing them puts a colour gradient
   across the tank.
-- **Button.** A through-hole momentary push button is already on hand. Check its legs are straight: the
+- **Button.** The XKB8080-W must be the **momentary** version. A latching one stays closed after the
+  press and needs a second press to release, while the firmware triggers on the closing edge once —
+  the result is one frame per two presses. Check the listing says momentary before ordering. Six pins
+  are internally paired: **find the pair that closes with a multimeter**, do not guess from the
+  layout; a wrong pair shows up as "the button does nothing".
+- **Panel hole.** Drill for the cap only, about 5 mm; the 8×8 mm body sits behind the panel. An 8 mm
+  hole leaves the switch loose. Check its legs are straight: the
   PCB-mount parts with bent legs bought earlier will not seat in a breadboard. A latching switch would
   not work here — the firmware expects a falling edge per press.
 - **Sensor cable.** GH1.25 to Dupont female. A single-ended tinned cable has nothing to plug into.
