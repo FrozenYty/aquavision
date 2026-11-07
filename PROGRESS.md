@@ -16,6 +16,15 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
 
 ## 2026-11-07
 
+- **The decision table in the architecture document stopped at 07.** Three ADRs were added today and
+  the table was missed every time, while the README and the folder both said ten. The table now lists
+  08, 09 and 10 — with 09 marked superseded, since it is the one ADR that a later one replaced.
+- **`scripts/check-adr-index.py` exists so the next one cannot be missed.** It checks both directions
+  in both languages (a record missing from the table, a table row pointing at nothing) and the
+  `adr/01-NN` range in the documentation index. Demonstrated failing by removing a row, then passing
+  again once restored.
+
+
 - **`firmware/main/src/` split into five files so the lead can change the rig without reading all of
   it**: `config.h` (pins, timings), `rig_state.h` (what the rig knows), `screen.cpp` (the layout),
   `protocol.cpp` (the serial grammar), `main.cpp` (wiring). Adding a screen state is three edits, none

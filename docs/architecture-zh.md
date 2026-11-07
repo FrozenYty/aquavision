@@ -153,3 +153,6 @@ MODEL_DIR=data/models
 | [05](adr/05-vendored-frontend-assets.md) | 前端第三方库与字体放在本地，运行时不依赖 CDN |
 | [06](adr/06-dataset-duo.md) | 训练数据使用 DUO，不使用 URPC |
 | [07](adr/07-local-first-verification.md) | 检查在本地跑完再推送；CI 是确认，不是发现 |
+| [08](adr/08-four-tables-added.md) | 九张表扩到十三张：快照、报告与参数原先没有落点 |
+| [09](adr/09-led-fill-light.md) | ~~补光改用 12V 灯条 + MOS 管~~ —— **已被 10 取代** |
+| [10](adr/10-desk-lamp-fill-light.md) | 补光用现有台灯：USB 直流供电、无频闪，不必另买光源 |

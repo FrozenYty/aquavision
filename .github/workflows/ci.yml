@@ -43,6 +43,9 @@ jobs:
       - name: No machine-specific paths
         run: python scripts/check-paths.py
 
+      - name: Every decision record is listed
+        run: python scripts/check-adr-index.py
+
       - name: Tests
         run: |
           if compgen -G "tests/test_*.py" > /dev/null; then
