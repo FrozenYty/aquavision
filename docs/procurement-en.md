@@ -22,7 +22,7 @@ in English.
 | 7 | Breadboard | DZYJ MB-102, 1660 tie points, with power rails | 1 | 23.70 | JD | Solderless assembly; the 405-hole board is too small once the ESP32 and shifter are seated |
 | 8 | Turbidity sensor | LIGHT ME2100A-IIC, I2C, reflective | 1 | 18.82 | LCSC | Reads water clarity |
 | 9 | Sensor cable | WHEELTEC GH1.25 4-pin to Dupont female, 200 mm | 1 | 7.84 | JD | Turbidity sensor to the level shifter pins |
-| 10 | Fill-light strip | 12 V flexible silicone strip, about 10 W/m, 5 cm cut marks, self-adhesive | 2 | 7.10 | JD | Fixed light source, replaces the desk lamp; cut into two 50 cm runs side by side |
+| 10 | Fill-light strip | 12 V flexible silicone strip, about 10 W/m, **neutral white 4000 K**, 5 cm cut marks, self-adhesive | 2 | 7.10 | JD | Fixed light source, replaces the desk lamp; two 50 cm runs side by side, **both the same colour temperature** |
 | 11 | Switch module | IRF520 MOSFET driver module, 3.3 V compatible input, heatsink | 1 | 5.00 | JD | PWM dimming from the ESP32; 0.83 A at 10 W, ample headroom |
 | 12 | Power adapter | 12 V **2 A** DC, 5.5×2.1 mm barrel | 1 | 25.00 | JD | Supplies the strip on its own rail; a 1 A unit would run at its rating, sag and dim |
 
@@ -47,6 +47,11 @@ change between runs. The button is not on the list: a through-hole momentary pus
 - **Camera exposure lock.** The seller confirms the module locks exposure over UVC. `python scripts/test_exposure.py`
   still runs on arrival and its output is kept as evidence; if the driver disagrees with the seller,
   fall back to fixed lighting with a 15 % brightness tolerance and record the change.
+- **Strip colour temperature.** Choose 4000 K neutral white: water absorbs red first and pushes the
+  image blue-green, and a warm source cancels half of that. A 6000 K source adds to the shift, and with
+  white balance locked the red gain is raised to compensate, which lifts noise on exactly the dark
+  targets this project has to see. Buy both runs from the same batch; mixing them puts a colour gradient
+  across the tank.
 - **Button.** A through-hole momentary push button is already on hand. Check its legs are straight: the
   PCB-mount parts with bent legs bought earlier will not seat in a breadboard. A latching switch would
   not work here — the firmware expects a falling edge per press.
