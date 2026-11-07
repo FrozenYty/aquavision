@@ -14,6 +14,21 @@ truth or splitting one day across two dates. What matters is one bullet per deci
 state, not a parade of every commit — the commits are already in git. If a day grows past a screen,
 the usual cause is a decision sitting in the log that belongs in an ADR.
 
+## 2026-11-07
+
+- **The fill light is now something the program can actually control.** The architecture diagram and the
+  parts list had said the MCU handles dimming since the beginning; the procurement document then chose
+  two desk lamps, and the two statements could not both be true. A 12 V LED board, an IRF520 module and
+  its own supply replace them — about ¥55, no mains switching next to a water tank. The reason it
+  matters is not tidiness: the quality score reads brightness, so a light that moves between runs makes
+  the score look broken.
+- **Two acceptance checks added to the rig, both cheap to run**: PWM from 30 % to 80 % must raise
+  brightness monotonically, and the light board, MOSFET and ESP32 grounds must show continuity. A
+  floating ground gives a gate signal that switches only sometimes, which is the kind of fault that
+  survives a rehearsal and fails on the day.
+- **The assembly order now says to skip the level shifter if the sensor accepts 3.3 V.** One module and
+  eight wires fewer is one less intermittent joint, and the sensor's supply has not been measured yet.
+
 ## 2026-11-06
 
 - **Prototype screen 2 delivered** (`web/templates/home.html`): four KPI cards, a hand-drawn 7-day
