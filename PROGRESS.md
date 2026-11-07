@@ -16,6 +16,19 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
 
 ## 2026-11-07
 
+- **`firmware/main/src/` split into five files so the lead can change the rig without reading all of
+  it**: `config.h` (pins, timings), `rig_state.h` (what the rig knows), `screen.cpp` (the layout),
+  `protocol.cpp` (the serial grammar), `main.cpp` (wiring). Adding a screen state is three edits, none
+  of them in `main.cpp`.
+- **CI now compiles the firmware.** A second job caches the ESP32 toolchain on `platformio.ini` and
+  runs `pio run`, so a syntax error surfaces on a pull request instead of on the bench.
+- **The firmware still has not compiled, and now we know why.** PlatformIO cannot unpack
+  `framework-arduinoespressif32-esp32s3-libs` on this machine: the package contains paths longer than
+  Windows' 260-character limit, and the unpack fails with `WinError 3`. That is a platform limit, not a
+  permission one — 5.7 GB of toolchain was downloaded and then removed. CI runs on Linux, where the
+  limit does not exist, so the first compile will happen there.
+
+
 - **The rig has a screen, and it says something.** A 0.96" OLED from the STM32 kit shows connection
   state, turbidity, the quality score and the verdict; two LEDs pulse green for a pass and yellow for a
   retake. Everything on it is ASCII — a Chinese font would cost one to two megabytes of flash for the

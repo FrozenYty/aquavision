@@ -1,65 +1,29 @@
-// Rig controller for AquaVision (P1-06).
+// Rig controller for AquaVision (P1-06). Wiring only.
 //
-// The ESP32 does four things and nothing else: it reports a button press, reads the turbidity sensor,
-// shows the state of the last capture on a 0.96" OLED, and lights one of two LEDs. It does no imaging
-// and no inference — the PC owns both, and the PC is the only source of truth for a frame's quality.
-// The firmware's job is to be legible from across the room and to survive a stuck PC.
+// The ESP32 reports a button press, reads turbidity, drives the OLED and pulses two LEDs. It does no
+// imaging and no inference: the PC owns both, and the PC is the only authority on a frame's quality.
 //
-// Serial protocol, one event or command per line, ASCII, `\n` terminated:
-//
-//   ESP32 -> PC   EVT HELLO <version>
-//                 EVT TRIGGER <millis>
-//                 EVT TURBIDITY <0-100>
-//                 EVT PONG
-//   PC -> ESP32   CMD RESULT <score 0-100> <PASS|RETAKE> <REASON>
-//                 CMD READY                 back to the idle screen
-//                 CMD PING                  answered with EVT PONG
-//
-// REASON is one token: LOW_LIGHT, BLUR, COLOR_CAST or NONE. Any line the firmware does not understand
-// is ignored rather than treated as an error — a garbled byte must not brick the rig.
+// What lives where, so a change stays small:
+//   config.h     pins, timings, addresses — the file to edit when hardware moves
+//   rig_state.h  what the rig knows (screen, score, turbidity, ...)
+//   screen.cpp   the 128x64 layout, one function per state
+//   protocol.cpp the serial grammar
+//   main.cpp     this file: the loop that calls the four above
 
 #include <Arduino.h>
 #include <U8g2lib.h>
 #include <Wire.h>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
+
+#include "config.h"
+#include "protocol.h"
+#include "rig_state.h"
+#include "screen.h"
 
 namespace {
 
-// ---------------------------------------------------------------------------- pins
-
-constexpr int PIN_BUTTON = 4;
-constexpr int PIN_LED_PASS = 5;    // green
-constexpr int PIN_LED_RETAKE = 6;  // yellow
-constexpr int PIN_I2C_SDA = 8;
-constexpr int PIN_I2C_SCL = 9;
-
-// The kit's OLED answers at 0x3C and the turbidity sensor at 0x49: one bus, two devices.
-constexpr uint8_t TURBIDITY_ADDR = 0x49;
-
-// ---------------------------------------------------------------------------- timing
-
-constexpr uint32_t BUTTON_DEBOUNCE_MS = 25;
-constexpr uint32_t LED_PULSE_MS = 300;
-constexpr uint32_t OFFLINE_AFTER_MS = 10000;  // no word from the PC for this long
-constexpr uint32_t TURBIDITY_PERIOD_MS = 5000;
-constexpr uint32_t HEARTBEAT_PERIOD_MS = 1000;
-
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C display(U8G2_R0, U8X8_PIN_NONE);
 
-enum class Screen { Ready, Capturing, Pass, Retake, Offline };
-
-struct State {
-  Screen screen = Screen::Ready;
-  int score = 0;
-  char reason[12] = "NONE";
-  int turbidity = -1;  // -1 means no reading yet
-  int trend = 0;       // -1 falling, 0 flat, 1 rising
-  int frames = 0;
-  bool pcAlive = false;
-  bool heartbeatOn = true;
-} state;
+rig::State state;
 
 uint32_t lastPcMessage = 0;
 uint32_t lastTurbidity = 0;
@@ -68,12 +32,11 @@ uint32_t ledPassUntil = 0;
 uint32_t ledRetakeUntil = 0;
 uint32_t lastButtonEdge = 0;
 bool lastButtonLevel = HIGH;
-bool dirty = true;
 
-// ---------------------------------------------------------------------------- sensor
-
+//: The measurement itself. Returns -1 when the sensor does not answer, which the screen shows as
+//: "--" rather than as a zero — a plausible wrong number is worse than a visible gap.
 int readTurbidity() {
-  Wire.requestFrom(TURBIDITY_ADDR, (uint8_t)2);
+  Wire.requestFrom(cfg::TURBIDITY_ADDR, static_cast<uint8_t>(2));
   if (Wire.available() < 2) {
     return -1;
   }
@@ -82,188 +45,31 @@ int readTurbidity() {
   return (high << 8) | low;
 }
 
-void updateTrend(int fresh) {
-  static int previous = -1;
-  if (previous >= 0 && fresh >= 0) {
-    const int delta = fresh - previous;
-    state.trend = delta > 2 ? 1 : (delta < -2 ? -1 : 0);
-  }
-  if (fresh >= 0) {
-    previous = fresh;
-  }
-}
-
-// ---------------------------------------------------------------------------- drawing
-
-// Right-aligned so two- and three-digit scores share an edge; centred numbers jump about.
-void drawValue(const char* text, int baseline) {
-  const int width = display.getStrWidth(text);
-  display.drawStr(128 - 4 - width, baseline, text);
-}
-
-void drawBanner(const char* text, bool inverted) {
-  constexpr int top = Y_BANNER_TOP;
-  constexpr int height = Y_BANNER_BOTTOM - Y_BANNER_TOP;
-  display.setFont(u8g2_font_5x7_tf);
-  if (inverted) {
-    display.drawBox(0, top, 128, height);
-    display.setDrawColor(0);
-  } else {
-    display.drawFrame(0, top, 128, height);
-  }
-  const int width = display.getStrWidth(text);
-  display.drawStr((128 - width) / 2, top + 10, text);
-  display.setDrawColor(1);
-}
-
-// Band geometry, fixed so nothing moves between states. Both baselines are chosen so the 5x7 label
-// and the 24 px number share a centre line — they sit on one row, as drawn in the design.
-constexpr int Y_RULE_TOP = 9;
-constexpr int Y_LABEL_BASELINE = 26;  // QUALITY, TURBIDITY, FRAMES
-constexpr int Y_VALUE_BASELINE = 32;  // the 24 px score
-constexpr int Y_BANNER_TOP = 35;
-constexpr int Y_BANNER_BOTTOM = 49;
-constexpr int Y_RULE_BOTTOM = 51;
-constexpr int Y_FOOTER_BASELINE = 62;
-
-void drawHeader() {
-  display.setFont(u8g2_font_5x7_tf);
-  display.drawStr(4, 7, "AQUAVISION");
-
-  const char* link = state.pcAlive ? "ONLINE" : "OFFLINE";
-  const int width = display.getStrWidth(link);
-  // One disc, not three: the heartbeat doubles as the status dot, because a disc before the word and
-  // another beside it read as decoration rather than state.
-  if (state.heartbeatOn || !state.pcAlive) {
-    display.drawDisc(128 - 4 - width - 8, 5, 1);
-  }
-  display.drawStr(128 - 4 - width, 7, link);
-  display.drawHLine(0, Y_RULE_TOP, 128);
-}
-
-void drawFooter() {
-  display.setFont(u8g2_font_5x7_tf);
-
-  // "TURB", not "TURBIDITY": the full word is 9 glyphs, and 5x7 advances 6 px per glyph, so
-  // "TURBIDITY 12 ^" runs to x=88 while "FRAMES 34" starts at x=70. The abbreviated form is the only
-  // one that fits with the counter; dropping the counter would let the full word back in.
-  char turbidity[24];
-  if (state.turbidity < 0) {
-    snprintf(turbidity, sizeof(turbidity), "TURB --");
-  } else {
-    const char* glyph = state.trend > 0 ? "^" : (state.trend < 0 ? "v" : "-");
-    snprintf(turbidity, sizeof(turbidity), "TURB %d %s", state.turbidity, glyph);
-  }
-  display.drawStr(4, Y_FOOTER_BASELINE, turbidity);
-
-  char frames[16];
-  snprintf(frames, sizeof(frames), "FRAMES %d", state.frames);
-  display.drawStr(128 - 4 - display.getStrWidth(frames), Y_FOOTER_BASELINE, frames);
-}
-
-// While a retake is on screen the footer answers "why" instead of repeating the turbidity.
-void drawReason(const char* reason) {
-  const char* words = "UNKNOWN";
-  if (strcmp(reason, "LOW_LIGHT") == 0) {
-    words = "LOW LIGHT";
-  } else if (strcmp(reason, "BLUR") == 0) {
-    words = "BLUR";
-  } else if (strcmp(reason, "COLOR_CAST") == 0) {
-    words = "COLOR CAST";
-  }
-  display.setFont(u8g2_font_5x7_tf);
-  display.drawStr(4, Y_FOOTER_BASELINE, words);
-}
-
-void renderOffline() {
-  display.drawBox(0, 0, 128, 64);
-  display.setDrawColor(0);
-  display.setFont(u8g2_font_5x7_tf);
-  display.drawStr(4, 10, "AQUAVISION");
-  display.setFont(u8g2_font_helvB12_tr);
-  display.drawStr(4, 32, "SERIAL OFFLINE");
-  display.setFont(u8g2_font_5x7_tf);
-  display.drawStr(4, 46, "CHECK USB CONNECTION");
-  display.setDrawColor(1);
-}
-
-void render() {
-  display.clearBuffer();
-
-  if (state.screen == Screen::Offline) {
-    renderOffline();
-    display.sendBuffer();
-    dirty = false;
-    return;
-  }
-
-  drawHeader();
-  drawFooter();
-  display.drawHLine(0, Y_RULE_BOTTOM, 128);
-  display.setFont(u8g2_font_5x7_tf);
-  display.drawStr(4, Y_LABEL_BASELINE, "QUALITY");
-
-  switch (state.screen) {
-    case Screen::Ready:
-      drawBanner("READY", false);
-      break;
-
-    case Screen::Capturing:
-      drawBanner("CAPTURING", false);
-      break;
-
-    case Screen::Pass:
-    case Screen::Retake: {
-      display.setFont(u8g2_font_helvB24_tn);
-      char score[8];
-      snprintf(score, sizeof(score), "%d", state.score);
-      drawValue(score, Y_VALUE_BASELINE);
-      if (state.screen == Screen::Pass) {
-        drawBanner("PASS >=60", true);
-      } else {
-        drawBanner("RETAKE <60", true);
-        drawReason(state.reason);
-      }
-      break;
-    }
-
-    case Screen::Offline:
-      break;  // handled above
-  }
-
-  display.sendBuffer();
-  dirty = false;
-}
-
-// ---------------------------------------------------------------------------- services
-
 void serviceButton(uint32_t now) {
-  const bool level = digitalRead(PIN_BUTTON);
-  if (level == lastButtonLevel) {
-    return;
-  }
-  if (now - lastButtonEdge < BUTTON_DEBOUNCE_MS) {
+  const bool level = digitalRead(cfg::PIN_BUTTON);
+  if (level == lastButtonLevel || now - lastButtonEdge < cfg::BUTTON_DEBOUNCE_MS) {
     return;
   }
   lastButtonEdge = now;
   lastButtonLevel = level;
   if (level != LOW) {
-    return;
+    return;  // the release edge, not a press
   }
 
-  // A press with no PC listening would otherwise leave the screen on CAPTURING forever.
   if (!state.pcAlive) {
-    state.screen = Screen::Offline;
-    dirty = true;
+    // Nothing is listening, so there is nothing to capture. Say so on the screen instead of leaving
+    // it on CAPTURING forever.
+    state.screen = rig::Screen::Offline;
+    state.markDirty();
     return;
   }
-  state.screen = Screen::Capturing;
-  dirty = true;
-  Serial.printf("EVT TRIGGER %lu\n", (unsigned long)millis());
+  state.screen = rig::Screen::Capturing;
+  state.markDirty();
+  protocol::emitTrigger(now);
 }
 
 void serviceTurbidity(uint32_t now) {
-  if (now - lastTurbidity < TURBIDITY_PERIOD_MS) {
+  if (now - lastTurbidity < cfg::TURBIDITY_PERIOD_MS) {
     return;
   }
   lastTurbidity = now;
@@ -271,153 +77,86 @@ void serviceTurbidity(uint32_t now) {
   if (value < 0) {
     return;
   }
-  updateTrend(value);
-  state.turbidity = value;
-  Serial.printf("EVT TURBIDITY %d\n", value);
-  dirty = true;
+  state.noteTurbidity(value);
+  protocol::emitTurbidity(value);
 }
 
 void serviceHeartbeat(uint32_t now) {
-  if (now - lastHeartbeat < HEARTBEAT_PERIOD_MS) {
+  if (now - lastHeartbeat < cfg::HEARTBEAT_PERIOD_MS) {
     return;
   }
   lastHeartbeat = now;
   state.heartbeatOn = !state.heartbeatOn;
-  // Only the idle screen blinks. During a result the score is what matters, and a redraw every second
+  // Only the idle screen blinks; during a result the score is what matters and a redraw every second
   // would compete with it.
-  if (state.screen == Screen::Ready) {
-    dirty = true;
+  if (state.screen == rig::Screen::Ready) {
+    state.markDirty();
   }
 }
 
 void serviceLeds(uint32_t now) {
-  digitalWrite(PIN_LED_PASS, now < ledPassUntil ? HIGH : LOW);
-  digitalWrite(PIN_LED_RETAKE, now < ledRetakeUntil ? HIGH : LOW);
+  digitalWrite(cfg::PIN_LED_PASS, now < ledPassUntil ? HIGH : LOW);
+  digitalWrite(cfg::PIN_LED_RETAKE, now < ledRetakeUntil ? HIGH : LOW);
 }
 
 void serviceLink(uint32_t now) {
-  const bool alive = (now - lastPcMessage) < OFFLINE_AFTER_MS;
+  const bool alive = (now - lastPcMessage) < cfg::OFFLINE_AFTER_MS;
   if (alive == state.pcAlive) {
     return;
   }
   state.pcAlive = alive;
-  state.screen = alive ? Screen::Ready : Screen::Offline;
-  dirty = true;
+  state.screen = alive ? rig::Screen::Ready : rig::Screen::Offline;
+  state.markDirty();
 }
 
-// ---------------------------------------------------------------------------- protocol
-
-void handleLine(char* line) {
-  char* saveptr = nullptr;
-  char* verb = strtok_r(line, " ", &saveptr);
-  if (verb == nullptr || strcmp(verb, "CMD") != 0) {
-    return;
-  }
-  char* command = strtok_r(nullptr, " ", &saveptr);
-  if (command == nullptr) {
-    return;
-  }
-
-  lastPcMessage = millis();
-
-  if (strcmp(command, "PING") == 0) {
-    Serial.println("EVT PONG");
-    return;
-  }
-  if (strcmp(command, "READY") == 0) {
-    state.screen = Screen::Ready;
-    dirty = true;
-    return;
-  }
-  if (strcmp(command, "RESULT") != 0) {
-    return;
-  }
-
-  const char* scoreText = strtok_r(nullptr, " ", &saveptr);
-  const char* verdict = strtok_r(nullptr, " ", &saveptr);
-  const char* reason = strtok_r(nullptr, " ", &saveptr);
-  if (scoreText == nullptr || verdict == nullptr) {
-    return;
-  }
-
-  state.score = constrain(atoi(scoreText), 0, 100);
-  state.frames += 1;
-  if (reason != nullptr) {
-    strncpy(state.reason, reason, sizeof(state.reason) - 1);
-    state.reason[sizeof(state.reason) - 1] = '\0';
+//: A result arrived from the PC: light the right LED for a moment.
+void noteResult() {
+  if (state.screen == rig::Screen::Pass) {
+    ledPassUntil = millis() + cfg::LED_PULSE_MS;
   } else {
-    strcpy(state.reason, "NONE");
-  }
-
-  if (strcmp(verdict, "PASS") == 0) {
-    state.screen = Screen::Pass;
-    ledPassUntil = millis() + LED_PULSE_MS;
-  } else {
-    state.screen = Screen::Retake;
-    ledRetakeUntil = millis() + LED_PULSE_MS;
-  }
-  dirty = true;
-}
-
-void serviceSerial() {
-  static char buffer[96];
-  static size_t length = 0;
-
-  while (Serial.available() > 0) {
-    const char c = (char)Serial.read();
-    if (c == '\n' || c == '\r') {
-      if (length > 0) {
-        buffer[length] = '\0';
-        handleLine(buffer);
-        length = 0;
-      }
-      continue;
-    }
-    if (length < sizeof(buffer) - 1) {
-      buffer[length++] = c;
-    } else {
-      length = 0;  // an overlong line is dropped rather than truncated into nonsense
-    }
+    ledRetakeUntil = millis() + cfg::LED_PULSE_MS;
   }
 }
 
 }  // namespace
 
 void setup() {
-  pinMode(PIN_BUTTON, INPUT_PULLUP);
-  pinMode(PIN_LED_PASS, OUTPUT);
-  pinMode(PIN_LED_RETAKE, OUTPUT);
-  digitalWrite(PIN_LED_PASS, LOW);
-  digitalWrite(PIN_LED_RETAKE, LOW);
+  pinMode(cfg::PIN_BUTTON, INPUT_PULLUP);
+  pinMode(cfg::PIN_LED_PASS, OUTPUT);
+  pinMode(cfg::PIN_LED_RETAKE, OUTPUT);
+  digitalWrite(cfg::PIN_LED_PASS, LOW);
+  digitalWrite(cfg::PIN_LED_RETAKE, LOW);
 
-  Serial.begin(115200);
+  Serial.begin(cfg::SERIAL_BAUD);
 
-  Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
-  // The HW I2C constructor is fixed at 0x3C; setI2CAddress after begin() has no effect.
+  Wire.begin(cfg::PIN_I2C_SDA, cfg::PIN_I2C_SCL);
   display.begin();
 
-  display.clearBuffer();
-  display.setFont(u8g2_font_helvB12_tr);
-  const char* title = "AQUAVISION";
-  display.drawStr((128 - display.getStrWidth(title)) / 2, 32, title);
-  display.sendBuffer();
-  delay(1500);
+  screen::renderSplash(display);
+  delay(cfg::SPLASH_MS);
 
+  protocol::emitHello();
   lastPcMessage = millis();
-  Serial.printf("EVT HELLO %s\n", "1.0");
-  state.screen = Screen::Ready;
-  dirty = true;
+  state.screen = rig::Screen::Ready;
+  state.markDirty();
 }
 
 void loop() {
   const uint32_t now = millis();
-  serviceSerial();
+
+  protocol::poll(state);
+  if (state.pulseLeds) {
+    noteResult();
+    state.pulseLeds = false;
+  }
   serviceButton(now);
   serviceTurbidity(now);
   serviceHeartbeat(now);
   serviceLeds(now);
   serviceLink(now);
-  if (dirty) {
-    render();
+
+  if (state.dirty) {
+    screen::render(display, state);
+    state.dirty = false;
   }
 }

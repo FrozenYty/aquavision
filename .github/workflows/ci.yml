@@ -55,3 +55,27 @@ jobs:
           else
             echo "no tests yet"
           fi
+
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The ESP32 toolchain is about a gigabyte. Caching it turns a five-minute job into a one-minute
+      # job; the key follows platformio.ini, so a platform bump rebuilds it once and then caches again.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ hashFiles('firmware/main/platformio.ini') }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Build the rig controller
+        working-directory: firmware/main
+        run: pio run
+

@@ -46,3 +46,6 @@ _probe.pdf
 
 # pytest scratch space, created by tests/conftest.py.
 tests/tmp/
+# PlatformIO: the build tree and the toolchain cache are both large and regenerable.
+.pio/
+.pio-core/
