@@ -22,8 +22,13 @@ in English.
 | 7 | Breadboard | DZYJ MB-102, 1660 tie points, with power rails | 1 | 23.70 | JD | Solderless assembly; the 405-hole board is too small once the ESP32 and shifter are seated |
 | 8 | Turbidity sensor | LIGHT ME2100A-IIC, I2C, reflective | 1 | 18.82 | LCSC | Reads water clarity |
 | 9 | Sensor cable | WHEELTEC GH1.25 4-pin to Dupont female, 200 mm | 1 | 7.84 | JD | Turbidity sensor to the level shifter pins |
+| 10 | Fill-light board | 12 V white LED board or strip on aluminium, 5–10 W | 1 | 30.00 | JD | Fixed light source, replaces the desk lamp |
+| 11 | Switch module | IRF520 MOSFET driver module, 3.3 V compatible input, heatsink | 1 | 5.00 | JD | PWM dimming from the ESP32 |
+| 12 | Power adapter | 12 V 1 A DC, 5.5×2.1 mm barrel | 1 | 20.00 | JD | Supplies the light board on its own rail |
 
-**Total ¥377.42.** The button is not on the list: a through-hole momentary push button is already on hand. A second, 405-hole breadboard was dropped from the order — the ESP32 with headers, the shifter and the wiring need the 1660-hole board.
+**Total ¥432.42.** The three lighting parts were added on 11-07; ADR 09 records why: a desk lamp cannot
+be controlled by the program, and the brightness term of the quality score needs a source that does not
+change between runs. The button is not on the list: a through-hole momentary push button is already on hand. A second, 405-hole breadboard was dropped from the order — the ESP32 with headers, the shifter and the wiring need the 1660-hole board.
 
 ## 2. Deliberately not bought
 
@@ -49,12 +54,19 @@ in English.
 
 ## 4. Assembly order
 
-Assemble and power on in four steps, one at a time, so a fault is localised immediately:
+Assemble and power on in five steps, one at a time, so a fault is localised immediately:
 
-1. ESP32 + tactile switch — serial prints a line on each press.
-2. Level shifter — measure 3.3 V on VCCA and 5 V on VCCB.
-3. Turbidity sensor — I2C scan finds address `0x49`; clear water reads high, cloudy reads low.
-4. Camera + lighting — exposure lock, left/right brightness ratio ≥ 0.7, 5 cm target ≥ 45 px at 640.
+1. ESP32 + tactile switch — serial prints a line on each press. **Debounce first**: one press, one line.
+2. Level shifter — measure 3.3 V on VCCA and 5 V on VCCB. **If the sensor accepts 3.3 V, skip this board
+   entirely** — one module and eight wires fewer is one less thing to go intermittent.
+3. Turbidity sensor — I2C scan finds address `0x49`; clear water reads high, cloudy reads low. Confirm a
+   4.7 kΩ pull-up on both SDA and SCL; without them the reads are intermittent, which is the hardest
+   fault to diagnose.
+4. Fill light — **the MOSFET ground and the ESP32 ground must be common**; drive the gate with PWM and
+   confirm brightness rises monotonically from 0 to 100 %. The light board runs from its own 12 V supply
+   and **must not be powered from the ESP32's 5 V pin**.
+5. Camera — exposure lock, `python scripts/test_exposure.py` exits 0; at a fixed light level, left/right
+   brightness ratio ≥ 0.7 and a 5 cm target ≥ 45 px at 640.
 
 ## 5. Acceptance numbers
 
@@ -64,6 +76,8 @@ Assemble and power on in four steps, one at a time, so a fault is localised imme
 | Frame stability | 20 consecutive frames, mean brightness spread < 10 % |
 | Lighting | Left/right half brightness ratio ≥ 0.7, no hot spot on the tank wall |
 | Flicker | Filmed by a phone camera, no rolling bars |
+| Light control | PWM from 30 % to 80 % raises mean brightness monotonically, without flicker |
+| Common ground | Light board negative, MOSFET ground and ESP32 ground all show continuity |
 | Target size | A 5 cm object ≥ 45 px wide at 640 input |
 | Turbidity | Clear water reads higher than water with a spoon of milk |
 | Tank | 24 h filled, no seepage, front wall without scratches or tint |
