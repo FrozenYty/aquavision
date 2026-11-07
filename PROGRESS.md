@@ -16,6 +16,22 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
 
 ## 2026-11-07
 
+- **The rig has a screen, and it says something.** A 0.96" OLED from the STM32 kit shows connection
+  state, turbidity, the quality score and the verdict; two LEDs pulse green for a pass and yellow for a
+  retake. Everything on it is ASCII — a Chinese font would cost one to two megabytes of flash for the
+  fourteen words the screen needs.
+- **A retake shows its reason, not just its score.** `LOW LIGHT`, `BLUR`, `COLOR CAST` come from the
+  three components the quality score already computes. A number without a cause gives the operator
+  nothing to fix.
+- **The firmware exists and has never been compiled.** `firmware/main/` holds a PlatformIO project and
+  a state machine, written without a toolchain on the machine. That is recorded in
+  `firmware/README.md` rather than discovered on the rig — the first build will produce errors, and
+  pretending otherwise would cost an afternoon.
+- **The turbidity read is a guess and is labelled as one.** Two bytes, big-endian, address 0x49; the
+  ME2100A-IIC datasheet has not been checked against it. A plausible but wrong reading is worse than a
+  blank one, so the screen shows `--` until a value arrives.
+
+
 - **The fill light is now something the program can actually control.** The architecture diagram and the
   parts list had said the MCU handles dimming since the beginning; the procurement document then chose
   two desk lamps, and the two statements could not both be true. A 12 V LED board, an IRF520 module and
