@@ -39,11 +39,6 @@ constexpr int RIGHT_EDGE = 128 - MARGIN;
 
 using namespace layout;
 
-void rightAligned(U8G2& display, const char* text, int baseline) {
-  display.setFont(u8g2_font_5x7_tf);
-  display.drawStr(RIGHT_EDGE - display.getStrWidth(text), baseline, text);
-}
-
 void drawHeader(U8G2& display, const rig::State& state) {
   display.setFont(u8g2_font_5x7_tf);
   display.drawStr(MARGIN, HEADER_BASELINE, "AQUAVISION");
