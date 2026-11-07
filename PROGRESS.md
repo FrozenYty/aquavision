@@ -3,7 +3,7 @@
 > Owner: whoever did the work · Revisit when: continuously, append only
 
 Current phase: **P1 — skeleton**
-Gate: `uvicorn` starts, `/api/health` answers, 9 tables exist, 13 pages render
+Gate: `uvicorn` starts, `/api/health` answers, 13 tables exist, 13 pages render
 
 One entry per day, newest first. A day's work goes in that day's entry; do not open a second one when
 the afternoon brings more. The heading is the date and nothing else — no “evening”, no “later”.

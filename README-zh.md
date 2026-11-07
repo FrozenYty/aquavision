@@ -8,21 +8,22 @@
 
 > 本文为 `README.md` 的中文对照版，以英文版为准。
 
-**当前状态**：P0 阶段，进展见 [PROGRESS.md](PROGRESS.md)。前端页面已可用模拟数据运行，服务端尚未开始。
+**当前状态**：P1 阶段，进展见 [PROGRESS.md](PROGRESS.md)。后端可用（`uvicorn`，42 条契约路由），
+十三张页面以模拟数据运行，ESP32 固件可编译；采集装置尚未组装。
 
 ## 文档
 
 | 文档 | 说明 |
 |---|---|
 | [文档索引](docs/INDEX-zh.md) | 哪份文档回答什么，以及改一处要连带改哪些 |
-| [需求定义书 V1.5](docs/srs-zh.md) | 功能需求 29 条、用例 9 个、数据表 13 张、验收项 36 条 |
+| [需求定义书 V1.10](docs/srs-zh.md) | 功能需求 29 条、用例 9 个、数据表 13 张、验收项 36 条 |
 | [任务计划](PLAN.md) | 阶段、任务与门禁，团队的任务契约 |
 | [总体架构](docs/architecture-zh.md) · [English](docs/architecture-en.md) | 分层、依赖规则、运行时模型、一帧的生命周期 |
 | [接口约定](docs/api-contract-zh.md) · [English](docs/api-contract-en.md) | REST 路径、响应封装、错误码、WebSocket 协议 |
 | [数据模型](docs/data-model-zh.md) · [English](docs/data-model-en.md) | 十三张表、字段、索引、文件存储 |
 | [测试计划](docs/test-plan-zh.md) · [English](docs/test-plan-en.md) | 测试分层、数据集划分、指标与验收 |
 | [术语表](docs/glossary-en-zh.md) | 中英对照，代码与文档共用的唯一词表 |
-| [决策记录](docs/adr/) | 七条已采纳的决定及其理由 |
+| [决策记录](docs/adr/) | 十条已采纳的决定及其理由 |
 
 设计文档以英文版为准，中文为对照版，两者必须在同一次提交内同步。
 
@@ -44,8 +45,9 @@ tests/       测试
 |---|---|
 | 采集 | USB 摄像头（1080P、手动曝光、免驱 UVC）+ OpenCV |
 | 识别 | PyTorch + Ultralytics YOLOv8n，三项改进：水下色彩校正、EMA 注意力、WIoU v3 |
-| 服务 | Python 3.11、FastAPI、SQLAlchemy 2.0、PostgreSQL 14 |
+| 服务 | Python 3.11、FastAPI、SQLAlchemy 2.1、PostgreSQL 14 |
 | 前端 | HTML5、Bootstrap 5.3.3、ECharts 5，原生 ES 模块，无构建步骤；第三方库放在 `web/static/vendor/` |
+| 采集控制 | ESP32-S3，Arduino 框架 + PlatformIO 构建；0.96 寸 OLED 与两个状态灯 |
 
 目标指标：四类物种 mAP@0.5 ≥ 0.75，改进模型较基线提升 ≥ 0.03，
 推理速度不低于基线 90%。
