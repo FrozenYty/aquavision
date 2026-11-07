@@ -21,7 +21,7 @@ FastAPI 进程运行在一台机器上，摄像头通过 USB 连接。
 ```mermaid
 flowchart LR
     CAM[USB 摄像头] --> CAP[采集服务]
-    MCU[ESP32：触发、补光、传感器] -. 串口 .-> CAP
+    MCU[ESP32：触发、传感器] -. 串口 .-> CAP
     CAP --> Q[质量判定]
     Q --> DB[(PostgreSQL)]
     Q --> FS[(本地文件)]
