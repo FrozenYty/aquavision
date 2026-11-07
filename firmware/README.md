@@ -6,6 +6,25 @@ turbidity sensor, shows the last capture's verdict on a 0.96" OLED, and lights o
 It does **no imaging and no inference**. The PC owns both, and the PC is the only authority on a
 frame's quality — the firmware displays what it is told.
 
+## Status: draft
+
+The screen layout is a **first draft**, agreed on 2026-11-07 and never seen on a real panel. Every
+coordinate in `src/screen.cpp` is provisional until the rig is on the bench.
+
+## Where things live
+
+| File | What it owns | Edit it when |
+|---|---|---|
+| `src/config.h` | pins, timings, I2C addresses | a wire moves, or a period feels wrong |
+| `src/rig_state.h` | what the rig knows: screen, score, turbidity, trend | a new value has to be remembered |
+| `src/screen.cpp` | the 128×64 layout, one function per state | the screen should look different |
+| `src/protocol.cpp` | the serial grammar | the PC and the board must say something new |
+| `src/main.cpp` | the loop that calls the four above | almost never |
+
+Adding a screen state is three edits: an entry in `rig::Screen`, a `drawX` function in `screen.cpp`, and
+a `case` in `render()`. Adding a field to the display is one line in `rig::State` and one in the
+function that draws it. Nothing else in the firmware knows about pixels.
+
 ## Build and flash
 
 ```
