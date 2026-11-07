@@ -102,8 +102,8 @@ void drawValue(const char* text, int baseline) {
 }
 
 void drawBanner(const char* text, bool inverted) {
-  constexpr int top = 52;
-  constexpr int height = 12;
+  constexpr int top = Y_BANNER_TOP;
+  constexpr int height = Y_BANNER_BOTTOM - Y_BANNER_TOP;
   display.setFont(u8g2_font_5x7_tf);
   if (inverted) {
     display.drawBox(0, top, 128, height);
@@ -112,9 +112,19 @@ void drawBanner(const char* text, bool inverted) {
     display.drawFrame(0, top, 128, height);
   }
   const int width = display.getStrWidth(text);
-  display.drawStr((128 - width) / 2, top + 9, text);
+  display.drawStr((128 - width) / 2, top + 10, text);
   display.setDrawColor(1);
 }
+
+// Band geometry, fixed so nothing moves between states. Both baselines are chosen so the 5x7 label
+// and the 24 px number share a centre line — they sit on one row, as drawn in the design.
+constexpr int Y_RULE_TOP = 9;
+constexpr int Y_LABEL_BASELINE = 26;  // QUALITY, TURBIDITY, FRAMES
+constexpr int Y_VALUE_BASELINE = 32;  // the 24 px score
+constexpr int Y_BANNER_TOP = 35;
+constexpr int Y_BANNER_BOTTOM = 49;
+constexpr int Y_RULE_BOTTOM = 51;
+constexpr int Y_FOOTER_BASELINE = 62;
 
 void drawHeader() {
   display.setFont(u8g2_font_5x7_tf);
@@ -128,9 +138,15 @@ void drawHeader() {
     display.drawDisc(128 - 4 - width - 8, 5, 1);
   }
   display.drawStr(128 - 4 - width, 7, link);
+  display.drawHLine(0, Y_RULE_TOP, 128);
+}
 
-  display.drawHLine(0, 16, 128);
+void drawFooter() {
+  display.setFont(u8g2_font_5x7_tf);
 
+  // "TURB", not "TURBIDITY": the full word is 9 glyphs, and 5x7 advances 6 px per glyph, so
+  // "TURBIDITY 12 ^" runs to x=88 while "FRAMES 34" starts at x=70. The abbreviated form is the only
+  // one that fits with the counter; dropping the counter would let the full word back in.
   char turbidity[24];
   if (state.turbidity < 0) {
     snprintf(turbidity, sizeof(turbidity), "TURB --");
@@ -138,11 +154,11 @@ void drawHeader() {
     const char* glyph = state.trend > 0 ? "^" : (state.trend < 0 ? "v" : "-");
     snprintf(turbidity, sizeof(turbidity), "TURB %d %s", state.turbidity, glyph);
   }
-  display.drawStr(4, 15, turbidity);
+  display.drawStr(4, Y_FOOTER_BASELINE, turbidity);
 
   char frames[16];
   snprintf(frames, sizeof(frames), "FRAMES %d", state.frames);
-  display.drawStr(128 - 4 - display.getStrWidth(frames), 15, frames);
+  display.drawStr(128 - 4 - display.getStrWidth(frames), Y_FOOTER_BASELINE, frames);
 }
 
 // While a retake is on screen the footer answers "why" instead of repeating the turbidity.
@@ -156,7 +172,7 @@ void drawReason(const char* reason) {
     words = "COLOR CAST";
   }
   display.setFont(u8g2_font_5x7_tf);
-  display.drawStr(4, 15, words);
+  display.drawStr(4, Y_FOOTER_BASELINE, words);
 }
 
 void renderOffline() {
@@ -182,8 +198,10 @@ void render() {
   }
 
   drawHeader();
+  drawFooter();
+  display.drawHLine(0, Y_RULE_BOTTOM, 128);
   display.setFont(u8g2_font_5x7_tf);
-  display.drawStr(4, 25, "QUALITY");
+  display.drawStr(4, Y_LABEL_BASELINE, "QUALITY");
 
   switch (state.screen) {
     case Screen::Ready:
@@ -199,7 +217,7 @@ void render() {
       display.setFont(u8g2_font_helvB24_tn);
       char score[8];
       snprintf(score, sizeof(score), "%d", state.score);
-      drawValue(score, 48);
+      drawValue(score, Y_VALUE_BASELINE);
       if (state.screen == Screen::Pass) {
         drawBanner("PASS >=60", true);
       } else {

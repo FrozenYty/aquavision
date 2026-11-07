@@ -38,18 +38,26 @@ saves buying anything if the parts box already has a bag of 1 kΩ.
 
 ## The screen
 
-128 × 64, monochrome, four bands:
+128 × 64, monochrome. Five bands, with every baseline a named constant so nothing shifts between
+states:
 
 ```
-AQUAVISION                ● ONLINE    5x7, the disc blinks once a second while idle
-TURB 12 -                 FRAMES 34   5x7
-────────────────────────────────────
-QUALITY                              5x7
-                          86         24px, right-aligned
-████████████████████████████████████
-█           PASS >=60              █  inverted banner
-████████████████████████████████████
+y 0                                      AQUAVISION  ·  online, disc blinks while idle
+y 9   ─────────────────────────────────────────────────────────────────────────────
+y26   QUALITY                                    86      label 5x7, value 24 px, same row
+y35   ████████████████████████████████████████████████████████████████████████████
+y49   █                              PASS >=60                                  █
+y51   ─────────────────────────────────────────────────────────────────────────────
+y62   TURB 12 ^                                          FRAMES 34                       5x7
 ```
+
+The footer says `TURB`, not `TURBIDITY`: at 6 px per glyph the full word runs to x=88 while
+`FRAMES 34` starts at x=70, and the two collide. Dropping the frame counter would let the full word
+back in — a trade worth making only if the counter turns out to matter less than the label.
+
+The label and the number **share a centre line** (`Y_LABEL_BASELINE` 26, `Y_VALUE_BASELINE` 32) —
+a 5x7 label sitting above a 24 px number reads as two unrelated rows, which is how the first draft of
+this code looked.
 
 A retake replaces the footer's turbidity reading with the reason — `LOW LIGHT`, `BLUR`, `COLOR CAST` —
 because a score without a cause tells the operator nothing to do.
