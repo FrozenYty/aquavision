@@ -22,11 +22,11 @@ in English.
 | 7 | Breadboard | DZYJ MB-102, 1660 tie points, with power rails | 1 | 23.70 | JD | Solderless assembly; the 405-hole board is too small once the ESP32 and shifter are seated |
 | 8 | Turbidity sensor | LIGHT ME2100A-IIC, I2C, reflective | 1 | 18.82 | LCSC | Reads water clarity |
 | 9 | Sensor cable | WHEELTEC GH1.25 4-pin to Dupont female, 200 mm | 1 | 7.84 | JD | Turbidity sensor to the level shifter pins |
-| 10 | Fill-light board | 12 V white LED board or strip on aluminium, 5–10 W | 1 | 30.00 | JD | Fixed light source, replaces the desk lamp |
-| 11 | Switch module | IRF520 MOSFET driver module, 3.3 V compatible input, heatsink | 1 | 5.00 | JD | PWM dimming from the ESP32 |
-| 12 | Power adapter | 12 V 1 A DC, 5.5×2.1 mm barrel | 1 | 20.00 | JD | Supplies the light board on its own rail |
+| 10 | Fill-light strip | 12 V flexible silicone strip, about 10 W/m, 5 cm cut marks, self-adhesive | 2 | 7.10 | JD | Fixed light source, replaces the desk lamp; cut into two 50 cm runs side by side |
+| 11 | Switch module | IRF520 MOSFET driver module, 3.3 V compatible input, heatsink | 1 | 5.00 | JD | PWM dimming from the ESP32; 0.83 A at 10 W, ample headroom |
+| 12 | Power adapter | 12 V **2 A** DC, 5.5×2.1 mm barrel | 1 | 25.00 | JD | Supplies the strip on its own rail; a 1 A unit would run at its rating, sag and dim |
 
-**Total ¥432.42.** The three lighting parts were added on 11-07; ADR 09 records why: a desk lamp cannot
+**Total ¥421.62.** The three lighting parts were added on 11-07; ADR 09 records why: a desk lamp cannot
 be controlled by the program, and the brightness term of the quality score needs a source that does not
 change between runs. The button is not on the list: a through-hole momentary push button is already on hand. A second, 405-hole breadboard was dropped from the order — the ESP32 with headers, the shifter and the wiring need the 1660-hole board.
 
