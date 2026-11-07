@@ -24,9 +24,10 @@ in English.
 | 9 | Sensor cable | WHEELTEC GH1.25 4-pin to Dupont female, 200 mm | 1 | 7.84 | JD | Turbidity sensor to the level shifter pins |
 | 10 | Fill-light strip | 12 V flexible silicone strip, about 10 W/m, **neutral white 4000 K**, 5 cm cut marks, self-adhesive | 2 | 7.10 | JD | Fixed light source, replaces the desk lamp; two 50 cm runs side by side, **both the same colour temperature** |
 | 11 | Switch module | IRF520 MOSFET driver module, 3.3 V compatible input, heatsink | 1 | 5.00 | JD | PWM dimming from the ESP32; 0.83 A at 10 W, ample headroom |
-| 12 | Power adapter | 12 V **2 A** DC, 5.5×2.1 mm barrel | 1 | 25.00 | JD | Supplies the strip on its own rail; a 1 A unit would run at its rating, sag and dim |
+| 12 | Power adapter | 12 V **2 A** DC, 5.5×2.1 mm barrel, overload and short-circuit protected | 1 | 18.20 | JD | Supplies the strip on its own rail; a 1 A unit would run at its rating, sag and dim |
+| 13 | Adapter lead | 5.5×2.1 mm DC socket to screw terminals | 1 | 3.00 | JD | The adapter ends in a barrel plug and the strip in bare wires; without this they do not meet |
 
-**Total ¥421.62.** The three lighting parts were added on 11-07; ADR 09 records why: a desk lamp cannot
+**Total ¥417.82.** The three lighting parts were added on 11-07; ADR 09 records why: a desk lamp cannot
 be controlled by the program, and the brightness term of the quality score needs a source that does not
 change between runs. The button is not on the list: a through-hole momentary push button is already on hand. A second, 405-hole breadboard was dropped from the order — the ESP32 with headers, the shifter and the wiring need the 1660-hole board.
 
@@ -47,6 +48,9 @@ change between runs. The button is not on the list: a through-hole momentary pus
 - **Camera exposure lock.** The seller confirms the module locks exposure over UVC. `python scripts/test_exposure.py`
   still runs on arrival and its output is kept as evidence; if the driver disagrees with the seller,
   fall back to fixed lighting with a 15 % brightness tolerance and record the change.
+- **Adapter lead.** The supply ends in a barrel plug and the strip in bare wires; without the socket-to-
+  terminal lead the two never meet. Reconnecting power at a cut end also needs a solderless clip (often
+  included) or a soldering iron — confirm when ordering.
 - **Strip colour temperature.** Choose 4000 K neutral white: water absorbs red first and pushes the
   image blue-green, and a warm source cancels half of that. A 6000 K source adds to the shift, and with
   white balance locked the red gain is raised to compensate, which lifts noise on exactly the dark
