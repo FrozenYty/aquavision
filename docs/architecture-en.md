@@ -153,3 +153,6 @@ No path, port or threshold is hard-coded in business code.
 | [05](adr/05-vendored-frontend-assets.md) | Frontend libraries and fonts vendored, no CDN at runtime |
 | [06](adr/06-dataset-duo.md) | Training data comes from DUO, not URPC |
 | [07](adr/07-local-first-verification.md) | Checks run locally before a push; CI confirms, it does not discover |
+| [08](adr/08-four-tables-added.md) | Nine tables become thirteen: snapshots, reports and parameters had nowhere to live |
+| [09](adr/09-led-fill-light.md) | ~~Fill light becomes a 12 V strip driven by a MOSFET~~ — **superseded by 10** |
+| [10](adr/10-desk-lamp-fill-light.md) | Fill light is the existing lamp: USB-powered DC, no visible flicker, nothing to buy |

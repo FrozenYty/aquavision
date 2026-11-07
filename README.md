@@ -22,7 +22,7 @@ assembled yet.
 | [Data model](docs/data-model-en.md) | Thirteen tables, fields, indexes, file storage |
 | [Test plan](docs/test-plan-en.md) | Test levels, dataset splitting, metrics and acceptance |
 | [Glossary](docs/glossary-en-zh.md) | English ↔ Chinese, the single word list shared by code and docs |
-| [Decisions](docs/adr/) | Ten accepted decisions and their reasoning |
+| [Decisions](docs/adr/) | Ten accepted decisions and their reasoning; `docs/architecture-en.md` §10 lists them |
 
 English is the source of truth for design documents; the Chinese files are reference versions and
 must be updated in the same commit.
