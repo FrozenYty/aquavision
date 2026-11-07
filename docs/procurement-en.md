@@ -22,8 +22,10 @@ in English.
 | 7 | Breadboard | DZYJ MB-102, 1660 tie points, with power rails | 1 | 23.70 | JD | Solderless assembly; the 405-hole board is too small once the ESP32 and shifter are seated |
 | 8 | Turbidity sensor | LIGHT ME2100A-IIC, I2C, reflective | 1 | 18.82 | LCSC | Reads water clarity |
 | 9 | Sensor cable | WHEELTEC GH1.25 4-pin to Dupont female, 200 mm | 1 | 7.84 | JD | Turbidity sensor to the level shifter pins |
+| 10 | Resistors | 330 Ω, 1/4 W metal film, 20 pieces | 1 | 3.00 | JD | LED current limiting; three 1 kΩ in parallel from the kit also work |
+| 11 | Trigger button | 16 mm metal momentary push button, normally open | 1 | 10.00 | JD | Panel mount; the kit's small tactile switches are awkward to press |
 
-**Total ¥377.42.** The fill light is the Midea MT-10T4 lamp already on hand: 10 W, 4000 K, Ra90,
+**Total ¥390.42.** The status display (0.96" OLED) and the green and yellow LEDs come from the STM32 kit on hand and are not bought. The fill light is the Midea MT-10T4 lamp already on hand: 10 W, 4000 K, Ra90,
 USB-powered (DC) and advertised as flicker-free. A strip was planned on 11-07 and withdrawn the same
 day after the lamp was checked — ADR 10.
 
@@ -70,7 +72,9 @@ Assemble and power on in five steps, one at a time, so a fault is localised imme
 4. Fill light — run the lamp **on USB, not on its battery**: falling charge drifts the brightness.
    Set one touch-dimming level and **tape over the touch area**. Tape the polariser flat to the lamp
    head, corners taut, no warp.
-5. Camera — exposure lock, `python scripts/test_exposure.py` exits 0; at a fixed light level, left/right
+5. Display and LEDs — an I2C scan shows both `0x3C` (OLED) and `0x49` (turbidity); the screen boots to
+   `AQUAVISION` then settles on `READY`; a button press pulses the green or yellow LED for 300 ms.
+6. Camera — exposure lock, `python scripts/test_exposure.py` exits 0; at a fixed light level, left/right
    brightness ratio ≥ 0.7 and a 5 cm target ≥ 45 px at 640.
 
 ## 5. Acceptance numbers

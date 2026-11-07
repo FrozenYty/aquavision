@@ -9,9 +9,9 @@
 | Item | Content |
 |---|---|
 | Document title | Underwater Species Detection and Monitoring for Marine Ranching Based on an Improved YOLOv8 — Software Project Requirements Specification |
-| Document number | SRS-PRJ14-V1.8-2026 |
+| Document number | SRS-PRJ14-V1.9-2026 |
 | Project number | PRJ-14 |
-| Document version | V1.8 |
+| Document version | V1.9 |
 | Phase | Phase 1: requirements analysis |
 | Prepared by | Training Group 14 |
 | Project lead | Yao Tianyu (group lead); supervisor: Wu Jianguang |
@@ -1524,6 +1524,7 @@ Defects found in acceptance testing are handled by severity. Critical (system un
 | V1.1 | 2026-11-03 | Yao Tianyu | Switched to direct capture from the local camera; capture-terminal modules and tables removed; 3.5 algorithm requirements and 2.4 architecture added; NFR numbering conflicts fixed; 2.3 scenarios, UC-01/UC-09 and 5.3 flows rewritten; wording inconsistent with the new architecture removed. | Implements the annotations on the final revision of 09. | Internal group review |
 | V1.2 | 2026-11-03 | Yao Tianyu | Marine-debris class and per-class metrics added; capture hardware list added (trigger board, temperature and turbidity sensors, status display); environment reporting added to the capture interface; streaming wording, team size and baseline-freeze week corrected; dataset size and acquisition risk added. | Implements the capture plan change and settles the requirements baseline. | Internal group review |
 | V1.3 | 2026-11-04 | Yao Tianyu | Marine-debris class removed and four classes restored; dataset wording unified to DUO; AL-08 and AL-09 deleted from the metric table and AL-03 limited to per-class recall; scenery list in Table 2-3 and class palette in 5.1 adjusted. | No public labels exist for that class and in-house data cannot support an independent accuracy metric; focus on four commercial and predator species to keep the metric basis consistent. | Internal group review |
+| V1.9 | 2026-11-07 | Yao Tianyu | Table 2-3 gains a status display and two status LEDs; the MCU row adds driving the display. Everything shown on the screen is English or numeric. | The screen and LEDs come from the STM32 kit already on hand, so they cost nothing; V1.4 removed the display on minimum-cost grounds and that premise no longer holds. The screen shows device state only — business data stays on the web side. | Internal group review |
 | V1.8 | 2026-11-07 | Yao Tianyu | Table 2-3 returns to the existing LED desk lamp; the strip, MOSFET and separate supply from V1.7 are withdrawn, and the MCU row goes back to trigger and turbidity. | The lamp on hand is USB-powered (DC), 4000 K, 10 W and advertised as flicker-free, so the flicker argument that justified the strip does not apply. ADR 09 is superseded by ADR 10. | Internal group review |
 | V1.7 | 2026-11-07 | Yao Tianyu | Table 2-3 replaces the desk lamp with a 12 V LED board, an IRF520 MOSFET module and its own supply, and the MCU row gains PWM dimming. | Both the architecture diagram and the parts list said the MCU controls the fill light, but a mains desk lamp cannot be controlled by a program — the claim was empty. A fixed board also removes the variation between capture sessions (ADR 09). | Internal group review |
 | V1.6 | 2026-11-06 | Yao Tianyu | The inspection report is produced as Markdown; scenario 5, FR-M5-04 and §7 say so, and §7 records that the Word, PDF and Excel formats are conversion targets only. | Every document in the repository is Markdown and none of them is submitted as a converted file; keeping two formats would mean keeping two copies, one of which is always stale. | Internal group review |
