@@ -16,20 +16,16 @@ in English.
 | 1 | USB camera | 1080P UVC module, 3.6 mm low-distortion lens, metal housing | 1 | 200.60 | JD | Image capture |
 | 2 | Glass tank | Low-iron ultra-clear glass, 300×170×200 mm, 5 mm walls, bare tank | 1 | 48.90 | JD | Capture chamber |
 | 3 | Linear polariser | FINNER PL sheet, gloss finish, no adhesive, 200×200 mm, 0.2 mm | 1 | 35.60 | JD | Cross-polarisation, two pieces cut from one sheet |
-| 4 | MCU board | DZYJ ESP32-S3 N16R8 DevKitC, headers pre-soldered | 1 | 26.60 | JD | Trigger, PWM, I2C master |
+| 4 | MCU board | DZYJ ESP32-S3 N16R8 DevKitC, headers pre-soldered | 1 | 26.60 | JD | Trigger, I2C master |
 | 5 | Level shifter | 8-channel bidirectional 3.3 V ↔ 5 V, headers pre-soldered | 1 | 7.10 | JD | Bridges the 5 V sensor to 3.3 V GPIO |
 | 6 | Jumper wires | DZYJ 40-pin ribbon, male-male / male-female / female-female, 120 pcs | 1 | 8.26 | JD | All wiring |
 | 7 | Breadboard | DZYJ MB-102, 1660 tie points, with power rails | 1 | 23.70 | JD | Solderless assembly; the 405-hole board is too small once the ESP32 and shifter are seated |
 | 8 | Turbidity sensor | LIGHT ME2100A-IIC, I2C, reflective | 1 | 18.82 | LCSC | Reads water clarity |
 | 9 | Sensor cable | WHEELTEC GH1.25 4-pin to Dupont female, 200 mm | 1 | 7.84 | JD | Turbidity sensor to the level shifter pins |
-| 10 | Fill-light strip | 12 V flexible silicone strip, about 10 W/m, **neutral white 4000 K**, 5 cm cut marks, self-adhesive | 2 | 7.10 | JD | Fixed light source, replaces the desk lamp; two 50 cm runs side by side, **both the same colour temperature** |
-| 11 | Switch module | IRF520 MOSFET driver module, 3.3 V compatible input, heatsink | 1 | 5.00 | JD | PWM dimming from the ESP32; 0.83 A at 10 W, ample headroom |
-| 12 | Power adapter | 12 V **2 A** DC, 5.5×2.1 mm barrel, overload and short-circuit protected | 1 | 18.20 | JD | Supplies the strip on its own rail; a 1 A unit would run at its rating, sag and dim |
-| 13 | Adapter lead | 5.5×2.1 mm DC socket to screw terminals | 1 | 3.00 | JD | The adapter ends in a barrel plug and the strip in bare wires; without this they do not meet |
 
-**Total ¥417.82.** The three lighting parts were added on 11-07; ADR 09 records why: a desk lamp cannot
-be controlled by the program, and the brightness term of the quality score needs a source that does not
-change between runs. The button is not on the list: a through-hole momentary push button is already on hand. A second, 405-hole breadboard was dropped from the order — the ESP32 with headers, the shifter and the wiring need the 1660-hole board.
+**Total ¥377.42.** The fill light is the Midea MT-10T4 lamp already on hand: 10 W, 4000 K, Ra90,
+USB-powered (DC) and advertised as flicker-free. A strip was planned on 11-07 and withdrawn the same
+day after the lamp was checked — ADR 10.
 
 ## 2. Deliberately not bought
 
@@ -71,9 +67,9 @@ Assemble and power on in five steps, one at a time, so a fault is localised imme
 3. Turbidity sensor — I2C scan finds address `0x49`; clear water reads high, cloudy reads low. Confirm a
    4.7 kΩ pull-up on both SDA and SCL; without them the reads are intermittent, which is the hardest
    fault to diagnose.
-4. Fill light — **the MOSFET ground and the ESP32 ground must be common**; drive the gate with PWM and
-   confirm brightness rises monotonically from 0 to 100 %. The light board runs from its own 12 V supply
-   and **must not be powered from the ESP32's 5 V pin**.
+4. Fill light — run the lamp **on USB, not on its battery**: falling charge drifts the brightness.
+   Set one touch-dimming level and **tape over the touch area**. Tape the polariser flat to the lamp
+   head, corners taut, no warp.
 5. Camera — exposure lock, `python scripts/test_exposure.py` exits 0; at a fixed light level, left/right
    brightness ratio ≥ 0.7 and a 5 cm target ≥ 45 px at 640.
 
@@ -85,8 +81,8 @@ Assemble and power on in five steps, one at a time, so a fault is localised imme
 | Frame stability | 20 consecutive frames, mean brightness spread < 10 % |
 | Lighting | Left/right half brightness ratio ≥ 0.7, no hot spot on the tank wall |
 | Flicker | Filmed by a phone camera, no rolling bars |
-| Light control | PWM from 30 % to 80 % raises mean brightness monotonically, without flicker |
-| Common ground | Light board negative, MOSFET ground and ESP32 ground all show continuity |
+| Light stability | Ten minutes of capture on USB: mean brightness of the first and last frame differ by < 5 % |
+| Polariser flatness | No visible warp; the lens-side sheet locked at the darkest orientation |
 | Target size | A 5 cm object ≥ 45 px wide at 640 input |
 | Turbidity | Clear water reads higher than water with a spoon of milk |
 | Tank | 24 h filled, no seepage, front wall without scratches or tint |

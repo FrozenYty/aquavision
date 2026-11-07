@@ -22,6 +22,12 @@ the usual cause is a decision sitting in the log that belongs in an ADR.
   its own supply replace them — about ¥55, no mains switching next to a water tank. The reason it
   matters is not tidiness: the quality score reads brightness, so a light that moves between runs makes
   the score look broken.
+- **Superseded the same day: the lamp on hand is already a DC source.** ADR 09 bought a 12 V strip
+  because a mains lamp cannot be controlled and would flicker. The lead's Midea MT-10T4 is USB-powered,
+  4000 K, 10 W and advertised as flicker-free — a DC source, so the flicker argument never applied. The
+  strip, MOSFET, adapter and lead are withdrawn (ADR 10), the parts list returns to ¥377.42, and the
+  architecture diagram stops claiming the MCU drives the light. Two rules carry the decision instead of
+  hardware: run the lamp on USB rather than its battery, and tape over the dimmer once it is set.
 - **Two acceptance checks added to the rig, both cheap to run**: PWM from 30 % to 80 % must raise
   brightness monotonically, and the light board, MOSFET and ESP32 grounds must show continuity. A
   floating ground gives a gate signal that switches only sometimes, which is the kind of fault that

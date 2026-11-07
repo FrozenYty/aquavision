@@ -20,7 +20,7 @@ Design goals, in order:
 ```mermaid
 flowchart LR
     CAM[USB camera] --> CAP[Capture service]
-    MCU[ESP32: trigger, light, sensors] -. serial .-> CAP
+    MCU[ESP32: trigger, sensors] -. serial .-> CAP
     CAP --> Q[Quality scoring]
     Q --> DB[(PostgreSQL)]
     Q --> FS[(Local files)]
