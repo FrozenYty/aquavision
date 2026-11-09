@@ -18,10 +18,6 @@
     </div>
 
     <form class="av-card mb-3 row g-2 align-items-end mx-0" id="filters">
-      <div class="col-12 col-md-5">
-        <label class="form-label small" for="f-q">帧号</label>
-        <input class="form-control form-control-sm" id="f-q" name="q" placeholder="如 20261103T0910">
-      </div>
       <div class="col-8 col-md-3">
         <label class="form-label small" for="f-source">来源</label>
         <select class="form-select form-select-sm" id="f-source" name="source"></select>
@@ -32,7 +28,7 @@
     </form>
 
     <section class="av-card">
-      <h2 class="av-card-title">难例 <small class="text-secondary fw-normal">低置信、人工修正、跨模型结果不一致的帧。导出数据集时可一并纳入</small></h2>
+      <h2 class="av-card-title">难例 <small class="text-secondary fw-normal">低置信、复核时修改过、跨模型不一致的帧，导出数据集时可一并纳入</small></h2>
       <div class="row g-3" id="grid"></div>
       <div class="av-pager" id="pager"></div>
     </section>
@@ -41,47 +37,50 @@
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
     import * as api from "../static/js/api.js";
-    import { confirmAction, esc, fmtTime, renderPager, toast } from "../static/js/ui.js";
-    import { CLASSES } from "../static/js/boxes.js";
+    import { confirmAction, esc, fmtTime, loadInto, qualityBadge, renderPager, toast } from "../static/js/ui.js";
 
     renderShell("P-08");
 
     const $ = (id) => document.getElementById(id);
-    // FR-M4-03 sources.
-    const HARD_SOURCES = { low_conf: "低置信", corrected: "被修正", disagree: "跨模型不一致" };
-    const KIND = { low_conf: "warning", corrected: "info", disagree: "danger" };
+    // The server's source codes (FR-M4-03).
+    const HARD_SOURCES = { low_conf: "低置信", modified: "复核修改", inconsistent: "跨模型不一致" };
+    const KIND = { low_conf: "warning", modified: "info", inconsistent: "danger" };
     let page = 1;
 
     $("f-source").innerHTML = '<option value="">全部</option>' +
       Object.entries(HARD_SOURCES).map(([code, name]) => `<option value="${code}">${name}</option>`).join("");
 
-    async function load() {
-      const filters = Object.fromEntries(new FormData($("filters")));
-      const data = await api.listHardSamples({ ...filters, page, size: 8 });
-      $("grid").innerHTML = data.items.length
-        ? data.items.map((h) => `
-          <div class="col-6 col-md-4 col-xl-3">
-            <div class="av-thumb">
-              <div class="av-thumb-img" style="background: center / cover no-repeat url('${esc(h.image_url)}')"></div>
-              <span class="badge text-bg-${KIND[h.source]}">${HARD_SOURCES[h.source]}</span>
-              <div class="av-thumb-meta">
-                <div class="av-mono text-truncate">${esc(h.frame_id)}</div>
-                <div><span class="av-class av-class-${h.class_code}">${CLASSES[h.class_code] ?? ""}</span>
-                  ${h.confidence == null ? "" : `<span class="av-mono">${h.confidence.toFixed(2)}</span>`}</div>
-                <div class="text-truncate" title="${esc(h.reason)}">${esc(h.reason)}</div>
-                <div class="d-flex gap-1 mt-2">
-                  <a class="btn btn-sm btn-outline-secondary" href="frame.html?id=${encodeURIComponent(h.frame_id)}">查看</a>
-                  <button class="btn btn-sm btn-outline-danger" data-frame="${esc(h.frame_id)}" type="button">移出</button>
-                  <span class="ms-auto align-self-center">${fmtTime(h.added_at).slice(5, 15)}</span>
-                </div>
+    // Real frames carry no picture URL yet; they keep the placeholder tile.
+    const thumbStyle = (h) => (h.image_url ? ` style="background: center / cover no-repeat url('${esc(h.image_url)}')"` : "");
+
+    function render(data) {
+      $("grid").innerHTML = data.items.map((h) => `
+        <div class="col-6 col-md-4 col-xl-3">
+          <div class="av-thumb">
+            <div class="av-thumb-img"${thumbStyle(h)}></div>
+            <span class="badge text-bg-${KIND[h.source] ?? "secondary"}">${HARD_SOURCES[h.source] ?? esc(h.source)}</span>
+            <div class="av-thumb-meta">
+              <div class="av-mono text-truncate">${esc(h.frame_id)}</div>
+              <div>${h.quality ? qualityBadge(h.quality) : ""} ${h.captured_at ? fmtTime(h.captured_at).slice(5, 15) : ""}</div>
+              <div class="d-flex gap-1 mt-2">
+                <a class="btn btn-sm btn-outline-secondary" href="frame.html?id=${encodeURIComponent(h.frame_id)}">查看</a>
+                <button class="btn btn-sm btn-outline-danger" data-frame="${esc(h.frame_id)}" type="button">移出</button>
               </div>
             </div>
-          </div>`).join("")
-        : '<div class="col-12 av-empty">没有符合条件的难例。复核时修改过的帧会自动进入这里，去 <a href="review.html">复核工作台</a> 看看。</div>';
-      renderPager($("pager"), data, (n) => { page = n; load().catch(fail); });
+          </div>
+        </div>`).join("");
+      renderPager($("pager"), data, (n) => { page = n; load(); });
     }
 
-    const fail = (err) => toast(err.message, "danger");
+    function load() {
+      const filters = Object.fromEntries(new FormData($("filters")));
+      $("pager").innerHTML = "";
+      return loadInto($("grid"), () => api.listHardSamples({ ...filters, page, size: 8 }), {
+        render,
+        isEmpty: (data) => data.items.length === 0,
+        empty: '没有符合条件的难例。复核时修改过的帧会自动进入这里，去 <a href="review.html">复核工作台</a> 看看。',
+      });
+    }
 
     $("grid").addEventListener("click", async (event) => {
       const id = event.target.closest("button[data-frame]")?.dataset.frame;
@@ -91,17 +90,17 @@
         toast("已移出难例池", "success");
         await load();
       } catch (err) {
-        fail(err);
+        toast(err.message, "danger");
       }
     });
 
     $("filters").addEventListener("submit", (event) => {
       event.preventDefault();
       page = 1;
-      load().catch(fail);
+      load();
     });
 
-    load().catch(fail);
+    load();
   </script>
 </body>
 </html>
