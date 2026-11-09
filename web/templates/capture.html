@@ -31,9 +31,10 @@
             <video id="webcam" class="av-webcam" autoplay muted playsinline hidden></video>
             <span class="av-latency" id="latency" hidden></span>
           </div>
-          <div class="d-flex flex-wrap gap-3 small text-secondary mt-2">
+          <div class="small text-secondary mt-2" id="feed-mode"></div>
+          <div class="d-flex flex-wrap gap-3 small text-secondary mt-1">
             <span id="frame-meta">—</span>
-            <span class="ms-auto">影像来自 DUO 公开数据集样张；正式版由 USB 摄像头实时供帧</span>
+            <span class="ms-auto" id="source-note"></span>
           </div>
         </section>
       </div>
@@ -83,37 +84,49 @@
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
     import * as api from "../static/js/api.js";
-    import { esc, fmtTime, renderPager, toast } from "../static/js/ui.js";
+    import { esc, fmtTime, loadInto, renderPager, toast } from "../static/js/ui.js";
     import { CLASSES, countByClass, stageHtml } from "../static/js/boxes.js";
+    import { openFeed } from "../static/js/live.js";
 
     renderShell("P-03");
 
     const $ = (id) => document.getElementById(id);
-    const GRAB_MS = 3000; // one frame every three seconds reads as a live feed without rushing the demo
-    const LATENCY_MS = 2000;
     const STATUS = {
       open: '<span class="badge text-bg-info">采集中</span>',
       closed: '<span class="badge text-bg-secondary">已结束</span>',
       failed: '<span class="badge text-bg-danger">失败</span>',
     };
+    const MODE = {
+      mock: "演示数据",
+      socket: "实时连接 /ws/capture",
+      polling: "实时连接不可用，已改为每秒轮询最新帧",
+      closed: "实时连接已断开",
+    };
     let current = null;
     let page = 1;
-    let timers = [];
+    let stopFeed = null;
     let stream = null;
+    let frame = {}; // what is on screen now, merged from the feed's updates
 
-    async function loadSessions() {
-      const data = await api.listSessions({ page, size: 5 });
-      $("sessions").innerHTML = data.items.map((s) => `<tr>
-        <td class="av-mono">${esc(s.session_id)}</td><td>${esc(s.site)}</td>
-        <td>${fmtTime(s.started_at)}</td><td>${s.frame_count}</td><td>${s.retake_count}</td>
-        <td>${STATUS[s.status]}</td><td class="text-danger">${esc(s.fail_reason ?? "")}</td></tr>`).join("");
-      renderPager($("pager"), data, (n) => { page = n; loadSessions(); });
-    }
+    // The server derives sessions from frames (frames, retakes); the prototype's fixtures add a site,
+    // a status and a failure reason. Either renders.
+    const loadSessions = (quiet = false) => loadInto($("sessions"), () => api.listSessions({ page, size: 5 }), {
+      quiet,
+      isEmpty: (d) => d.items.length === 0,
+      empty: "还没有采集会话。点“开始采集”打开第一个。",
+      render: (data) => {
+        $("sessions").innerHTML = data.items.map((s) => `<tr>
+          <td class="av-mono">${esc(s.session_id)}</td><td>${esc(s.site ?? "—")}</td>
+          <td>${fmtTime(s.started_at)}</td><td>${s.frames ?? s.frame_count}</td><td>${s.retakes ?? s.retake_count}</td>
+          <td>${s.status ? STATUS[s.status] ?? esc(s.status) : "—"}</td><td class="text-danger">${esc(s.fail_reason ?? "")}</td></tr>`).join("");
+        renderPager($("pager"), data, (n) => { page = n; loadSessions(); });
+      },
+    });
 
     const meter = (label, v) => `<div class="av-meter${v < 60 ? " is-low" : ""}">
-      <span>${label}</span><div class="av-meter-bar"><span style="--v: ${v}"></span></div><strong>${v}</strong></div>`;
+      <span>${label}</span><div class="av-meter-bar"><span style="--v: ${v}"></span></div><strong>${Math.round(v)}</strong></div>`;
 
-    function renderQuality(q) {
+    function renderQuality(q, components) {
       const low = q.verdict !== "ok";
       $("q-ring").classList.toggle("is-low", low);
       $("q-ring").querySelector(".av-ring-value").setAttribute("stroke-dasharray", `${q.score} 100`);
@@ -121,7 +134,10 @@
       $("q-verdict").innerHTML = low
         ? '<span class="badge text-bg-warning">需重拍</span> 低于 60，入库但不识别'
         : '<span class="badge text-bg-success">合格</span> 已送入识别';
-      $("q-meters").innerHTML = meter("清晰度", q.sharpness) + meter("亮度", q.brightness) + meter("色偏", q.colorcast);
+      // The three components exist only at capture time (api-contract §6); a stored frame has the score.
+      $("q-meters").innerHTML = components?.sharpness !== undefined
+        ? meter("清晰度", components.sharpness) + meter("亮度", components.brightness) + meter("色偏", components.colorcast)
+        : '<div class="small text-secondary">分项只在采集当时返回，已入库的帧只保留总分</div>';
     }
 
     function renderCounts(boxes) {
@@ -132,34 +148,50 @@
         `<strong class="ms-auto av-mono">${counts[code]}</strong></li>`).join("");
     }
 
-    function addToStrip(frame) {
+    function addToStrip(f) {
       const strip = $("strip");
       strip.querySelector(".av-empty")?.remove();
-      const retake = frame.quality.verdict !== "ok";
+      const retake = f.quality?.verdict === "retake";
+      const thumb = f.image_url ? `<img src="${esc(f.image_url)}" alt="">` : '<span class="av-strip-blank"></span>';
       strip.insertAdjacentHTML("afterbegin", `
-        <a class="av-strip-item${retake ? " is-retake" : ""}" href="frame.html?id=${encodeURIComponent(frame.frame_id)}">
-          <img src="${esc(frame.image_url)}" alt="">
-          <span class="av-mono">${esc(frame.frame_id.slice(-9))}</span>
-          <span>${retake ? "需重拍" : `质量 ${frame.quality.score}`}</span>
+        <a class="av-strip-item${retake ? " is-retake" : ""}" href="frame.html?id=${encodeURIComponent(f.frame_id)}">
+          ${thumb}<span class="av-mono">${esc(f.frame_id.slice(-9))}</span>
+          <span>${f.quality ? (retake ? "需重拍" : `质量 ${f.quality.score}`) : "—"}</span>
         </a>`);
       while (strip.children.length > 8) strip.lastElementChild.remove();
     }
 
-    async function grabOne() {
-      const frame = await api.grabFrame(current.session_id);
-      const { items: boxes } = await api.getObjects(frame.frame_id);
-      $("live").className = frame.quality.verdict === "ok" ? "" : "is-retake";
-      $("live").innerHTML = stageHtml(frame.image_url, boxes);
-      $("frame-meta").innerHTML = `<span class="av-mono">${esc(frame.frame_id)}</span> · ${fmtTime(frame.captured_at)}`;
-      renderQuality(frame.quality);
-      renderCounts(boxes);
-      addToStrip(frame);
-      await loadSessions();
+    // One update in, every reading out: picture, boxes, quality, counts, strip and latency.
+    function applyUpdate(update) {
+      if (update.latency_ms !== undefined) $("latency").textContent = `延迟 ${update.latency_ms} ms`;
+      else if (update.age_ms !== undefined) $("latency").textContent = `距采集 ${(update.age_ms / 1000).toFixed(1)} s`;
+      if (!("boxes" in update)) return;
+
+      const fresh = update.frame_id && update.frame_id !== frame.frame_id;
+      frame = { ...frame, ...Object.fromEntries(Object.entries(update).filter(([, v]) => v !== undefined)) };
+      $("live").className = frame.quality?.verdict === "retake" ? "is-retake" : "";
+      $("live").innerHTML = stageHtml(frame.image_url, frame.boxes ?? []);
+      if (frame.frame_id) {
+        $("frame-meta").innerHTML = `<span class="av-mono">${esc(frame.frame_id)}</span>${frame.captured_at ? ` · ${fmtTime(frame.captured_at)}` : ""}`;
+      }
+      if (frame.quality) renderQuality(frame.quality, frame.components);
+      renderCounts(frame.boxes ?? []);
+      if (fresh) {
+        addToStrip(frame);
+        loadSessions(true);
+      }
     }
 
-    // Mock latency: a believable figure that moves, refreshed every two seconds (prototype §3).
-    function tickLatency() {
-      $("latency").textContent = `延迟 ${110 + Math.floor(Math.random() * 50)} ms`;
+    function onState(kind, detail) {
+      if (kind === "status") {
+        $("feed-mode").textContent = `${MODE.socket} · ${detail.fps} fps · 队列 ${detail.queue} · 模型 ${detail.model}`;
+        return;
+      }
+      $("feed-mode").textContent = MODE[kind] ?? kind;
+      if (kind === "polling" || kind === "socket") {
+        $("live").className = "";
+        $("live").innerHTML = '<div class="av-state" role="status"><span class="spinner-border spinner-border-sm"></span> 等待第一帧…</div>';
+      }
     }
 
     function setRunning(running) {
@@ -168,21 +200,29 @@
       $("site").disabled = running;
       $("btn-close").disabled = !running;
       $("latency").hidden = !running;
-      timers.forEach(clearInterval);
-      timers = running
-        ? [setInterval(() => run(grabOne), GRAB_MS), setInterval(tickLatency, LATENCY_MS)]
-        : [];
     }
 
-    async function run(action) {
-      try { await action(); } catch (err) { toast(err.message, "danger"); setRunning(false); }
+    async function startSession() {
+      if (stream) await toggleWebcam();
+      current = await api.openSession({ site: $("site").value, camera_index: 0 });
+      frame = {};
+      setRunning(true);
+      stopFeed = await openFeed(current.session_id, applyUpdate, onState, (err) => toast(err.message, "danger"));
     }
 
     async function stopSession() {
       if (!current) return;
+      stopFeed?.();
+      stopFeed = null;
       setRunning(false);
-      await api.closeSession(current.session_id);
-      toast(`会话 ${current.session_id} 已结束`, "success");
+      $("feed-mode").textContent = "";
+      try {
+        await api.closeSession(current.session_id);
+        toast(`会话 ${current.session_id} 已结束`, "success");
+      } catch (err) {
+        // The server keeps no session table: closing one that never received a frame is a 404.
+        toast(err.code === 40401 ? `会话 ${current.session_id} 没有收到任何帧，已结束` : err.message, err.code === 40401 ? "info" : "danger");
+      }
       current = null;
       await loadSessions();
     }
@@ -206,23 +246,23 @@
       $("frame-meta").textContent = "本机摄像头实时画面，此模式不叠加目标框";
     }
 
-    $("btn-open").onclick = () => run(async () => {
-      if (stream) await toggleWebcam();
-      current = await api.openSession({ site: $("site").value, camera_index: 0 });
-      tickLatency();
-      setRunning(true);
-      await grabOne();
-    });
-    $("btn-close").onclick = () => run(stopSession);
+    $("btn-open").onclick = () => startSession().catch((err) => { toast(err.message, "danger"); setRunning(false); });
+    $("btn-close").onclick = () => stopSession();
     $("btn-webcam").onclick = () => toggleWebcam().catch(() => toast("无法打开本机摄像头，请检查浏览器权限", "danger"));
 
-    run(async () => {
-      const [camera] = await api.listCameras();
-      $("camera").textContent = camera ? `· ${camera.name}` : "· 未检测到摄像头";
-      renderCounts([]);
-      $("count-total").textContent = "";
-      await loadSessions();
-    });
+    renderCounts([]);
+    $("count-total").textContent = "";
+    $("source-note").textContent = api.USE_MOCK
+      ? "影像来自 DUO 公开数据集样张；正式版由 USB 摄像头实时供帧"
+      : "影像由采集端的 USB 摄像头提供";
+    // The server lists cameras as { items }; the prototype's fixture is a bare list.
+    api.listCameras()
+      .then((d) => {
+        const [camera] = Array.isArray(d) ? d : d.items;
+        $("camera").textContent = camera ? `· ${camera.name}` : "· 未检测到摄像头";
+      })
+      .catch(() => { $("camera").textContent = "· 无法读取摄像头列表"; });
+    loadSessions();
   </script>
 </body>
 </html>

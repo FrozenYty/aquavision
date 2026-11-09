@@ -73,6 +73,18 @@
 - **Two of screen 6's charts cannot be fed by the contract.** Interception per day and corrections per
   class are drawn from arrays; the server returns totals. Against the server those two cards state the
   totals in words and say what breakdown is missing — lane B's call whether the contract grows.
+- **`P2-08`: the capture page's client is built, the box stays open.** `web/static/js/live.js` feeds the
+  page from one stream — the mock under `?mock=1`, `/ws/capture` as contract §7 describes it, or a
+  one-second poll of the session's newest frame when the socket will not open — and every figure on the
+  page comes from that stream. The poll was verified against the real server with frames posted into
+  the open session; the socket path against a scratch endpoint speaking §7, including a stale result
+  that was correctly dropped. The box is not ticked: the server has no `/ws/capture`, nothing posts the
+  camera's frames to the API yet, and detection still returns 501, so no live detection can be shown.
+- **Contract §7 leaves a client three questions, sent to lane B.** A binary frame carries no
+  `frame_id`, so §8's "correlate by frame id" has nothing to correlate; `detect` carries no quality
+  score for the ring; and the socket's authentication is unspecified. The client accepts an optional
+  `{ type: "frame", frame_id, captured_at, quality }` header before each JPEG and a `quality` field on
+  `detect` if the contract adds them, and works without them.
 
 # Progress
 
