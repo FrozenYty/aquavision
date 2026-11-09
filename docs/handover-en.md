@@ -11,112 +11,150 @@ true next lives here.
 
 - One section per person. Each item states **what exists**, **what is left**, and **how it is checked**.
 - A criterion is something a stranger can run or read and settle. "Works well" is not a criterion.
-- Anything not listed here is not in scope. An unlisted change is welcome, but it arrives as its own
-  pull request with its own reason, not folded into these.
+- Task ids match `PLAN.md`; if the two disagree, `PLAN.md` wins and this file is corrected.
 - §4 applies to every item here, including the ones written for someone else.
 
-## 2. For Gao Tianxiang — P1-02 and the detection path
+## 2. For Gao Tianxiang — the backend and the model
 
-**Read this before opening the branch.** Most of `P1-02` is already built, by the lead, because the
-phase gate could not wait until Monday. Rebuilding it will waste a day and lose the tests.
+### 2.1 Finish `P1-02` (task `P2-05`)
 
-### What already exists and must not be rewritten
+**Read this before opening a branch.** Most of `P1-02` is already built, by the lead, because the phase
+gate could not wait. Rebuilding it costs a day and loses the tests.
+
+What exists and must not be rewritten:
 
 | Piece | Where | State |
 |---|---|---|
-| App factory, envelope, error codes, JWT, role guards | `server/app/main.py`, `envelope.py`, `security.py`, `deps.py` | Done, 42 routes mounted |
-| Task queue rows, cancel, retry | `server/app/routers/tasks.py` | Rows and state machine done; **nothing consumes the queue** |
-| Capture ingest with quality scoring, dedup, clock guard | `server/app/routers/capture.py` | Done |
-| Review, hard-example pool | `routers/review.py`, `routers/hard_samples.py` | Done |
-| Datasets, reports, parameters | `routers/datasets.py`, `reports.py`, `system.py` | Done |
-| The nine-table model and the four new tables | `server/app/models.py` | Done; ADR 08 explains the four |
-| Contract coverage test | `tests/test_api_skeleton.py::test_every_contract_route_is_mounted` | Passing; **do not weaken it** |
+| App factory, envelope, error codes, JWT, role guards | `server/app/main.py`, `envelope.py`, `security.py`, `deps.py` | 42 routes mounted |
+| Capture ingest, quality scoring, dedup, clock guard | `routers/capture.py` | done |
+| Review, hard-example pool | `routers/review.py`, `routers/hard_samples.py` | done |
+| Datasets, reports, parameters | `routers/datasets.py`, `reports.py`, `system.py` | done |
+| Thirteen tables | `server/app/models.py` | done; ADR 08 explains the last four |
+| Contract coverage test | `tests/test_api_skeleton.py` | passing — **do not weaken it** |
 
-### What is left
+What is left:
 
 1. **A real detection path.** `POST /api/detect/frames/{id}` and `/api/detect/batches` return 501
-   because there is no weight file. Load the model once at start-up from `model_version.weight_path`,
-   run inference, write `detect_object` rows, and make the 501 disappear.
+   because no weight file exists. Load the model once at start-up from `model_version.weight_path`, run
+   inference, write `detect_object`, and delete the 501.
 2. **A queue consumer.** `detect_task` rows are written and never processed. A worker that picks up
-   queued tasks, updates `progress` per frame, honours cancel within five seconds (AC-11) and marks
-   failures with a reason.
-3. **Statistics that follow the reviewed basis.** `/api/stats/*` already filters by status; confirm
-   the figures match the dashboard after real detection exists.
-4. **`POST /api/detect/frames` must refuse a frame that never came from capture** (AC-10) — the guard
-   belongs in the handler, not only in the interface.
-
-### How each of those is checked
+   queued tasks, updates `progress` per frame, honours cancel within five seconds (AC-11), and marks a
+   failure with a reason.
+3. **`POST /api/detect/frames` must refuse a frame that never came through capture** (AC-10) — the
+   guard belongs in the handler, not only in the interface.
+4. **Statistics on real results.** `/api/stats/*` filters by review status already; confirm the figures
+   match the dashboard once detection writes rows.
 
 | Claim | The check |
 |---|---|
-| Detection is real inference, not fixtures | Run one frame end to end; the boxes match a manual run of the same weights on the same image; `detect_object` rows carry the model version that produced them |
-| The queue actually runs | Submit 100 frames; progress advances monotonically; the task reaches `done`; `obj_count` matches the rows |
-| Cancel takes effect | Cancel at frame 40; no new result appears after five seconds; the task reads `cancelled` |
-| A failed frame can be retried | Force one failure; the task reads `failed` with a reason; retry resets it and it completes |
-| No fake data anywhere | Every remaining 501 names what is missing in its message |
-| Nothing regressed | `pytest -q` is at least 114 passed; no test skipped, no assertion deleted |
+| Detection is real inference, not fixtures | One frame end to end; boxes match a manual run of the same weights on the same image; rows carry the model version that produced them |
+| The queue actually runs | Submit 100 frames; progress advances monotonically; the task reaches `done`; `obj_count` equals the row count |
+| Cancel takes effect | Cancel at frame 40; no new result after five seconds; the task reads `cancelled` |
+| A failure is retryable | Force one; the task reads `failed` with a reason; retry completes it |
+| Nothing regressed | `pytest` at or above its current count; **no test skipped, no assertion deleted** |
 
-### Constraints
+### 2.2 Dataset and a first baseline (task `P2-06`)
 
-- **Do not change the vision module** (`server/app/vision/`) — it is lane A's, and the camera checks
-  depend on its current behaviour.
-- **Do not rename or drop a column** without an ADR; `EXPECTED_COLUMNS` will fail the suite, and the
-  data model document must move in the same pull request.
-- **Do not add a dependency** without pinning it and updating the CI dependency line in the same
-  commit. CI installs a short explicit list and nothing else.
-- **Do not silence a failing test** to make the gate green. If a test is wrong, say why in the review.
+`models.py` and `train_experiment` exist; nothing has been trained. This task is the **exploratory**
+run: it proves the pipeline end to end and gives the dashboard real numbers. The official E0–E4
+experiments remain `P4-01..03` on the frozen dataset — say so in the pull request, so no one thinks the
+work is being done twice.
 
-## 3. For Sun Jianheng — interface debt
+- **Split DUO once, deterministically**, and write the split to disk with a manifest: 7782 images,
+  official test 1111 held out, the rest split 7:2:1 by the rule the data model already describes. The
+  same seed must produce the same split, and the counts must sum to the total — checked, not assumed.
+- **One baseline run recorded in `train_experiment`** with every metric column filled: `map50`,
+  `map50_95`, `recall_avg`, `fps`, `params_m`, plus the snapshot name, seed, epochs and batch size.
+  An empty metric cell fails this task.
+- **The weights load through `model_version`.** Register the version, activate it, and show that
+  `POST /api/detect/frames` uses it — that is what closes §2.1 item 1.
+- **Say what the numbers mean.** If mAP@0.5 lands far from the 0.75 target, say so in the pull request
+  with a hypothesis, rather than leaving a low number for someone to discover later.
 
-Three items, in this order. The first two are mechanical and can be closed in one pull request.
+### 2.3 Contract tests for every route (task `P2-07`)
 
-### 3.1 The `provisional` markers are now false
+The skeleton tests cover the envelope, the guards and the 501s. They do not cover **the shape of each
+route's payload**, which is the thing the frontend breaks against.
 
-The contract went from 18 routes to 42 (`docs/api-contract-en.md` §6); all 24 that were called
-"provisional" are in it. The comments in `web/static/js/api.js` still say they are not, which now
-misleads every reader.
+- At least one test per **P0** route: status code, `code` field, and the presence and type of the
+  documented fields.
+- A failing reference: delete a field from a serializer and the suite must go red. Demonstrate that
+  once and say so in the pull request.
+- The suite stays runnable with no database server — SQLite, as now.
+- Do not test the framework. Test what this project promises in `docs/api-contract-en.md`.
 
-- Remove every `// provisional` marker; none of those routes is provisional any more.
-- Add a check that fails when the word comes back: a test that reads `api.js` and asserts it appears
-  zero times, so a future edit cannot quietly reintroduce the confusion.
-- Add the matching check on the other side: **every function in `api.js` maps to a route in the
-  contract**. The five contract routes with no frontend caller — `auth/login`, `auth/me`,
-  `tasks/{id}`, `detect/frames`, `compare/frames` — are not to be invented; they are listed in §6 for
-  the backend and will get a caller when the page needs one.
+## 3. For Sun Jianheng — the interface
 
-### 3.2 The sign-in page does not call the backend
+Order matters: 3.1 and 3.2 are mechanical and unblock the rest.
 
-`web/templates/login.html` validates the form and redirects to `home.html`. `POST /api/auth/login`
-exists and works — lockout, JWT, audit row and all.
+### 3.1 `api.js` tells the truth (task `P2-10`)
 
-- Call it when the API is reachable; keep the redirect for the mock-only prototype.
-- A refused sign-in must show the message the server returns, not a generic one: the server's messages
-  already carry the remaining attempts and the lockout time.
+The contract went from 18 routes to 42; every route once called "provisional" is in it. The comments
+still say otherwise, which now misleads every reader.
 
-### 3.3 The copy suggestions
+- Remove every `// provisional` marker.
+- **Add a test that fails if the word returns** — read `api.js`, assert zero occurrences.
+- **Add the mirror check**: every exported function maps to a route in `docs/api-contract-en.md` §6.
+  Five contract routes have no frontend caller yet (`auth/login`, `auth/me`, `tasks/{id}`,
+  `detect/frames`, `compare/frames`) — they are not to be invented; they are listed for the backend.
 
-`docs/copy-review-zh.md` holds nine findings, three of them marked as worth doing first: the sidebar
-group names, the four statistics subtitles, and the day prefix on the dashboard figures. Apply
-whichever the lead approves; the document records what was already applied so nothing is done twice.
+### 3.2 Sign-in (task `P2-11`)
+
+`POST /api/auth/login` works — lockout, JWT, audit row. The page validates and redirects.
+
+- Call the endpoint; store the token; send it as `Authorization: Bearer`.
+- **Show the server's own message** on refusal: it carries the remaining attempts and the lockout time.
+- A 401 from any page returns the user to the form instead of an empty table.
+
+### 3.3 Loading, empty and failure (task `P2-12`)
+
+Mock data never fails, so the pages have never rendered a failure. Real data will.
+
+- Every page that calls the API renders three states: loading, empty, and error.
+- **Stop the server and reload the page** — a plain sentence, not a blank panel or a stuck spinner.
+- A slow response must not look like an empty one.
+
+### 3.4 The capture page streams real frames (task `P2-08`)
+
+`capture.html` currently animates mock detections. `/ws/capture` is specified in the contract §7.
+
+- Live boxes from the socket; polling as the fallback when it cannot connect.
+- The mock path stays reachable through `USE_MOCK` — the prototype must still open on a machine with no
+  backend.
+- The quality ring, the frame strip and the latency figure take their values from the same messages,
+  not from a second source.
+
+### 3.5 Dataset export page (task `P2-09`)
+
+The routes exist: `GET`/`POST /api/datasets`, with a real split and a manifest.
+
+- Export a snapshot, list it, refresh — no mock data on that page.
+- The split counts shown must equal what the server returned; a mismatch here is the defect that makes
+  the export untrustworthy.
+
+### 3.6 The copy review
+
+`docs/copy-review-zh.md` holds nine findings; three are marked as worth doing first. Apply what the lead
+approves; the document already records what was applied, so nothing is done twice.
 
 ## 4. The bar every handover is held to
 
-1. **The repository's own checks pass, run locally, and the output is pasted in the pull request.**
-   All seven, not a summary of them.
-2. **The thing is demonstrable.** A reviewer can perform the claim in the table above without asking
-   the author how.
-3. **The documents move with the code.** A route change updates the contract; a schema change updates
-   the data model and `EXPECTED_COLUMNS`; anything a reader would now believe falsely is corrected in
-   the same pull request.
-4. **A decision that departs from a document gets an ADR.** Silent divergence is the one failure this
-   project cannot afford four writers.
+1. **The repository's own checks pass locally and the output is pasted in the pull request.** All of
+   them, not a summary: `ruff check`, `ruff format --check`, the five document checks, `pytest`, and
+   `pio run` if firmware changed.
+2. **The thing is demonstrable.** A reviewer performs the claim in the table without asking the author.
+3. **Documents move with the code.** A route change updates the contract; a schema change updates the
+   data model and `EXPECTED_COLUMNS`; anything a reader would now believe falsely is corrected in the
+   same pull request.
+4. **A decision that departs from a document gets an ADR.** Silent divergence is the one failure four
+   writers cannot afford.
 5. **No test is deleted or skipped to make the gate green.** If a test is wrong, the pull request says
    which and why.
 6. **The pull request states what is not done.** "It works" is not a report; a known gap named in the
-   description is worth more than a gap found in the defence.
+   description is worth more than one found in the defence.
 
 ## 5. Closing a handover
 
-When an item is accepted, delete its section here and record the outcome in `PROGRESS.md` with the
-date. A handover document that lists finished work stops being read, and the next person then misses
-the one item that still matters.
+When an item is accepted, delete its section here, tick the task in `PLAN.md`, and record the outcome
+in `PROGRESS.md` with the date. A handover document that lists finished work stops being read, and the
+next person then misses the one item that still matters.
