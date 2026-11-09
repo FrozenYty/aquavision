@@ -36,7 +36,8 @@ class Fail extends Error {
 
 // Every page load starts the mock afresh, but screens 3-5 hand a frame from page to page. Frames
 // captured and reviews submitted are kept for the browser tab so the walk-through holds together.
-const STORE = "av-mock-state";
+// Versioned: state saved by an older mock, in older shapes, must not be restored over the new data.
+const STORE = "av-mock-state-v2";
 const saved = (() => {
   try {
     return JSON.parse(sessionStorage.getItem(STORE)) ?? {};
@@ -395,32 +396,29 @@ const ROUTES = {
     return report;
   },
 
-  // Dataset export. An export runs over a few reads, like a background job would.
-  "GET /datasets": () => {
-    for (const ds of DATASETS.filter((d) => d.status === "running")) {
-      ds.progress = Math.min(100, ds.progress + 25);
-      if (ds.progress === 100) ds.status = "done";
-    }
-    persist();
-    return DATASETS;
-  },
+  // Dataset snapshots, as the server answers them: export is synchronous and ready on return.
+  "GET /datasets": () => ({ items: DATASETS, total: DATASETS.length }),
 
   "POST /datasets": ({ body }) => {
-    const { train, val, test } = body?.ratio ?? {};
-    if (train + val + test !== 100) throw new Fail(40001, "划分比例之和必须为 100");
-    if (DATASETS.some((d) => d.status === "running")) throw new Fail(40901, "已有导出任务在进行中");
-    const images = 7782 + (body.include_hard ? hardSamples().length : 0) + Object.keys(REVIEWS).length;
-    const valCount = Math.round((images * val) / 100);
-    const testCount = Math.round((images * test) / 100);
+    if (!/^DS-[A-Za-z0-9_-]+$/.test(body?.snapshot_name ?? "")) throw new Fail(40002, "快照名须以 DS- 开头");
+    if (DATASETS.some((d) => d.snapshot_name === body.snapshot_name)) throw new Fail(40901, "该快照名已存在");
+    const ratios = (body.split_ratio ?? "7:2:1").split(":").map(Number);
+    if (ratios.reduce((a, b) => a + b, 0) !== 10) throw new Fail(40002, "划分比例之和应为 10，例如 7:2:1");
+    const frames = body.only_reviewed === false ? FRAMES.length : Object.keys(REVIEWS).length;
+    if (!frames) throw new Fail(40002, "没有符合条件的帧，无法导出");
+    const val = Math.round((frames * ratios[1]) / 10);
+    const test = Math.round((frames * ratios[2]) / 10);
     const ds = {
-      version: `DS-V${DATASETS.length + 1}`,
-      created_at: new Date().toISOString(),
-      images,
-      split: { train: images - valCount - testCount, val: valCount, test: testCount },
+      dataset_id: Math.max(...DATASETS.map((d) => d.dataset_id)) + 1,
+      snapshot_name: body.snapshot_name,
+      split_ratio: body.split_ratio,
       seed: body.seed,
-      scope: [body.reviewed_only ? "仅复核后结果" : "全部结果", body.include_hard ? "含难例" : "不含难例"].join("，"),
-      status: "running",
-      progress: 0,
+      frame_count: frames,
+      splits: { train: frames - val - test, val, test },
+      groups: Math.ceil(frames / 3),
+      manifest_path: `data/datasets/${body.snapshot_name}/manifest.json`,
+      status: "ready",
+      created_at: new Date().toISOString(),
     };
     DATASETS.unshift(ds);
     persist();

@@ -85,6 +85,14 @@
   score for the ring; and the socket's authentication is unspecified. The client accepts an optional
   `{ type: "frame", frame_id, captured_at, quality }` header before each JPEG and a `quality` field on
   `detect` if the contract adds them, and works without them.
+- **`P2-09` done: the dataset page exports against the real route.** It sends what the server takes — a
+  `DS-` name, the ratio as tenths (`7:2:1`), a seed, reviewed-only — where it had sent percentages and an
+  `include_hard` flag the server never had. Counts on the page are the server's; a snapshot whose splits
+  do not add up to its frame count is marked on the row as a defect rather than smoothed over. Two
+  exports of the same four frames with seed 42 split identically, which is the determinism AC-18 asks for.
+- **The mock's saved state is now versioned.** A tab that had run the old mock restored its old-shaped
+  records over the new data and drew `undefined`; the storage key carries a version so a shape change
+  starts clean.
 
 # Progress
 

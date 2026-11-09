@@ -116,7 +116,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P2-08** The capture page streams real frames · @chemflowers · done when `capture.html` shows
       live detections from `/ws/capture` (or polling if the socket is unavailable), and the mock path
       stays behind `USE_MOCK`
-- [ ] **P2-09** Dataset export page against the real API · @chemflowers · closes AC-18 · done when a snapshot can be
+- [x] **P2-09** Dataset export page against the real API · @chemflowers · closes AC-18 · done when a snapshot can be
       exported, listed and refreshed with no mock data, and the split counts match the server
 - [x] **P2-10** `api.js` tells the truth · @chemflowers · done when no `provisional` marker remains, a
       test fails if the word returns, and every exported function maps to a route in the contract

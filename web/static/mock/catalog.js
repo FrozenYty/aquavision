@@ -19,19 +19,11 @@ export const TASKS = [
 // low_conf (low confidence), modified (changed in review), inconsistent (models disagree).
 export const HARD_SOURCES = ["low_conf", "inconsistent", "low_conf", "modified", "inconsistent", "low_conf", "modified"];
 
-// Dataset snapshots (FR-M4-04). DS-V2 is the cleaned DUO set from P0-01: 7782 images, test 1111,
-// split by perceptual-hash group. Mock field names; the contract's snapshot is in §6.
+// Dataset snapshots (FR-M4-04), in the shape the datasets route returns. DS-V2 is the cleaned DUO
+// set from P0-01: 7782 frames with the official 1111-frame test set held out.
 export const DATASETS = [
-  {
-    version: "DS-V2", created_at: "2026-11-04T16:20:00+08:00", images: 7782,
-    split: { train: 5447, val: 1224, test: 1111 }, seed: 42, scope: "DUO 清洗后全集",
-    status: "done", progress: 100,
-  },
-  {
-    version: "DS-V1", created_at: "2026-10-30T10:05:00+08:00", images: 6200,
-    split: { train: 4340, val: 1240, test: 620 }, seed: 42, scope: "DUO 首批，未去重",
-    status: "done", progress: 100,
-  },
+  { dataset_id: 2, snapshot_name: "DS-V2", split_ratio: "7:2:1", seed: 42, frame_count: 7782, status: "ready", splits: { train: 5447, val: 1224, test: 1111 }, created_at: "2026-11-04T08:20:00+00:00" },
+  { dataset_id: 1, snapshot_name: "DS-V1", split_ratio: "7:2:1", seed: 42, frame_count: 6200, status: "archived", splits: { train: 4340, val: 1240, test: 620 }, created_at: "2026-10-30T02:05:00+00:00" },
 ];
 
 // Inspection reports (FR-M5-04), in the shape the reports route returns.

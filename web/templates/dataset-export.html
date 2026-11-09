@@ -20,44 +20,44 @@
     <div class="row g-3">
       <div class="col-xl-4">
         <form class="av-card" id="export-form" novalidate>
-          <h2 class="av-card-title">样本范围</h2>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="reviewed-only" checked>
-            <label class="form-check-label" for="reviewed-only">只用复核后的结果</label>
-          </div>
-          <div class="form-check mb-3">
-            <input class="form-check-input" type="checkbox" id="include-hard" checked>
-            <label class="form-check-label" for="include-hard">纳入难例池 <span class="text-secondary" id="hard-count"></span></label>
+          <h2 class="av-card-title">导出设置</h2>
+          <label class="form-label small" for="snapshot-name">快照名</label>
+          <input class="form-control form-control-sm mb-1" id="snapshot-name" required pattern="DS-[A-Za-z0-9_\-]+" maxlength="64">
+          <div class="invalid-feedback">以 DS- 开头，只用字母、数字、下划线和短横线</div>
+          <div class="form-check mt-2 mb-3">
+            <input class="form-check-input" type="checkbox" id="only-reviewed" checked>
+            <label class="form-check-label" for="only-reviewed">只用复核过的帧（未复核的结果不算标注）</label>
           </div>
 
-          <h2 class="av-card-title">划分比例（%）</h2>
+          <h2 class="av-card-title">划分比例（训练 : 验证 : 测试，合计 10）</h2>
           <div class="row g-2">
             <div class="col-4"><label class="form-label small" for="r-train">训练</label>
-              <input class="form-control form-control-sm av-ratio" id="r-train" type="number" min="0" max="100" value="70"></div>
+              <input class="form-control form-control-sm av-ratio" id="r-train" type="number" min="0" max="10" value="7"></div>
             <div class="col-4"><label class="form-label small" for="r-val">验证</label>
-              <input class="form-control form-control-sm av-ratio" id="r-val" type="number" min="0" max="100" value="15"></div>
+              <input class="form-control form-control-sm av-ratio" id="r-val" type="number" min="0" max="10" value="2"></div>
             <div class="col-4"><label class="form-label small" for="r-test">测试</label>
-              <input class="form-control form-control-sm av-ratio" id="r-test" type="number" min="0" max="100" value="15"></div>
+              <input class="form-control form-control-sm av-ratio" id="r-test" type="number" min="0" max="10" value="1"></div>
           </div>
           <div class="small mt-1" id="ratio-note"></div>
 
           <div class="row g-2 mt-2">
             <div class="col-6"><label class="form-label small" for="seed">随机种子</label>
-              <input class="form-control form-control-sm" id="seed" type="number" value="42" required>
-              <div class="invalid-feedback">随机种子须为整数；数据与种子相同时划分可复现</div></div>
-            <div class="col-6"><span class="form-label small d-block">格式与划分方式</span>
-              <span class="small text-secondary">YOLO txt · 按相似帧分组，同组不跨集合</span></div>
+              <input class="form-control form-control-sm" id="seed" type="number" min="0" value="42" required>
+              <div class="invalid-feedback">请填写非负整数；同样的帧和种子总会得到同样的划分</div></div>
+            <div class="col-6"><span class="form-label small d-block">划分方式</span>
+              <span class="small text-secondary">按采集时间相近的帧分组，同组不跨集合</span></div>
           </div>
 
           <button class="btn btn-primary w-100 mt-3" id="btn-export" type="submit">导出新快照</button>
+          <div class="mt-3" id="export-result"></div>
         </form>
       </div>
       <div class="col-xl-8">
         <section class="av-card">
-          <h2 class="av-card-title">快照记录 <small class="text-secondary fw-normal">训练实验按版本号引用</small></h2>
+          <h2 class="av-card-title">快照记录 <small class="text-secondary fw-normal">训练实验按快照名引用</small></h2>
           <div class="table-responsive">
             <table class="table table-hover align-middle mb-0 small">
-              <thead><tr><th>版本</th><th>导出时间</th><th>图像</th><th>训练/验证/测试</th><th>种子</th><th>范围</th><th>状态</th><th></th></tr></thead>
+              <thead><tr><th>快照</th><th>导出时间</th><th>帧数</th><th>训练/验证/测试</th><th>比例</th><th>种子</th><th>状态</th></tr></thead>
               <tbody id="snapshots"></tbody>
             </table>
           </div>
@@ -69,80 +69,97 @@
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
     import * as api from "../static/js/api.js";
-    import { esc, fmtTime, toast } from "../static/js/ui.js";
+    import { esc, fmtTime, loadInto, toast } from "../static/js/ui.js";
 
     renderShell("P-09");
 
     const $ = (id) => document.getElementById(id);
-    const POLL_MS = 1000;
-    let timer = null;
-
-    const ratio = () => ({ train: Number($("r-train").value), val: Number($("r-val").value), test: Number($("r-test").value) });
+    // The datasets route's status words.
+    const STATUS = { ready: ["可用", "success"], building: ["生成中", "info"], archived: ["已归档", "secondary"] };
+    const ratio = () => [$("r-train"), $("r-val"), $("r-test")].map((el) => Number(el.value));
 
     // Field-level feedback as the numbers change (SRS §5.1: errors next to the field).
     function checkRatio() {
-      const r = ratio();
-      const sum = r.train + r.val + r.test;
-      const ok = sum === 100;
+      const parts = ratio();
+      const sum = parts.reduce((a, b) => a + b, 0);
+      const ok = sum === 10 && parts.every((n) => Number.isInteger(n) && n >= 0);
       document.querySelectorAll(".av-ratio").forEach((el) => el.classList.toggle("is-invalid", !ok));
       $("ratio-note").className = `small mt-1 ${ok ? "text-secondary" : "text-danger"}`;
-      $("ratio-note").textContent = ok ? "合计 100%" : `合计 ${sum}%，三项之和必须为 100`;
+      $("ratio-note").textContent = ok ? `合计 10（${parts.join(":")}）` : `合计 ${sum}，三项须为整数且之和为 10`;
       return ok;
     }
 
-    function statusCell(d) {
-      if (d.status === "done") return '<span class="badge text-bg-success">已完成</span>';
-      return `<div class="progress av-progress"><div class="progress-bar" style="width: ${d.progress}%"></div></div>
-        <span class="av-mono">${d.progress}%</span>`;
+    // The page shows the server's numbers as they are; a snapshot whose splits do not add up to its
+    // frame count is a defect, and says so instead of being rounded away.
+    function splitCell(d) {
+      const { train = 0, val = 0, test = 0 } = d.splits ?? {};
+      const mismatch = train + val + test !== d.frame_count
+        ? `<div class="text-danger">合计 ${train + val + test} ≠ ${d.frame_count}</div>` : "";
+      return `<span class="av-mono">${train} / ${val} / ${test}</span>${mismatch}`;
+    }
+
+    function render({ items }) {
+      $("snapshots").innerHTML = items.map((d) => {
+        const [label, kind] = STATUS[d.status] ?? [d.status, "secondary"];
+        return `<tr>
+          <td class="av-mono fw-bold">${esc(d.snapshot_name)}</td>
+          <td>${fmtTime(d.created_at).slice(0, -3)}</td>
+          <td class="av-mono">${d.frame_count}</td>
+          <td>${splitCell(d)}</td>
+          <td class="av-mono">${esc(d.split_ratio)}</td>
+          <td class="av-mono">${d.seed}</td>
+          <td><span class="badge text-bg-${kind}">${label}</span></td></tr>`;
+      }).join("");
     }
 
     async function loadSnapshots() {
-      const list = await api.listDatasets();
-      $("snapshots").innerHTML = list.map((d) => `<tr>
-        <td class="av-mono fw-bold">${esc(d.version)}</td>
-        <td>${fmtTime(d.created_at).slice(0, -3)}</td>
-        <td class="av-mono">${d.images}</td>
-        <td class="av-mono">${d.split.train} / ${d.split.val} / ${d.split.test}</td>
-        <td class="av-mono">${d.seed}</td>
-        <td class="text-wrap">${esc(d.scope)}</td>
-        <td>${statusCell(d)}</td>
-        <td>${d.status === "done" ? '<button class="btn btn-sm btn-outline-secondary" data-download type="button">下载</button>' : ""}</td></tr>`).join("");
-      const running = list.some((d) => d.status === "running");
-      $("btn-export").disabled = running;
-      clearTimeout(timer);
-      if (running) timer = setTimeout(() => loadSnapshots().catch(fail), POLL_MS);
+      const data = await loadInto($("snapshots"), api.listDatasets, {
+        render,
+        isEmpty: (d) => d.items.length === 0,
+        empty: "还没有导出过数据集快照",
+      });
+      // Suggest the next free DS-Vn — also for an empty list — unless the user has typed a name.
+      if (data && !$("snapshot-name").dataset.touched) {
+        const used = data.items.map((d) => Number(/^DS-V(\d+)$/.exec(d.snapshot_name)?.[1] ?? 0));
+        $("snapshot-name").value = `DS-V${Math.max(0, ...used) + 1}`;
+      }
     }
 
-    const fail = (err) => toast(err.message, "danger");
-
     document.querySelectorAll(".av-ratio").forEach((el) => el.addEventListener("input", checkRatio));
+    $("snapshot-name").addEventListener("input", () => { $("snapshot-name").dataset.touched = "1"; });
 
     $("export-form").addEventListener("submit", async (event) => {
       event.preventDefault();
-      const seedOk = $("seed").value !== "" && Number.isInteger(Number($("seed").value));
+      const nameOk = $("snapshot-name").checkValidity();
+      const seedOk = $("seed").value !== "" && Number.isInteger(Number($("seed").value)) && Number($("seed").value) >= 0;
+      $("snapshot-name").classList.toggle("is-invalid", !nameOk);
       $("seed").classList.toggle("is-invalid", !seedOk);
-      if (!checkRatio() || !seedOk) return;
+      if (!checkRatio() || !nameOk || !seedOk) return;
+      $("btn-export").disabled = true;
+      $("btn-export").textContent = "导出中…";
       try {
         const ds = await api.exportDataset({
-          ratio: ratio(),
+          snapshot_name: $("snapshot-name").value.trim(),
+          split_ratio: ratio().join(":"),
           seed: Number($("seed").value),
-          reviewed_only: $("reviewed-only").checked,
-          include_hard: $("include-hard").checked,
+          only_reviewed: $("only-reviewed").checked,
         });
-        toast(`开始导出 ${ds.version}，共 ${ds.images} 张`, "success");
+        $("export-result").innerHTML = `<div class="alert alert-success small mb-0">
+          <strong>${esc(ds.snapshot_name)}</strong> 已导出：${ds.frame_count} 帧，${ds.groups} 组，
+          训练 ${ds.splits.train} / 验证 ${ds.splits.val} / 测试 ${ds.splits.test}
+          <div class="av-mono text-truncate" title="${esc(ds.manifest_path)}">${esc(ds.manifest_path)}</div></div>`;
+        delete $("snapshot-name").dataset.touched;
         await loadSnapshots();
       } catch (err) {
-        fail(err);
+        $("export-result").innerHTML = `<div class="alert alert-danger small mb-0">${esc(err.message)}</div>`;
+      } finally {
+        $("btn-export").disabled = false;
+        $("btn-export").textContent = "导出新快照";
       }
     });
 
-    $("snapshots").addEventListener("click", (event) => {
-      if (event.target.closest("[data-download]")) toast("原型阶段不生成真实文件；正式版下载 YOLO 格式压缩包", "info");
-    });
-
     checkRatio();
-    api.listHardSamples({ size: 1 }).then((d) => { $("hard-count").textContent = `（当前 ${d.total} 帧）`; }).catch(fail);
-    loadSnapshots().catch(fail);
+    loadSnapshots();
   </script>
 </body>
 </html>
