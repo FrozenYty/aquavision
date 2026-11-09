@@ -31,9 +31,9 @@
       <p class="text-secondary small mb-4">使用分配的账号进入系统</p>
 
       <div class="mb-3">
-        <label class="form-label" for="account">手机号或邮箱</label>
+        <label class="form-label" for="account">账号、手机号或邮箱</label>
         <input class="form-control" id="account" name="account" autocomplete="username" required>
-        <div class="invalid-feedback">请输入手机号或邮箱</div>
+        <div class="invalid-feedback">请输入账号</div>
       </div>
       <div class="mb-3">
         <label class="form-label" for="password">密码</label>
@@ -41,27 +41,46 @@
                autocomplete="current-password" required>
         <div class="invalid-feedback">请输入密码</div>
       </div>
-      <div class="mb-3">
-        <label class="form-label" for="captcha">图形验证码</label>
-        <div class="input-group">
-          <input class="form-control" id="captcha" name="captcha" maxlength="4" required>
-          <span class="input-group-text av-mono" title="验证码图片由服务端提供">8K3W</span>
-          <div class="invalid-feedback">请输入验证码</div>
-        </div>
-      </div>
 
-      <button class="btn btn-primary w-100" type="submit">登录</button>
-      <div class="text-end mt-3"><a class="small" href="#">找回密码</a></div>
+      <div class="alert alert-danger small py-2" id="login-error" role="alert" hidden></div>
+      <button class="btn btn-primary w-100" id="btn-login" type="submit">登录</button>
+      <p class="small text-secondary mt-3 mb-0" id="login-hint">忘记密码请联系管理员在“系统管理”中重置。</p>
     </form>
   </main>
 
   <script type="module">
-    // Until /api/auth/login exists, a filled-in form simply opens the workbench.
-    const form = document.getElementById("login-form");
-    form.addEventListener("submit", (event) => {
+    import * as api from "../static/js/api.js";
+
+    const $ = (id) => document.getElementById(id);
+    const form = $("login-form");
+
+    // Only a bare page name is accepted as the destination, never a URL.
+    const next = new URLSearchParams(location.search).get("next") ?? "";
+    const target = /^[a-z-]+\.html(\?[\w=&%.-]*)?$/.test(next) ? next : "home.html";
+
+    if (api.USE_MOCK) $("login-hint").textContent = "演示模式：任意账号和密码都能登录，数据为模拟数据。";
+
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
       form.classList.add("was-validated");
-      if (form.checkValidity()) location.href = "home.html";
+      $("login-error").hidden = true;
+      if (!form.checkValidity()) return;
+      $("btn-login").disabled = true;
+      $("btn-login").textContent = "登录中…";
+      try {
+        api.saveSession(await api.login($("account").value.trim(), $("password").value));
+        location.href = target;
+      } catch (err) {
+        // The server's own words: they carry the attempts left and the lockout time (AC-01).
+        $("login-error").textContent = err.message;
+        $("login-error").hidden = false;
+        form.classList.remove("was-validated"); // the server spoke; an empty-field hint would only add noise
+        $("password").value = "";
+        $("password").focus();
+      } finally {
+        $("btn-login").disabled = false;
+        $("btn-login").textContent = "登录";
+      }
     });
   </script>
 </body>

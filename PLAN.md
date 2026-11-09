@@ -120,7 +120,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       exported, listed and refreshed with no mock data, and the split counts match the server
 - [x] **P2-10** `api.js` tells the truth · @chemflowers · done when no `provisional` marker remains, a
       test fails if the word returns, and every exported function maps to a route in the contract
-- [ ] **P2-11** Sign-in against the real endpoint · @chemflowers · closes AC-01 · done when the login page calls
+- [x] **P2-11** Sign-in against the real endpoint · @chemflowers · closes AC-01 · done when the login page calls
       `POST /api/auth/login`, stores the token, shows the server's own lockout message, and a 401 from
       any page returns the user to the form
 - [ ] **P2-12** Loading, empty and failure states · @chemflowers · done when every page that calls the

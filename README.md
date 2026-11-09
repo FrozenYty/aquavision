@@ -60,8 +60,9 @@ The pages need no build. Serve `web/` and open the login page:
 python -m http.server 8765 --directory web
 ```
 
-Then visit <http://localhost:8765/templates/login.html>. Data comes from `web/static/mock/` until
-`USE_MOCK` in `web/static/js/api.js` is switched off.
+Then visit <http://localhost:8765/templates/login.html?mock=1>. The `?mock=1` flag runs the pages on
+`web/static/mock/` for that browser tab, so the prototype opens with no backend; without it every page
+calls the real API and asks for a sign-in.
 
 ## Team
 

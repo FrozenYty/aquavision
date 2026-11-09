@@ -1,7 +1,8 @@
 // Shared shell: top bar, left menu and footer. Every page except login calls renderShell(pageId).
 // Menu groups follow the business domains of SRS §5.1; page IDs follow the SRS page list (§5.2).
 
-import { USE_MOCK } from "./api.js";
+import { USE_MOCK, clearSession, currentUser, hasSession, toLogin } from "./api.js";
+import { esc } from "./ui.js";
 
 // Page ids follow SRS §5.2. Entries without href are not built in the prototype: they stay in the
 // menu, greyed and tagged P2, so the full system reads as a schedule rather than as missing pages.
@@ -48,6 +49,7 @@ const MENU = [
 const DATA_SOURCE = "数据来源：公开水下数据集与教学演示水箱影像，不含真实海域位置信息。";
 
 function topbarHtml() {
+  const name = currentUser()?.real_name || currentUser()?.username || "演示账号";
   return `
     <button class="av-menu-toggle" type="button" aria-label="展开菜单">☰</button>
     <a class="av-brand" href="home.html">
@@ -58,8 +60,8 @@ function topbarHtml() {
     <div class="av-topbar-actions">
       <span class="av-clock" aria-hidden="true"></span>
       <a href="admin.html?tab=messages" title="站内消息">消息 <span class="badge rounded-pill text-bg-info">0</span></a>
-      <span class="av-topbar-user"><span class="av-avatar" aria-hidden="true">演</span> 演示账号</span>
-      <a href="login.html">退出</a>
+      <span class="av-topbar-user"><span class="av-avatar" aria-hidden="true">${esc(name.slice(0, 1))}</span> ${esc(name)}</span>
+      <a href="login.html" id="sign-out">退出</a>
     </div>`;
 }
 
@@ -118,6 +120,11 @@ function startClock(el) {
 }
 
 export function renderShell(pageId) {
+  // No token, no page: an empty table behind a missing login helps nobody (handover §3.2).
+  if (!hasSession()) {
+    toLogin();
+    return;
+  }
   const topbar = document.createElement("header");
   topbar.className = "av-topbar";
   topbar.innerHTML = topbarHtml();
@@ -148,6 +155,8 @@ export function renderShell(pageId) {
       el.style.setProperty("--i", i++);
     }
   }
+
+  topbar.querySelector("#sign-out").addEventListener("click", clearSession);
 
   topbar.querySelector(".av-menu-toggle").addEventListener("click", () => {
     document.body.classList.toggle("av-menu-open");

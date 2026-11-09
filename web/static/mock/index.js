@@ -166,6 +166,16 @@ function findSession(id) {
 }
 
 const ROUTES = {
+  // Demo mode accepts any non-empty account; the real lockout and audit live on the server.
+  "POST /auth/login": ({ body }) => {
+    if (!body?.username || !body?.password) throw new Fail(40001, "请输入账号和密码");
+    return {
+      token: "mock-token",
+      expires_at: new Date(Date.now() + 8 * 3600e3).toISOString(),
+      user: { user_id: 1, username: body.username, real_name: "演示账号", role: "admin" },
+    };
+  },
+
   "GET /cameras": () => CAMERAS,
 
   "GET /capture/sessions": ({ query }) =>
