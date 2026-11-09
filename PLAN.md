@@ -94,6 +94,42 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P2-04** Minimal review loop: delete, add, relabel · @chemflowers @Gtechson · done when the
       edit persists and the count updates without a page reload
 
+      **Backend and model · @Gtechson**
+
+- [ ] **P2-05** Finish P1-02: detection, the queue consumer, reviewed statistics · @Gtechson · done
+      when `POST /api/detect/frames/{id}` returns boxes from real weights, a batch task advances to
+      `done` on its own, and `/api/stats/*` matches the dashboard — the acceptance list is
+      `docs/handover-en.md` §2
+- [ ] **P2-06** DUO dataset preparation and a first baseline run · @Gtechson · done when the split is
+      written to disk with a manifest, one baseline experiment is recorded in `train_experiment`, and
+      its weights load through `model_version`
+      - this is the **exploratory** run that unblocks P2-01 and gives the dashboard real numbers; the
+        official E0–E4 experiments stay at P4-01..03 on the frozen dataset, and the difference is
+        stated in the pull request so nobody thinks the work is done twice
+- [ ] **P2-07** API contract tests for every route · @Gtechson · done when each P0 route has at least
+      one test asserting status, envelope and payload shape, and the suite still runs without a
+      database server
+
+      **Frontend and interface · @chemflowers**
+
+- [ ] **P2-08** The capture page streams real frames · @chemflowers · done when `capture.html` shows
+      live detections from `/ws/capture` (or polling if the socket is unavailable), and the mock path
+      stays behind `USE_MOCK`
+- [ ] **P2-09** Dataset export page against the real API · @chemflowers · done when a snapshot can be
+      exported, listed and refreshed with no mock data, and the split counts match the server
+- [ ] **P2-10** `api.js` tells the truth · @chemflowers · done when no `provisional` marker remains, a
+      test fails if the word returns, and every exported function maps to a route in the contract
+- [ ] **P2-11** Sign-in against the real endpoint · @chemflowers · done when the login page calls
+      `POST /api/auth/login`, stores the token, shows the server's own lockout message, and a 401 from
+      any page returns the user to the form
+- [ ] **P2-12** Loading, empty and failure states · @chemflowers · done when every page that calls the
+      API renders all three states, and a killed server produces a message rather than a blank screen
+
+      **Together**
+
+- [ ] **P2-13** Rehearse the P2 gate end to end · @Gtechson @chemflowers · done when someone who has
+      not seen the system completes the slice from a cold start in under two minutes, twice in a row
+
 - [ ] **GATE P2** — from a cold start, someone who has not seen the system completes the slice in
       three minutes, no restart, no manual database edit
 

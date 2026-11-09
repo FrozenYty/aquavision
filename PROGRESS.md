@@ -1,3 +1,18 @@
+## 2026-11-09
+
+- **Nine tasks assigned for P2, split by lane, each with a criterion a stranger can run.** Backend and
+  model: finish `P1-02` (detection, the queue consumer, reviewed statistics), prepare the DUO split and
+  run one exploratory baseline, and add contract tests for every P0 route. Interface: `api.js` stops
+  claiming routes are provisional, sign-in calls the real endpoint, every page renders loading, empty
+  and failure, the capture page streams real frames, and the dataset export page loses its mocks.
+- **The baseline moved out of `P4` into `P2-06`, deliberately.** Training is wall-clock work with
+  iteration in it; leaving all of it in the final phase means discovering model problems with no time
+  left to answer them. The phase boundary is stated in the task so the official E0–E4 runs at `P4`
+  are not mistaken for the same work done twice.
+- **`docs/handover-en.md` was rewritten as the acceptance list rather than a note.** It opens by naming
+  what already exists — the cheapest mistake on a Monday is rebuilding a skeleton that is already
+  there — and every remaining item is paired with the check that settles it.
+
 # Progress
 
 > Owner: whoever did the work · Revisit when: continuously, append only
