@@ -48,18 +48,13 @@
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
     import * as api from "../static/js/api.js";
-    import { esc, fmtTime, qualityBadge, toast } from "../static/js/ui.js";
+    import { esc, fmtTime, loadInto, qualityBadge } from "../static/js/ui.js";
     import { CLASSES, countByClass, stageHtml, statusBadge } from "../static/js/boxes.js";
 
     renderShell("P-06");
 
     const $ = (id) => document.getElementById(id);
-    async function load() {
-      // Without ?id= the page opens the first frame, so the menu entry is never a dead end.
-      const id = new URLSearchParams(location.search).get("id")
-        ?? (await api.listFrames({ page: 1, size: 1 })).items[0].frame_id;
-      const [frame, boxes] = await Promise.all([api.getFrame(id), api.getObjects(id)]);
-
+    function render({ frame, boxes }) {
       $("frame-id").textContent = frame.frame_id;
       $("btn-review").href = `review.html?id=${encodeURIComponent(frame.frame_id)}`;
       $("stage").className = frame.quality.verdict === "ok" ? "" : "is-retake";
@@ -73,7 +68,7 @@
       $("objects").innerHTML = boxes.length
         ? boxes.map((b) => `<tr data-id="${b.object_id}">
             <td class="av-mono">${b.object_id}</td>
-            <td><span class="av-class av-class-${b.class_code}">${CLASSES[b.class_code]}</span></td>
+            <td><span class="av-class av-class-${b.class_code}">${CLASSES[b.class_code] ?? esc(b.class_code)}</span></td>
             <td class="av-mono">${b.is_manual ? "人工" : b.confidence.toFixed(2)}</td>
             <td>${statusBadge(b)}</td></tr>`).join("")
         : '<tr><td colspan="4" class="text-secondary">这一帧没有识别结果</td></tr>';
@@ -84,13 +79,27 @@
         `<strong class="ms-auto av-mono">${counts[code]}</strong></li>`).join("");
     }
 
+    // Without ?id= the page opens the newest frame, so the menu entry is never a dead end.
+    async function fetchFrame() {
+      const id = new URLSearchParams(location.search).get("id")
+        ?? (await api.listFrames({ page: 1, size: 1 })).items[0]?.frame_id;
+      if (!id) return null;
+      const [frame, objects] = await Promise.all([api.getFrame(id), api.getObjects(id)]);
+      return { frame, boxes: objects.items };
+    }
+
+    loadInto($("stage"), fetchFrame, {
+      render,
+      isEmpty: (data) => data === null,
+      empty: '还没有任何帧。先去 <a href="capture.html">采集控制</a> 采一帧。',
+    });
+
     // Hovering a row lights its box, so list and picture read as one.
     $("objects").addEventListener("mouseover", (event) => {
       const id = event.target.closest("tr")?.dataset.id;
       document.querySelectorAll("#stage .av-box").forEach((el) => el.classList.toggle("is-hot", el.dataset.id === id));
     });
 
-    load().catch((err) => toast(err.message, "danger"));
   </script>
 </body>
 </html>

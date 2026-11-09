@@ -65,18 +65,17 @@
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
     import * as api from "../static/js/api.js";
-    import { esc, fmtTime, toast } from "../static/js/ui.js";
+    import { esc, fmtTime, loadInto, toast } from "../static/js/ui.js";
     import { CLASSES } from "../static/js/boxes.js";
 
     renderShell("P-11");
 
     const $ = (id) => document.getElementById(id);
-    const POLL_MS = 1000;
     const TEMPLATE = { standard: "标准巡检", brief: "简版" };
     const BASIS = { reviewed: "复核后结果", raw: "原始识别结果" };
-    let species = [];
-    let quality = [];
-    let timer = null;
+    // The reports route's status words.
+    const STATUS = { ready: ["已生成", "success"], generating: ["生成中", "info"], failed: ["失败", "danger"] };
+    let stats = null;
 
     const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
@@ -98,46 +97,60 @@
       return ok ? { label: `${from} 至 ${to} `, from, to } : null;
     }
 
+    // The server answers /stats/species with { items: [{ class_code, count, share }] } and
+    // /stats/quality with totals; the prototype's fixtures still hold per-class and per-day arrays.
+    function adapt([species, quality]) {
+      const rows = Array.isArray(species)
+        ? species.map((r) => ({ class_code: r.class_code, count: r.box_count }))
+        : species.items.map((r) => ({ class_code: r.class_code, count: r.count }));
+      const totals = Array.isArray(quality)
+        ? quality.reduce((t, q) => ({ total: t.total + q.total, rejected: t.rejected + q.intercepted }), { total: 0, rejected: 0 })
+        : { total: quality.total, rejected: quality.rejected };
+      return { rows, ...totals };
+    }
+
     function renderPreview() {
+      if (!stats) return;
       const p = period();
-      const total = species.reduce((sum, s) => sum + s.box_count, 0);
-      const frames = quality.reduce((sum, q) => sum + q.total, 0);
-      const intercepted = quality.reduce((sum, q) => sum + q.intercepted, 0);
-      const rows = species.map((s) => `<tr><td><span class="av-class av-class-${s.class_code}">${CLASSES[s.class_code]}</span></td>
-        <td class="av-mono">${s.box_count}</td><td class="av-mono">${((s.box_count / total) * 100).toFixed(1)}%</td></tr>`).join("");
+      const all = stats.rows.reduce((sum, r) => sum + r.count, 0);
+      const rows = stats.rows.length
+        ? stats.rows.map((r) => `<tr><td><span class="av-class av-class-${r.class_code}">${CLASSES[r.class_code] ?? esc(r.class_code)}</span></td>
+            <td class="av-mono">${r.count}</td><td class="av-mono">${((r.count / all) * 100).toFixed(1)}%</td></tr>`).join("")
+        : '<tr><td colspan="3" class="text-secondary">所选口径下还没有识别结果</td></tr>';
       const standard = $("template").value === "standard";
+      const rate = stats.total ? `${((stats.rejected / stats.total) * 100).toFixed(1)}%` : "—";
       $("preview").innerHTML = `
         <h3>${esc(p ? `${p.label}巡检报告` : "巡检报告")}</h3>
         <p class="text-secondary small">统计周期：${p ? `${p.from} 至 ${p.to}` : "请选择有效的日期范围"}</p>
         <h4>一、物种组成</h4>
         <table class="table table-sm small mb-3"><thead><tr><th>物种</th><th>目标数</th><th>占比</th></tr></thead><tbody>${rows}</tbody></table>
         ${standard ? `<h4>二、质量拦截</h4>
-        <p class="small">近 7 日共采集 <strong>${frames}</strong> 帧，拦截低质量帧 <strong>${intercepted}</strong> 帧，
-          拦截率 <strong>${((intercepted / frames) * 100).toFixed(1)}%</strong>。被拦截的帧只入库、不识别。</p>
+        <p class="small">近 7 日共采集 <strong>${stats.total}</strong> 帧，拦截低质量帧 <strong>${stats.rejected}</strong> 帧，
+          拦截率 <strong>${rate}</strong>。被拦截的帧只入库、不识别。</p>
         <h4>三、模型信息</h4>
-        <p class="small">在线模型 v8n-E3，结果均可追溯到帧、模型版本与参数。</p>` : ""}
-        <footer>模型版本 v8n-E3 · 统计口径：${BASIS[$("basis").value]} · 数据为演示数据，非真实运行结果</footer>`;
+        <p class="small">报告记录生成时的在线模型版本，结果均可追溯到帧、模型版本与参数。</p>` : ""}
+        <footer>统计口径：${BASIS[$("basis").value]}${api.USE_MOCK ? " · 数据为演示数据，非真实运行结果" : ""}</footer>`;
     }
+
+    const day = (value) => (value ? value.slice(0, 10) : "—");
 
     function statusCell(r) {
-      if (r.status === "done") return '<span class="badge text-bg-success">已生成</span>';
-      return `<div class="progress av-progress"><div class="progress-bar" style="width: ${r.progress}%"></div></div>`;
+      const [label, kind] = STATUS[r.status] ?? [r.status, "secondary"];
+      return `<span class="badge text-bg-${kind}">${label}</span>${r.error_msg ? `<div class="text-danger">${esc(r.error_msg)}</div>` : ""}`;
     }
 
-    async function loadHistory() {
-      const list = await api.listReports();
-      $("history").innerHTML = list.map((r) => `<tr>
-        <td>${esc(r.title)}</td><td class="av-mono">${esc(r.period)}</td><td>${TEMPLATE[r.template]}</td>
-        <td>${BASIS[r.basis]}</td><td class="av-mono">${esc(r.model_version)}</td><td>${fmtTime(r.created_at).slice(0, -3)}</td>
-        <td>${statusCell(r)}</td>
-        <td>${r.status === "done" ? '<div class="d-flex gap-1"><button class="btn btn-sm btn-outline-secondary" data-format="Word" type="button">Word</button><button class="btn btn-sm btn-outline-secondary" data-format="PDF" type="button">PDF</button></div>' : ""}</td></tr>`).join("");
-      const running = list.some((r) => r.status === "running");
-      $("btn-generate").disabled = running;
-      clearTimeout(timer);
-      if (running) timer = setTimeout(() => loadHistory().catch(fail), POLL_MS);
-    }
-
-    const fail = (err) => toast(err.message, "danger");
+    const loadHistory = () => loadInto($("history"), () => api.listReports(), {
+      isEmpty: (d) => d.items.length === 0,
+      empty: "还没有生成过报告。选好周期后点“生成报告”。",
+      render: ({ items }) => {
+        $("history").innerHTML = items.map((r) => `<tr>
+          <td class="av-mono">${esc(r.report_code)}</td><td class="av-mono">${day(r.period_start)} ~ ${day(r.period_end)}</td>
+          <td>${TEMPLATE[r.template] ?? esc(r.template)}</td><td>${BASIS[r.basis] ?? esc(r.basis)}</td>
+          <td class="av-mono">${r.model_version_id == null ? "—" : `#${r.model_version_id}`}</td><td>${fmtTime(r.created_at).slice(0, -3)}</td>
+          <td>${statusCell(r)}</td>
+          <td>${r.status === "ready" ? `<div class="d-flex gap-1" title="${esc(r.file_path ?? "")}"><button class="btn btn-sm btn-outline-secondary" data-format="Word" type="button">Word</button><button class="btn btn-sm btn-outline-secondary" data-format="PDF" type="button">PDF</button></div>` : ""}</td></tr>`).join("");
+      },
+    });
 
     $("period").addEventListener("change", () => {
       $("custom-range").hidden = $("period").value !== "custom";
@@ -149,24 +162,37 @@
       event.preventDefault();
       const p = period();
       if (!p) return toast("请先选好有效的日期范围", "warning");
+      $("btn-generate").disabled = true;
       try {
-        await api.createReport({ label: p.label, period: `${p.from} ~ ${p.to}`, template: $("template").value, basis: $("basis").value });
-        toast("报告生成中，可以离开本页，完成后在历史里下载", "success");
+        const report = await api.createReport({
+          period_start: `${p.from}T00:00:00+08:00`,
+          period_end: `${p.to}T23:59:59+08:00`,
+          template: $("template").value,
+          basis: $("basis").value,
+        });
+        toast(`报告 ${report.report_code} 已生成`, "success");
         await loadHistory();
       } catch (err) {
-        fail(err);
+        toast(err.message, "danger");
+      } finally {
+        $("btn-generate").disabled = false;
       }
     });
 
     $("history").addEventListener("click", (event) => {
       const format = event.target.closest("[data-format]")?.dataset.format;
-      if (format) toast(`原型阶段不生成真实文件；正式版下载 ${format} 格式报告`, "info");
+      if (format) toast(`报告文件已在服务端生成；${format} 格式的下载还没有接口`, "info");
     });
 
-    Promise.all([api.statsSpecies(), api.statsQuality()])
-      .then(([s, q]) => { species = s; quality = q; renderPreview(); })
-      .catch(fail);
-    loadHistory().catch(fail);
+    loadInto($("preview"), () => Promise.all([api.statsSpecies(), api.statsQuality()]), {
+      isEmpty: () => false,
+      empty: "",
+      render: (data) => {
+        stats = adapt(data);
+        renderPreview();
+      },
+    });
+    loadHistory();
   </script>
 </body>
 </html>

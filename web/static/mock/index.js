@@ -46,6 +46,7 @@ const saved = (() => {
 })();
 const captured = saved.frames ?? [];
 const REVIEWS = saved.reviews ?? {};
+const VERSIONS = saved.versions ?? {};
 FRAMES.unshift(...captured);
 if (saved.tasks) TASKS.splice(0, TASKS.length, ...saved.tasks);
 const removedHard = new Set(saved.removed_hard ?? []);
@@ -59,6 +60,7 @@ function persist() {
     sessionStorage.setItem(STORE, JSON.stringify({
         frames: captured,
         reviews: REVIEWS,
+        versions: VERSIONS,
         tasks: TASKS,
         removed_hard: [...removedHard],
         datasets: DATASETS,
@@ -225,16 +227,31 @@ const ROUTES = {
 
   "GET /frames/{id}": ({ id }) => withImage(findFrame(id)),
 
-  "GET /frames/{id}/objects": ({ id }) => REVIEWS[id] ?? detectedObjects(findFrame(id)),
+  // As the server answers: the boxes plus a per-class count.
+  "GET /frames/{id}/objects": ({ id }) => {
+    const items = REVIEWS[id] ?? detectedObjects(findFrame(id));
+    const counts = {};
+    for (const box of items) counts[box.class_code] = (counts[box.class_code] ?? 0) + 1;
+    return { items, counts };
+  },
 
-  // Body { objects: [...] }: the full box list after review (api-contract §6). The reply is the
-  // mock's own; the contract's is { version_no, object_count, hard_sample }.
+  // Body { objects, note }: the full box list after review (api-contract §6); the reply is the contract's.
   "POST /review/frames/{id}": ({ id, body }) => {
     if (!Array.isArray(body?.objects)) throw new Fail(40001, "缺少复核结果");
-    const before = (REVIEWS[id] ?? detectedObjects(findFrame(id))).length;
+    const before = REVIEWS[id] ?? detectedObjects(findFrame(id));
+    const kept = new Set(body.objects.map((b) => b.object_id));
     REVIEWS[id] = body.objects;
+    VERSIONS[id] = (VERSIONS[id] ?? 1) + 1;
     persist();
-    return { frame_id: id, count_before: before, count_after: body.objects.length };
+    return {
+      frame_id: id,
+      version_no: VERSIONS[id],
+      object_count: body.objects.length,
+      hard_sample: true,
+      rejected: before.filter((b) => !kept.has(b.object_id)).length,
+      added: body.objects.filter((b) => b.is_manual).length,
+      note: body.note ?? null,
+    };
   },
 
   // The server takes { asset_count, conf_thr, ... }; frame_ids is sent too and ignored there.
@@ -352,28 +369,26 @@ const ROUTES = {
     return row;
   },
 
-  // Inspection reports. Generation runs over a few reads, like the dataset export.
-  "GET /reports": () => {
-    for (const r of REPORTS.filter((x) => x.status === "running")) {
-      r.progress = Math.min(100, r.progress + 34);
-      if (r.progress === 100) r.status = "done";
-    }
-    persist();
-    return REPORTS;
-  },
+  // Reports, as the server answers: generated synchronously, ready when the call returns.
+  "GET /reports": ({ query }) => paginate(REPORTS, query),
 
   "POST /reports": ({ body }) => {
-    if (!body?.period) throw new Fail(40001, "请选择统计周期");
+    if (!body?.period_start || !body?.period_end) throw new Fail(40001, "请选择统计周期");
+    if (body.period_end < body.period_start) throw new Fail(40002, "结束日期不能早于开始日期");
+    const id = Math.max(...REPORTS.map((r) => r.report_id)) + 1;
+    const code = `RP${new Date().toISOString().slice(2, 10).replaceAll("-", "")}-${String(id).padStart(3, "0")}`;
     const report = {
-      report_id: Math.max(...REPORTS.map((r) => r.report_id)) + 1,
-      title: `${body.label}巡检报告`,
-      period: body.period,
+      report_id: id,
+      report_code: code,
+      period_start: body.period_start,
+      period_end: body.period_end,
       template: body.template,
       basis: body.basis,
-      model_version: "v8n-E3",
+      model_version_id: MODELS.find((m) => m.is_online)?.model_id ?? null,
+      status: "ready",
+      error_msg: null,
+      file_path: `reports/${code}.md`,
       created_at: new Date().toISOString(),
-      status: "running",
-      progress: 0,
     };
     REPORTS.unshift(report);
     persist();

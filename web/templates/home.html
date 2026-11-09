@@ -67,7 +67,7 @@
     import { renderShell } from "../static/js/layout.js";
     import { DASHBOARD } from "../static/mock/fixtures.js";
     import * as api from "../static/js/api.js";
-    import { esc, fmtTime } from "../static/js/ui.js";
+    import { esc, fmtTime, loadInto, showLoading } from "../static/js/ui.js";
 
     renderShell("P-02");
 
@@ -76,11 +76,16 @@
 
     // Four cards, two of them a plain number and two a short label: the eye lands on the number first.
     function renderKpis(d) {
+      const diff = d.frames_today - (d.daily.at(-2) ?? 0);
+      // Real mode: the rate is the server's 7-day figure, and nothing counts pending reviews yet.
+      const rejection = d.quality
+        ? [`${(d.quality.rate * 100).toFixed(1)}%`, `近 ${d.quality.days} 日 ${d.quality.rejected} 帧需重拍`]
+        : [`${pct(d.rejected_today, d.frames_today)}%`, `${d.rejected_today} 帧需重拍`];
       const cards = [
-        ["今日采集", d.frames_today, `较昨日 <span class="up">+${d.frames_today - d.daily.at(-2)}</span> 帧`],
-        ["待复核", d.to_review, `<span class="warn">需在 24 小时内处理</span>`],
-        ["质量拦截率", `${pct(d.rejected_today, d.frames_today)}%`, `${d.rejected_today} 帧需重拍`],
-        ["在线模型", null, `mAP@0.5 ${d.model_map50.toFixed(2)}`],
+        ["今日采集", d.frames_today, `较昨日 <span class="up">${diff >= 0 ? "+" : ""}${diff}</span> 帧`],
+        ["待复核", d.to_review ?? "—", d.to_review == null ? "暂无统计接口" : `<span class="warn">需在 24 小时内处理</span>`],
+        ["质量拦截率", ...rejection],
+        ["在线模型", null, d.model_map50 == null ? "还没有指标" : `mAP@0.5 ${d.model_map50.toFixed(2)}`],
       ];
       $("kpis").innerHTML = cards
         .map(([label, value, note]) => {
@@ -96,7 +101,7 @@
     // Hand-drawn SVG: one file, no chart library, and it stays crisp at any width.
     function renderTrend(values) {
       const W = 720, H = 200, padL = 34, padR = 16, padT = 18, padB = 26;
-      const max = Math.max(...values) * 1.18;
+      const max = Math.max(...values, 1) * 1.18; // a week of zeros still draws a flat line
       const innerW = W - padL - padR;
       const innerH = H - padT - padB;
       const x = (i) => padL + (innerW * i) / (values.length - 1);
@@ -135,29 +140,51 @@
       failed: '<span class="badge text-bg-danger">失败</span>',
     };
 
+    // The server derives sessions from frames (frames, retakes); the prototype's fixtures add a site
+    // and a status. Either renders.
     function renderSessions(items) {
-      if (!items.length) {
-        $("sessions").innerHTML = '<div class="av-empty">暂无采集会话。<a href="capture.html">去采集一帧</a></div>';
-        return;
-      }
       $("sessions").innerHTML = items
         .map((s) => `<div class="av-session">
-          <div><span class="av-mono">${esc(s.session_id)}</span> · 点位 ${esc(s.site)}
-            <br><small>${fmtTime(s.started_at)} · ${s.frame_count} 帧 · 需重拍 ${s.retake_count}</small></div>
-          <div class="text-end">${STATUS[s.status] ?? esc(s.status)}</div>
+          <div><span class="av-mono">${esc(s.session_id)}</span>${s.site ? ` · 点位 ${esc(s.site)}` : ""}
+            <br><small>${fmtTime(s.started_at)} · ${s.frames ?? s.frame_count} 帧 · 需重拍 ${s.retakes ?? s.retake_count}</small></div>
+          <div class="text-end">${s.status ? STATUS[s.status] ?? esc(s.status) : ""}</div>
         </div>`)
         .join("");
     }
 
-    renderKpis(DASHBOARD);
-    renderTrend(DASHBOARD.daily);
-
-    try {
-      const data = await api.listSessions({ page: 1, size: 4 });
-      renderSessions(data.items);
-    } catch (err) {
-      $("sessions").innerHTML = `<div class="av-empty">会话加载失败：${esc(err.message)}</div>`;
+    // The fixture is the prototype's dashboard; with a server the same cards come from the API.
+    async function fetchDashboard() {
+      if (api.USE_MOCK) return DASHBOARD;
+      const [trend, quality, models] = await Promise.all([api.statsTrend(), api.statsQuality(), api.listModels()]);
+      const online = models.items.find((m) => m.is_online);
+      const daily = trend.items.map((item) => item.frames);
+      return {
+        frames_today: daily.at(-1) ?? 0,
+        daily,
+        to_review: null,
+        quality,
+        model_version: online?.version_name ?? "无",
+        model_map50: online?.map50 ?? null,
+      };
     }
+
+    showLoading($("trend"));
+    loadInto($("kpis"), fetchDashboard, {
+      isEmpty: () => false,
+      empty: "",
+      render: (d) => {
+        renderKpis(d);
+        renderTrend(d.daily.length > 1 ? d.daily : [0, 0]);
+      },
+    }).then((d) => {
+      if (!d) $("trend").innerHTML = "";
+    });
+
+    loadInto($("sessions"), () => api.listSessions({ page: 1, size: 4 }), {
+      isEmpty: (data) => data.items.length === 0,
+      empty: '暂无采集会话。<a href="capture.html">去采集一帧</a>',
+      render: (data) => renderSessions(data.items),
+    });
   </script>
 </body>
 </html>

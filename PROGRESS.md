@@ -65,6 +65,14 @@
   sent no password (the route requires one of at least eight characters), and the parameter form wrote
   `max_workers` and `default_conf`, keys the server does not have. Monitoring now shows what the
   server measures — queue, stored frames, disk, concurrency — instead of a GPU figure nothing reports.
+- **`P2-12` done with part 3: home, statistics, reports, frame detail and review.** Every page that calls
+  the API now draws loading, empty and failure. The home cards no longer show fixture numbers against a
+  real server: they read the trend, quality and model routes, and "pending review" says no route
+  counts it. Frames from the server have no picture, so the stage draws a labelled placeholder and the
+  boxes on it rather than a broken image.
+- **Two of screen 6's charts cannot be fed by the contract.** Interception per day and corrections per
+  class are drawn from arrays; the server returns totals. Against the server those two cards state the
+  totals in words and say what breakdown is missing — lane B's call whether the contract grows.
 
 # Progress
 

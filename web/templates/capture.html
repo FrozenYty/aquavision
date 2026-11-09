@@ -147,7 +147,7 @@
 
     async function grabOne() {
       const frame = await api.grabFrame(current.session_id);
-      const boxes = await api.getObjects(frame.frame_id);
+      const { items: boxes } = await api.getObjects(frame.frame_id);
       $("live").className = frame.quality.verdict === "ok" ? "" : "is-retake";
       $("live").innerHTML = stageHtml(frame.image_url, boxes);
       $("frame-meta").innerHTML = `<span class="av-mono">${esc(frame.frame_id)}</span> · ${fmtTime(frame.captured_at)}`;

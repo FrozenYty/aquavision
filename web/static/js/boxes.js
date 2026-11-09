@@ -45,11 +45,16 @@ export function boxHtml(box, i = 0) {
   );
 }
 
+// The picture, or a 16:9 placeholder when there is none: the contract has no route that serves a
+// frame image yet, so real frames arrive without one and their boxes are drawn on the placeholder.
+export function pictureHtml(imageUrl) {
+  return imageUrl
+    ? `<img src="${esc(imageUrl)}" alt="帧画面" draggable="false">`
+    : '<div class="av-stage-blank">服务端暂未提供帧图像，检测框按坐标画在占位区域上</div>';
+}
+
 export function stageHtml(imageUrl, boxes) {
-  return (
-    `<div class="av-stage"><img src="${esc(imageUrl)}" alt="帧画面" draggable="false">` +
-    `${boxes.map(boxHtml).join("")}</div>`
-  );
+  return `<div class="av-stage">${pictureHtml(imageUrl)}${boxes.map(boxHtml).join("")}</div>`;
 }
 
 // review_status values from the data model; low confidence is called out while still pending.

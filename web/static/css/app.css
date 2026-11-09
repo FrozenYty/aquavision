@@ -731,6 +731,17 @@ body {
   animation-delay: calc(var(--i, 0) * 140ms);
 }
 
+.av-stage-blank {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 9;
+  padding: var(--av-space-4);
+  color: var(--av-frame-muted);
+  font-size: var(--av-fs-sm);
+  line-height: 1.5;
+  text-align: center;
+}
+
 @keyframes av-box-in {
   from { opacity: 0; transform: scale(1.08); }
 }
