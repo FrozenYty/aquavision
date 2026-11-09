@@ -872,6 +872,15 @@ body {
   border-radius: var(--av-radius-sm);
 }
 
+/* A strip entry for a frame that came without a picture. */
+.av-strip-blank {
+  display: block;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--av-border);
+  border-radius: var(--av-radius-sm);
+  background: var(--av-abyss);
+}
+
 .av-strip-item:hover img {
   border-color: var(--av-accent);
 }
