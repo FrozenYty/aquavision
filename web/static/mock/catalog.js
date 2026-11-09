@@ -1,11 +1,11 @@
 // Mock data for the pages beyond the prototype walk-through (P-05, P-08, P-09, P-11, P-12, P-13).
 // Hand-set and fixed, like fixtures.js: a demo that changes on every reload looks broken.
-// Field names follow the data model; collection routes for these pages are provisional (not in
-// docs/api-contract-en.md yet) and marked as such in api.js.
+// Every route these pages call is in docs/api-contract-en.md §6. The field names below are older
+// than the contract and do not all match the server's; each page aligns them when it moves to real
+// data, which is when a mismatch would actually show.
 
 // detect_task. status: 0 queued, 1 running, 2 done, 3 failed (glossary §3). kind, source, total,
-// done and error are provisional: the data model keeps them on the task row in some form, the
-// contract does not list them yet.
+// done and error are mock names; the server sends type, task_code, progress and error_msg.
 export const TASKS = [
   { task_id: 2046, kind: "batch", source: "s-b1-001", total: 20, done: 7, status: 1, model_version: "v8n-E3", created_at: "2026-11-06T10:42:00+08:00", error: null },
   { task_id: 2047, kind: "batch", source: "s-a3-002", total: 15, done: 0, status: 0, model_version: "v8n-E3", created_at: "2026-11-06T10:44:00+08:00", error: null },
@@ -30,7 +30,7 @@ export const HARD_SEEDS = [
 ];
 
 // Dataset snapshots (FR-M4-04). DS-V2 is the cleaned DUO set from P0-01: 7782 images, test 1111,
-// split by perceptual-hash group. Fields are provisional.
+// split by perceptual-hash group. Mock field names; the contract's snapshot is in §6.
 export const DATASETS = [
   {
     version: "DS-V2", created_at: "2026-11-04T16:20:00+08:00", images: 7782,
@@ -44,7 +44,7 @@ export const DATASETS = [
   },
 ];
 
-// Inspection reports (FR-M5-04). Fields are provisional.
+// Inspection reports (FR-M5-04). Mock field names; the contract's report is in §6.
 export const REPORTS = [
   {
     report_id: 12, title: "11 月第 1 周巡检报告", period: "2026-11-01 ~ 2026-11-06", template: "standard",

@@ -19,6 +19,14 @@
 - **`docs/handover-en.md` was rewritten as the acceptance list rather than a note.** It opens by naming
   what already exists — the cheapest mistake on a Monday is rebuilding a skeleton that is already
   there — and every remaining item is paired with the check that settles it.
+- **`P2-10` done: `api.js` no longer calls any route provisional.** All 37 exported functions map to a
+  route in `api-contract` §6, and `tests/test_api_js.py` now fails if the word returns or a function
+  names a route the contract lacks. Five contract routes have no browser caller yet (`auth/login`,
+  `auth/me`, `tasks/{id}`, `detect/frames`, `compare/frames`); none was invented to fill the gap.
+- **The mock is older than the contract and it shows.** Its field names for tasks, datasets, reports and
+  the review reply differ from the server's serializers, and the frames page sends `session_id`,
+  `verdict`, `from`, `to` where the server reads `session`, `quality`, `start`, `end`. The comments now
+  say so instead of calling the routes provisional; the fields get aligned page by page under `P2-12`.
 
 # Progress
 

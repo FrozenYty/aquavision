@@ -77,7 +77,7 @@ function stillOf(frame) {
   return STILLS[(Number(frame.frame_id.slice(-4)) - 1) % STILLS.length];
 }
 
-// image_url is provisional: the contract's frame object does not say where the picture is served.
+// image_url is mock-only: the contract's frame object does not say where the picture is served.
 const withImage = (frame) => ({ ...frame, image_url: new URL(stillOf(frame).image, import.meta.url).href });
 
 // Live frames follow a script instead of the dice: four good frames, then one below the threshold,
@@ -117,7 +117,7 @@ function withQueue(tasks) {
 }
 
 // The pool: seeded samples on real frames, plus every frame corrected on the review page (FR-M4-03
-// says a modified frame enters the pool automatically). Source and reason fields are provisional.
+// says a modified frame enters the pool automatically). Source and reason are mock field names.
 function hardSamples() {
   const ok = FRAMES.filter((f) => f.quality.verdict === "ok" && !captured.includes(f));
   const seeded = HARD_SEEDS.map((seed, i) => ({ ...seed, frame: ok[i * 2] })).filter((h) => h.frame);
@@ -140,7 +140,7 @@ function findFrame(id) {
   return frame;
 }
 
-// object_id, is_manual and review_status are provisional fields (data model, not yet in the contract).
+// object_id, is_manual and review_status follow the detection box in api-contract §6.
 function detectedObjects(frame) {
   if (frame.quality.verdict !== "ok") return []; // needs retake: stored, never detected
   const still = stillOf(frame);
@@ -227,7 +227,8 @@ const ROUTES = {
 
   "GET /frames/{id}/objects": ({ id }) => REVIEWS[id] ?? detectedObjects(findFrame(id)),
 
-  // Body shape is provisional: { objects: [...] }, the full box list after review.
+  // Body { objects: [...] }: the full box list after review (api-contract §6). The reply is the
+  // mock's own; the contract's is { version_no, object_count, hard_sample }.
   "POST /review/frames/{id}": ({ id, body }) => {
     if (!Array.isArray(body?.objects)) throw new Fail(40001, "缺少复核结果");
     const before = (REVIEWS[id] ?? detectedObjects(findFrame(id))).length;
@@ -254,7 +255,7 @@ const ROUTES = {
     return task;
   },
 
-  // System administration, all provisional.
+  // System administration (api-contract §6).
   "GET /users": () => USERS,
 
   "POST /users/{id}/status": ({ id, body }) => {
@@ -317,7 +318,7 @@ const ROUTES = {
     return model;
   },
 
-  // Experiments and the species dictionary, provisional.
+  // Experiments and the species dictionary (api-contract §6).
   "GET /experiments": () => EXPERIMENTS,
 
   "GET /species": () => SPECIES,
@@ -331,7 +332,7 @@ const ROUTES = {
     return row;
   },
 
-  // Inspection reports, provisional. Generation runs over a few reads, like the dataset export.
+  // Inspection reports. Generation runs over a few reads, like the dataset export.
   "GET /reports": () => {
     for (const r of REPORTS.filter((x) => x.status === "running")) {
       r.progress = Math.min(100, r.progress + 34);
@@ -359,7 +360,7 @@ const ROUTES = {
     return report;
   },
 
-  // Dataset export, provisional. An export runs over a few reads, like a background job would.
+  // Dataset export. An export runs over a few reads, like a background job would.
   "GET /datasets": () => {
     for (const ds of DATASETS.filter((d) => d.status === "running")) {
       ds.progress = Math.min(100, ds.progress + 25);
@@ -391,7 +392,7 @@ const ROUTES = {
     return ds;
   },
 
-  // Hard-sample pool, provisional.
+  // Hard-sample pool.
   "GET /hard-samples": ({ query }) => {
     const q = (query.q ?? "").toLowerCase();
     const items = hardSamples().filter(
@@ -407,7 +408,7 @@ const ROUTES = {
     return { frame_id: id };
   },
 
-  // The task list and its two actions are provisional; GET /tasks/{id} is a contract route.
+  // Task list, cancel and retry; every route here is in api-contract §6.
   "GET /tasks": ({ query }) => {
     advanceTasks();
     const q = (query.q ?? "").toLowerCase();
@@ -439,7 +440,7 @@ const ROUTES = {
   },
 
   // Screen 6 statistics. species and quality are contract routes; trend and
-  // corrections are provisional pending lane B confirmation.
+  // corrections are contract routes too (api-contract §6).
   "GET /stats/species": () => STATS_SPECIES,
   "GET /stats/quality": () => STATS_QUALITY,
   "GET /stats/trend": () => STATS_TREND,
