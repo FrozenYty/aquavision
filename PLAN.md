@@ -130,7 +130,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 
 - [ ] **P2-13** Rehearse the P2 gate end to end · @Gtechson @chemflowers · done when someone who has
       not seen the system completes the slice from a cold start in under two minutes, twice in a row
-- [ ] **P2-14** Requirements traceability matrix over every prototype screen · @chemflowers · done
+- [x] **P2-14** Requirements traceability matrix over every prototype screen · @chemflowers · done
       when each screen in `web/templates/` has rows in `docs/traceability-en/zh.md`, every referenced
       screenshot exists in the repository, and every requirement id it cites exists in the SRS
 

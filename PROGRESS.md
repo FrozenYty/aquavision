@@ -73,6 +73,13 @@
 - **Two of screen 6's charts cannot be fed by the contract.** Interception per day and corrections per
   class are drawn from arrays; the server returns totals. Against the server those two cards state the
   totals in words and say what breakdown is missing — lane B's call whether the contract grows.
+- **`P2-14` done: requirements traceability matrix.** `docs/traceability-en.md` and `-zh.md`, 13
+  screens, 106 element rows, each pointing at a numbered callout on a per-screen screenshot in
+  `docs/images/traceability/` (compressed to 1.2 MB). The generator refuses to write unless every
+  requirement cited is in SRS table 3-1, every screen has its image and every template has a section.
+  Status is stated as it is: mock-only elements are "in progress", and the UT column is "not started"
+  throughout because no per-element test exists yet. FR-M2-05 and FR-M3-03 have no screen element and
+  say why. The menu's role filtering is recorded as in progress, not done.
 - **`P2-08`: the capture page's client is built, the box stays open.** `web/static/js/live.js` feeds the
   page from one stream — the mock under `?mock=1`, `/ws/capture` as contract §7 describes it, or a
   one-second poll of the session's newest frame when the socket will not open — and every figure on the
