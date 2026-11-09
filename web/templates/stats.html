@@ -44,12 +44,13 @@
       </div>
     </div>
 
-    <p class="text-secondary small mt-2 mb-0">数字为演示数据，非真实运行结果。</p>
+    <p class="text-secondary small mt-2 mb-0" id="demo-note" hidden>数字为演示数据，非真实运行结果。</p>
   </main>
 
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
     import * as api from "../static/js/api.js";
+    import { loadInto } from "../static/js/ui.js";
     import {
       renderSpeciesDonut,
       renderTrendLine,
@@ -60,19 +61,46 @@
     renderShell("P-10");
 
     const $ = (id) => document.getElementById(id);
+    $("demo-note").hidden = !api.USE_MOCK;
 
-    (async () => {
-      const [species, quality, trend, corrections] = await Promise.all([
-        api.statsSpecies(),
-        api.statsQuality(),
-        api.statsTrend(),
-        api.statsCorrections(),
-      ]);
-      renderSpeciesDonut($("chart-species"), species);
-      renderTrendLine($("chart-trend"), trend);
-      renderInterceptBars($("chart-quality"), quality);
-      renderCorrectionStack($("chart-corrections"), corrections);
-    })();
+    // The prototype's fixtures hold per-class and per-day arrays; the server answers species and trend
+    // as { items }, and quality and corrections as totals only. The two charts drawn per day and per
+    // class therefore show the totals in words until the contract offers the breakdown.
+    const summary = (html) => `<p class="small mb-0">${html}</p>`;
+
+    loadInto($("chart-species"), api.statsSpecies, {
+      isEmpty: (d) => (Array.isArray(d) ? d : d.items).length === 0,
+      empty: "所选时间内还没有识别结果",
+      render: (d) => renderSpeciesDonut($("chart-species"), Array.isArray(d)
+        ? d
+        : d.items.map((r) => ({ class_code: r.class_code, box_count: r.count }))),
+    });
+
+    loadInto($("chart-trend"), api.statsTrend, {
+      isEmpty: (d) => (Array.isArray(d) ? d : d.items).length < 2,
+      empty: "数据不足两天，画不出趋势",
+      render: (d) => renderTrendLine($("chart-trend"), Array.isArray(d) ? d : d.items),
+    });
+
+    loadInto($("chart-quality"), api.statsQuality, {
+      isEmpty: (d) => (Array.isArray(d) ? d.length === 0 : d.total === 0),
+      empty: "所选时间内还没有采集帧",
+      render: (d) => {
+        if (Array.isArray(d)) return renderInterceptBars($("chart-quality"), d);
+        $("chart-quality").innerHTML = summary(`近 ${d.days} 日共采集 <strong>${d.total}</strong> 帧，拦截
+          <strong>${d.rejected}</strong> 帧，拦截率 <strong>${(d.rate * 100).toFixed(1)}%</strong>。按日的柱图需要服务端提供每日数据。`);
+      },
+    });
+
+    loadInto($("chart-corrections"), api.statsCorrections, {
+      isEmpty: (d) => (Array.isArray(d) ? d.length === 0 : d.total === 0),
+      empty: "所选时间内还没有人工修正",
+      render: (d) => {
+        if (Array.isArray(d)) return renderCorrectionStack($("chart-corrections"), d);
+        $("chart-corrections").innerHTML = summary(`近 ${d.days} 日：改类别 <strong>${d.modified}</strong>，补框
+          <strong>${d.added}</strong>，删框 <strong>${d.rejected}</strong>，共 ${d.total} 处。按类别的分布需要服务端分类统计。`);
+      },
+    });
   </script>
 </body>
 </html>

@@ -50,8 +50,8 @@
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
     import * as api from "../static/js/api.js";
-    import { esc, toast } from "../static/js/ui.js";
-    import { CLASSES, boxHtml, statusBadge } from "../static/js/boxes.js";
+    import { loadInto, toast } from "../static/js/ui.js";
+    import { CLASSES, boxHtml, pictureHtml, statusBadge } from "../static/js/boxes.js";
 
     renderShell("P-07");
 
@@ -81,7 +81,7 @@
 
     function render() {
       $("canvas").className = `av-stage is-editing${mode === "draw" ? " is-drawing" : ""}`;
-      $("canvas").innerHTML = `<img src="${esc(imageUrl)}" alt="帧画面" draggable="false">` + objects.map(boxHtml).join("");
+      $("canvas").innerHTML = pictureHtml(imageUrl) + objects.map(boxHtml).join("");
       const box = selected && $("canvas").querySelector(`.av-box[data-id="${selected}"]`);
       if (box) {
         box.classList.add("is-selected");
@@ -130,7 +130,7 @@
     let drag = null;
 
     $("canvas").addEventListener("pointerdown", (event) => {
-      if (!imageUrl) return;
+      if (!frameId) return;
       const p = point(event);
       if (mode === "draw") {
         remember();
@@ -227,30 +227,38 @@
     $("btn-submit").onclick = async () => {
       try {
         const result = await api.submitReview(frameId, objects);
-        toast(`复核已提交，计数 ${result.count_before} → ${result.count_after}`, "success");
-        initialCount = result.count_after;
+        toast(`复核已提交（第 ${result.version_no} 版），计数 ${initialCount} → ${result.object_count}`, "success");
+        initialCount = result.object_count;
         render();
       } catch (err) {
         toast(err.message, "danger");
       }
     };
 
-    async function load() {
-      // Without ?id= the page opens the first frame, so the menu entry is never a dead end.
-      frameId = new URLSearchParams(location.search).get("id")
-        ?? (await api.listFrames({ page: 1, size: 1 })).items[0].frame_id;
-      const [frame, boxes] = await Promise.all([api.getFrame(frameId), api.getObjects(frameId)]);
-      imageUrl = frame.image_url;
-      objects = boxes;
-      initialCount = boxes.length;
-      $("frame-id").textContent = frame.frame_id;
-      $("btn-back").href = `frame.html?id=${encodeURIComponent(frame.frame_id)}`;
-      // Open on the box most likely to be wrong: the lowest confidence.
-      const doubtful = [...boxes].sort((a, b) => a.confidence - b.confidence)[0];
-      select(doubtful?.object_id ?? null);
+    // Without ?id= the page opens the newest frame, so the menu entry is never a dead end.
+    async function fetchFrame() {
+      const id = new URLSearchParams(location.search).get("id")
+        ?? (await api.listFrames({ page: 1, size: 1 })).items[0]?.frame_id;
+      if (!id) return null;
+      const [frame, data] = await Promise.all([api.getFrame(id), api.getObjects(id)]);
+      return { frame, boxes: data.items };
     }
 
-    load().catch((err) => toast(err.message, "danger"));
+    loadInto($("canvas"), fetchFrame, {
+      isEmpty: (data) => data === null,
+      empty: '还没有任何帧可以复核。先去 <a href="capture.html">采集控制</a> 采一帧。',
+      render: ({ frame, boxes }) => {
+        frameId = frame.frame_id;
+        imageUrl = frame.image_url ?? "";
+        objects = boxes;
+        initialCount = boxes.length;
+        $("frame-id").textContent = frame.frame_id;
+        $("btn-back").href = `frame.html?id=${encodeURIComponent(frame.frame_id)}`;
+        // Open on the box most likely to be wrong: the lowest confidence.
+        const doubtful = [...boxes].sort((a, b) => a.confidence - b.confidence)[0];
+        select(doubtful?.object_id ?? null);
+      },
+    });
   </script>
 </body>
 </html>

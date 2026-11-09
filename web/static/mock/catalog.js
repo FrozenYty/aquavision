@@ -34,16 +34,10 @@ export const DATASETS = [
   },
 ];
 
-// Inspection reports (FR-M5-04). Mock field names; the contract's report is in §6.
+// Inspection reports (FR-M5-04), in the shape the reports route returns.
 export const REPORTS = [
-  {
-    report_id: 12, title: "11 月第 1 周巡检报告", period: "2026-11-01 ~ 2026-11-06", template: "standard",
-    basis: "reviewed", model_version: "v8n-E3", created_at: "2026-11-06T09:00:00+08:00", status: "done", progress: 100,
-  },
-  {
-    report_id: 11, title: "10 月巡检报告", period: "2026-10-01 ~ 2026-10-31", template: "standard",
-    basis: "reviewed", model_version: "v8n-E2", created_at: "2026-11-01T08:30:00+08:00", status: "done", progress: 100,
-  },
+  { report_id: 12, report_code: "RP261106-012", period_start: "2026-11-01T00:00:00+00:00", period_end: "2026-11-06T23:59:59+00:00", template: "standard", basis: "reviewed", model_version_id: 4, status: "ready", error_msg: null, file_path: "reports/RP261106-012.md", created_at: "2026-11-06T01:00:00+00:00" },
+  { report_id: 11, report_code: "RP261101-011", period_start: "2026-10-01T00:00:00+00:00", period_end: "2026-10-31T23:59:59+00:00", template: "standard", basis: "reviewed", model_version_id: 3, status: "ready", error_msg: null, file_path: "reports/RP261101-011.md", created_at: "2026-11-01T00:30:00+00:00" },
 ];
 
 // model_version, train_experiment and species_dict, in the shapes serializers.model_version, the

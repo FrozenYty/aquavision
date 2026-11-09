@@ -123,7 +123,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [x] **P2-11** Sign-in against the real endpoint · @chemflowers · closes AC-01 · done when the login page calls
       `POST /api/auth/login`, stores the token, shows the server's own lockout message, and a 401 from
       any page returns the user to the form
-- [ ] **P2-12** Loading, empty and failure states · @chemflowers · done when every page that calls the
+- [x] **P2-12** Loading, empty and failure states · @chemflowers · done when every page that calls the
       API renders all three states, and a killed server produces a message rather than a blank screen
 
       **Together**
