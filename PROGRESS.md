@@ -9,6 +9,16 @@
   iteration in it; leaving all of it in the final phase means discovering model problems with no time
   left to answer them. The phase boundary is stated in the task so the official E0–E4 runs at `P4`
   are not mistaken for the same work done twice.
+- **P3 and P4 were too coarse to start on, and one number in them was stale.** Six P3 tasks covered 29
+  requirements — a whole module per task, which cannot be a pull request — and P4 asked for "nine
+  metrics" while SRS Table 6-1 has seven since V1.3 deleted two. Both phases were rewritten so a task is
+  one PR-sized slice that names the acceptance items it closes.
+- **Writing the acceptance ids down exposed three capabilities that had no task at all**: scheduled
+  capture (AC-06), CSV export of results (AC-14) and the species dictionary editor (AC-26). None of
+  them was in the plan in any form, and the first two do not exist in the code either.
+- **All 36 acceptance items are now claimed by exactly one task.** That is what makes the P3 gate
+  ("every item traceable to the task that closed it") a check rather than a wish — and it is verified by
+  reading `PLAN.md`, not by memory.
 - **A traceability matrix joins the frontend lane (`P2-14`).** The course wants one built from the SRS
   and the UI prototype, covering every screen. The template it follows is five sheets — cover, change
   history, matrix, and one annotated screenshot per screen — and its unit is **one UI element per row**,

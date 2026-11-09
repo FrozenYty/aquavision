@@ -89,14 +89,15 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       boxes with `model_version` and `latency_ms`
 - [ ] **P2-02** Result persistence and query API · @Gtechson · done when boxes land in
       `detect_object` and querying by `frame_id` returns them
-- [ ] **P2-03** Capture and review pages on real data · @chemflowers · done when no mock data is left
+- [ ] **P2-03** Capture and review pages on real data · @chemflowers · closes AC-08, AC-13 · done when no mock data is left
       on those two pages
-- [ ] **P2-04** Minimal review loop: delete, add, relabel · @chemflowers @Gtechson · done when the
+- [ ] **P2-04** Minimal review loop: delete, add, relabel · @chemflowers @Gtechson · closes AC-17 · done when the
       edit persists and the count updates without a page reload
 
       **Backend and model · @Gtechson**
 
-- [ ] **P2-05** Finish P1-02: detection, the queue consumer, reviewed statistics · @Gtechson · done
+- [ ] **P2-05** Finish P1-02: detection, the queue consumer, reviewed statistics · @Gtechson · closes
+      AC-05, AC-07, AC-10, AC-12 · done
       when `POST /api/detect/frames/{id}` returns boxes from real weights, a batch task advances to
       `done` on its own, and `/api/stats/*` matches the dashboard — the acceptance list is
       `docs/handover-en.md` §2
@@ -115,11 +116,11 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P2-08** The capture page streams real frames · @chemflowers · done when `capture.html` shows
       live detections from `/ws/capture` (or polling if the socket is unavailable), and the mock path
       stays behind `USE_MOCK`
-- [ ] **P2-09** Dataset export page against the real API · @chemflowers · done when a snapshot can be
+- [ ] **P2-09** Dataset export page against the real API · @chemflowers · closes AC-18 · done when a snapshot can be
       exported, listed and refreshed with no mock data, and the split counts match the server
 - [ ] **P2-10** `api.js` tells the truth · @chemflowers · done when no `provisional` marker remains, a
       test fails if the word returns, and every exported function maps to a route in the contract
-- [ ] **P2-11** Sign-in against the real endpoint · @chemflowers · done when the login page calls
+- [ ] **P2-11** Sign-in against the real endpoint · @chemflowers · closes AC-01 · done when the login page calls
       `POST /api/auth/login`, stores the token, shows the server's own lockout message, and a 401 from
       any page returns the user to the form
 - [ ] **P2-12** Loading, empty and failure states · @chemflowers · done when every page that calls the
@@ -138,37 +139,86 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 
 ### P3 — breadth
 
-- [ ] **P3-01** Batch detection, thread pool, progress · @Gtechson · done when a 100-frame task
-      completes, progress is queryable and state survives a restart
-- [ ] **P3-02** Statistics dashboard and report export · @chemflowers · done when four charts render
-      and Word and PDF export both work
-- [ ] **P3-03** Model version management and activation · @Gtechson · done when exactly one model is
-      online and results record the version
-- [ ] **P3-04** Accounts, roles, permissions · @Gtechson · done when the role is enforced server-side
-- [ ] **P3-05** Review canvas: drag, zoom, add, delete · @chemflowers · done when all four gestures
-      work on one frame without a reload
-- [ ] **P3-06** Demo mode · @FrozenYty · done when one action resets data and hides debug output
+- [ ] **P3-01** Batch detection, the pool and progress · @Gtechson · closes AC-11 · done when a
+      100-frame task completes, progress is queryable while it runs, and a restart mid-task resumes
+      it rather than losing it
+- [ ] **P3-02** Statistics dashboard · @chemflowers · closes AC-19, AC-20, AC-21 · done when the four
+      charts render from `/api/stats/*`, the basis switch changes both the figures and the caption,
+      and the empty site shows an empty state rather than a blank chart
+- [ ] **P3-03** Model versions and activation · @Gtechson · closes AC-23, AC-24 · done when exactly one
+      model is online, a version without metrics cannot go online, and each result records the version
+      that produced it
+- [ ] **P3-04** Account management · @Gtechson · closes AC-03, AC-04 · done when an account can be created,
+      disabled and restored, a disabled account cannot sign in, and its history stays queryable
+- [ ] **P3-05** Review canvas: drag, zoom, add, delete · @chemflowers · closes AC-15, AC-16 · done when
+      all four gestures work on one frame without a reload, and two reviews produce two versions that
+      can be rolled back between
+- [ ] **P3-06** Demo mode · @FrozenYty · closes AC-36 · done when one action resets the data, hides
+      debug output, and leaves the system in the state a rehearsal starts from
+- [ ] **P3-07** Report generation and history · @chemflowers · closes AC-22 · done when a report is
+      generated as Markdown from the same queries the dashboard uses, its figures equal the dashboard,
+      and the footer carries the model version and the basis — **not Word or PDF; SRS V1.6 settled that**
+- [ ] **P3-08** Retention cleanup and reference nulling · @Gtechson · closes AC-09 · done when the
+      cleanup job removes intermediate files older than the retention period, nulls the references,
+      never touches originals by default, and reports what it deleted
+- [ ] **P3-09** Parameters, monitoring and messages · @Gtechson · closes AC-27, AC-28, AC-29 · done
+      when a parameter change persists and is audited with before and after values, the queue and disk
+      levels are visible, and a repeated failure message is not duplicated
+- [ ] **P3-10** Performance budget, measured · @FrozenYty · closes AC-34 · done when a committed script
+      measures single-frame latency and the list endpoints' P90 against a database at design capacity,
+      and the numbers are pasted into the pull request — a claim is not a measurement
+- [ ] **P3-11** The permission matrix, negatively tested · @Gtechson · closes AC-02 · done when a test
+      asserts 403 for every (role, guarded route) pair where access must be refused, and the list of
+      pairs lives in the test file rather than in someone's head
+- [ ] **P3-12** Failure and recovery · @FrozenYty · covers the states between AC items · done when a
+      killed worker, an unreachable database and a full disk each produce a message the operator can
+      act on, instead of a blank page or a stuck spinner
+- [ ] **P3-13** Scheduled capture · @Gtechson · closes AC-06 · there is no timer anywhere in the system
+      yet: done when a schedule of N captures every M minutes produces exactly N batches, a run whose
+      device is unavailable is marked failed with a reason, and the schedule survives a restart
+- [ ] **P3-14** Result export · @chemflowers · closes AC-14 · done when a result set exports as CSV with
+      one row per box, the row count equals the page's count, and Chinese class names open correctly in
+      Excel — the encoding is the part that usually breaks
+- [ ] **P3-15** Species dictionary and per-class thresholds · @chemflowers · closes AC-26 · done when the
+      four classes and their thresholds can be viewed and edited on P-12, a threshold change applies to
+      new jobs and not to finished ones, and a class code that disagrees with `labels.txt` is refused
 
 - [ ] **GATE P3** — all 36 acceptance items demonstrated live, one after another, no manual database
-      edits in between
+      edits in between, and every item traceable to the task that closed it
 
 ### P4 — close
 
-- [ ] **P4-01** Baseline training E0 · @Gtechson · done when the experiment is recorded with data
-      snapshot, seed and metrics
-- [ ] **P4-02** Three improvements E1–E3 · @Gtechson · done when each is isolated and the metrics are
-      comparable to the baseline
-- [ ] **P4-03** Ablation E4 and fine-tuning · @Gtechson · done when the ablation table is complete and
-      the tank fine-tune is evaluated
-- [ ] **P4-04** Metric acceptance, per class · @Gtechson @IkeaFyj · done when nine metrics are
-      recorded and any failure is explained in writing
-- [ ] **P4-05** Defect fixing and regression · all · done when blocker and major defects are at zero
+- [ ] **P4-01** Dataset freeze, then baseline E0 · @Gtechson · closes AC-30 · done when the snapshot is
+      frozen **before** the first official run — name, split, seed and manifest written down — and E0
+      is recorded with every metric column filled
+      - freezing first is the point: a baseline trained on a moving dataset cannot be compared to
+        anything, and every later number inherits the mistake
+- [ ] **P4-02** The three improvements · @Gtechson · closes AC-32 · done when each is isolated on top of
+      the previous one, each has a row in the experiment table, and each reports its delta against E0
+      - E1 underwater colour correction
+      - E2 EMA attention
+      - E3 WIoU v3 loss
+- [ ] **P4-03** Ablation and tank fine-tuning · @Gtechson · closes AC-32 · done when the ablation table
+      shows each improvement's own contribution, and the fine-tune on tank images is evaluated against
+      the same test set
+- [ ] **P4-04** Metric acceptance, per class · @Gtechson @IkeaFyj · closes AC-30, AC-31, AC-33 · done
+      when all **seven** metrics of SRS Table 6-1 (AL-01..AL-07) are recorded — the count was nine
+      before V1.3 deleted AL-08 and AL-09 — and any miss is explained in writing
+- [ ] **P4-05** Defect closure · all · done when every defect has a recorded severity, a fix and a
+      regression check, and blocker and major counts are zero — "no defects" is not a number
 - [ ] **P4-06** Acceptance checklist, demo script, slides · @IkeaFyj · done when every acceptance item
-      is ticked and the demo runs end to end on paper
+      is ticked with the evidence beside it, and the demo runs end to end on paper without a question
+      left unanswerable
 - [ ] **P4-07** Three rehearsals · @FrozenYty · done when each run finishes under eight minutes with no
-      dead air
+      dead air, and the third run needs no fix made between it and the previous one
+- [ ] **P4-08** Reproducibility · @Gtechson · closes AC-25 · done when the same configuration run twice
+      differs by less than 1 % on every metric, and both runs are in the table — a single run proves
+      nothing about the next one
+- [ ] **P4-09** Submission package · @FrozenYty · closes AC-35 · done when the SRS, the traceability
+      matrix, the test report and this plan agree with each other and with the code at one commit, and
+      the document index lists nothing that does not exist
 
-- [ ] **GATE P4** — three tables full: metrics, ablation, acceptance checklist
+- [ ] **GATE P4** — four tables full: metrics, ablation, reproducibility, acceptance checklist
 
 ## 5. Text constraints
 
