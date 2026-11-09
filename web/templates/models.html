@@ -37,11 +37,11 @@
       <div data-panel="experiments" hidden>
         <div class="table-responsive">
           <table class="table align-middle mb-0 small">
-            <thead><tr><th>实验</th><th>改动</th><th>种子</th><th>mAP@0.5</th><th>mAP@0.5:0.95</th><th>平均召回</th><th>FPS</th><th>参数量</th></tr></thead>
+            <thead><tr><th>实验</th><th>数据集</th><th>种子</th><th>轮次</th><th>mAP@0.5</th><th>mAP@0.5:0.95</th><th>平均召回</th><th>FPS</th></tr></thead>
             <tbody id="experiments"></tbody>
           </table>
         </div>
-        <p class="small text-secondary mt-2 mb-0">消融顺序：每个实验在上一个基础上只加一项改进，括号内为相对基线 E0 的变化。基线实验不可删除。</p>
+        <p class="small text-secondary mt-2 mb-0">消融顺序：每个实验在上一个基础上只加一项改进，括号内为服务端给出的相对基线 mAP@0.5 变化。基线实验不可删除。</p>
       </div>
 
       <div data-panel="species" hidden>
@@ -59,78 +59,69 @@
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
     import * as api from "../static/js/api.js";
-    import { bindTabs, confirmAction, esc, fmtTime, toast } from "../static/js/ui.js";
+    import { bindTabs, confirmAction, esc, fmtTime, loadInto, toast } from "../static/js/ui.js";
 
     renderShell("P-12");
     bindTabs($("tabs"));
 
     function $(id) { return document.getElementById(id); }
-    const CATEGORY = { 1: "经济种", 2: "敌害种" };
-    const delta = (v, base, digits) => {
-      const d = v - base;
-      if (!d) return "";
-      return ` <span class="${d > 0 ? "text-success" : "text-danger"}">(${d > 0 ? "+" : ""}${d.toFixed(digits)})</span>`;
-    };
-    let models = [];
+    // data model §3.6
+    const CATEGORY = { 1: "经济种", 2: "敌害种", 3: "环境物" };
+    const num = (v, digits = 2) => (v == null ? "—" : Number(v).toFixed(digits));
 
-    function renderVersions() {
-      const online = models.find((m) => m.is_online);
-      $("online").textContent = online?.version_name ?? "—";
-      $("versions").innerHTML = models.map((m) => `<tr>
-        <td class="av-mono fw-bold">${esc(m.version_name)}</td><td class="av-mono">${esc(m.dataset)}</td>
-        <td class="av-mono">${m.map50.toFixed(2)}</td><td class="av-mono">${m.map5095.toFixed(2)}</td>
-        <td class="av-mono">${m.recall.toFixed(2)}</td><td class="av-mono">${m.fps}</td><td class="av-mono">${m.params_m} M</td>
-        <td>${fmtTime(m.registered_at).slice(0, -3)}</td>
+    function renderVersions({ items }) {
+      const online = items.find((m) => m.is_online);
+      $("versions").innerHTML = items.map((m) => `<tr>
+        <td class="av-mono fw-bold">${esc(m.version_name)}</td><td class="av-mono">${esc(m.dataset_ref ?? "—")}</td>
+        <td class="av-mono">${num(m.map50)}</td><td class="av-mono">${num(m.map50_95)}</td>
+        <td class="av-mono">${num(m.recall_avg)}</td><td class="av-mono">${num(m.fps, 0)}</td>
+        <td class="av-mono">${m.params_m == null ? "—" : `${m.params_m} M`}</td>
+        <td>${fmtTime(m.created_at).slice(0, -3)}</td>
         <td>${m.is_online ? '<span class="badge text-bg-success">在线</span>' : '<span class="badge text-bg-secondary">离线</span>'}</td>
-        <td>${m.is_online ? "" : `<button class="btn btn-sm btn-outline-primary" data-model="${m.model_id}" type="button">${m.model_id < online.model_id ? "回滚到此版本" : "上线"}</button>`}</td></tr>`).join("");
+        <td>${m.is_online ? "" : `<button class="btn btn-sm btn-outline-primary" data-model="${m.model_id}" data-name="${esc(m.version_name)}" type="button">${online && m.model_id < online.model_id ? "回滚到此版本" : "上线"}</button>`}</td></tr>`).join("");
     }
 
-    async function loadVersions() {
-      models = await api.listModels();
-      renderVersions();
-    }
-
-    async function loadExperiments() {
-      const experiments = await api.listExperiments();
-      const byId = Object.fromEntries(models.map((m) => [m.model_id, m]));
-      const base = byId[experiments.find((e) => e.baseline).model_id];
-      $("experiments").innerHTML = experiments.map((e) => {
-        const m = byId[e.model_id];
-        return `<tr><td class="av-mono fw-bold">${e.exp_id}${e.baseline ? ' <span class="badge text-bg-secondary">基线</span>' : ""}</td>
-          <td>${esc(e.change)}</td><td class="av-mono">${e.seed}</td>
-          <td class="av-mono">${m.map50.toFixed(2)}${delta(m.map50, base.map50, 2)}</td>
-          <td class="av-mono">${m.map5095.toFixed(2)}${delta(m.map5095, base.map5095, 2)}</td>
-          <td class="av-mono">${m.recall.toFixed(2)}${delta(m.recall, base.recall, 2)}</td>
-          <td class="av-mono">${m.fps}${delta(m.fps, base.fps, 0)}</td>
-          <td class="av-mono">${m.params_m} M</td></tr>`;
+    function renderExperiments({ items }) {
+      $("experiments").innerHTML = items.map((e) => {
+        const d = e.delta_map50;
+        const delta = d ? ` <span class="${d > 0 ? "text-success" : "text-danger"}">(${d > 0 ? "+" : ""}${d.toFixed(2)})</span>` : "";
+        return `<tr><td class="fw-bold">${esc(e.exp_name)}${e.is_baseline ? ' <span class="badge text-bg-secondary">基线</span>' : ""}</td>
+          <td class="av-mono">${esc(e.dataset_snapshot)}</td><td class="av-mono">${e.seed}</td><td class="av-mono">${e.epochs ?? "—"}</td>
+          <td class="av-mono">${num(e.map50)}${delta}</td><td class="av-mono">${num(e.map50_95)}</td>
+          <td class="av-mono">${num(e.recall_avg)}</td><td class="av-mono">${num(e.fps, 0)}</td></tr>`;
       }).join("");
     }
 
-    async function loadSpecies() {
-      const rows = await api.listSpecies();
-      $("species").innerHTML = rows.map((s) => `<tr data-code="${s.class_code}">
+    function renderSpecies({ items }) {
+      $("species").innerHTML = items.map((s) => `<tr data-code="${s.class_code}">
         <td class="av-mono">${s.class_code}</td>
         <td><span class="av-class av-class-${s.class_code}">${esc(s.cn_name)}</span></td>
-        <td>${CATEGORY[s.category]}</td>
+        <td>${CATEGORY[s.category] ?? s.category}</td>
         <td><input class="form-control form-control-sm w-auto" type="number" step="0.05" min="0.05" max="0.95" value="${s.conf_thr}" aria-label="${esc(s.cn_name)}阈值">
           <div class="invalid-feedback">0.05 到 0.95 之间</div></td>
         <td><input class="form-check-input" type="checkbox" ${s.in_stat ? "checked" : ""} aria-label="${esc(s.cn_name)}计入统计"></td>
         <td><button class="btn btn-sm btn-outline-primary" data-save type="button">保存</button></td></tr>`).join("");
     }
 
-    const fail = (err) => toast(err.message, "danger");
+    const isEmpty = (d) => d.items.length === 0;
+    async function loadVersions() {
+      const data = await loadInto($("versions"), api.listModels, { render: renderVersions, isEmpty, empty: "还没有登记任何模型版本" });
+      // Said in the header too, empty list or not, so "no model online" is never a blank.
+      $("online").textContent = data ? data.items.find((m) => m.is_online)?.version_name ?? "无" : "—";
+    }
+    const loadExperiments = () => loadInto($("experiments"), api.listExperiments, { render: renderExperiments, isEmpty, empty: "还没有记录任何训练实验" });
+    const loadSpecies = () => loadInto($("species"), api.listSpecies, { render: renderSpecies, isEmpty, empty: "物种字典为空，请先运行 init_db" });
 
     $("versions").addEventListener("click", async (event) => {
-      const id = Number(event.target.closest("[data-model]")?.dataset.model);
-      if (!id) return;
-      const target = models.find((m) => m.model_id === id);
-      if (!confirmAction(`把在线模型切换到 ${target.version_name}？之后新建的识别任务都会使用它。`)) return;
+      const btn = event.target.closest("[data-model]");
+      if (!btn) return;
+      if (!confirmAction(`把在线模型切换到 ${btn.dataset.name}？之后新建的识别任务都会使用它。`)) return;
       try {
-        await api.activateModel(id);
-        toast(`${target.version_name} 已上线`, "success");
+        await api.activateModel(btn.dataset.model);
+        toast(`${btn.dataset.name} 已上线`, "success");
         await loadVersions();
       } catch (err) {
-        fail(err);
+        toast(err.message, "danger");
       }
     });
 
@@ -143,14 +134,16 @@
       input.classList.toggle("is-invalid", !ok);
       if (!ok) return;
       try {
-        await api.updateSpecies(row.dataset.code, { conf_thr: thr, in_stat: row.querySelector('input[type="checkbox"]').checked ? 1 : 0 });
+        await api.updateSpecies(row.dataset.code, { conf_thr: thr, in_stat: row.querySelector('input[type="checkbox"]').checked });
         toast("已保存，新任务按新阈值过滤", "success");
       } catch (err) {
-        fail(err);
+        toast(err.message, "danger");
       }
     });
 
-    loadVersions().then(loadExperiments).then(loadSpecies).catch(fail);
+    loadVersions();
+    loadExperiments();
+    loadSpecies();
   </script>
 </body>
 </html>

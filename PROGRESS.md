@@ -60,6 +60,11 @@
 - **For lane A: the quality score rejects underwater colour.** Two DUO frames posted to the real
   server scored 40 and 31 with colour cast 0 — blue-green water reads as a colour defect, so as tuned
   the gate would turn every underwater frame away.
+- **`P2-12` part 2: the model and administration pages.** Same three states, per tab, and the same
+  move to the server's shapes. Two were outright broken against the real server: resetting a password
+  sent no password (the route requires one of at least eight characters), and the parameter form wrote
+  `max_workers` and `default_conf`, keys the server does not have. Monitoring now shows what the
+  server measures — queue, stored frames, disk, concurrency — instead of a GPU figure nothing reports.
 
 # Progress
 

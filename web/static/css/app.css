@@ -519,6 +519,13 @@ body {
   font-size: var(--av-fs-xs);
 }
 
+/* Audit values can be whole JSON rows; one line each, the full text on hover. */
+.av-log-value {
+  max-width: calc(var(--av-space-6) * 7);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Thin progress bar for task and export rows. */
 .av-progress {
   min-width: calc(var(--av-space-6) * 3);
