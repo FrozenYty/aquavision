@@ -46,56 +46,57 @@ export const REPORTS = [
   },
 ];
 
-// model_version, train_experiment and species_dict. Figures follow SRS scenario 4 (baseline
-// mAP@0.5 0.76 at 42 FPS, improved 0.83 at 39 FPS) and the dashboard's online model v8n-E3.
+// model_version, train_experiment and species_dict, in the shapes serializers.model_version, the
+// experiments route and serializers.species return. Figures follow SRS scenario 4 (baseline mAP@0.5
+// 0.76 at 42 FPS, improved 0.83 at 39 FPS) and the dashboard's online model v8n-E3.
 export const MODELS = [
-  { model_id: 4, version_name: "v8n-E3", dataset: "DS-V2", map50: 0.83, map5095: 0.55, recall: 0.77, fps: 39, params_m: 3.4, is_online: 1, registered_at: "2026-11-05T18:00:00+08:00" },
-  { model_id: 3, version_name: "v8n-E2", dataset: "DS-V2", map50: 0.81, map5095: 0.53, recall: 0.75, fps: 40, params_m: 3.4, is_online: 0, registered_at: "2026-11-05T11:20:00+08:00" },
-  { model_id: 2, version_name: "v8n-E1", dataset: "DS-V2", map50: 0.79, map5095: 0.51, recall: 0.73, fps: 41, params_m: 3.2, is_online: 0, registered_at: "2026-11-04T21:40:00+08:00" },
-  { model_id: 1, version_name: "v8n-E0", dataset: "DS-V2", map50: 0.76, map5095: 0.49, recall: 0.71, fps: 42, params_m: 3.2, is_online: 0, registered_at: "2026-11-04T15:10:00+08:00" },
+  { model_id: 4, version_name: "v8n-E3", dataset_ref: "DS-V2", map50: 0.83, map50_95: 0.55, recall_avg: 0.77, fps: 39, params_m: 3.4, is_online: true, status: 1, created_at: "2026-11-05T10:00:00+00:00" },
+  { model_id: 3, version_name: "v8n-E2", dataset_ref: "DS-V2", map50: 0.81, map50_95: 0.53, recall_avg: 0.75, fps: 40, params_m: 3.4, is_online: false, status: 1, created_at: "2026-11-05T03:20:00+00:00" },
+  { model_id: 2, version_name: "v8n-E1", dataset_ref: "DS-V2", map50: 0.79, map50_95: 0.51, recall_avg: 0.73, fps: 41, params_m: 3.2, is_online: false, status: 1, created_at: "2026-11-04T13:40:00+00:00" },
+  { model_id: 1, version_name: "v8n-E0", dataset_ref: "DS-V2", map50: 0.76, map50_95: 0.49, recall_avg: 0.71, fps: 42, params_m: 3.2, is_online: false, status: 1, created_at: "2026-11-04T07:10:00+00:00" },
 ];
 
 // Ablation order: each experiment adds one improvement to the one before (README stack).
 export const EXPERIMENTS = [
-  { exp_id: "E0", model_id: 1, change: "基线 YOLOv8n", seed: 42, baseline: true },
-  { exp_id: "E1", model_id: 2, change: "+ 水下色彩校正", seed: 42 },
-  { exp_id: "E2", model_id: 3, change: "+ EMA 注意力", seed: 42 },
-  { exp_id: "E3", model_id: 4, change: "+ WIoU v3 损失", seed: 42 },
+  { exp_id: 1, exp_name: "E0 基线 YOLOv8n", dataset_snapshot: "DS-V2", split_ratio: "7:2:1", seed: 42, epochs: 100, map50: 0.76, map50_95: 0.49, recall_avg: 0.71, fps: 42, is_baseline: true, delta_map50: null, created_at: "2026-11-04T07:00:00+00:00" },
+  { exp_id: 2, exp_name: "E1 + 水下色彩校正", dataset_snapshot: "DS-V2", split_ratio: "7:2:1", seed: 42, epochs: 100, map50: 0.79, map50_95: 0.51, recall_avg: 0.73, fps: 41, is_baseline: false, delta_map50: 0.03, created_at: "2026-11-04T13:30:00+00:00" },
+  { exp_id: 3, exp_name: "E2 + EMA 注意力", dataset_snapshot: "DS-V2", split_ratio: "7:2:1", seed: 42, epochs: 100, map50: 0.81, map50_95: 0.53, recall_avg: 0.75, fps: 40, is_baseline: false, delta_map50: 0.05, created_at: "2026-11-05T03:10:00+00:00" },
+  { exp_id: 4, exp_name: "E3 + WIoU v3 损失", dataset_snapshot: "DS-V2", split_ratio: "7:2:1", seed: 42, epochs: 100, map50: 0.83, map50_95: 0.55, recall_avg: 0.77, fps: 39, is_baseline: false, delta_map50: 0.07, created_at: "2026-11-05T09:50:00+00:00" },
 ];
 
-// category: 1 economic, 2 pest (glossary §4).
+// category: 1 economic, 2 pest, 3 environment (data model §3.6).
 export const SPECIES = [
-  { class_code: "holothurian", cn_name: "海参", category: 1, conf_thr: 0.5, in_stat: 1 },
-  { class_code: "strongylocentrotus", cn_name: "海胆", category: 1, conf_thr: 0.5, in_stat: 1 },
-  { class_code: "chlamys", cn_name: "扇贝", category: 1, conf_thr: 0.45, in_stat: 1 },
-  { class_code: "asterias", cn_name: "海星", category: 2, conf_thr: 0.5, in_stat: 1 },
+  { class_code: "holothurian", cn_name: "海参", latin_name: "Holothuroidea", category: 1, conf_thr: 0.5, in_stat: true, status: 1 },
+  { class_code: "strongylocentrotus", cn_name: "海胆", latin_name: "Strongylocentrotus", category: 1, conf_thr: 0.5, in_stat: true, status: 1 },
+  { class_code: "chlamys", cn_name: "扇贝", latin_name: "Chlamys", category: 1, conf_thr: 0.45, in_stat: true, status: 1 },
+  { class_code: "asterias", cn_name: "海星", latin_name: "Asterias", category: 2, conf_thr: 0.5, in_stat: true, status: 1 },
 ];
 
-// sys_user, system parameters, sys_log and sys_message. Roles use the contract's codes
-// (api-contract §4); reading observer as the SRS capture operator is an assumption to confirm.
+// sys_user, system parameters, sys_log and sys_message, in the server's shapes. Roles use the
+// contract's codes (api-contract §4); reading observer as the SRS capture operator is unconfirmed.
 export const USERS = [
-  { user_id: 1, account: "admin@aquavision.test", role: "admin", status: 1, last_login: "2026-11-06T08:55:00+08:00" },
-  { user_id: 2, account: "analyst@aquavision.test", role: "analyst", status: 1, last_login: "2026-11-06T09:40:00+08:00" },
-  { user_id: 3, account: "algo@aquavision.test", role: "algo", status: 1, last_login: "2026-11-05T21:10:00+08:00" },
-  { user_id: 4, account: "capture@aquavision.test", role: "observer", status: 1, last_login: "2026-11-06T10:42:00+08:00" },
-  { user_id: 5, account: "intern@aquavision.test", role: "observer", status: 0, last_login: "2026-10-28T14:00:00+08:00" },
+  { user_id: 1, username: "admin", real_name: "系统管理员", role: "admin", status: 1, last_login_at: "2026-11-06T00:55:00+00:00" },
+  { user_id: 2, username: "analyst", real_name: "分析员一", role: "analyst", status: 1, last_login_at: "2026-11-06T01:40:00+00:00" },
+  { user_id: 3, username: "algo", real_name: "算法员一", role: "algo", status: 1, last_login_at: "2026-11-05T13:10:00+00:00" },
+  { user_id: 4, username: "capture", real_name: "采集员一", role: "observer", status: 1, last_login_at: "2026-11-06T02:42:00+00:00" },
+  { user_id: 5, username: "intern", real_name: "实习采集员", role: "observer", status: 0, last_login_at: "2026-10-28T06:00:00+00:00" },
 ];
 
-// Defaults from architecture §8 and the SRS: two workers, 300 ms detection interval, score 60.
-export const PARAMS = { retention_days: 90, max_workers: 2, default_conf: 0.5, quality_threshold: 60, detect_interval_ms: 300 };
+// The server's parameter set and defaults (config.py, api-contract §6 Parameters).
+export const PARAMS = { retention_days: 30, max_concurrency: 2, detect_interval_ms: 300, quality_threshold: 60, camera_index: 0 };
 
 export const LOGS = [
-  { time: "2026-11-06T10:58:00+08:00", account: "analyst@aquavision.test", action: "提交复核", before: "4 个目标", after: "5 个目标" },
-  { time: "2026-11-06T09:30:00+08:00", account: "admin@aquavision.test", action: "修改参数", before: "质量阈值 55", after: "质量阈值 60" },
-  { time: "2026-11-05T18:02:00+08:00", account: "algo@aquavision.test", action: "模型上线", before: "v8n-E2", after: "v8n-E3" },
-  { time: "2026-11-05T09:15:00+08:00", account: "admin@aquavision.test", action: "停用账号", before: "intern@aquavision.test 启用", after: "停用" },
-  { time: "2026-11-04T16:21:00+08:00", account: "algo@aquavision.test", action: "导出数据集", before: "DS-V1", after: "DS-V2" },
-  { time: "2026-11-04T08:50:00+08:00", account: "capture@aquavision.test", action: "登录", before: "", after: "" },
+  { log_id: 6, user_id: 2, module: "review", action: "submit", target_type: "media_asset", target_id: "20261103T091000-0001", before_value: "4", after_value: "5", created_at: "2026-11-06T02:58:00+00:00" },
+  { log_id: 5, user_id: 1, module: "system", action: "param", target_type: "sys_param", target_id: "quality_threshold", before_value: "55", after_value: "60", created_at: "2026-11-06T01:30:00+00:00" },
+  { log_id: 4, user_id: 3, module: "model", action: "activate", target_type: "model_version", target_id: "4", before_value: "v8n-E2", after_value: "v8n-E3", created_at: "2026-11-05T10:02:00+00:00" },
+  { log_id: 3, user_id: 1, module: "user", action: "status", target_type: "sys_user", target_id: "5", before_value: "1", after_value: "0", created_at: "2026-11-05T01:15:00+00:00" },
+  { log_id: 2, user_id: 3, module: "dataset", action: "export", target_type: "dataset_snapshot", target_id: "DS-V2", before_value: null, after_value: "7782", created_at: "2026-11-04T08:21:00+00:00" },
+  { log_id: 1, user_id: 4, module: "auth", action: "login", target_type: "sys_user", target_id: "4", before_value: null, after_value: null, created_at: "2026-11-04T00:50:00+00:00" },
 ];
 
-// msg_type: capture_fail, task_fail, report_done (FR-M8-02).
+// type: capture_fail, task_fail, report_done (FR-M8-02).
 export const MESSAGES = [
-  { msg_id: 3, msg_type: "task_fail", text: "识别任务 #2044 失败：推理超时，单帧超过 5 秒", created_at: "2026-11-06T09:06:00+08:00", is_read: 0 },
-  { msg_id: 2, msg_type: "report_done", text: "11 月第 1 周巡检报告已生成，可在巡检报告页下载", created_at: "2026-11-06T09:00:00+08:00", is_read: 0 },
-  { msg_id: 1, msg_type: "capture_fail", text: "会话 s-b1-002 采集失败：摄像头不可用，请检查 USB 连接", created_at: "2026-11-04T08:45:00+08:00", is_read: 1 },
+  { msg_id: 3, type: "task_fail", level: "warn", title: "识别任务失败", content: "DT261106-0044 推理超时：单帧超过 5 秒", is_read: false, created_at: "2026-11-06T01:06:00+00:00" },
+  { msg_id: 2, type: "report_done", level: "info", title: "巡检报告已生成", content: "11 月第 1 周巡检报告，可在巡检报告页下载", is_read: false, created_at: "2026-11-06T01:00:00+00:00" },
+  { msg_id: 1, type: "capture_fail", level: "error", title: "采集失败", content: "会话 s-b1-002：摄像头不可用，请检查 USB 连接", is_read: true, created_at: "2026-11-04T00:45:00+00:00" },
 ];

@@ -259,8 +259,8 @@ const ROUTES = {
     return task;
   },
 
-  // System administration (api-contract §6).
-  "GET /users": () => USERS,
+  // System administration, in the server's shapes (api-contract §6).
+  "GET /users": () => ({ items: USERS, total: USERS.length }),
 
   "POST /users/{id}/status": ({ id, body }) => {
     const user = USERS.find((u) => u.user_id === Number(id));
@@ -270,68 +270,84 @@ const ROUTES = {
     return user;
   },
 
-  "POST /users/{id}/reset-password": ({ id }) => {
+  "POST /users/{id}/reset-password": ({ id, body }) => {
     if (!USERS.some((u) => u.user_id === Number(id))) throw new Fail(40401, "账号不存在");
-    return { reset: true };
+    if (!(body?.password?.length >= 8)) throw new Fail(40002, "新密码至少 8 位");
+    return { user_id: Number(id), reset: true };
   },
 
   "GET /params": () => PARAMS,
 
+  // PATCH takes any subset and answers with the full set plus what changed.
   "PATCH /params": ({ body }) => {
-    if (!(body.quality_threshold >= 0 && body.quality_threshold <= 100)) throw new Fail(40001, "质量阈值须在 0 到 100 之间");
-    return Object.assign(PARAMS, body);
+    if (body.quality_threshold !== undefined && !(body.quality_threshold >= 0 && body.quality_threshold <= 100)) {
+      throw new Fail(40002, "质量阈值须在 0 到 100 之间");
+    }
+    const changed = Object.fromEntries(
+      Object.entries(body).filter(([k, v]) => PARAMS[k] !== v).map(([k, v]) => [k, { before: PARAMS[k], after: v }]),
+    );
+    Object.assign(PARAMS, body);
+    return { params: PARAMS, changed };
   },
 
-  // Monitoring figures: queue and failure rate from the task list, the rest fixed.
-  "GET /monitor": () => {
-    const finished = TASKS.filter((t) => t.status >= 2);
-    return {
-      queue: TASKS.filter((t) => t.status === 0).length,
-      running: TASKS.filter((t) => t.status === 1).length,
-      failure_rate: finished.length ? TASKS.filter((t) => t.status === 3).length / finished.length : 0,
-      gpu_mem_gb: 3.8,
-      gpu_mem_total_gb: 8,
-      disk_used_pct: 41,
-      checked_at: new Date().toISOString(),
-    };
-  },
+  // Monitoring: queue counts from the task list, the rest fixed (the server measures the disk).
+  "GET /monitor": () => ({
+    queue: {
+      queued: TASKS.filter((t) => t.status === "queued").length,
+      running: TASKS.filter((t) => t.status === "running").length,
+    },
+    frames: FRAMES.length,
+    disk: { used_gb: 182.4, total_gb: 476.3, percent: 38.3, level: "ok" },
+    max_concurrency: PARAMS.max_concurrency,
+    at: new Date().toISOString(),
+  }),
 
-  "GET /logs": ({ query }) => {
-    const q = (query.q ?? "").toLowerCase();
-    return LOGS.filter((l) => !q || `${l.account}${l.action}${l.before}${l.after}`.toLowerCase().includes(q));
-  },
+  // Filters as the server reads them: module and action, no keyword.
+  "GET /logs": ({ query }) =>
+    paginate(LOGS.filter((l) => (!query.module || l.module === query.module) && (!query.action || l.action === query.action)), query),
 
-  "GET /messages": () => MESSAGES,
+  "GET /messages": ({ query }) => ({
+    ...paginate(MESSAGES, query),
+    unread: MESSAGES.filter((m) => !m.is_read).length,
+  }),
 
   "POST /messages/{id}/read": ({ id }) => {
     const msg = MESSAGES.find((m) => m.msg_id === Number(id));
     if (!msg) throw new Fail(40401, "消息不存在");
-    msg.is_read = 1;
-    return msg;
+    msg.is_read = true;
+    return { msg_id: msg.msg_id, is_read: true };
   },
 
   // Model versions: both routes are in the contract. Exactly one model is online (P3-03).
-  "GET /models": () => MODELS,
+  "GET /models": () => ({
+    items: MODELS,
+    online_model_id: MODELS.find((m) => m.is_online)?.model_id ?? null,
+    total: MODELS.length,
+  }),
 
   "POST /models/{id}/activate": ({ id }) => {
     const model = MODELS.find((m) => m.model_id === Number(id));
     if (!model) throw new Fail(40401, "模型版本不存在");
     if (model.is_online) throw new Fail(40901, "该版本已在线");
-    MODELS.forEach((m) => { m.is_online = m === model ? 1 : 0; });
+    MODELS.forEach((m) => { m.is_online = m === model; });
     persist();
     return model;
   },
 
   // Experiments and the species dictionary (api-contract §6).
-  "GET /experiments": () => EXPERIMENTS,
+  "GET /experiments": () => ({
+    items: EXPERIMENTS,
+    baseline: EXPERIMENTS.find((e) => e.is_baseline)?.exp_name ?? null,
+    total: EXPERIMENTS.length,
+  }),
 
-  "GET /species": () => SPECIES,
+  "GET /species": () => ({ items: SPECIES, total: SPECIES.length }),
 
   "PATCH /species/{id}": ({ id, body }) => {
     const row = SPECIES.find((s) => s.class_code === id);
     if (!row) throw new Fail(40401, "类别不存在");
-    if (!(body.conf_thr >= 0.05 && body.conf_thr <= 0.95)) throw new Fail(40001, "阈值须在 0.05 到 0.95 之间");
-    Object.assign(row, { conf_thr: body.conf_thr, in_stat: body.in_stat });
+    if (body.conf_thr !== undefined && !(body.conf_thr >= 0 && body.conf_thr <= 1)) throw new Fail(40002, "阈值须在 0 到 1 之间");
+    for (const key of ["conf_thr", "in_stat", "cn_name"]) if (body[key] !== undefined) row[key] = body[key];
     persist();
     return row;
   },

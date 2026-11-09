@@ -139,7 +139,8 @@ export const updateSpecies = (code, body) => request("PATCH", `/species/${code}`
 // ---- System administration ----
 export const listUsers = () => request("GET", "/users");
 export const setUserStatus = (id, status) => request("POST", `/users/${id}/status`, { body: { status } });
-export const resetPassword = (id) => request("POST", `/users/${id}/reset-password`);
+export const resetPassword = (id, password) =>
+  request("POST", `/users/${id}/reset-password`, { body: { password } });
 export const getParams = () => request("GET", "/params");
 export const updateParams = (body) => request("PATCH", "/params", { body });
 export const getMonitor = () => request("GET", "/monitor");
