@@ -42,6 +42,7 @@
 | `data-model-en/zh.md` | 表、字段、索引、文件落盘 | 加表或加字段 | @Gtechson |
 | `test-plan-en/zh.md` | 测试分层、数据集、指标、缺陷分级 | 指标或验收项变化 | @IkeaFyj |
 | `prototype-en/zh.md` | 11-06 走查展示什么，逐屏说明 | 原型被正式切片取代 | @chemflowers |
+| `traceability-en/zh.md` | 原型每个界面逐元素追踪到 SRS 表 3-1 | 界面或元素变化、或状态变化 | @chemflowers |
 | `procurement-en/zh.md` | 买什么、为什么买这些、怎么验收 | 换硬件 | @FrozenYty |
 | `copy-review-en/zh.md` | 界面文案的审阅结论，按页面 | 文案重写或页面集合变化 | @FrozenYty |
 | `handover-en/zh.md` | 交接出去的工作，以及它必须达到的标准 | 有事项关闭或新增 | @FrozenYty |
