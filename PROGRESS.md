@@ -9,6 +9,13 @@
   iteration in it; leaving all of it in the final phase means discovering model problems with no time
   left to answer them. The phase boundary is stated in the task so the official E0–E4 runs at `P4`
   are not mistaken for the same work done twice.
+- **A traceability matrix joins the frontend lane (`P2-14`).** The course wants one built from the SRS
+  and the UI prototype, covering every screen. The template it follows is five sheets — cover, change
+  history, matrix, and one annotated screenshot per screen — and its unit is **one UI element per row**,
+  not one screen per row: a title, an input, a button, each described by how it looks and what it does,
+  and each pointing at a numbered callout on the picture. The template workbook was read for its
+  structure and then deleted; the structure is recorded in `docs/handover-en.md` §3.6 so it does not
+  have to be found again.
 - **`docs/handover-en.md` was rewritten as the acceptance list rather than a note.** It opens by naming
   what already exists — the cheapest mistake on a Monday is rebuilding a skeleton that is already
   there — and every remaining item is paired with the check that settles it.
