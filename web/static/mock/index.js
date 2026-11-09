@@ -15,7 +15,7 @@ import {
 import {
   DATASETS,
   EXPERIMENTS,
-  HARD_SEEDS,
+  HARD_SOURCES,
   LOGS,
   MESSAGES,
   MODELS,
@@ -96,42 +96,31 @@ function findTask(id) {
   return task;
 }
 
-// Each read moves the running task one frame on, so a page that polls shows real progress. When it
+// Each read moves the running task on by a tenth, so a page that polls shows real progress. When it
 // finishes, the oldest queued task starts (two workers in the design, one here keeps it readable).
 function advanceTasks() {
-  let running = TASKS.find((t) => t.status === 1);
+  let running = TASKS.find((t) => t.status === "running");
   if (running) {
-    running.done = Math.min(running.total, running.done + 1);
-    if (running.done === running.total) running.status = 2;
+    running.progress = Math.min(100, running.progress + 10);
+    if (running.progress === 100) Object.assign(running, { status: "done", finished_at: new Date().toISOString() });
   }
-  if (!TASKS.some((t) => t.status === 1)) {
-    running = TASKS.filter((t) => t.status === 0).sort((a, b) => a.task_id - b.task_id)[0];
-    if (running) running.status = 1;
+  if (!TASKS.some((t) => t.status === "running")) {
+    running = TASKS.filter((t) => t.status === "queued").sort((a, b) => a.task_id - b.task_id)[0];
+    if (running) running.status = "running";
   }
   persist();
 }
 
-function withQueue(tasks) {
-  const queued = TASKS.filter((t) => t.status === 0).sort((a, b) => a.task_id - b.task_id);
-  return tasks.map((t) => ({ ...t, queue_pos: t.status === 0 ? queued.indexOf(t) + 1 : null }));
-}
-
-// The pool: seeded samples on real frames, plus every frame corrected on the review page (FR-M4-03
-// says a modified frame enters the pool automatically). Source and reason are mock field names.
+// The pool, in the server's shape: the frame object plus its source. Seeded samples sit on real
+// frames, and every frame submitted on the review page joins as "modified" (FR-M4-03).
 function hardSamples() {
   const ok = FRAMES.filter((f) => f.quality.verdict === "ok" && !captured.includes(f));
-  const seeded = HARD_SEEDS.map((seed, i) => ({ ...seed, frame: ok[i * 2] })).filter((h) => h.frame);
-  const corrected = Object.entries(REVIEWS).map(([id, boxes]) => ({
-    source: "corrected",
-    class_code: boxes.find((b) => b.review_status === 2)?.class_code ?? boxes[0]?.class_code,
-    confidence: null,
-    reason: "复核时修改过框或类别",
-    frame: FRAMES.find((f) => f.frame_id === id),
-  }));
-  return [...corrected, ...seeded]
+  const seeded = HARD_SOURCES.map((source, i) => ({ source, frame: ok[i * 2] })).filter((h) => h.frame);
+  const reviewed = Object.keys(REVIEWS).map((id) => ({ source: "modified", frame: FRAMES.find((f) => f.frame_id === id) }));
+  return [...reviewed, ...seeded]
     .filter((h) => h.frame && !removedHard.has(h.frame.frame_id))
     .filter((h, i, all) => all.findIndex((o) => o.frame === h.frame) === i)
-    .map(({ frame, ...h }) => ({ ...h, frame_id: frame.frame_id, image_url: withImage(frame).image_url, added_at: frame.captured_at }));
+    .map(({ frame, source }) => ({ ...withImage(frame), source }));
 }
 
 function findFrame(id) {
@@ -220,14 +209,15 @@ const ROUTES = {
     return session;
   },
 
+  // Filters as the server reads them: session, site, quality (ok | retake), start, end.
   "GET /frames": ({ query }) => {
     const items = FRAMES.filter(
       (f) =>
         (!query.site || f.site === query.site) &&
-        (!query.session_id || f.session_id.includes(query.session_id)) &&
-        (!query.verdict || f.quality.verdict === query.verdict) &&
-        (!query.from || f.captured_at.slice(0, 10) >= query.from) &&
-        (!query.to || f.captured_at.slice(0, 10) <= query.to),
+        (!query.session || f.session_id === query.session) &&
+        (!query.quality || f.quality.verdict === query.quality) &&
+        (!query.start || f.captured_at.slice(0, 10) >= query.start) &&
+        (!query.end || f.captured_at.slice(0, 10) <= query.end),
     );
     const result = paginate(items, query);
     return { ...result, items: result.items.map(withImage) };
@@ -247,18 +237,22 @@ const ROUTES = {
     return { frame_id: id, count_before: before, count_after: body.objects.length };
   },
 
+  // The server takes { asset_count, conf_thr, ... }; frame_ids is sent too and ignored there.
   "POST /detect/batches": ({ body }) => {
-    if (!body?.frame_ids?.length) throw new Fail(40001, "请至少选择一帧");
+    if (!(body?.asset_count >= 1)) throw new Fail(40001, "请至少选择一帧");
+    const id = Math.max(...TASKS.map((t) => t.task_id)) + 1;
     const task = {
-      task_id: Math.max(...TASKS.map((t) => t.task_id)) + 1,
-      kind: "batch",
-      source: `${body.frame_ids.length} 帧（影像浏览）`,
-      total: body.frame_ids.length,
-      done: 0,
-      status: 0,
-      model_version: "v8n-E3",
+      task_id: id,
+      task_code: `DT${new Date().toISOString().slice(2, 10).replaceAll("-", "")}-${String(id).padStart(4, "0")}`,
+      type: "batch",
+      status: "queued",
+      progress: 0,
+      asset_count: body.asset_count,
+      obj_count: 0,
+      model_version_id: 4,
+      error_msg: null,
       created_at: new Date().toISOString(),
-      error: null,
+      finished_at: null,
     };
     TASKS.push(task);
     persist();
@@ -402,49 +396,40 @@ const ROUTES = {
     return ds;
   },
 
-  // Hard-sample pool.
-  "GET /hard-samples": ({ query }) => {
-    const q = (query.q ?? "").toLowerCase();
-    const items = hardSamples().filter(
-      (h) => (!query.source || h.source === query.source) && (!q || h.frame_id.toLowerCase().includes(q)),
-    );
-    return paginate(items, query);
-  },
+  // Hard-sample pool, filtered by source like the server (no keyword filter there).
+  "GET /hard-samples": ({ query }) =>
+    paginate(hardSamples().filter((h) => !query.source || h.source === query.source), query),
 
   "DELETE /hard-samples/{id}": ({ id }) => {
     if (!hardSamples().some((h) => h.frame_id === id)) throw new Fail(40401, "难例不存在");
     removedHard.add(id);
     persist();
-    return { frame_id: id };
+    return { frame_id: id, removed: 1 };
   },
 
-  // Task list, cancel and retry; every route here is in api-contract §6.
+  // Task list, cancel and retry, as the server answers them (status filter only, no keyword).
   "GET /tasks": ({ query }) => {
     advanceTasks();
-    const q = (query.q ?? "").toLowerCase();
-    const items = TASKS.filter(
-      (t) =>
-        (query.status === undefined || t.status === Number(query.status)) &&
-        (!q || String(t.task_id).includes(q) || t.source.toLowerCase().includes(q)),
-    ).sort((a, b) => b.task_id - a.task_id);
-    const result = paginate(items, query);
-    return { ...result, items: withQueue(result.items) };
+    const items = TASKS.filter((t) => !query.status || t.status === query.status).sort(
+      (a, b) => b.task_id - a.task_id,
+    );
+    return paginate(items, query);
   },
 
-  "GET /tasks/{id}": ({ id }) => withQueue([findTask(id)])[0],
+  "GET /tasks/{id}": ({ id }) => findTask(id),
 
   "POST /tasks/{id}/cancel": ({ id }) => {
     const task = findTask(id);
-    if (task.status > 1) throw new Fail(40901, "任务已结束，不能取消");
-    Object.assign(task, { status: 3, error: "已取消" });
+    if (!["queued", "running"].includes(task.status)) throw new Fail(40901, "任务已结束，不能取消");
+    Object.assign(task, { status: "cancelled", finished_at: new Date().toISOString() });
     persist();
     return task;
   },
 
   "POST /tasks/{id}/retry": ({ id }) => {
     const task = findTask(id);
-    if (task.status !== 3) throw new Fail(40901, "只有失败的任务可以重试");
-    Object.assign(task, { status: 0, done: 0, error: null });
+    if (task.status !== "failed") throw new Fail(40901, "只有失败的任务可以重试");
+    Object.assign(task, { status: "queued", progress: 0, error_msg: null, finished_at: null });
     persist();
     return task;
   },

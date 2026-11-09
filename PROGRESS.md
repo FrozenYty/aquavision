@@ -49,6 +49,17 @@
   serve `web/`, so the pages and the API share no origin without a separate mount or proxy; and
   nothing creates the first account — `init_db` seeds species only. Testing used a scratch runner that
   mounts `web/` and adds a test account; neither is committed.
+- **`P2-12` part 1: loading, empty and failure on the task, frame and hard-sample pages.** One helper,
+  `loadInto`, draws all three; after five seconds the loading line says the server is slow, so a slow
+  answer never reads as an empty one, and a failure says why and offers a retry. Each page and its mock
+  route now use the server's shape — status words, progress as a percentage, the server's filter names
+  and source codes — so real rows render instead of `NaN`.
+- **Three more contract questions surfaced, all lane B:** `POST /detect/batches` takes a frame count,
+  not the selected frames; `GET /tasks` and `GET /hard-samples` have no keyword filter, which SRS §5.1
+  asks of every list page; and no route serves a frame's picture, so real thumbnails stay placeholders.
+- **For lane A: the quality score rejects underwater colour.** Two DUO frames posted to the real
+  server scored 40 and 31 with colour cast 0 — blue-green water reads as a colour defect, so as tuned
+  the gate would turn every underwater frame away.
 
 # Progress
 

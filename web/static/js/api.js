@@ -118,8 +118,10 @@ export const closeSession = (sessionId) => request("POST", `/capture/sessions/${
 
 // ---- Frames and detection ----
 export const listFrames = (query) => request("GET", "/frames", { query });
+// The server counts frames (asset_count); which frames is not part of the contract yet, so the ids
+// travel along for when it is.
 export const startBatch = (frameIds) =>
-  request("POST", "/detect/batches", { body: { frame_ids: frameIds } });
+  request("POST", "/detect/batches", { body: { asset_count: frameIds.length, frame_ids: frameIds } });
 export const listTasks = (query) => request("GET", "/tasks", { query });
 export const cancelTask = (id) => request("POST", `/tasks/${id}/cancel`);
 export const retryTask = (id) => request("POST", `/tasks/${id}/retry`);

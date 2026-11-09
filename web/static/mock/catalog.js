@@ -4,30 +4,20 @@
 // than the contract and do not all match the server's; each page aligns them when it moves to real
 // data, which is when a mismatch would actually show.
 
-// detect_task. status: 0 queued, 1 running, 2 done, 3 failed (glossary §3). kind, source, total,
-// done and error are mock names; the server sends type, task_code, progress and error_msg.
+// detect_task, in the shape serializers.task returns: status is a word, progress a percentage.
 export const TASKS = [
-  { task_id: 2046, kind: "batch", source: "s-b1-001", total: 20, done: 7, status: 1, model_version: "v8n-E3", created_at: "2026-11-06T10:42:00+08:00", error: null },
-  { task_id: 2047, kind: "batch", source: "s-a3-002", total: 15, done: 0, status: 0, model_version: "v8n-E3", created_at: "2026-11-06T10:44:00+08:00", error: null },
-  { task_id: 2048, kind: "single", source: "20261103T091003-0004", total: 1, done: 0, status: 0, model_version: "v8n-E3", created_at: "2026-11-06T10:45:00+08:00", error: null },
-  { task_id: 2045, kind: "batch", source: "s-a3-001", total: 14, done: 14, status: 2, model_version: "v8n-E3", created_at: "2026-11-06T09:20:00+08:00", error: null },
-  { task_id: 2044, kind: "batch", source: "s-a3-001", total: 14, done: 9, status: 3, model_version: "v8n-E3", created_at: "2026-11-06T09:05:00+08:00", error: "推理超时：单帧超过 5 秒" },
-  { task_id: 2043, kind: "single", source: "20261103T143000-0001", total: 1, done: 1, status: 2, model_version: "v8n-E2", created_at: "2026-11-05T16:12:00+08:00", error: null },
-  { task_id: 2042, kind: "batch", source: "s-b1-001", total: 20, done: 20, status: 2, model_version: "v8n-E2", created_at: "2026-11-05T15:30:00+08:00", error: null },
+  { task_id: 46, task_code: "DT261106-0046", type: "batch", status: "running", progress: 35, asset_count: 20, obj_count: 41, model_version_id: 4, error_msg: null, created_at: "2026-11-06T02:42:00+00:00", finished_at: null },
+  { task_id: 47, task_code: "DT261106-0047", type: "batch", status: "queued", progress: 0, asset_count: 15, obj_count: 0, model_version_id: 4, error_msg: null, created_at: "2026-11-06T02:44:00+00:00", finished_at: null },
+  { task_id: 48, task_code: "DT261106-0048", type: "live", status: "queued", progress: 0, asset_count: 1, obj_count: 0, model_version_id: 4, error_msg: null, created_at: "2026-11-06T02:45:00+00:00", finished_at: null },
+  { task_id: 45, task_code: "DT261106-0045", type: "batch", status: "done", progress: 100, asset_count: 14, obj_count: 37, model_version_id: 4, error_msg: null, created_at: "2026-11-06T01:20:00+00:00", finished_at: "2026-11-06T01:21:10+00:00" },
+  { task_id: 44, task_code: "DT261106-0044", type: "batch", status: "failed", progress: 64, asset_count: 14, obj_count: 22, model_version_id: 4, error_msg: "推理超时：单帧超过 5 秒", created_at: "2026-11-06T01:05:00+00:00", finished_at: "2026-11-06T01:06:02+00:00" },
+  { task_id: 43, task_code: "DT261105-0043", type: "live", status: "done", progress: 100, asset_count: 1, obj_count: 3, model_version_id: 3, error_msg: null, created_at: "2026-11-05T08:12:00+00:00", finished_at: "2026-11-05T08:12:01+00:00" },
+  { task_id: 42, task_code: "DT261105-0042", type: "batch", status: "cancelled", progress: 40, asset_count: 20, obj_count: 15, model_version_id: 3, error_msg: null, created_at: "2026-11-05T07:30:00+00:00", finished_at: "2026-11-05T07:31:00+00:00" },
 ];
 
-// Hard-sample pool (FR-M4-03). Three sources: low confidence, corrected in review, and models that
-// disagree. The mock attaches these to real frames in order; frames corrected on the review page
-// join as "corrected" on their own.
-export const HARD_SEEDS = [
-  { source: "low_conf", class_code: "holothurian", confidence: 0.42, reason: "礁石纹理被判成海参" },
-  { source: "disagree", class_code: "chlamys", confidence: 0.55, reason: "基线判扇贝，改进模型判海星" },
-  { source: "low_conf", class_code: "asterias", confidence: 0.38, reason: "目标被泥沙半遮挡" },
-  { source: "corrected", class_code: "strongylocentrotus", confidence: 0.61, reason: "漏检一只海胆，复核补框" },
-  { source: "disagree", class_code: "holothurian", confidence: 0.49, reason: "两模型框位置偏差超过 0.3 IoU" },
-  { source: "low_conf", class_code: "strongylocentrotus", confidence: 0.44, reason: "画面边缘，目标只露一半" },
-  { source: "corrected", class_code: "asterias", confidence: 0.58, reason: "海星被改为扇贝" },
-];
+// Hard-sample pool (FR-M4-03). One entry per seeded sample, using the server's source codes:
+// low_conf (low confidence), modified (changed in review), inconsistent (models disagree).
+export const HARD_SOURCES = ["low_conf", "inconsistent", "low_conf", "modified", "inconsistent", "low_conf", "modified"];
 
 // Dataset snapshots (FR-M4-04). DS-V2 is the cleaned DUO set from P0-01: 7782 images, test 1111,
 // split by perceptual-hash group. Mock field names; the contract's snapshot is in §6.
