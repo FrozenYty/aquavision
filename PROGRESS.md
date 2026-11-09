@@ -37,6 +37,18 @@
   the review reply differ from the server's serializers, and the frames page sends `session_id`,
   `verdict`, `from`, `to` where the server reads `session`, `quality`, `start`, `end`. The comments now
   say so instead of calling the routes provisional; the fields get aligned page by page under `P2-12`.
+- **`P2-11` done: sign-in calls `POST /api/auth/login`.** The token and user are stored, every request
+  carries the bearer header, a refusal shows the server's own sentence (attempts left, then the
+  lockout and its remaining seconds), and a 401 anywhere except the login call clears the session and
+  returns to the form with the page to come back to. The captcha field is gone: the endpoint never
+  took one, and a field nothing checks is decoration. FR-M1-01 still asks for a captcha.
+- **The mock became opt-in per tab.** `?mock=1` runs a tab on the mock, `?mock=0` leaves it; without
+  the flag every page talks to the real API. A hard-coded switch could not serve both the demo laptop
+  and the integrated system.
+- **Two gaps found while testing against the real server, both lane B.** The FastAPI app does not
+  serve `web/`, so the pages and the API share no origin without a separate mount or proxy; and
+  nothing creates the first account — `init_db` seeds species only. Testing used a scratch runner that
+  mounts `web/` and adds a test account; neither is committed.
 
 # Progress
 

@@ -60,8 +60,8 @@ tests/       测试
 python -m http.server 8765 --directory web
 ```
 
-然后访问 <http://localhost:8765/templates/login.html>。在 `web/static/js/api.js` 的 `USE_MOCK`
-关闭之前，数据来自 `web/static/mock/`。
+然后访问 <http://localhost:8765/templates/login.html?mock=1>。`?mock=1` 让这个浏览器标签页的页面使用
+`web/static/mock/` 的模拟数据，没有后端也能打开原型；不带它时，每个页面都调用真实接口，并要求先登录。
 
 ## 团队
 
