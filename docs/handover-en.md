@@ -132,7 +132,42 @@ The routes exist: `GET`/`POST /api/datasets`, with a real split and a manifest.
 - The split counts shown must equal what the server returned; a mismatch here is the defect that makes
   the export untrustworthy.
 
-### 3.6 The copy review
+### 3.6 Requirements traceability matrix (task `P2-14`)
+
+The course asks for a matrix built from the SRS and the UI prototype, covering **every screen in the
+prototype**. The template it is modelled on is a five-sheet workbook: a cover, a change history, the
+matrix, and one annotated screenshot per screen.
+
+**The matrix is one row per UI element, not one per screen.** Each row carries: number, module (the
+screen), sub-module (header / form / actions / content), function point (the control), a description
+that says what it looks like and what it does, three review columns (PD / COD / UT), the author and the
+accountable owner.
+
+The description refers to the screenshot by figure and callout — "refer to figure 1, callout 4". That
+reference is the whole point of the exercise: it is what lets a reviewer find the element on the image
+instead of trusting the prose.
+
+Deliver it in the repository as Markdown, because a spreadsheet cannot be reviewed in a pull request:
+
+- `docs/traceability-en.md` and `docs/traceability-zh.md`, paired like every other document; the English
+  is the source of truth and the Chinese is the reference version.
+- Screenshots under `docs/images/traceability/`, one per page, named for the page id — `p02-home.png`
+  and so on. Callouts may be drawn on the image or, if that is impractical, the rows for a page are
+  grouped in reading order and the page states that the numbering is by row.
+- The cover fields and the change history from the template, as short sections.
+- The status legend — done, in progress, not started — applied honestly. A page that is a prototype
+  with mock data is not "done" in the sense a reviewer reads it.
+
+What settles it:
+
+| Claim | The check |
+|---|---|
+| Every prototype screen is covered | Every file in `web/templates/` appears as a module in the matrix |
+| The images are real | Every path referenced under `docs/images/traceability/` exists in the repository |
+| The requirement ids are real | Every `FR-Mx-xx` cited exists in `docs/srs-en.md` Table 3-1 |
+| A reader can follow it | Someone who has not seen the app finds three named elements on their screenshots |
+
+### 3.7 The copy review
 
 `docs/copy-review-zh.md` holds nine findings; three are marked as worth doing first. Apply what the lead
 approves; the document already records what was applied, so nothing is done twice.
