@@ -43,6 +43,7 @@ only single-language files above the line. Within `docs/`, the fastest route is 
 | `data-model-en/zh.md` | tables, columns, indexes, file layout | a table or column changes | @Gtechson |
 | `test-plan-en/zh.md` | levels, datasets, metrics, defect classes | a metric or acceptance item changes | @IkeaFyj |
 | `prototype-en/zh.md` | what the 11-06 walkthrough shows, screen by screen | the prototype is replaced by the real slice | @chemflowers |
+| `traceability-en/zh.md` | every prototype screen, element by element, traced to SRS table 3-1 | a screen or element changes, or a status moves | @chemflowers |
 | `procurement-en/zh.md` | what to buy, why these parts, how to accept them | hardware changes | @FrozenYty |
 | `copy-review-en/zh.md` | findings on the interface copy, by page | the copy is rewritten or the page set changes | @FrozenYty |
 | `handover-en/zh.md` | work that changed hands, and the bar it must clear | an item is accepted or a new one opens | @FrozenYty |
