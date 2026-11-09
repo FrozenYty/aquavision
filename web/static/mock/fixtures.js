@@ -12,7 +12,7 @@ export const CAMERAS = [
   { index: 0, name: "USB 1080P Camera", width: 1920, height: 1080, available: true },
 ];
 
-// Session fields beyond session_id are provisional (no session object in the contract yet).
+// Session fields beyond session_id are mock names; GET /capture/sessions is in the contract.
 export const SESSIONS = [
   ["s-a3-001", "A3", "2026-11-03T09:10:00+08:00", "closed", null],
   ["s-a3-002", "A3", "2026-11-03T14:30:00+08:00", "closed", null],
@@ -46,7 +46,7 @@ function makeFrame(session, i) {
     env: { turbidity_rel: int(4, 28) },
     width: 1920,
     height: 1080,
-    site: session.site, // provisional: the contract filters by site but the frame has no site field
+    site: session.site, // mock-only: the server keeps the site as point_code
   };
 }
 
@@ -139,7 +139,7 @@ export const FALSE_POSITIVE = {
 };
 
 // Screen 6 mock data. /stats/species and /stats/quality match the contract route
-// table; trend and corrections are provisional (not in docs/api-contract-en.md yet).
+// table, and so are trend and corrections.
 // Totals are DASHBOARD.daily element for element and today's intercepted count is
 // DASHBOARD.rejected_today, so screens 2 and 6 cannot disagree when compared.
 
@@ -160,10 +160,10 @@ export const STATS_QUALITY = [
   { date: "2026-11-06", total: 412, intercepted: 49 },
 ];
 
-// Provisional: frames captured per day, for the trend line.
+// Frames captured per day, for the trend line.
 export const STATS_TREND = STATS_QUALITY.map(({ date, total }) => ({ date, frames: total }));
 
-// Provisional: review corrections per class (relabel / added / removed boxes).
+// Review corrections per class (relabel / added / removed boxes).
 export const STATS_CORRECTIONS = [
   { class_code: "strongylocentrotus", relabel: 9, added: 4, removed: 2 },
   { class_code: "holothurian", relabel: 12, added: 3, removed: 5 },

@@ -1,7 +1,8 @@
 // The only module that talks HTTP. Pages call the named functions below, never fetch().
 // While USE_MOCK is true, requests are answered by ../mock/ in the same envelope as the server.
 //
-// Paths marked "provisional" are not in docs/api-contract-en.md yet; lane B confirms them.
+// Every function maps to a route in docs/api-contract-en.md §6; tests/test_api_js.py holds both
+// that claim and the absence of any "not in the contract yet" marker.
 
 export const USE_MOCK = true;
 
@@ -42,32 +43,30 @@ function clean(params) {
 
 // ---- Capture ----
 export const listCameras = () => request("GET", "/cameras");
-export const listSessions = (query) => request("GET", "/capture/sessions", { query }); // provisional
+export const listSessions = (query) => request("GET", "/capture/sessions", { query });
 export const openSession = (body) => request("POST", "/capture/sessions", { body });
 export const grabFrame = (sessionId) => request("POST", `/capture/sessions/${sessionId}/frames`);
 export const closeSession = (sessionId) => request("POST", `/capture/sessions/${sessionId}/close`);
 
 // ---- Frames and detection ----
-// Contract filters: page, size, site, from, to. Provisional: session_id, verdict.
 export const listFrames = (query) => request("GET", "/frames", { query });
-// Body shape is provisional; the contract names the route only.
 export const startBatch = (frameIds) =>
   request("POST", "/detect/batches", { body: { frame_ids: frameIds } });
-export const listTasks = (query) => request("GET", "/tasks", { query }); // provisional
-export const cancelTask = (id) => request("POST", `/tasks/${id}/cancel`); // provisional
-export const retryTask = (id) => request("POST", `/tasks/${id}/retry`); // provisional
-export const listHardSamples = (query) => request("GET", "/hard-samples", { query }); // provisional
-export const removeHardSample = (frameId) => request("DELETE", `/hard-samples/${frameId}`); // provisional
-export const listDatasets = () => request("GET", "/datasets"); // provisional
-export const exportDataset = (body) => request("POST", "/datasets", { body }); // provisional
-export const listReports = () => request("GET", "/reports"); // provisional
-export const createReport = (body) => request("POST", "/reports", { body }); // provisional
+export const listTasks = (query) => request("GET", "/tasks", { query });
+export const cancelTask = (id) => request("POST", `/tasks/${id}/cancel`);
+export const retryTask = (id) => request("POST", `/tasks/${id}/retry`);
+export const listHardSamples = (query) => request("GET", "/hard-samples", { query });
+export const removeHardSample = (frameId) => request("DELETE", `/hard-samples/${frameId}`);
+export const listDatasets = () => request("GET", "/datasets");
+export const exportDataset = (body) => request("POST", "/datasets", { body });
+export const listReports = () => request("GET", "/reports");
+export const createReport = (body) => request("POST", "/reports", { body });
 export const listModels = () => request("GET", "/models");
 export const activateModel = (id) => request("POST", `/models/${id}/activate`);
-export const listExperiments = () => request("GET", "/experiments"); // provisional
-export const listSpecies = () => request("GET", "/species"); // provisional
-export const updateSpecies = (code, body) => request("PATCH", `/species/${code}`, { body }); // provisional
-// ---- System administration (all provisional) ----
+export const listExperiments = () => request("GET", "/experiments");
+export const listSpecies = () => request("GET", "/species");
+export const updateSpecies = (code, body) => request("PATCH", `/species/${code}`, { body });
+// ---- System administration ----
 export const listUsers = () => request("GET", "/users");
 export const setUserStatus = (id, status) => request("POST", `/users/${id}/status`, { body: { status } });
 export const resetPassword = (id) => request("POST", `/users/${id}/reset-password`);
@@ -81,12 +80,12 @@ export const getFrame = (frameId) => request("GET", `/frames/${frameId}`);
 export const getObjects = (frameId) => request("GET", `/frames/${frameId}/objects`);
 
 // ---- Review ----
-// Body shape is provisional: the full box list after review.
+// The full corrected box list, not a diff (api-contract §6, review submission).
 export const submitReview = (frameId, objects) =>
   request("POST", `/review/frames/${frameId}`, { body: { objects } });
 
 // ---- Stats (screen 6) ----
 export const statsSpecies = () => request("GET", "/stats/species");
 export const statsQuality = () => request("GET", "/stats/quality");
-export const statsTrend = () => request("GET", "/stats/trend"); // provisional
-export const statsCorrections = () => request("GET", "/stats/corrections"); // provisional
+export const statsTrend = () => request("GET", "/stats/trend");
+export const statsCorrections = () => request("GET", "/stats/corrections");

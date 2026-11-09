@@ -118,7 +118,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       stays behind `USE_MOCK`
 - [ ] **P2-09** Dataset export page against the real API · @chemflowers · closes AC-18 · done when a snapshot can be
       exported, listed and refreshed with no mock data, and the split counts match the server
-- [ ] **P2-10** `api.js` tells the truth · @chemflowers · done when no `provisional` marker remains, a
+- [x] **P2-10** `api.js` tells the truth · @chemflowers · done when no `provisional` marker remains, a
       test fails if the word returns, and every exported function maps to a route in the contract
 - [ ] **P2-11** Sign-in against the real endpoint · @chemflowers · closes AC-01 · done when the login page calls
       `POST /api/auth/login`, stores the token, shows the server's own lockout message, and a 401 from
