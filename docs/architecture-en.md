@@ -57,16 +57,22 @@ single most expensive mistake in a project this size.
 
 ## 4. Directory layout
 
+The tree below is the target; the first rows of it are what exists today. §3 explains the gap.
+
 ```
 server/
   app/
-    main.py            FastAPI entry point, router registration, camera startup
-    api/               auth, capture, detect, review, stats, model
-    services/          quality, tasks, review, statistics
-    repo/              one module per table
-    vision/            capture, preprocess, detect, quality
-    models/            SQLAlchemy definitions
-    core/              config, auth, logging, errors
+    main.py            FastAPI entry point, router registration, lifespan
+    routers/           the API surface, one module per domain (target: api/)
+    vision/            capture, quality, inference
+    rig/               the serial link to the ESP32 and the verdict it produces
+    models.py          SQLAlchemy definitions (target: models/)
+    db.py              engine and session factory
+    security.py        hashing, tokens, dependencies
+    serializers.py     row-to-JSON shapes
+    worker.py          the detection thread pool
+    config.py          settings, read once
+    envelope.py        the one response shape
 web/
   static/              css, js, fonts, vendor (pinned libraries), mock (fixtures for api.js)
   templates/           html pages
@@ -87,6 +93,7 @@ One process, four concerns:
 | Detection | Inference every ~300 ms | Decoupled from display rate; see ADR 03 |
 | Batch jobs | Fixed thread pool, 2 workers | No Celery, no Redis; task state lives in PostgreSQL |
 | API | Async FastAPI handlers | Serves REST; one WebSocket endpoint is planned and not yet implemented, so the capture page polls |
+| Rig link | One reader thread plus one keepalive thread, started only when `AV_RIG_PORT` is set | The board is optional; a machine without one is not degraded. The link's states and the keepalive rule are in `docs/rig-state-machine-en.md` §9 |
 
 **Detection rate is not the display rate.** The camera pushes frames at 10 fps; detection runs
 every 300 ms and the newest boxes are reused for intermediate frames. On a GPU both run at full

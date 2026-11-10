@@ -166,10 +166,10 @@ which had not arrived either; and the turbidity sensor, which needs the level sh
 
 ## Hardware reference
 
-The three vendor documents behind the rig are kept **outside the repository**, in the submission
-folder's `datasheets/` directory — not here: the repository is public, and the turbidity manual forbids
-disclosure to third parties without written consent. Facts learned from a document can be recorded; the
-document itself cannot be republished.
+The three vendor documents behind the rig are **not in this repository**: the repository is public, and
+the turbidity manual forbids disclosure to third parties without written consent. Facts learned from a
+document can be recorded; the document itself cannot be republished. The hardware lead holds copies and
+will provide them on request.
 
 | Datasheet | Part | What it settled |
 |---|---|---|

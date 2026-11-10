@@ -1,5 +1,30 @@
 ## 2026-11-10
 
+- **The hardware reference described a folder that exists on one machine only.** It said the three vendor
+  PDFs are kept "in the submission folder's `datasheets/` directory", which is a location on the lead's
+  disk and meaningless to anyone reading the public repository. It now says the documents are not in the
+  repository, why they cannot be, and that the hardware lead provides copies on request - no folder, no
+  drive, no machine.
+- **`check-paths.py` cannot catch that class of defect, and now that is known rather than assumed.** The
+  check matches path *syntax* - a drive letter, a UNC share, a home directory - and `datasheets/` has
+  none: character for character it is a relative reference, indistinguishable from `docs/`. The defect is
+  reachability, not syntax, so no regex finds it; a reviewer has to ask whether the name resolves inside
+  the repository. The older dated entry above still describes the folder, and stays: `PROGRESS.md` is
+  append-only, so the correction is this sentence, not an edit to history.
+- **`P2-17` is finished rather than merely working.** The two unused helpers in `link.py` are gone; the
+  wiring now has an end-to-end test (settings -> link -> trigger -> keepalive -> `CMD RESULT`) instead of
+  three modules tested in isolation; and `scripts/test_rig_link.py` is the bench tool an operator runs
+  first, in the shape of `test_exposure.py` and `test_rig.py` - it prints every line the board says, pings
+  every two seconds, and exits 0 only on a real `EVT PONG`.
+- **The wiring test found a setting that lied.** Every field in `config.py` carries an explicit
+  `validation_alias`, and with `extra="ignore"` a constructor call by field name - `Settings(rig_port=...)`
+  - was accepted and then discarded, leaving the default. The link would silently never start for anyone
+  who built settings that way. `populate_by_name=True` makes the name mean what it says; the test that
+  caught it stays as the regression.
+- **A leftover I created is now cleaned.** Five `pytest-cache-files-*` directories had been left in the
+  project root by earlier runs under a sandbox that then refused to read them, and they made
+  `ruff format --check .` crash rather than report. Removed, and the check passes again.
+
 - **Hard samples: the quality badge no longer sits on top of the source badge.** The thumbnail rule put
   every badge inside a card in the top-right corner, so the quality badge in the meta line landed on the
   source badge. The rule now applies only to a badge placed directly on the card; the image browser, whose

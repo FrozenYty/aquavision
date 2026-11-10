@@ -110,9 +110,10 @@ Honest list, because a README that overstates is worse than a short one.
 - **Works**: sign-in and roles, the frame list and detail, review submissions, statistics, the
   dataset export, system settings — against real tables and a real database.
 - **Works without hardware**: everything above; the camera pages fall back to an empty list.
-- **Not yet**: detection returns 501 until weights are registered (`P2-05`), the live capture page has
-  no `/ws/capture` socket so it polls, and the ESP32 rig link has no PC-side implementation yet
-  (`P2-17`).
+- **Not yet**: detection returns 501 until weights are registered (`P2-05`), and the live capture page
+  has no `/ws/capture` socket so it polls. The rig link's PC half exists (`server/app/rig/`) and stays
+  dormant until `AV_RIG_PORT` names a port; `scripts/test_rig_link.py` is the first thing to run when a
+  board is plugged in.
 
 ### Prototype mode, no backend
 

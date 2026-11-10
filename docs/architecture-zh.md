@@ -63,16 +63,22 @@ routers/  →  serializers/  →  SQLAlchemy 会话  →  models/
 
 ## 四、目录结构
 
+下图是**目标**结构；其中前几行是今天已有的。差距见第三节。
+
 ```
 server/
   app/
-    main.py            FastAPI 入口，注册路由，启动采集
-    api/               auth、capture、detect、review、stats、model
-    services/          quality、tasks、review、statistics
-    repo/              一表一模块
-    vision/            capture、preprocess、detect、quality
-    models/            SQLAlchemy 定义
-    core/              配置、鉴权、日志、异常
+    main.py            FastAPI 入口，注册路由，生命周期
+    routers/           接口层，按领域一模块（目标：api/）
+    vision/            采集、质量、推理
+    rig/               到 ESP32 的串口链路，以及它产出的判定
+    models.py          SQLAlchemy 定义（目标：models/）
+    db.py              引擎与会话工厂
+    security.py        哈希、令牌、依赖
+    serializers.py     行到 JSON 的形状
+    worker.py          检测线程池
+    config.py          配置，只读一次
+    envelope.py        唯一的响应形状
 web/
   static/              css、js、字体、vendor（锁定版本的第三方库）、mock（api.js 的模拟数据）
   templates/           html 页面
@@ -93,6 +99,7 @@ tests/
 | 识别 | 每约 300 ms 推理一次 | 与显示帧率解耦，见 ADR 03 |
 | 批量任务 | 固定线程池，2 个工作线程 | 不引 Celery 与 Redis，任务状态存 PostgreSQL |
 | 接口 | FastAPI 异步处理 | 提供 REST；一个 WebSocket 端点已规划但尚未实现，所以采集页改用轮询 |
+| 装置链路 | 一个读线程加一个保活线程，仅在设置了 `AV_RIG_PORT` 时启动 | 板子是可选的；没有板子的机器不是「降级状态」。链路的状态与保活规则见 `docs/rig-state-machine-zh.md` 第九节 |
 
 **识别频率不等于显示帧率。** 摄像头按 10 fps 推帧，识别每 300 ms 跑一次，中间帧复用
 最新的框。有独显时两者都跑满；在 CPU 上这样能保住画面流畅，而不是掉到 3 fps。
