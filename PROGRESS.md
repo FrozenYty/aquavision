@@ -199,6 +199,14 @@
   is committed with 1111 `filename md5` lines, generated from the frozen official test set; the
   images stay out of git. The split already on disk was not regenerated — the lead confirmed it is
   correct; the seed governs a fresh run.
+- **`P2-06b` ran the exploratory baseline end to end.** A separate `aquavision-train` environment
+  (torch 2.12.1+cu126, ultralytics 8.4.202) trained YOLOv8n on 1800 train / 200 val for 30 epochs
+  (seed 42, batch 16, 640). On the frozen 1111-image test set: mAP@0.5 **0.770**, mAP@0.5:0.95
+  **0.561**, mean recall **0.692**, 499 fps, 3.14 M parameters; `train_experiment` row 1 has every
+  metric column filled. mAP@0.5 clears the 0.75 target; mean recall does not (0.692 vs 0.75) —
+  the class imbalance (sea urchin is about 24x scallop) and the 1800-image subset are the first
+  hypotheses. The official E0–E4 stay at P4. The run was interrupted at epoch 20 and resumed from
+  `last.pt`; the final row is a continuous 30-epoch run with a dataloader restart.
 
 ## 2026-11-09
 

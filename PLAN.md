@@ -138,6 +138,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         - training runs on the GPU: install a **separate** environment with the CUDA build of torch.
           The runtime environment must not be touched, and a CPU run of four future experiments plus
           an ablation is not a schedule anyone can keep
+        - delivered 11-10: YOLOv8n, 1800 train / 200 val, 30 epochs, seed 42; frozen test mAP@0.5
+          0.770, mAP@0.5:0.95 0.561, mean recall 0.692, 499 fps, 3.14 M params; `train_experiment`
+          row 1; weights under `runs/detect/data/models/baseline-e0/weights/best.pt`
       - **P2-06c** the weights registered and loadable through `model_version`, which unblocks `P2-05b`
       - this is the **exploratory** run that gives the dashboard real numbers; the official E0–E4 stay
         at `P4-01..03` on the frozen dataset, and the difference is stated in the pull request
