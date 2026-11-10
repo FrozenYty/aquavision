@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>模型与实验 · AquaVision</title>
+  <title>模型实验 · AquaVision</title>
   <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
   <link rel="stylesheet" href="../static/css/tokens.css">
   <link rel="stylesheet" href="../static/css/app.css">
@@ -11,7 +11,7 @@
 <body>
   <main class="av-content">
     <div class="av-page-header">
-      <h1>模型与实验</h1>
+      <h1>模型实验</h1>
       <div class="av-page-actions">
         <span class="small text-secondary align-self-center">在线模型 <strong class="av-mono text-body" id="online"></strong></span>
       </div>
@@ -63,7 +63,7 @@
     import { bindTabs, confirmAction, esc, fmtTime, loadInto, toast } from "../static/js/ui.js";
     import { CLASSES } from "../static/js/boxes.js";
 
-    renderShell("P-12");
+    renderShell();
     bindTabs($("tabs"));
 
     function $(id) { return document.getElementById(id); }

@@ -97,7 +97,6 @@ Parallelism is not worth paying for with meaning:
 
 | Item | Why it stays |
 |---|---|
-| Page titles 工作台 / 难例池 (3 characters) | These are the pre-V1.11 names; SRS §5.2 now calls these pages 人工复核 and 难例样本, and `P2-18` replaces the titles |
 | Table headers 创建时间 / 登记时间 (4 characters) | Four characters is normal in a table; shortening loses information |
 | `mAP@0.5` beside 平均召回 | Metric names keep their English form; translating them makes them harder to recognise, not easier |
 | The five parameter labels being unequal | Form labels stack vertically, each above its own input, so their right edges never align anyway. Forcing equal length would delete 中间文件 and 批量识别, which say what the parameter applies to |
@@ -105,12 +104,30 @@ Parallelism is not worth paying for with meaning:
 One earlier suggestion is withdrawn: renaming 检测框 to 目标框. The glossary already fixes 检测框, and a
 review that contradicts the glossary would start exactly the drift the glossary exists to prevent.
 
+A row that kept the page titles 工作台 and 难例池 is gone: SRS V1.11 renamed the pages itself (§5.2),
+and the interface now follows it (`P2-18`).
+
 ## 6. Status
 
 Applied before this review was written, in the copy pass of 2026-11-06: the detection box / target box
 wording, the out-of-range hint, the seed hint, the hard-example caption, and the capture button.
 
-Still open, and listed by priority: the sidebar group names, the statistics subtitles, and the
-dashboard KPI prefixes. The remaining items are polish, and belong with the design pass that also
-removes the `P-xx` eyebrow from the page headers — that marker stays until then because it is the only
-anchor tying a screen to its row in SRS §5.2.
+Closed on 2026-11-10 (`P2-18`):
+
+- **Sidebar group names: applied, with one change.** The groups are 概览 · 采集 · 识别 · 复核 · 统计 · 系统.
+  The review proposed 模型 for the last group, which would file 系统设置 under a group called "model";
+  the group is 系统, and 模型实验 sits under it as one part of the system.
+- **Statistics subtitles: applied.** The measures are 目标框数 · 采集帧数 · 重拍帧占比 · 改动次数, each with
+  its period and, since `P3-02`, whether it follows the counting basis. 重拍 is the glossary's word
+  (需重拍), not a new one.
+- **Dashboard KPI prefixes: 当前模型 applied; the 今日 prefix rejected.** The review read the first three
+  cards as today's figures. Against the real server two of them are not: 待复核 is not a per-day count
+  (the glossary defines it as `review_status = 0`, whatever day the frame came in), and the rejection rate
+  is the server's seven-day figure, which its note already states. 今日待复核 and 今日拦截率 would be
+  false, so those labels stay and the notes carry the period. In the prototype, where the rate is today's,
+  the note now says so.
+- **The `P-xx` eyebrow has left the page headers.** The screen-to-SRS anchor is now the traceability
+  matrix, and `tests/test_page_names.py` holds the menu, the page titles, SRS §5.2 and the matrix to one
+  name per page.
+
+Still open, as polish: the items in §4 (the Latin unit, 被修正, the missing 默认, sentence endings).

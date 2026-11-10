@@ -60,16 +60,16 @@ Every screen of the prototype, element by element, traced to the requirement it 
 
 | No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
 |---|---|---|---|---|---|---|---|---|---|---|
-| TM-008 | P-02 Running overview (and the shared shell) | header | Brand link | See figure 2, callout 1. Returns to the workbench from any page. | FR-M1-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-008 | P-02 Running overview (and the shared shell) | header | Brand link | See figure 2, callout 1. Returns to the running overview from any page. | FR-M1-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-009 | P-02 Running overview (and the shared shell) | header | Demo-data badge | See figure 2, callout 2. Shown on every page while the tab runs on mock data. | FR-M1-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-010 | P-02 Running overview (and the shared shell) | header | Messages link | See figure 2, callout 3. Opens the messages tab of system administration. | FR-M8-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-010 | P-02 Running overview (and the shared shell) | header | Messages link | See figure 2, callout 3. Opens the messages tab of system settings. | FR-M8-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-011 | P-02 Running overview (and the shared shell) | header | Signed-in user | See figure 2, callout 4. Name of the signed-in account. | FR-M1-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-012 | P-02 Running overview (and the shared shell) | header | Sign-out link | See figure 2, callout 5. Clears the session and returns to the sign-in page. | FR-M1-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-013 | P-02 Running overview (and the shared shell) | header | Main menu | See figure 2, callout 6. Thirteen pages in SRS order, grouped by business domain; the current page is highlighted. Not yet filtered by role. | FR-M1-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
 | TM-014 | P-02 Running overview (and the shared shell) | content | Frames today | See figure 2, callout 7. Today's frame count from the daily trend. | FR-M5-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-015 | P-02 Running overview (and the shared shell) | content | Pending review | See figure 2, callout 8. No route counts pending reviews yet; the card says so. | FR-M4-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
 | TM-016 | P-02 Running overview (and the shared shell) | content | Rejection rate | See figure 2, callout 9. Seven-day rejection rate from the quality route. | FR-M2-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-017 | P-02 Running overview (and the shared shell) | content | Online model | See figure 2, callout 10. Version and mAP@0.5 of the online model. | FR-M6-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-017 | P-02 Running overview (and the shared shell) | content | Current model | See figure 2, callout 10. Version and mAP@0.5 of the model online now. | FR-M6-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-018 | P-02 Running overview (and the shared shell) | content | Seven-day trend | See figure 2, callout 11. Frames per day. | FR-M5-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-019 | P-02 Running overview (and the shared shell) | content | Messages card | See figure 2, callout 12. Static text for now; not yet wired to the messages route. | FR-M8-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
 | TM-020 | P-02 Running overview (and the shared shell) | content | Recent sessions | See figure 2, callout 13. Last four capture sessions with frame and retake counts. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
@@ -90,12 +90,12 @@ Every screen of the prototype, element by element, traced to the requirement it 
 | TM-028 | P-03 Capture control | content | Quality ring | See figure 3, callout 8. Score of the newest frame; amber with a retake notice below 60. | FR-M2-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-029 | P-03 Capture control | content | Quality components | See figure 3, callout 9. Sharpness, brightness and colour cast when the source sends them. | FR-M2-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-030 | P-03 Capture control | content | Per-class count | See figure 3, callout 10. Boxes per class on the current frame. | FR-M3-04 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-031 | P-03 Capture control | content | Recent frames | See figure 3, callout 11. Last eight frames; each opens the frame detail. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-031 | P-03 Capture control | content | Recent frames | See figure 3, callout 11. Last eight frames; each opens the result detail. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-032 | P-03 Capture control | content | Session table | See figure 3, callout 12. Sessions with start time, frames and retakes. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 
 ### 4.4 P-04 Image browser (figure 4)
 
-![Figure 4: P-04 Image browser](images/traceability/p04-frames.png)
+![Figure 4: P-04 Image browser](images/traceability/p04-image-browser.png)
 
 | No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -105,7 +105,7 @@ Every screen of the prototype, element by element, traced to the requirement it 
 | TM-036 | P-04 Image browser | form | Date range | See figure 4, callout 4. Start and end dates, inclusive. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-037 | P-04 Image browser | content | Frame tile | See figure 4, callout 5. Picture, quality badge, frame id and time; a placeholder when the server sends no picture. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-038 | P-04 Image browser | content | Selection box | See figure 4, callout 6. Selects a frame for batch detection; retake frames cannot be selected. | FR-M3-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-039 | P-04 Image browser | content | Result link | See figure 4, callout 7. Opens the frame detail. | FR-M3-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-039 | P-04 Image browser | content | Result link | See figure 4, callout 7. Opens the result detail. | FR-M3-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-040 | P-04 Image browser | actions | Batch detection | See figure 4, callout 8. Creates a detection task for the selected frames. | FR-M3-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
 | TM-041 | P-04 Image browser | content | Pagination | See figure 4, callout 9. Twelve frames per page. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 
@@ -125,12 +125,12 @@ Every screen of the prototype, element by element, traced to the requirement it 
 
 ### 4.6 P-06 Result detail (figure 6)
 
-![Figure 6: P-06 Result detail](images/traceability/p06-frame.png)
+![Figure 6: P-06 Result detail](images/traceability/p06-result-detail.png)
 
 | No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
 |---|---|---|---|---|---|---|---|---|---|---|
 | TM-049 | P-06 Result detail | actions | Back to capture | See figure 6, callout 1. Returns to the capture page. | FR-M3-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-050 | P-06 Result detail | actions | Go to review | See figure 6, callout 2. Opens this frame in the review workbench. | FR-M4-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-050 | P-06 Result detail | actions | Go to review | See figure 6, callout 2. Opens this frame in manual review. | FR-M4-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-051 | P-06 Result detail | content | Result picture | See figure 6, callout 3. Frame with its boxes; a labelled placeholder while no route serves the picture. | FR-M3-01, FR-M3-04 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
 | TM-052 | P-06 Result detail | content | Low-confidence box | See figure 6, callout 4. Translucent fill and a review tag, never colour alone. | FR-M3-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-053 | P-06 Result detail | content | Frame facts | See figure 6, callout 5. Quality, capture time and session. | FR-M2-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
@@ -163,9 +163,9 @@ Every screen of the prototype, element by element, traced to the requirement it 
 |---|---|---|---|---|---|---|---|---|---|---|
 | TM-067 | P-08 Hard samples | form | Source filter | See figure 8, callout 1. Low confidence, modified in review, or models disagree. | FR-M4-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-068 | P-08 Hard samples | content | Sample tile | See figure 8, callout 2. Frame, quality and capture time. | FR-M4-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-069 | P-08 Hard samples | content | Source badge | See figure 8, callout 3. Why the frame is in the pool. | FR-M4-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-070 | P-08 Hard samples | actions | View | See figure 8, callout 4. Opens the frame detail. | FR-M4-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-071 | P-08 Hard samples | actions | Remove | See figure 8, callout 5. Removes the frame from the pool after a confirmation. | FR-M4-03 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-069 | P-08 Hard samples | content | Source badge | See figure 8, callout 3. Why the frame is a hard sample. | FR-M4-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-070 | P-08 Hard samples | actions | View | See figure 8, callout 4. Opens the result detail. | FR-M4-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-071 | P-08 Hard samples | actions | Remove | See figure 8, callout 5. Removes the frame from the hard samples after a confirmation. | FR-M4-03 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
 | TM-072 | P-08 Hard samples | content | Pagination | See figure 8, callout 6. Eight samples per page. | FR-M4-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 
 ### 4.9 P-09 Data export (figure 9)
@@ -245,9 +245,9 @@ Every screen of the prototype, element by element, traced to the requirement it 
 | P-01 Sign-in | `login.html` | 7 | 6 | 0 | 1 |
 | P-02 Running overview (and the shared shell) | `home.html` | 13 | 10 | 3 | 0 |
 | P-03 Capture control | `capture.html` | 12 | 8 | 4 | 0 |
-| P-04 Image browser | `frames.html` | 9 | 8 | 1 | 0 |
+| P-04 Image browser | `image-browser.html` | 9 | 8 | 1 | 0 |
 | P-05 Detection jobs | `tasks.html` | 7 | 5 | 2 | 0 |
-| P-06 Result detail | `frame.html` | 8 | 6 | 1 | 1 |
+| P-06 Result detail | `result-detail.html` | 8 | 6 | 1 | 1 |
 | P-07 Manual review | `review.html` | 10 | 0 | 10 | 0 |
 | P-08 Hard samples | `hard-samples.html` | 6 | 5 | 1 | 0 |
 | P-09 Data export | `dataset-export.html` | 7 | 7 | 0 | 0 |

@@ -188,7 +188,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - the keepalive is not decoration: without it the rig declares a healthy idle system offline after
         ten seconds, and waiting for a button is what the rig does most of the time
 
-- [ ] **P2-18** One page name per page · @chemflowers · the SRS table and the traceability matrix
+- [x] **P2-18** One page name per page · @chemflowers · the SRS table and the traceability matrix
       already carry the new names (SRS V1.11); the interface still says the old ones · done when
       - **the menu, both page titles and the traceability matrix agree with SRS §5.2 for all thirteen
         pages.** The scheme is object plus action, four characters where the language allows, no "page"

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>统计看板 · AquaVision</title>
+  <title>统计分析 · AquaVision</title>
   <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
   <link rel="stylesheet" href="../static/css/tokens.css">
   <link rel="stylesheet" href="../static/css/app.css">
@@ -11,7 +11,7 @@
 <body>
   <main class="av-content">
     <div class="av-page-header">
-      <h1>统计看板</h1>
+      <h1>统计分析</h1>
       <div class="av-page-actions">
         <label class="small text-secondary align-self-center" for="basis">统计口径</label>
         <select class="form-select form-select-sm w-auto" id="basis" aria-label="统计口径">
@@ -30,19 +30,19 @@
       </div>
       <div class="col-lg-6">
         <section class="av-card">
-          <h2 class="av-card-title">采集量趋势 <small class="text-secondary fw-normal">每日收帧 · 不区分口径</small></h2>
+          <h2 class="av-card-title">采集量趋势 <small class="text-secondary fw-normal">每日采集帧数 · 不区分口径</small></h2>
           <div id="chart-trend"></div>
         </section>
       </div>
       <div class="col-lg-6">
         <section class="av-card">
-          <h2 class="av-card-title">质量拦截率 <small class="text-secondary fw-normal">低质量帧占比 · 近 7 日，不区分口径</small></h2>
+          <h2 class="av-card-title">质量拦截率 <small class="text-secondary fw-normal">近 7 日重拍帧占比 · 不区分口径</small></h2>
           <div id="chart-quality"></div>
         </section>
       </div>
       <div class="col-lg-6">
         <section class="av-card">
-          <h2 class="av-card-title">复核修正分布 <small class="text-secondary fw-normal">人工改动汇总 · 近 7 日，不区分口径</small></h2>
+          <h2 class="av-card-title">复核修正分布 <small class="text-secondary fw-normal">近 7 日改动次数 · 不区分口径</small></h2>
           <div id="chart-corrections"></div>
         </section>
       </div>
@@ -62,7 +62,7 @@
       renderCorrectionStack,
     } from "../static/js/charts.js";
 
-    renderShell("P-10");
+    renderShell();
 
     const $ = (id) => document.getElementById(id);
     $("demo-note").hidden = !api.USE_MOCK;

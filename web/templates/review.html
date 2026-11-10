@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>复核工作台 · AquaVision</title>
+  <title>人工复核 · AquaVision</title>
   <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
   <link rel="stylesheet" href="../static/css/tokens.css">
   <link rel="stylesheet" href="../static/css/app.css">
@@ -11,9 +11,9 @@
 <body>
   <main class="av-content">
     <div class="av-page-header">
-      <h1>复核工作台</h1>
+      <h1>人工复核</h1>
       <div class="av-page-actions">
-        <a class="btn btn-outline-secondary text-nowrap" id="btn-back" href="frames.html">返回识别结果</a>
+        <a class="btn btn-outline-secondary text-nowrap" id="btn-back" href="image-browser.html">返回结果详情</a>
         <button class="btn btn-primary text-nowrap" id="btn-submit" type="button">提交复核</button>
       </div>
     </div>
@@ -53,7 +53,7 @@
     import { confirmAction, loadInto, toast } from "../static/js/ui.js";
     import { CLASSES, boxHtml, pictureHtml, statusBadge } from "../static/js/boxes.js";
 
-    renderShell("P-07");
+    renderShell();
 
     const $ = (id) => document.getElementById(id);
     const MODIFIED = 2;
@@ -274,7 +274,7 @@
         objects = boxes;
         initialCount = boxes.length;
         $("frame-id").textContent = frame.frame_id;
-        $("btn-back").href = `frame.html?id=${encodeURIComponent(frame.frame_id)}`;
+        $("btn-back").href = `result-detail.html?id=${encodeURIComponent(frame.frame_id)}`;
         // Open on the box most likely to be wrong: the lowest confidence.
         const doubtful = [...boxes].sort((a, b) => a.confidence - b.confidence)[0];
         select(doubtful?.object_id ?? null);

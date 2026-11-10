@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>工作台 · AquaVision</title>
+  <title>运行总览 · AquaVision</title>
   <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
   <link rel="stylesheet" href="../static/css/tokens.css">
   <link rel="stylesheet" href="../static/css/app.css">
@@ -32,9 +32,9 @@
 <body>
   <main class="av-content">
     <div class="av-page-header">
-      <h1>工作台</h1>
+      <h1>运行总览</h1>
       <div class="av-page-actions">
-        <a class="btn btn-outline-primary" href="frames.html">影像浏览</a>
+        <a class="btn btn-outline-primary" href="image-browser.html">影像浏览</a>
         <a class="btn btn-primary" href="capture.html">开始采集</a>
       </div>
     </div>
@@ -69,7 +69,7 @@
     import * as api from "../static/js/api.js";
     import { esc, fmtTime, loadInto, showLoading } from "../static/js/ui.js";
 
-    renderShell("P-02");
+    renderShell();
 
     const $ = (id) => document.getElementById(id);
     const pct = (part, whole) => Math.round((part / whole) * 100);
@@ -80,12 +80,12 @@
       // Real mode: the rate is the server's 7-day figure, and nothing counts pending reviews yet.
       const rejection = d.quality
         ? [`${(d.quality.rate * 100).toFixed(1)}%`, `近 ${d.quality.days} 日 ${d.quality.rejected} 帧需重拍`]
-        : [`${pct(d.rejected_today, d.frames_today)}%`, `${d.rejected_today} 帧需重拍`];
+        : [`${pct(d.rejected_today, d.frames_today)}%`, `今日 ${d.rejected_today} 帧需重拍`];
       const cards = [
         ["今日采集", d.frames_today, `较昨日 <span class="up">${diff >= 0 ? "+" : ""}${diff}</span> 帧`],
         ["待复核", d.to_review ?? "—", d.to_review == null ? "暂无统计接口" : `<span class="warn">需在 24 小时内处理</span>`],
         ["质量拦截率", ...rejection],
-        ["在线模型", null, d.model_map50 == null ? "还没有指标" : `mAP@0.5 ${d.model_map50.toFixed(2)}`],
+        ["当前模型", null, d.model_map50 == null ? "还没有指标" : `mAP@0.5 ${d.model_map50.toFixed(2)}`],
       ];
       $("kpis").innerHTML = cards
         .map(([label, value, note]) => {
