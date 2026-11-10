@@ -124,6 +124,13 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    # The application's own loggers have to be visible at INFO, because a hardware link that starts and
+    # says nothing looks exactly like a link that never started. Uvicorn configures its own loggers and
+    # leaves the root alone, so one root handler here is what makes `app.*` appear in the terminal.
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)-7s %(name)s: %(message)s"
+    )
+
     settings = get_settings()
     app = FastAPI(
         title="AquaVision",

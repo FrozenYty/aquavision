@@ -154,6 +154,17 @@ as a blank screen — during assembly it is the fastest check there is.
 Verified on the board: the image flashes and verifies, the firmware prints `EVT HELLO 1.1`, and the
 I2C scan reports nothing when nothing is wired.
 
+**Opening the serial port resets the board.** The bridge chip's DTR and RTS lines feed the auto-reset
+circuit, so the sketch restarts whenever a program opens `COM5` — the log begins with the ROM boot banner
+and a fresh `EVT SCREEN READY`. That is the board behaving correctly, and it is worth knowing before
+debugging: a reader that connects and then waits eleven seconds will watch the rig go `OFFLINE`, because
+the boot happens first and the ten-second link timer starts at the same moment. Test the keepalive on a
+port held open, not by reconnecting.
+
+Two consequences for tooling. A bench check that opens the port and exits leaves the rig freshly booted,
+not in whatever state it was in. And a server restart is a board restart: the link does not "reconnect",
+it starts over.
+
 **The OLED is verified.** Wired directly to the ESP32 - `VCC` to `3V3`, `SDA` to `GPIO8`, `SCL` to
 `GPIO9` - the scan reports `EVT I2C 3C`, the splash draws, and `CMD PING` answers `EVT PONG`, so the
 PC-to-board command path works as well as the display. The five screens were then driven from the
