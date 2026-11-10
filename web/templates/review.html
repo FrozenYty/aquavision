@@ -50,7 +50,7 @@
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
     import * as api from "../static/js/api.js";
-    import { loadInto, toast } from "../static/js/ui.js";
+    import { confirmAction, loadInto, toast } from "../static/js/ui.js";
     import { CLASSES, boxHtml, pictureHtml, statusBadge } from "../static/js/boxes.js";
 
     renderShell("P-07");
@@ -115,6 +115,8 @@
 
     function removeSelected() {
       if (!selected) return;
+      // Deleting is destructive for the reviewer's session, so it asks first (SRS §5.1).
+      if (!confirmAction("删除选中的框？提交复核后，这一框会被标为已驳回。")) return;
       remember();
       objects = objects.filter((o) => o.object_id !== selected);
       selected = null;
@@ -224,14 +226,32 @@
       if (event.key === "b") { selected = null; setMode("draw"); }
     });
 
+    // The box list is what the server stored after the submit, not what the page last held: the server
+    // assigns object ids to new boxes and sets the count, so both come back from it.
+    // Rejected boxes stay in the store for traceability (AC-15) but are not part of the working set.
+    async function reloadBoxes() {
+      const data = await api.getObjects(frameId);
+      objects = data.items.filter((box) => box.review_status !== 3);
+      selected = null;
+      previous = null;
+      $("tool-undo").disabled = true;
+    }
+
     $("btn-submit").onclick = async () => {
+      const button = $("btn-submit");
+      button.disabled = true;
       try {
         const result = await api.submitReview(frameId, objects);
-        toast(`复核已提交（第 ${result.version_no} 版），计数 ${initialCount} → ${result.object_count}`, "success");
+        const before = initialCount;
+        await reloadBoxes();
+        // The count is the server's: its object_count, not the length of anything this page holds.
         initialCount = result.object_count;
+        toast(`复核已提交（第 ${result.version_no} 版），计数 ${before} → ${initialCount}`, "success");
         render();
       } catch (err) {
         toast(err.message, "danger");
+      } finally {
+        button.disabled = false;
       }
     };
 
@@ -247,9 +267,10 @@
     loadInto($("canvas"), fetchFrame, {
       isEmpty: (data) => data === null,
       empty: '还没有任何帧可以复核。先去 <a href="capture.html">采集控制</a> 采一帧。',
-      render: ({ frame, boxes }) => {
+      render: ({ frame, boxes: all }) => {
         frameId = frame.frame_id;
         imageUrl = frame.image_url ?? "";
+        const boxes = all.filter((box) => box.review_status !== 3); // rejected boxes are kept, not shown
         objects = boxes;
         initialCount = boxes.length;
         $("frame-id").textContent = frame.frame_id;
