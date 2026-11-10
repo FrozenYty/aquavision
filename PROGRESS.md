@@ -207,6 +207,15 @@
   the class imbalance (sea urchin is about 24x scallop) and the 1800-image subset are the first
   hypotheses. The official E0–E4 stay at P4. The run was interrupted at epoch 20 and resumed from
   `last.pt`; the final row is a continuous 30-epoch run with a dataloader restart.
+- **`P2-06c` registered and activated the baseline weights.** `scripts/register_model.py` turned
+  `metrics.json` into `model_version` row 1 (`v8n-E0-exploratory`, mAP@0.5 0.7703, mAP@0.5:0.95
+  0.5614, recall 0.6919, 499 fps, 3.14 M parameters) and made it the only online row. The app loaded
+  it at start-up from `runs/detect/data/models/baseline-e0/weights/best.pt`; a captured frame went
+  through `POST /api/detect/frames`, returned the model version, and its `detect_task` points at
+  model 1. A manual run of the same weights on the same stored image matched the API boxes. The
+  camera's A3 1080p frames were not on this machine (`data/frames/A3/20261110` is absent and camera
+  index 1 is unavailable), so the proof used the laptop camera; the real A3 frame acceptance stays
+  with P2-05b. The CPU runtime's first inference took 6.6 s; the 499 fps figure is the training GPU.
 
 ## 2026-11-09
 
