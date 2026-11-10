@@ -1,3 +1,21 @@
+## 2026-11-10
+
+- **The frontend lane delivered five of six tasks, and left the sixth open on purpose.** `P2-09`,
+  `P2-10`, `P2-11`, `P2-12` and `P2-14` are ticked and verified here; `P2-08` is built but not ticked,
+  because the server has no `/ws/capture`, nothing posts frames to the API, and detection still returns
+  501 — a live detection cannot be shown, so it is not called done. That judgement is the review's most
+  useful result: the box was left open rather than closed on faith.
+- **Both of the new tests were shown to fail before being trusted.** Renaming a route in `api.js` turns
+  `test_every_exported_function_maps_to_a_contract_route` red; adding the word "provisional" back turns
+  the other one red. A test that has never failed is a decoration.
+- **The traceability matrix is real work, not a table.** 106 rows per language, one row per UI control,
+  13 annotated screenshots with numbered callouts, every cited requirement id checked against SRS
+  Table 3-1, and a status column that admits 27 elements are in progress and 4 are not started.
+- **Three contract gaps came back from the frontend, and are now in the backend lane's list**: a binary
+  frame carries no `frame_id` for §8's correlation, `detect` carries no quality score for the ring, and
+  the socket's authentication is unspecified — the client currently puts the token in the query string,
+  which leaks it into logs and referrers.
+
 ## 2026-11-09
 
 - **Nine tasks assigned for P2, split by lane, each with a criterion a stranger can run.** Backend and

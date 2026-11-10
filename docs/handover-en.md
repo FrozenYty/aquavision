@@ -53,6 +53,20 @@ What is left:
 | A failure is retryable | Force one; the task reads `failed` with a reason; retry completes it |
 | Nothing regressed | `pytest` at or above its current count; **no test skipped, no assertion deleted** |
 
+**Three questions the frontend sent to this lane, before you build the socket.** The capture page's
+client exists and speaks `/ws/capture` today; the contract §7 it speaks to is incomplete:
+
+1. **A binary frame carries no `frame_id`**, so §8's "correlate a result by frame id" has nothing to
+   correlate. Either the frame message gets a header, or the first `detect` after each binary frame is
+   the correlation.
+2. **`detect` carries no quality score**, so the quality ring has nothing to show.
+3. **The socket's authentication is unspecified.** The client puts the token in the query string
+   because it has nothing better; tokens in URLs leak into logs and referrers. Decide it and write it
+   into §7 — first-message authentication is the usual answer.
+
+Answer all three in the contract before the route exists, not after: the page and the server have to
+agree on a protocol neither can test alone.
+
 ### 2.2 Dataset and a first baseline (task `P2-06`)
 
 `models.py` and `train_experiment` exist; nothing has been trained. This task is the **exploratory**
