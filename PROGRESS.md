@@ -47,6 +47,11 @@
   frame carries no `frame_id` for §8's correlation, `detect` carries no quality score for the ring, and
   the socket's authentication is unspecified — the client currently puts the token in the query string,
   which leaks it into logs and referrers.
+- **`P2-15` answered those three questions before the route exists.** The socket authenticates with a
+  first `auth` message, never a query-string token; each binary JPEG follows a `frame` message that
+  carries `frame_id`, `captured_at` and `quality`; and results correlate to frames by `frame_id`, not
+  by order. This unblocks `P2-08`: `web/static/js/live.js` still sends the token in the query string
+  and must move to first-message authentication. The `/ws/capture` route itself does not exist yet.
 
 ## 2026-11-09
 

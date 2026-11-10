@@ -209,15 +209,24 @@ POST /api/review/frames/{frame_id}
 
 `/ws/capture`，每个浏览器标签页一条连接。
 
+**鉴权。** 每条连接的第一条消息必须是 `{"type": "auth", "token": "<JWT>"}`。服务端返回
+`{"type": "auth_ok"}`；token 缺失、无效或过期时以关闭码 `4401` 关闭连接，五秒内未收到 `auth`
+消息则以 `4408` 关闭。token 不进查询串——查询串会漏进访问日志和 referrer。
+
 | 方向 | 类型 | 载荷 |
 |---|---|---|
+| 客户端 → 服务端 | `auth` | `{ "token": "<JWT>" }`，必须是首条消息 |
+| 服务端 → 客户端 | `auth_ok` | `{}` |
 | 客户端 → 服务端 | `start` | `{ "session_id": "...", "fps": 10, "detect_interval_ms": 300 }` |
-| 服务端 → 客户端 | 二进制 | JPEG 字节，一条消息一帧 |
-| 服务端 → 客户端 | `detect` | `{ "frame_id": "...", "boxes": [], "latency_ms": 128 }` |
+| 服务端 → 客户端 | `frame` | `{ "frame_id": "...", "captured_at": "...", "quality": { "score": 66, "verdict": "ok" } }` |
+| 服务端 → 客户端 | 二进制 | 一条消息一帧 JPEG，紧跟在 `frame` 消息之后，是该消息的图 |
+| 服务端 → 客户端 | `detect` | `{ "frame_id": "...", "boxes": [], "latency_ms": 128, "model_version": "...", "conf_threshold": 0.4 }` |
 | 服务端 → 客户端 | `status` | `{ "fps": 9.8, "queue": 0, "model": "v8n-e3" }` |
 | 客户端 → 服务端 | `stop` | `{}` |
 
-图像走二进制帧，结果走 JSON，两者靠 `frame_id` 关联，**不靠顺序**。
+**帧关联。** 二进制消息与它前面紧挨着的 `frame` 消息组成一个帧单元；二进制本身不带 id。
+结果与帧靠 `frame_id` 关联，**不靠帧或结果到达的顺序**。质量分挂在 `frame` 消息上，形状与
+§6 的帧对象一致。
 
 ## 八、帧与结果的对齐
 
