@@ -20,14 +20,16 @@ enum class Screen {
 
 // Why a frame failed the quality gate. The strings are what the protocol carries; the display maps
 // them to words. Adding a new cause means adding one entry here and one line in `screen.cpp`.
-enum class Reason { None, LowLight, Blur, ColorCast, Unknown };
+// `NoReply` is the one cause the rig decides for itself: no verdict arrived inside
+// `cfg::CAPTURE_TIMEOUT_MS`, so there is nothing to report a score for.
+enum class Reason { None, LowLight, Blur, ColorCast, Unknown, NoReply };
 
 const char* reasonToken(Reason reason);
 Reason reasonFromToken(const char* token);
 
 struct State {
   Screen screen = Screen::Ready;
-  int score = 0;
+  int score = -1;      // -1 means no verdict yet; the screen leaves the number out
   Reason reason = Reason::None;
   int turbidity = -1;   // -1 means no reading yet; the screen shows "--"
   // No trend field. The screen used to draw a triangle for rising, falling and steady, decided by an

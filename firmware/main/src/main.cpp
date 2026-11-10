@@ -28,6 +28,7 @@ rig::State state;
 uint32_t lastPcMessage = 0;
 uint32_t lastTurbidity = 0;
 uint32_t lastHeartbeat = 0;
+uint32_t captureStartedAt = 0;
 uint32_t lastAnimation = 0;
 uint32_t ledPassUntil = 0;
 uint32_t ledRetakeUntil = 0;
@@ -62,11 +63,42 @@ void serviceButton(uint32_t now) {
     // it on CAPTURING forever.
     state.screen = rig::Screen::Offline;
     state.markDirty();
+    protocol::emitScreen(state);
     return;
   }
+  if (state.screen == rig::Screen::Capturing) {
+    // Already waiting for a verdict. A second press must not become a second frame: the PC would shoot
+    // twice for one shot and the operator would see one result for two pictures.
+    return;
+  }
+
   state.screen = rig::Screen::Capturing;
+  state.score = -1;           // no verdict for this shot yet, so the screen shows no number
+  state.reason = rig::Reason::None;
+  state.animPhase = 0;
+  captureStartedAt = now;
   state.markDirty();
+  // Every state change is reported, so the PC never has to infer a screen from the event that caused
+  // it. TRIGGER says "capture this frame"; SCREEN says "the panel is now on CAPTURING".
+  protocol::emitScreen(state);
   protocol::emitTrigger(now);
+}
+
+// A capture whose verdict never arrives. Without this the spinner turns forever while the PC is
+// healthy enough to keep the link alive - the one state where a still, silent screen is worst.
+void serviceCaptureTimeout(uint32_t now) {
+  if (state.screen != rig::Screen::Capturing) {
+    return;
+  }
+  if (now - captureStartedAt < cfg::CAPTURE_TIMEOUT_MS) {
+    return;
+  }
+  state.screen = rig::Screen::Retake;
+  state.reason = rig::Reason::NoReply;
+  state.score = -1;
+  state.animPhase = 0;
+  state.markDirty();
+  protocol::emitTimeout(now);
 }
 
 void serviceTurbidity(uint32_t now) {
@@ -88,9 +120,9 @@ void serviceHeartbeat(uint32_t now) {
   }
   lastHeartbeat = now;
   state.heartbeatOn = !state.heartbeatOn;
-  // Only the idle screen blinks; during a result the score is what matters and a redraw every second
-  // would compete with it.
-  if (state.screen == rig::Screen::Ready) {
+  // The dot is the only thing that moves between events, so it redraws wherever it is visible. On
+  // OFFLINE the whole screen is a filled box and the header is not drawn at all.
+  if (state.screen != rig::Screen::Offline) {
     state.markDirty();
   }
 }
@@ -120,8 +152,20 @@ void serviceLink(uint32_t now) {
     return;
   }
   state.pcAlive = alive;
-  state.screen = alive ? rig::Screen::Ready : rig::Screen::Offline;
-  state.markDirty();
+  if (!alive) {
+    // Losing the PC overrides everything: no state can make progress without it.
+    state.screen = rig::Screen::Offline;
+    state.markDirty();
+    protocol::emitScreen(state);
+    return;
+  }
+  // The PC is back. Only a screen that was showing the link failure resets - a verdict or a capture in
+  // progress belongs to the rig and must not be replaced by the mere fact that the link recovered.
+  if (state.screen == rig::Screen::Offline) {
+    state.screen = rig::Screen::Ready;
+    state.markDirty();
+    protocol::emitScreen(state);
+  }
 }
 
 //: A result arrived from the PC: light the right LED for a moment.
@@ -178,6 +222,7 @@ void loop() {
   serviceTurbidity(now);
   serviceHeartbeat(now);
   serviceAnimation(now);
+  serviceCaptureTimeout(now);
   serviceLeds(now);
   serviceLink(now);
 

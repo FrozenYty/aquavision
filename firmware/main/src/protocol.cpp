@@ -19,20 +19,32 @@ size_t length = 0;
 //: Set by `handleLine` when a command was applied; cleared by `poll`.
 bool sawCommand = false;
 
-void handleResult(rig::State& state, char** cursor) {
+bool handleResult(rig::State& state, char** cursor) {
   const char* scoreText = strtok_r(nullptr, " ", cursor);
   const char* verdict = strtok_r(nullptr, " ", cursor);
   const char* reason = strtok_r(nullptr, " ", cursor);
   if (scoreText == nullptr || verdict == nullptr) {
-    return;
+    return false;
   }
 
-  state.score = constrain(atoi(scoreText), 0, 100);
+  const int score = constrain(atoi(scoreText), 0, 100);
+
+  // A verdict answers a capture, so it means something only while one is in flight. Accepted in any
+  // other state it would invent a result for a shot that never happened, or overwrite a timeout the
+  // operator has already read. Dropped silently it would leave the PC believing the rig took it, so it
+  // is dropped loudly - the same reason TCP answers an unexpected segment with a reset.
+  if (state.screen != rig::Screen::Capturing) {
+    protocol::emitStrayResult(score);
+    return false;
+  }
+
+  state.score = score;
   state.reason = rig::reasonFromToken(reason);
   state.frames += 1;
   state.screen = (strcmp(verdict, "PASS") == 0) ? rig::Screen::Pass : rig::Screen::Retake;
   state.pulseLeds = true;
   state.markDirty();
+  return true;
 }
 
 void handleLine(rig::State& state, char* text) {
@@ -55,8 +67,9 @@ void handleLine(rig::State& state, char* text) {
     state.markDirty();
     protocol::emitScreen(state);
   } else if (strcmp(command, "RESULT") == 0) {
-    handleResult(state, &cursor);
-    protocol::emitScreen(state);
+    if (handleResult(state, &cursor)) {
+      protocol::emitScreen(state);
+    }
   }
 }
 
@@ -117,6 +130,12 @@ void emitScreen(const rig::State& state) {
 }
 
 void emitHello() { Serial.printf("EVT HELLO %s\n", cfg::FIRMWARE_VERSION); }
+
+void emitTimeout(uint32_t millisNow) {
+  Serial.printf("EVT TIMEOUT %lu\n", (unsigned long)millisNow);
+}
+
+void emitStrayResult(int score) { Serial.printf("EVT STRAY RESULT %d\n", score); }
 
 void emitTrigger(uint32_t millisNow) { Serial.printf("EVT TRIGGER %lu\n", (unsigned long)millisNow); }
 

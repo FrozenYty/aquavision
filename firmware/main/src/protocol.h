@@ -26,6 +26,12 @@ void emitI2CScan();
 //: the only witness is the panel, which makes a wiring question and a logic question look identical.
 void emitScreen(const rig::State& state);
 void emitTrigger(uint32_t millisNow);
+//: A capture that produced no verdict inside `cfg::CAPTURE_TIMEOUT_MS`.
+void emitTimeout(uint32_t millisNow);
+//: A verdict that arrived when no capture was in flight. Reported rather than swallowed: a silently
+//: dropped message leaves the PC believing the rig accepted it, which is why TCP answers an unexpected
+//: segment with a reset instead of ignoring it.
+void emitStrayResult(int score);
 void emitTurbidity(int value);
 void emitPong();
 
