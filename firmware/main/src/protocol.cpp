@@ -53,8 +53,10 @@ void handleLine(rig::State& state, char* text) {
   } else if (strcmp(command, "READY") == 0) {
     state.screen = rig::Screen::Ready;
     state.markDirty();
+    protocol::emitScreen(state);
   } else if (strcmp(command, "RESULT") == 0) {
     handleResult(state, &cursor);
+    protocol::emitScreen(state);
   }
 }
 
@@ -85,6 +87,22 @@ bool poll(rig::State& state) {
   return sawCommand;
 }
 
+const char* screenName(rig::Screen screen) {
+  switch (screen) {
+    case rig::Screen::Ready:
+      return "READY";
+    case rig::Screen::Capturing:
+      return "CAPTURING";
+    case rig::Screen::Pass:
+      return "PASS";
+    case rig::Screen::Retake:
+      return "RETAKE";
+    case rig::Screen::Offline:
+      return "OFFLINE";
+  }
+  return "UNKNOWN";
+}
+
 void emitI2CScan() {
   for (uint8_t address = 1; address < 127; ++address) {
     Wire.beginTransmission(address);
@@ -92,6 +110,10 @@ void emitI2CScan() {
       Serial.printf("EVT I2C %02X\n", address);
     }
   }
+}
+
+void emitScreen(const rig::State& state) {
+  Serial.printf("EVT SCREEN %s %d\n", screenName(state.screen), state.score);
 }
 
 void emitHello() { Serial.printf("EVT HELLO %s\n", cfg::FIRMWARE_VERSION); }

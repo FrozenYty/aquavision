@@ -1,5 +1,26 @@
 ## 2026-11-10
 
+- **The panel design was rebuilt against the hardware, and the first version lost four arguments to it.**
+  Shape now carries the verdict - a filled banner for PASS, an outline for RETAKE - because at 128x64 the
+  words alone were the only difference. The retake reason moved from a second line in the banner (one
+  pixel of clearance, which read as a smudge) to the caption slot above the score. The labels went to
+  bold 7x13 so they read as captions: measured on the panel, the score font's ascent 19 and the label's
+  ascent 9 then put both on the same centre line at 21.5. The footer settled on a single six-pixel
+  gutter in both columns, with the value left-aligned after it - right-aligning left a two-pixel gap after
+  a five-digit reading and a wide one after a three-digit reading, two gaps in one row.
+- **The trend mark is gone, and it was a design defect rather than a taste problem.** The triangle was
+  chosen by an absolute threshold of two counts on a reading that spans 700-16000: two counts is noise,
+  so the mark flickered between rising, falling and steady. At five digits it also overlapped `FRAMES`.
+  The field and its computation were removed with the drawing, because a feature that lies is worse than
+  no feature.
+- **Every state was exercised on the panel, and the walk found two real bugs.** `protocol::poll` returns
+  whether a command arrived, and the caller discarded it, so the link timer only ever started at boot
+  and the rig declared OFFLINE ten seconds later however much it was talking to the PC. And the screen
+  state became observable at all only after adding `EVT SCREEN <name> <score>` - before that, a wiring
+  question and a logic question looked identical from the serial port.
+- **A temporary `CMD TURB` command injected readings for the demo and was removed before the commit.**
+  A rig that accepts invented sensor values is exactly what this project must not ship.
+
 - **The rig's electrical half started, and the first module works.** The OLED was wired directly to the
   ESP32 - `3V3`, `GND`, `GPIO8`, `GPIO9` - because it is a 3.3 V part and needs no level shifter. The
   boot scan reports `EVT I2C 3C`, the splash draws, and `CMD PING` answers `EVT PONG`: the I2C bus, the

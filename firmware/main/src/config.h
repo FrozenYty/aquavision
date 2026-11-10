@@ -30,6 +30,8 @@ constexpr uint32_t LED_PULSE_MS = 300;
 constexpr uint32_t OFFLINE_AFTER_MS = 10000;  // silence from the PC for this long flips to OFFLINE
 constexpr uint32_t TURBIDITY_PERIOD_MS = 5000;
 constexpr uint32_t HEARTBEAT_PERIOD_MS = 1000;
+// The three-dot spinner on CAPTURING. Fast enough to read as motion, slow enough not to strobe.
+constexpr uint32_t SPIN_PERIOD_MS = 250;
 constexpr uint32_t SPLASH_MS = 1500;
 
 // ---------------------------------------------------------------------------- identity

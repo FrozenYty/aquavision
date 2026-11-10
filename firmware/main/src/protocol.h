@@ -21,6 +21,10 @@ bool poll(rig::State& state);
 void emitHello();
 // Reports every address that answers on the I2C bus, one EVT line each.
 void emitI2CScan();
+
+//: Reports the screen the rig just switched to. Without it, a state change is invisible from the PC -
+//: the only witness is the panel, which makes a wiring question and a logic question look identical.
+void emitScreen(const rig::State& state);
 void emitTrigger(uint32_t millisNow);
 void emitTurbidity(int value);
 void emitPong();
