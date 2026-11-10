@@ -98,9 +98,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       boxes with `model_version` and `latency_ms`
 - [ ] **P2-02** Result persistence and query API · @Gtechson · done when boxes land in
       `detect_object` and querying by `frame_id` returns them
-- [ ] **P2-03** Capture and review pages on real data · @chemflowers · closes AC-08, AC-13 · done when no mock data is left
+- [x] **P2-03** Capture and review pages on real data · @chemflowers · closes AC-08, AC-13 · done when no mock data is left
       on those two pages
-- [ ] **P2-04** Minimal review loop: delete, add, relabel · @chemflowers @Gtechson · closes AC-17 · done when the
+- [x] **P2-04** Minimal review loop: delete, add, relabel · @chemflowers @Gtechson · closes AC-17 · done when the
       edit persists and the count updates without a page reload
 
       **Backend and model · @Gtechson**
@@ -165,7 +165,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [x] **P2-15** Answer contract §7's three open questions · @Gtechson · unblocks `P2-08` · done when
       §7 states how the socket authenticates, how a binary frame is correlated to its `frame_id`, and
       where that frame's quality score is carried — all three, in the contract, before the route exists
-- [ ] **P2-16** Hold `live.js` to contract §7 · @chemflowers · done when the socket sends the token in
+- [x] **P2-16** Hold `live.js` to contract §7 · @chemflowers · done when the socket sends the token in
       the first `auth` message rather than the query string, handles `4401` and `4408`, and a test fails
       when the client and §7 disagree about a message type or a field - the mirror of
       `tests/test_api_js.py`, which is what keeps the REST client honest

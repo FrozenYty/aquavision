@@ -1,5 +1,28 @@
 ## 2026-11-10
 
+- **`P2-04` done: the review loop persists delete, add and relabel with one submit.** Every edit is
+  local until the reviewer submits the whole set (the server's contract), delete asks first, and after
+  the submit the page reloads the boxes from the server: new boxes get their ids there, rejected boxes
+  stay out of the working set, and the count is the server's `object_count`. Checked on the real server
+  with boxes seeded into a scratch database (detection had not written boxes yet): one delete,
+  one drawn box and one relabel submitted with the count going from 3 to 3; the stored rows match the page, and the page
+  shows the same rows after a reload.
+- **`P2-16` done: `live.js` follows contract §7.** The token now travels as the first `auth` message and never in
+  the URL; the client waits for `auth_ok` before sending `start`; a 4401 close sends the user to sign in,
+  and a 4408 close is reported as a stall. `tests/test_live_socket.py` fails when the client uses a message
+  type or a field §7 does not define (checked by planting a mismatch). Checked against a scratch socket
+  server that speaks §7: auth then start, boxes drawn, and a refused token returns to sign-in.
+  `/ws/capture` is still not on `main`, so P2-08 stays open.
+- **`P2-03` done: the capture and review pages hold no mock data.** Neither page imports the mock; the only
+  route to it is the explicit `?mock=1` switch, which stays. Capture reads sessions and frames from the API and
+  shows the empty state when there are none; review reads the newest frame (or the one named) and submits to the
+  real route (`P2-04`). Checked against the real server: sessions and posted frames render, the review page
+  loads boxes and submits. The capture page's live boxes still depend on `/ws/capture` (`P2-08`).
+- **`P3-02` in part: the species chart follows the counting basis, and its caption follows with it.** The
+  chart reads `/api/stats/species?basis=…`, and the caption names the basis; the other three charts say they do
+  not depend on it. Checked on the real server: reviewed gives 6 boxes and raw gives 8, both matching the API.
+  Not ticked: the route has no site dimension, so the "empty site" criterion cannot be met, and the quality chart
+  needs per-day figures the server does not return. `P3-14` (CSV) is blocked on lane B; see the PR description.
 - **The rig's three numbers became a script, so the tank can be judged without an opinion.**
   `scripts/test_rig.py` measures lighting uniformity, the width of a 5 cm target at 640 px, and the
   brightness drift between the first and last frame of a run; `server/app/vision/rig.py` holds the
