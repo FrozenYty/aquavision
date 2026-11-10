@@ -108,6 +108,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       AC-05, AC-07, AC-10, AC-12 · three checkpoints, each its own pull request
       - **P2-05a** the queue consumer, driven by synthetic `detect_task` rows — **no weights needed,
         start here**
+        - delivered 11-10: `server/app/worker.py` claims queued tasks, advances `progress`, honours
+          cancel, records a failure reason, and requeues stale rows on restart; the detector is
+          injected, so this checkpoint never invents boxes
       - **P2-05b** the detection path — **blocked until `P2-06c` produces weights**, and it is the only
         part of this task that is
       - **P2-05c** `/api/stats/*` verified against rows written by 05b, figures equal to the dashboard

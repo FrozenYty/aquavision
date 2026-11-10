@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     quality_threshold: int = Field(default=60, validation_alias="AV_QUALITY_THRESHOLD")
     camera_index: int = Field(default=0, validation_alias="AV_CAMERA_INDEX")
 
+    # The detection queue pool (architecture §5). Tests disable it so the suite stays deterministic.
+    worker_enabled: bool = Field(default=True, validation_alias="AV_WORKER_ENABLED")
+    worker_poll_seconds: float = Field(
+        default=1.0, ge=0.05, validation_alias="AV_WORKER_POLL_SECONDS"
+    )
+
     @property
     def jwt_secret_is_default(self) -> bool:
         """True when nobody has set a real secret — surfaced by /api/health, never silently."""
