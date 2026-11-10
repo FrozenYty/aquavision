@@ -163,3 +163,36 @@ rather than a panel that quietly lies.
 
 A score of `-1` in `EVT SCREEN` means the screen deliberately shows no number: there is no verdict, and
 a stale or invented one would be worse than a blank.
+
+## 9. The PC side of the link
+
+The server holds the other end of the same cable, and it has a state machine of its own
+(`server/app/rig/link.py`). It is smaller than the rig's, and it is written the same way, because the
+failures here are the same shape: a port unplugged mid-read, a write attempted on a closed port, a
+keepalive thread outliving the transport it was pinging.
+
+| State \ Event | start | port opened | open failed | read failed | write failed | stop | keepalive tick | line in |
+|---|---|---|---|---|---|---|---|---|
+| `DOWN` | Opening | - | - | - | - | Stopping | - | - |
+| `OPENING` | ignored | **Open** | stay, retry | - | - | Stopping | - | - |
+| `OPEN` | ignored | - | - | **Opening**, retry | **Opening**, retry | Stopping | send `CMD PING` | dispatch |
+| `STOPPING` | ignored | ignored | ignored | - | - | - | ignored | ignored |
+
+**Two invariants, both enforced in the code:**
+
+1. **A transport exists if and only if the state is `OPEN`.** A write on a closed port raises in
+   whichever thread made it, and a keepalive thread that raises takes the process down.
+2. **Only `OPEN` sends keepalives.** A reconnect loop that also pings is two writers on one port.
+
+The matrix earned its place immediately: the first implementation set the *global* stop event when a
+write failed, which ended the reader thread for good - one unlucky write and the link never came back.
+The test that found it is `test_a_failed_write_takes_the_link_down_and_it_recovers`.
+
+**The verdict path is not a separate state machine.** On `EVT TRIGGER` the server grabs a frame, scores
+it with the same quality gate the rest of the product uses, and answers `CMD RESULT <score> <verdict>
+<reason>`. If the capture fails - no camera, device busy, disk full - it answers **nothing**. The rig's
+own five-second timeout then reports `RETAKE / NO REPLY` with no score, which is exactly true, and no
+new message had to be invented for the rig to learn.
+
+The keepalive obligation of §6 is discharged here: every two seconds, from `OPEN`, for as long as the
+port is held.

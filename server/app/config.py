@@ -34,6 +34,13 @@ class Settings(BaseSettings):
     quality_threshold: int = Field(default=60, validation_alias="AV_QUALITY_THRESHOLD")
     camera_index: int = Field(default=0, validation_alias="AV_CAMERA_INDEX")
 
+    # The rig link (P2-17). Empty port means the link is off: the server runs fine without a board, which
+    # is the normal case for everyone who is not at the rig.
+    rig_port: str = Field(default="", validation_alias="AV_RIG_PORT")
+    rig_baud: int = Field(default=115200, validation_alias="AV_RIG_BAUD")
+    # The rig requires a keepalive at least every two seconds or it declares itself offline.
+    rig_keepalive_seconds: float = Field(default=2.0, validation_alias="AV_RIG_KEEPALIVE_SECONDS")
+
     # The detection queue pool (architecture §5). Tests disable it so the suite stays deterministic.
     worker_enabled: bool = Field(default=True, validation_alias="AV_WORKER_ENABLED")
     worker_poll_seconds: float = Field(
