@@ -5,6 +5,7 @@
 *.engine
 data/
 datasets/
+runs/
 *.mp4
 *.avi
 *.mov
