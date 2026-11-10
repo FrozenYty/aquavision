@@ -40,6 +40,7 @@ from app.envelope import (
 from app.envelope import (
     envelope as build,
 )
+from app.rig.wiring import build_link
 from app.routers import (
     auth,
     capture,
@@ -95,7 +96,7 @@ async def request_context(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Start the detection pool with the app; stop it before the process exits."""
+    """Start the detection pool and the rig link with the app; stop both before the process exits."""
     worker = None
     if getattr(app.state, "worker_enabled", False):
         worker = Worker(
@@ -105,9 +106,19 @@ async def lifespan(app: FastAPI):
         )
         worker.start()
         app.state.worker = worker
+    link = None
+    if getattr(app.state, "rig_port", ""):
+        # The rig link is started last and stopped first: a panel that asks for a frame while the
+        # database is gone would produce a verdict nobody can store.
+        link = build_link(get_settings())
+        if link is not None:
+            link.start()
+
     try:
         yield
     finally:
+        if link is not None:
+            link.stop()
         if worker is not None:
             worker.stop()
 
@@ -132,6 +143,7 @@ def create_app() -> FastAPI:
     app.state.worker_enabled = settings.worker_enabled
     app.state.worker_poll_seconds = settings.worker_poll_seconds
     app.state.max_concurrency = settings.max_concurrency
+    app.state.rig_port = settings.rig_port
 
     app.middleware("http")(request_context)
 

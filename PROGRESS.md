@@ -12,6 +12,32 @@
   review's three open items are closed: the group names and statistics subtitles applied, the current-model
   label applied, and the "today" prefix rejected because two of those cards are not daily figures against the
   real server.
+- **The rig link now has its PC half (P2-17), written from a state matrix rather than from intuition.**
+  `server/app/rig/` holds the protocol grammar as pure functions, a link that owns the port
+  (DOWN / OPENING / OPEN / STOPPING against start, opened, open failed, read failed, write failed stop,
+  keepalive tick and line in), and a service that answers a trigger with the same quality gate the rest
+  of the product uses. The matrix is §9 of `docs/rig-state-machine-en/zh.md`.
+- **The matrix paid for itself on the first run.** The initial link set the *global* stop event when a
+  write failed, which ended the reader thread for good: one unlucky write and the rig link never came
+  back. The test that caught it is `test_a_failed_write_takes_the_link_down_and_it_recovers`, and the
+  fix was to give each connection its own event instead of borrowing the shutdown one.
+- **A failed capture sends nothing at all.** No invented score, no error message the rig would have to
+  learn - the firmware's five-second timeout turns the silence into `RETAKE / NO REPLY`, which is what
+  actually happened. The two halves agree about the verdict because they run the same scoring code.
+- **Port, baud and keepalive are settings** (`AV_RIG_PORT`, `AV_RIG_BAUD`, `AV_RIG_KEEPALIVE_SECONDS`),
+  and an empty port means no link: a developer's machine, CI and every machine that is not at the rig run
+  without a board and are not in a degraded state. `pyserial` is installed by `requirements-server.txt`.
+- **The state-matrix rule is now a working principle** (`AGENTS.md` §4, principle 8): hardware behaviour is specified
+  as the product of its states and events before it is coded, because the pairs nobody writes down are
+  where the demo fails.
+
+- **A decision stopped being true, so it was replaced rather than left standing.** ADR 07 said `pytest`
+  stays CI-only until its dependencies install on every workstation without torch. `requirements-server.txt`
+  now pins the server and the tests - pytest, httpx, no torch - so the condition is met, and the local
+  `pytest -q` that `AGENTS.md`, the pull-request template and the README already demand is now a recorded
+  decision instead of a habit running ahead of one. The record is superseded by ADR 11 rather than
+  rewritten in place: a suite that only runs in CI is a suite people push past. Cost: one record, two
+  table rows and two index lines; the check set and CI keep their roles.
 - **A documentation audit against the code found thirty-five claims that were not true, and fifteen of
   them are fixed.** The pattern was the same in every case: a number or a name written once in a document
   and never compared to the thing it described. Two examples worth naming: the stack table promised

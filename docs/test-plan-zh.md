@@ -12,7 +12,7 @@
 | 单元 | 质量评分、坐标换算、阈值判断 | `pytest` | 每次提交 |
 | 接口 | 响应封装、错误码、权限、分页 | `pytest` + `httpx` | 每个 PR |
 | 端到端 | 采集 → 识别 → 复核 → 报告 | 手工脚本 | 每周 |
-| 模型 | mAP、分类别召回、计数偏差 | `scripts/evaluate.py` | 每个模型版本 |
+| 模型 | mAP、分类别召回、计数偏差 | `scripts/train_baseline.py` | 每个模型版本 |
 
 覆盖率不作为目标。规则更简单：**任何可能悄悄算错数的分支都必须有测试。** 也就是质量评分、
 坐标换算、去重与统计——不是 CRUD 接口。
@@ -47,7 +47,7 @@
 
 ## 四、测试数据与夹具
 
-- `tests/fixtures/` 放三张小图（清晰、模糊、过曝各一）与一份录好的识别结果，总量控制在 200 KB 内，进仓库。
+- 目前仓库里没有预置图片夹具。采集测试在代码里合成所需图像——清晰噪声帧、它的模糊副本、纯色帧与蓝偏帧——再把用到的 JPEG 写进 `tmp_path`；生成过程是确定性的，因此无需提交夹具。
 - 任何测试都不许打开真实摄像头，采集通过夹具返回预置帧。
 - 需要数据库的测试用临时 SQLite 文件，每个会话建一次、删一次。
 
@@ -57,11 +57,11 @@
 ruff check .            # 静态检查
 ruff format --check .   # 格式检查
 pytest -q               # 全部测试
-python scripts/evaluate.py --weights data/models/<版本>/best.pt --split test
+python scripts/train_baseline.py   # 训练后在冻结测试集上评估
 python scripts/check-bilingual.py
 ```
 
-模型评估打印一张表，同时把 `metrics.json` 写到权重旁边，保证“版本”与“数字”不分离。
+评估目前尚未与训练分离。`scripts/train_baseline.py` 先训练基线，再在冻结的测试集上评估最佳权重，把 `metrics.json` 写进运行目录；`scripts/register_model.py` 读取该文件并写入 `model_version` 行，保证“版本”与“数字”不分离。
 
 ## 六、缺陷处理
 
