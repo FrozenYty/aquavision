@@ -128,7 +128,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - **P2-06c** the weights registered and loadable through `model_version`, which unblocks `P2-05b`
       - this is the **exploratory** run that gives the dashboard real numbers; the official E0–E4 stay
         at `P4-01..03` on the frozen dataset, and the difference is stated in the pull request
-- [ ] **P2-07** API contract tests for every route · @Gtechson · done when each P0 route has at least
+- [x] **P2-07** API contract tests for every route · @Gtechson · done when each P0 route has at least
       one test asserting status, envelope and payload shape, and the suite still runs without a
       database server
 

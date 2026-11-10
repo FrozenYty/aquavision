@@ -52,6 +52,11 @@
   carries `frame_id`, `captured_at` and `quality`; and results correlate to frames by `frame_id`, not
   by order. This unblocks `P2-08`: `web/static/js/live.js` still sends the token in the query string
   and must move to first-message authentication. The `/ws/capture` route itself does not exist yet.
+- **`P2-07` closed the payload-shape gap on every P0 route.** The skeleton test covered the envelope,
+  the guards and the 501s; it did not check what each route actually returns. A new section now
+  asserts status, `code`, and the documented fields and types for all 21 P0 routes, seeding tasks,
+  boxes, models, experiments and species through the SQLite fixture. The failing reference was
+  demonstrated once: removing `task_code` from `serializers.task` turns the batch-task test red.
 
 ## 2026-11-09
 
