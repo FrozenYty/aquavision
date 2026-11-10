@@ -60,6 +60,17 @@ What exists and must not be rewritten:
 | Thirteen tables | `server/app/models.py` | done; ADR 08 explains the last four |
 | Contract coverage test | `tests/test_api_skeleton.py` | passing — **do not weaken it** |
 
+**What keeps `P1-02` open is exactly two routes**, and they are the two that need weights:
+
+| Route | Requirement | Closes when |
+|---|---|---|
+| `POST /api/detect/frames/{id}` | FR-M3-01 | `P2-05b` |
+| `POST /api/detect/batches` | FR-M3-02 | `P2-05b` |
+
+`POST /api/compare/frames/{id}` used to be on this list and has been **moved to `P4-10`**: it needs two
+registered versions loaded at once, so leaving it here would have made `P1-02` unclosable until P4.
+That is a correction to the task, not a relaxation of it.
+
 What is left:
 
 1. **A real detection path.** `POST /api/detect/frames/{id}` and `/api/detect/batches` return 501

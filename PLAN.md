@@ -63,11 +63,15 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [x] **P1-01** DDL script and species dictionary seed · @Gtechson · done when `scripts/init_db.py`
       runs on an empty database and four classes are seeded
 - [ ] **P1-02** FastAPI skeleton: every contract route, envelope, error codes, JWT · @Gtechson ·
-      done when `/api/health` answers in the envelope, every route in `docs/api-contract-en.md` §6 is
-      mounted, and the ones marked P0 return real data while the rest return 501 in the same envelope
-      - mounted by @FrozenYty on 11-06: envelope, guards, all 42 routes, 21 of them returning real
-        data. What remains is detection, the queue consumer and the reviewed statistics — the
-        acceptance list for those is `docs/handover-en.md` §2
+      closes when the queue consumer, the two detection routes and the reviewed statistics are real —
+      that is `P2-05a`, `P2-05b` and `P2-05c`, and nothing else
+      - mounted by @FrozenYty on 11-06: envelope, guards, all 42 routes, 21 of them returning real data
+      - **two P0 routes still answer 501**: `POST /api/detect/frames/{id}` (FR-M3-01) and
+        `POST /api/detect/batches` (FR-M3-02) — they need weights, so they close with `P2-06c`
+      - **`POST /api/compare/frames/{id}` moved out of this task.** It needs *two registered model
+        versions loaded at once*, which cannot exist before the improved models do; keeping it here
+        would have made P1-02 unclosable until P4. It is now `P4-10`
+      - the acceptance list for what remains is `docs/handover-en.md` §2.1
 - [ ] **P1-03** Capture module: open device, lock exposure, grab, score, persist · @FrozenYty · done
       when 20 frames are captured and file, score and `frame_id` all agree
 - [x] **P1-04** Thirteen static pages · @chemflowers · done when every page opens, uses mock data and
@@ -225,6 +229,10 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P4-09** Submission package · @FrozenYty · closes AC-35 · done when the SRS, the traceability
       matrix, the test report and this plan agree with each other and with the code at one commit, and
       the document index lists nothing that does not exist
+- [ ] **P4-10** Same-frame comparison · @Gtechson · moved from `P1-02` · done when
+      `POST /api/compare/frames/{id}` runs the baseline and one improved model on the same frame, the
+      response carries both sets of boxes and both version names, and the page can show them side by
+      side — it could not be built earlier because it needs two registered versions
 
 - [ ] **GATE P4** — four tables full: metrics, ablation, reproducibility, acceptance checklist
 
