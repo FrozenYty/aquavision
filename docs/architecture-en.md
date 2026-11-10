@@ -36,13 +36,19 @@ flowchart LR
 ## 3. Layers and the dependency rule
 
 ```
-api/  →  services/  →  repo/  →  models/
-              ↓
-           vision/
+routers/  →  serializers/  →  SQLAlchemy session  →  models/
+                  ↓
+               vision/
 ```
 
-**Dependencies flow one way only.** `api` never touches SQL, `services` never touches HTTP,
-`vision` is called by `services` and never calls back.
+**Target:** `api/ → services/ → repo/ → models/`, with `services` between routing and data access.
+**Today** is one level below that: routing, validation and business logic all live in
+`server/app/routers/`, `models.py` holds the table definitions, and the `repo/` and `services/`
+packages do not exist. **A layer that does not exist must not be drawn as if it did** — this section
+says where the code is going and why; the rule below is what keeps that move possible.
+
+**Dependencies flow one way only.** Routers do not execute raw SQL, business logic does not build HTTP
+responses, and `vision` is called by the routers and never calls back.
 
 | Layer | Responsibility | Must not |
 |---|---|---|
@@ -57,7 +63,7 @@ single most expensive mistake in a project this size.
 
 ## 4. Directory layout
 
-The tree below is the target; the first rows of it are what exists today. §3 explains the gap.
+The tree below is today's layout; the names in parentheses are the target §3 describes.
 
 ```
 server/
@@ -85,14 +91,14 @@ tests/
 
 ## 5. Runtime model
 
-One process, four concerns:
+One process, five concerns:
 
 | Concern | How it runs | Why |
 |---|---|---|
 | Capture | Background thread, 10 fps | Keeps the latest frame without blocking requests |
 | Detection | Inference every ~300 ms | Decoupled from display rate; see ADR 03 |
 | Batch jobs | Fixed thread pool, 2 workers | No Celery, no Redis; task state lives in PostgreSQL |
-| API | Async FastAPI handlers | Serves REST; one WebSocket endpoint is planned and not yet implemented, so the capture page polls |
+| API | Sync `def` handlers, run by FastAPI in its thread pool | Serves REST; one WebSocket endpoint is planned and not yet implemented, so the capture page polls |
 | Rig link | One reader thread plus one keepalive thread, started only when `AV_RIG_PORT` is set | The board is optional; a machine without one is not degraded. The link's states and the keepalive rule are in `docs/rig-state-machine-en.md` §9 |
 
 **Detection rate is not the display rate.** The camera pushes frames at 10 fps; detection runs
@@ -145,6 +151,9 @@ AV_MAX_CONCURRENCY=2
 AV_DETECT_INTERVAL_MS=300
 AV_QUALITY_THRESHOLD=60
 AV_CAMERA_INDEX=0
+AV_RIG_PORT=                        # empty turns the rig link off; the board is optional
+AV_RIG_BAUD=115200
+AV_RIG_KEEPALIVE_SECONDS=2.0
 AV_WORKER_ENABLED=1
 AV_WORKER_POLL_SECONDS=1.0
 ```

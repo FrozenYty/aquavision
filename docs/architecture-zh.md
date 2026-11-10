@@ -63,7 +63,7 @@ routers/  →  serializers/  →  SQLAlchemy 会话  →  models/
 
 ## 四、目录结构
 
-下图是**目标**结构；其中前几行是今天已有的。差距见第三节。
+下图是**今天**的目录结构；括号里写的是第三节所述的目标。
 
 ```
 server/
@@ -91,14 +91,14 @@ tests/
 
 ## 五、运行时模型
 
-一个进程，四件事：
+一个进程，五件事：
 
 | 关注点 | 运行方式 | 原因 |
 |---|---|---|
 | 采集 | 后台线程，10 fps | 保证取到最新帧，且不阻塞请求 |
 | 识别 | 每约 300 ms 推理一次 | 与显示帧率解耦，见 ADR 03 |
 | 批量任务 | 固定线程池，2 个工作线程 | 不引 Celery 与 Redis，任务状态存 PostgreSQL |
-| 接口 | FastAPI 异步处理 | 提供 REST；一个 WebSocket 端点已规划但尚未实现，所以采集页改用轮询 |
+| 接口 | 同步 `def` 处理函数，由 FastAPI 的线程池执行 | 提供 REST；一个 WebSocket 端点已规划但尚未实现，所以采集页改用轮询 |
 | 装置链路 | 一个读线程加一个保活线程，仅在设置了 `AV_RIG_PORT` 时启动 | 板子是可选的；没有板子的机器不是「降级状态」。链路的状态与保活规则见 `docs/rig-state-machine-zh.md` 第九节 |
 
 **识别频率不等于显示帧率。** 摄像头按 10 fps 推帧，识别每 300 ms 跑一次，中间帧复用
@@ -149,6 +149,9 @@ AV_MAX_CONCURRENCY=2
 AV_DETECT_INTERVAL_MS=300
 AV_QUALITY_THRESHOLD=60
 AV_CAMERA_INDEX=0
+AV_RIG_PORT=                        # 留空即不启用装置链路；板子是可选的
+AV_RIG_BAUD=115200
+AV_RIG_KEEPALIVE_SECONDS=2.0
 AV_WORKER_ENABLED=1
 AV_WORKER_POLL_SECONDS=1.0
 ```

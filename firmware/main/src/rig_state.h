@@ -12,10 +12,8 @@ namespace rig {
 
 //: The link with the PC, as a first-class part of the state rather than a loose boolean.
 //:
-//: Two states, and the rig boots in the second one: the PC owns the link and proves it with a keepalive
-//: every two seconds, so no heartbeat means no PC. There is deliberately no "never connected yet" state -
-//: it would only exist for the couple of seconds between power-up and the PC's first message, and the
-//: honest thing to show in that window is OFFLINE.
+//: Two states, and the rig boots in the first one: `setup()` starts the link Alive and the screen
+//: Ready, with a ten-second grace before silence is treated as a lost PC.
 enum class Link {
   Alive,  // a command arrived within `cfg::OFFLINE_AFTER_MS`
   Gone,   // `cfg::OFFLINE_AFTER_MS` of silence
@@ -39,7 +37,7 @@ const char* reasonToken(Reason reason);
 Reason reasonFromToken(const char* token);
 
 struct State {
-  Screen screen = Screen::Offline;  // no PC has said anything yet, and that is what OFFLINE means
+  Screen screen = Screen::Ready;  // `setup()` starts Alive; a fresh rig is waiting, not broken
   int score = -1;      // -1 means no verdict yet; the screen leaves the number out
   Reason reason = Reason::None;
   int turbidity = -1;   // -1 means no reading yet; the screen shows "--"
@@ -48,7 +46,7 @@ struct State {
   // scale, so the mark flickered. A trend worth showing has to be relative, and until there is a reason
   // for one, the reading itself is the honest display.
   int frames = 0;       // accepted or judged, this session
-  Link link = Link::Gone;
+  Link link = Link::Alive;
   bool heartbeatOn = true;
   uint8_t animPhase = 0;  // which of the three spinner dots is lit, 0-2
 
@@ -71,8 +69,8 @@ struct State {
   }
 };
 
-//: The three facts that separate a working rig from a lying one. Six of the fifteen screen/link
-//: combinations are reachable; these are the lines between them.
+//: The three facts that separate a working rig from a lying one. Of the ten screen/link combinations
+//: five are reachable; these are the lines between them.
 inline bool invariantHolds(const State& state) {
   // OFFLINE if and only if the link is gone. Everything else requires a live PC: a capture, a verdict
   // and an idle-but-ready rig all mean somebody is on the other end of the cable.

@@ -8,7 +8,7 @@ with a human review loop that feeds corrections back into training.
 
 **Status**: phase P2, see [PROGRESS.md](PROGRESS.md). The backend serves both the API and the thirteen
 pages from one origin, sign-in works against a freshly created database, and the ESP32 firmware compiles
-and drives its panel. Detection still returns 501 without weights, the capture rig is not assembled, and
+and drives its panel. Detection still returns 501 because the detection path is not built, the capture rig is not assembled, and
 the camera path is hardware-gated.
 
 ## Getting started
@@ -110,7 +110,7 @@ Honest list, because a README that overstates is worse than a short one.
 - **Works**: sign-in and roles, the frame list and detail, review submissions, statistics, the
   dataset export, system settings — against real tables and a real database.
 - **Works without hardware**: everything above; the camera pages fall back to an empty list.
-- **Not yet**: detection returns 501 until weights are registered (`P2-05`), and the live capture page
+- **Not yet**: detection returns 501 because the detection path itself is not implemented (`P2-05b`); a model version is registered and online, the code that would run it is what is missing. The live capture page
   has no `/ws/capture` socket so it polls. The rig link's PC half exists (`server/app/rig/`) and stays
   dormant until `AV_RIG_PORT` names a port; `scripts/test_rig_link.py` is the first thing to run when a
   board is plugged in.

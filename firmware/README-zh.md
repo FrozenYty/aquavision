@@ -8,24 +8,26 @@
 它**不采图，也不做推理**。这两件事都归 PC，而一帧画面的质量只有 PC 说了算——固件只显示被
 告知的内容。
 
-## 状态：草稿
+## 状态：初稿，已在面板上跑过
 
-屏幕布局是**初稿**，2026-11-07 商定，从未在真实面板上看过。在装置上台架之前，`src/screen.cpp`
-里的每一个坐标都是暂定的。
+屏幕布局是**初稿**，2026-11-07 商定。显示屏已在 2026-11-10 接到板子上并驱动过五个屏幕（见「到货的
+那块板子定下了什么」），但整套装置尚未组装：在它上台架之前，`src/screen.cpp` 里的每一个坐标仍是
+暂定的。
 
 ## 各部分在哪
 
 | 文件 | 负责什么 | 什么时候改 |
 |---|---|---|
 | `src/config.h` | 引脚、时序、I2C 地址 | 挪了一根线，或某个周期感觉不对 |
-| `src/rig_state.h` | 装置知道的东西：屏幕、分数、浊度、趋势 | 有新的值需要被记住 |
+| `src/rig_state.h` | 装置知道的东西：屏幕、分数、原因、浊度、帧数、链路 | 有新的值需要被记住 |
 | `src/screen.cpp` | 128×64 的布局，每个状态一个函数 | 屏幕该换个样子 |
 | `src/protocol.cpp` | 串口语法 | PC 和板子之间要说一句新的话 |
 | `src/main.cpp` | 调用上面四个的循环 | 几乎从不改 |
 
-新增一个屏幕状态要改三处：在 `rig::Screen` 里加一项，在 `screen.cpp` 里加一个 `drawX` 函数，
-在 `render()` 里加一个 `case`。往显示上加一个字段，是在 `rig::State` 里加一行、在画它的那个
-函数里再加一行。固件里没有别的地方知道像素这回事。
+新增一个屏幕状态要改四处：在 `rig::Screen` 里加一项，在 `screen.cpp` 里加一个 `drawX` 函数，
+在 `render()` 里加一个 `case`，还要在 `protocol.cpp` 的 `screenName()` 里加一个 `case`，让 PC
+收到一个它认识的名字。往显示上加一个字段，是在 `rig::State` 里加一行、在画它的那个函数里再加
+一行。固件里没有别的地方知道像素这回事。
 
 ## 编译与烧录
 
@@ -97,24 +99,27 @@ y 55..62  TURB 12400                                  FRAMES 12
 
 ## 串口协议
 
-一行一条消息，ASCII，以 `\n` 结尾。固件忽略它看不懂的任何内容，所以一个乱码字节不会让装置变砖。
+一行一条消息，115200 波特率，ASCII，以 `\n` 结尾。一行最多 95 个字符：溢出时缓冲区复位，更长的输入
+不会被当作一条消息处理。固件忽略它看不懂的任何内容，所以一个乱码字节不会让装置变砖。
 
 | 方向 | 消息 | 含义 |
 |---|---|---|
 | → PC | `EVT HELLO <version>` | 板子起来了 |
 | → PC | `EVT I2C <addr>` | 开机扫描时每个应答的设备一行 |
-| → PC | `EVT SCREEN <name> <score>` | **每一次**屏幕变化：READY、CAPTURING、PASS、RETAKE、OFFLINE |
+| → PC | `EVT SCREEN <name> <score>` | 一次屏幕变化：READY、CAPTURING、PASS、RETAKE、OFFLINE。采集超时先发 `EVT TIMEOUT`，紧接这一条 |
 | → PC | `EVT TRIGGER <millis>` | 按键被按下，一次采集开始了 |
 | → PC | `EVT TURBIDITY <value>` | 每 5 s 一次的新读数 |
-| → PC | `EVT TIMEOUT <millis>` | 5 s 内没有等到判定，所以这一张算 RETAKE |
+| → PC | `EVT TIMEOUT <millis>` | 5 s 内没有等到判定；屏幕切到 RETAKE，随后发 `EVT SCREEN RETAKE -1` |
 | → PC | `EVT STRAY RESULT <score>` | 没有在途采集却来了判定；该判定**没有**被采用 |
+| → PC | `EVT INVARIANT <screen> <link>` | 不该存在的屏幕/链路组合；线上永远不该出现 |
 | → PC | `EVT PONG` | 对 `CMD PING` 的应答 |
-| PC → | `CMD RESULT <score> <PASS\|RETAKE> <REASON>` | 要显示什么，仅在 CAPTURING 时有效 |
+| PC → | `CMD RESULT <score> <PASS\|RETAKE> <REASON>` | 要显示什么，仅在 CAPTURING 时有效；分数会被夹到 0–100 |
 | PC → | `CMD READY` | 回到空闲屏幕 |
 | PC → | `CMD PING` | 存活检查 |
 
-`REASON` 是一个 token：`LOW_LIGHT`、`BLUR`、`COLOR_CAST`、`NONE` 或 `NO_REPLY`。最后一个是
-装置自己生成的，永远不会发给装置。
+`REASON` 是一个 token：`LOW_LIGHT`、`BLUR`、`COLOR_CAST`、`NONE`、`UNKNOWN` 或 `NO_REPLY`。
+`NO_REPLY` 由装置自己生成，永远不会发给装置；`UNKNOWN` 是服务端在没有任何子分数能指出原因时发的
+（`server/app/rig/protocol.py`），装置遇到不认识的 token 也会存成它。
 
 **PC 那一半现在有了**（`server/app/rig/`，P2-17）：服务端打开端口，每两秒发一次 `CMD PING`，
 把 `EVT TRIGGER` 变成一次采集和一条 `CMD RESULT`，并记录装置上报的每一次屏幕变化。它自己的
@@ -147,6 +152,10 @@ BOOT 键。
 
 在板子上验证过：镜像能烧入并通过校验，固件打印 `EVT HELLO 1.1`，而没有接任何东西时 I2C 扫描
 什么也不报。
+
+**改线不必重启。** `CMD SCAN` 会重新扫描 I2C 总线并逐个上报应答的地址，所以换一根线之后只要发一行命令，
+不用断电重启、也不用去等开机窗口。这条命令就是在浊度传感器调试时加的：开机扫描是另一个看总线的机会，
+而它发生在任何人有机会动线之前。
 
 **打开串口会让板子复位。** 桥接芯片的 DTR 与 RTS 接了自动复位电路，所以任何程序一打开 `COM5`，
 固件就会重启——日志从头是 ROM 启动信息，随后是一条全新的 `EVT SCREEN READY`。**这是板子在正常工作**，

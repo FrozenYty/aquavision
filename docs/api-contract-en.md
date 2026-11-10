@@ -28,12 +28,13 @@ Every response, success or failure:
 
 | Range | Meaning | Example |
 |---|---|---|
-| `400xx` | Invalid request | `40001` missing parameter |
-| `401xx` | Not authenticated | `40101` token expired |
+| `400xx` | Invalid request | `40001` missing parameter; `40002` invalid parameter |
+| `401xx` | Not authenticated | `40101` token expired; `40102` not signed in |
 | `403xx` | Not permitted | `40301` role cannot access |
 | `404xx` | Not found | `40401` frame does not exist |
 | `409xx` | State conflict | `40901` task already running |
 | `500xx` | Server error | `50001` internal error |
+| `501xx` | Mounted but not implemented | `50100` route not implemented |
 
 Never return a bare HTTP 500 with a stack trace. Wrap it as `50001` and log the detail.
 
@@ -116,8 +117,10 @@ the number of routes is a consequence, not a target.
 {
   "frame_id": "20261103T193012-0042",
   "session_id": "s-a3-001",
+  "point_code": "A3",
   "captured_at": "2026-11-03T19:30:12.418+08:00",
   "quality": { "score": 66, "verdict": "ok" },
+  "is_retake": false,
   "env": { "turbidity_rel": 12 },
   "width": 1920, "height": 1080
 }
@@ -158,6 +161,11 @@ The request carries the full corrected set, not a diff: the reviewer's canvas is
 diff would have to be merged against a version that may have moved on. `hard_sample` says whether the
 frame entered the hard-example pool (FR-M4-03).
 
+Each object in `objects` carries `object_id` (optional; omit it for a box drawn in review),
+`class_code`, `confidence`, `x`, `y`, `w` and `h`; `is_manual` and `review_status` are set by the
+server and are not read from the request. The response also reports `frame_id`, `rejected` (boxes
+removed by this review), `added` (boxes drawn by hand) and the submitted `note`.
+
 Coordinates are normalised to `0..1`, relative to the image, origin at the top-left corner.
 
 ### Dataset snapshot
@@ -174,8 +182,10 @@ Coordinates are normalised to `0..1`, relative to the image, origin at the top-l
 }
 ```
 
-`status` is `building`, `ready` or `archived`. The per-frame membership lives in the snapshot table,
-not in the response: a snapshot with seven thousand frames is not a payload.
+`status` is `building`, `ready` or `archived`. The per-frame membership lives in `dataset_item`, not in
+the response: a snapshot with seven thousand frames is not a payload. The list and the export response
+also carry `splits` with the per-split frame counts; the export response adds `groups` and
+`manifest_path`.
 
 ### Report
 
@@ -189,6 +199,7 @@ not in the response: a snapshot with seven thousand frames is not a payload.
   "basis": "reviewed",
   "model_version_id": 3,
   "status": "ready",
+  "error_msg": null,
   "file_path": "reports/RP261106-001.md",
   "created_at": "2026-11-06T15:41:00+00:00"
 }
@@ -206,8 +217,9 @@ not in the response: a snapshot with seven thousand frames is not a payload.
 }
 ```
 
-`PATCH` takes any subset of these keys and returns the full set. Every change is written to the audit
-log with its before and after value (AC-27).
+`PATCH` takes any subset of these keys and returns `{ "params": { ... }, "changed": { ... } }`:
+`params` is the full set, and `changed` names each key that changed with its before and after value.
+Every change is also written to the audit log (AC-27).
 
 ## 7. WebSocket protocol
 
@@ -248,5 +260,5 @@ same shape as the frame object in §6.
 
 - Breaking changes bump the path: `/api/v2/...`. Within v1, fields may be added, never removed
   or renamed.
-- Every detection response records `model_version` and `conf_threshold`, so a result can be
-  reproduced later.
+- Every detection response names the model version behind it — `model_version_id` on a task,
+  `model_version` on the socket's `detect` message — so a result can be reproduced later.

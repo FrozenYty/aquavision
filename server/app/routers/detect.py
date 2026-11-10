@@ -1,7 +1,8 @@
 """Detection entry points (FR-M3-01, FR-M3-02).
 
-Single-frame detection returns 501: there is no weight file yet, and inventing boxes would be worse
-than saying so — the frontend would build against fiction. The batch endpoint is real, because the
+Single-frame detection returns 501 because the detection path itself is not implemented (PLAN.md
+P2-05b), not because a weight file is missing: a version is registered and online. Inventing boxes would
+be worse than saying so — the frontend would build against fiction. The batch endpoint is real, because the
 queue it writes to is real; it refuses to create a task when there is nothing to run on, since an
 entry that can never start reads as pending work on the dashboard.
 """

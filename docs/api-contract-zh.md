@@ -29,12 +29,13 @@
 
 | 段位 | 含义 | 示例 |
 |---|---|---|
-| `400xx` | 请求不合法 | `40001` 缺少参数 |
-| `401xx` | 未认证 | `40101` 令牌过期 |
+| `400xx` | 请求不合法 | `40001` 缺少参数；`40002` 参数不合法 |
+| `401xx` | 未认证 | `40101` 令牌过期；`40102` 未登录 |
 | `403xx` | 无权限 | `40301` 角色无权访问 |
 | `404xx` | 不存在 | `40401` 帧不存在 |
-| `500xx` 前的 `409xx` | 状态冲突 | `40901` 任务已在运行 |
+| `409xx` | 状态冲突 | `40901` 任务已在运行 |
 | `500xx` | 服务端错误 | `50001` 内部错误 |
+| `501xx` | 已挂载但尚未实现 | `50100` 接口尚未实现 |
 
 不许直接抛 500 加堆栈，一律包装成 `50001`，细节写日志。
 
@@ -116,8 +117,10 @@ GET /api/frames?page=1&size=24&site=A3&start=2026-11-01&end=2026-11-03
 {
   "frame_id": "20261103T193012-0042",
   "session_id": "s-a3-001",
+  "point_code": "A3",
   "captured_at": "2026-11-03T19:30:12.418+08:00",
   "quality": { "score": 66, "verdict": "ok" },
+  "is_retake": false,
   "env": { "turbidity_rel": 12 },
   "width": 1920, "height": 1080
 }
@@ -158,6 +161,8 @@ POST /api/review/frames/{frame_id}
 请求体提交**整份修正后的框集合**，不是增量差异：复核画布才是准，差异还要跟一个可能已经变过的版本合并。
 `hard_sample` 表示这一帧是否进入了难例池（FR-M4-03）。
 
+请求里的每个框包含 `object_id`（可选，复核中人工补画的框省略）、`class_code`、`confidence`、`x`、`y`、`w`、`h`；`is_manual` 与 `review_status` 由服务端决定，不从请求读取。响应还会带回 `frame_id`、`rejected`（本次复核去掉的框数）、`added`（人工补画的框数）与请求里的 `note`。
+
 ### 数据集快照
 
 ```json
@@ -172,7 +177,7 @@ POST /api/review/frames/{frame_id}
 }
 ```
 
-`status` 取 `building`、`ready` 或 `archived`。帧级归属存在快照条目表里，不放进响应——七千帧不是载荷。
+`status` 取 `building`、`ready` 或 `archived`。帧级归属存在 `dataset_item` 里，不放进响应——七千帧不是载荷。列表与导出响应还会带上 `splits`（各集合的帧数）；导出响应另有 `groups` 与 `manifest_path`。
 
 ### 巡检报告
 
@@ -186,6 +191,7 @@ POST /api/review/frames/{frame_id}
   "basis": "reviewed",
   "model_version_id": 3,
   "status": "ready",
+  "error_msg": null,
   "file_path": "reports/RP261106-001.md",
   "created_at": "2026-11-06T15:41:00+00:00"
 }
@@ -203,7 +209,8 @@ POST /api/review/frames/{frame_id}
 }
 ```
 
-`PATCH` 接受其中任意子集，返回完整的一组。每次改动都写入审计日志并记录前后值（AC-27）。
+`PATCH` 接受其中任意子集，返回 `{ "params": { ... }, "changed": { ... } }`：`params` 是完整的一组，
+`changed` 列出每个发生变化的键及其前后值。每次改动同样写入审计日志（AC-27）。
 
 ## 七、WebSocket 协议
 
@@ -238,4 +245,4 @@ POST /api/review/frames/{frame_id}
 ## 九、版本
 
 - 破坏性变更升路径：`/api/v2/...`。同一版本内只许加字段，不许删或改名。
-- 每个识别响应都记 `model_version` 与 `conf_threshold`，保证结果可复现。
+- 每条识别响应都记下背后的模型版本——任务响应里是 `model_version_id`，WebSocket 的 `detect` 消息里是 `model_version`——保证结果可复现。

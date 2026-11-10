@@ -1,5 +1,35 @@
 ## 2026-11-10
 
+- **Three documents were audited against the code and thirty-odd claims were false.** The rig documents
+  contradicted the firmware in eighteen places - the state diagram still drew `boot -> Offline` after the
+  firmware had started booting into `Ready`, `EVT SCREEN` was documented as reporting every screen change
+  while the capture timeout emitted only `EVT TIMEOUT`, and the protocol table was missing `CMD RESULT`'s
+  score clamp, the `UNKNOWN` reason token and `EVT INVARIANT`. The API contract documented query parameters
+  and request fields the routes do not read; the architecture document said "four concerns" above a table
+  of five. All fixed against the source, none against another document.
+- **One of those was a protocol hole, and the fix went into the firmware rather than the prose.** The
+  capture timeout changed the screen to `RETAKE` without emitting `EVT SCREEN`, so "every screen change is
+  reported" was false. `serviceCaptureTimeout` now sends `EVT TIMEOUT` and then `EVT SCREEN RETAKE -1`; the
+  documents say so. Documenting an exception would have been cheaper and would have made the protocol
+  unlearnable - a client could never tell whether a missing `EVT SCREEN` meant "no change" or "this one
+  does not report".
+- **`CMD SCAN` exists because the boot scan was the only look at the bus.** The turbidity bring-up went
+  three rounds of "rescan and see" that each cost a power cycle and a race against the boot window. One
+  command that rescans on demand makes a wiring change testable in a second. It is in both firmware
+  READMEs, and it is what made the last two hours of diagnostics possible.
+- **The turbidity sensor was not found, and the reason is power, not code.** The I2C scan answers nothing
+  at any address: the sensor is a 4.5-5.5 V part, the board has no 5 V output (its `5Vin` is an input), and
+  the 12 V module on hand needs a supply nobody has. `readTurbidity` returns -1, the firmware shows `-----`
+  and sends no `EVT TURBIDITY`, which is the designed behaviour: a plausible wrong number is worse than a
+  visible gap. Next step is a USB charger and a spare cable, not a code change.
+- **Two code docstrings were lying about the system they describe.** `detect.py` blamed a missing weight
+  file for the 501 when a version is registered and online - the missing piece is the detection path
+  (P2-05b) - and `system.py` claimed `PATCH /api/params` answers 501 for want of a parameter table, which
+  now exists and which the endpoint writes to. The README said the same stale thing in both languages.
+- **`models.py` said "the nine tables" above thirteen, and the capture route filed frames flat.** The
+  documented layout is `data/frames/<site>/<YYYYMMDD>/<session>/`; the API writer dropped site and session
+  and put thousands of frames from different sessions in one folder. Fixed to match the data model.
+
 - **The PC and the board talked to each other for the first time, and the keepalive lifecycle was
   observed on the panel rather than argued from the source.** On one open port: keepalives held `READY`;
   thirteen seconds of silence produced `EVT SCREEN OFFLINE`; the next keepalive raised `EVT SCREEN READY`

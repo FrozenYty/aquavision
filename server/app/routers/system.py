@@ -1,8 +1,9 @@
 """Parameters, monitoring, messages and the audit log (FR-M7-01, FR-M8-01, FR-M8-02, AC-04).
 
-Parameters are read from `Settings` and returned as-is. `PATCH` answers 501: **the data model has no
-parameter table**, so a change would live in process memory and vanish on restart — worse than being
-unavailable, because the operator would believe it stuck. The fix is a tenth table, not a dictionary.
+Parameters are read from `Settings` for the values nothing overrides, and a `PATCH` persists the changed
+keys in `sys_param` and returns both the full set and what moved. An earlier version answered 501 because
+the data model had no parameter table; that table exists now, so the endpoint does too — a change that
+lived in process memory would vanish on restart and the operator would believe it stuck.
 
 Monitoring and the log are computed from rows that already exist.
 """

@@ -1,4 +1,4 @@
-"""The nine tables of the data model, as SQLAlchemy declarative models (P1-01).
+"""The thirteen tables of the data model, as SQLAlchemy declarative models (P1-01).
 
 The field-by-field dictionary in docs/data-model-en.md §3 is the source of truth;
 every column here is transcribed from it, in dictionary order. Types follow §2:
@@ -361,7 +361,7 @@ class Report(Base):
     file_path: Mapped[str | None] = mapped_column(String(512))
     status: Mapped[int] = mapped_column(
         SmallInteger, server_default="0"
-    )  # 0 running, 1 ready, 2 failed
+    )  # 0 generating, 1 ready, 2 failed - the words `serializers.REPORT_STATUS` publishes
     error_msg: Mapped[str | None] = mapped_column(String(255))
     created_by: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("sys_user.user_id"), index=True
