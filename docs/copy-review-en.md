@@ -97,7 +97,7 @@ Parallelism is not worth paying for with meaning:
 
 | Item | Why it stays |
 |---|---|
-| Page titles 工作台 / 难例池 (3 characters) | These names come from SRS §5.2; changing them breaks the trace to the specification |
+| Page titles 工作台 / 难例池 (3 characters) | These are the pre-V1.11 names; SRS §5.2 now calls these pages 人工复核 and 难例样本, and `P2-18` replaces the titles |
 | Table headers 创建时间 / 登记时间 (4 characters) | Four characters is normal in a table; shortening loses information |
 | `mAP@0.5` beside 平均召回 | Metric names keep their English form; translating them makes them harder to recognise, not easier |
 | The five parameter labels being unequal | Form labels stack vertically, each above its own input, so their right edges never align anyway. Forcing equal length would delete 中间文件 and 批量识别, which say what the parameter applies to |

@@ -161,7 +161,7 @@ still say otherwise, which now misleads every reader.
 - Remove every `// provisional` marker.
 - **Add a test that fails if the word returns** — read `api.js`, assert zero occurrences.
 - **Add the mirror check**: every exported function maps to a route in `docs/api-contract-en.md` §6.
-  Five contract routes have no frontend caller yet (`auth/login`, `auth/me`, `tasks/{id}`,
+  Four contract routes have no frontend caller yet (`auth/me`, `tasks/{id}`,
   `detect/frames`, `compare/frames`) — they are not to be invented; they are listed for the backend.
 
 ### 3.2 Sign-in (task `P2-11`)

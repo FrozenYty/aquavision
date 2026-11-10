@@ -13,7 +13,7 @@ Every screen of the prototype, element by element, traced to the requirement it 
 | Project | AquaVision — underwater species detection and monitoring |
 | Document | Requirements traceability matrix |
 | Version | 1.0 |
-| Based on | `srs-en.md` (SRS-PRJ14-V1.10-2026), table 3-1 and the page list in §5.2 |
+| Based on | `srs-en.md` (SRS-PRJ14-V1.11-2026), table 3-1 and the page list in §5.2 |
 | Screens | 13, one figure each |
 | Author | Sun Jianheng (@chemflowers) |
 | Reviewer | Yao Tianyu (@FrozenYty) |
