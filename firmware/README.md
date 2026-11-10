@@ -101,11 +101,23 @@ a garbled byte cannot brick the rig.
 
 `REASON` is one token: `LOW_LIGHT`, `BLUR`, `COLOR_CAST` or `NONE`.
 
-## Two things not yet verified
+## What the arrival board settled
 
-1. **This has never been compiled.** No PlatformIO toolchain existed on the machine it was written on.
-   The first task on the rig is `pio run`, and the first thing to expect is a compile error, not a
-   working board.
-2. **The turbidity read is a guess.** `readTurbidity()` assumes two bytes, big-endian, from address
+The first board was flashed on 2026-11-10 and the first assumption did not survive. `Serial` was
+pointed at the S3's native USB port, so the UART bridge showed ROM boot messages and nothing from the
+sketch — a board that looked dead while it was running perfectly. `ARDUINO_USB_CDC_ON_BOOT` is now 0,
+which puts the sketch on UART0: one cable flashes and monitors, and no BOOT button is needed.
+
+`setup()` also scans the I2C bus once and prints one `EVT I2C <addr>` line per device that answers.
+That is how a missing display or an unplugged sensor becomes visible in the serial log instead of only
+as a blank screen — during assembly it is the fastest check there is.
+
+Verified on the board: the image flashes and verifies, the firmware prints `EVT HELLO 1.1`, and the
+I2C scan reports nothing when nothing is wired. **Not yet verified:** the OLED, the LEDs and the
+button, because none of them was connected yet.
+
+## Still not verified
+
+1. **The turbidity read is a guess.** `readTurbidity()` assumes two bytes, big-endian, from address
    0x49. The ME2100A-IIC datasheet has not been checked against it. Confirm the register layout before
    trusting the number on screen — a plausible but wrong reading is worse than none.
