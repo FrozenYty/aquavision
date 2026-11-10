@@ -12,6 +12,11 @@
   `eef7a82` → `c279872`. The tree before and after is identical (`9a2ba2e`), which is the check that
   proves only the message moved; a copy of the old branch is kept as `backup/pre-trailer-rewrite` until
   the team has reset.
+- **The gate was proved in CI, not just locally.** A throwaway branch carried one empty commit whose
+  message ended with the forbidden footer. Pull request #100: the `check` job failed, `mergeable_state`
+  read `blocked`, and the branch changed no files — so lint and format could not be the cause. The same
+  command on the same commit reproduces the refusal locally. That also confirmed branch protection is
+  back: a failing required check stops the merge, which is the state that had to hold after the rewrite.
 - **The rule now lives where it can be enforced.** `CONTRIBUTING.md` §2 forbids attribution footers,
   `scripts/check-commit-messages.py` fails on one, CI runs it on every pull request, and `AGENTS.md` §6
   lists it. The check was proved to fail against the old commit and pass against the rewritten history
