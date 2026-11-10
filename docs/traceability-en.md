@@ -29,7 +29,7 @@ Every screen of the prototype, element by element, traced to the requirement it 
 
 - **Figure N, callout M** points at the red numbered circle M on figure N. Callouts are numbered in reading order within each screen; a row with no callout describes an element the requirement asks for that is not on screen.
 - **Screenshots show the prototype in demo mode** (`?mock=1`). The status columns describe the system against the real server: an element that only works on mock data is not counted as done.
-- **PD** — screen design exists and was reviewed in the prototype walkthrough. **COD** — coded and checked against the real server on the date above. **UT** — covered by an automated test of the element; none is yet, so this column reads Not started throughout.
+- **PD** — screen design exists and was reviewed in the prototype walkthrough. **COD** — coded and checked against the real server on the date above. **UT** — covered by an automated test of the element; the suite checks page structure and names, not element behaviour, so this column reads Not started throughout.
 - **Assignee** builds the element; **owner** answers for the screen.
 
 | Status | Meaning |
@@ -65,7 +65,7 @@ Every screen of the prototype, element by element, traced to the requirement it 
 | TM-010 | P-02 Running overview (and the shared shell) | header | Messages link | See figure 2, callout 3. Opens the messages tab of system settings. | FR-M8-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-011 | P-02 Running overview (and the shared shell) | header | Signed-in user | See figure 2, callout 4. Name of the signed-in account. | FR-M1-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-012 | P-02 Running overview (and the shared shell) | header | Sign-out link | See figure 2, callout 5. Clears the session and returns to the sign-in page. | FR-M1-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-013 | P-02 Running overview (and the shared shell) | header | Main menu | See figure 2, callout 6. Thirteen pages in SRS order, grouped by business domain; the current page is highlighted. Not yet filtered by role. | FR-M1-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-013 | P-02 Running overview (and the shared shell) | header | Main menu | See figure 2, callout 6. Twelve pages in SRS order, grouped by business domain (sign-in has no menu entry); the current page is highlighted. Not yet filtered by role. | FR-M1-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
 | TM-014 | P-02 Running overview (and the shared shell) | content | Frames today | See figure 2, callout 7. Today's frame count from the daily trend. | FR-M5-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-015 | P-02 Running overview (and the shared shell) | content | Pending review | See figure 2, callout 8. No route counts pending reviews yet; the card says so. | FR-M4-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
 | TM-016 | P-02 Running overview (and the shared shell) | content | Rejection rate | See figure 2, callout 9. Seven-day rejection rate from the quality route. | FR-M2-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |

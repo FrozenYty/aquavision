@@ -10,12 +10,15 @@
 |---|---|---|---|
 | Unit | Quality scoring, coordinate conversion, threshold logic | `pytest` | Every commit |
 | API | Envelope, error codes, permissions, pagination | `pytest` + `httpx` | Every PR |
-| End-to-end | Capture → detect → review → report | Manual script | Weekly |
+| End-to-end | Capture → detect → review → report | Manual walkthrough | Weekly |
 | Model | mAP, per-class recall, counting deviation | `scripts/train_baseline.py` | Each model version |
 
 Coverage is not a target. The rule is simpler: **any module with a branch that can silently
 produce a wrong number must have a test.** That means quality scoring, coordinate conversion,
 deduplication and statistics — not CRUD endpoints.
+
+An end-to-end run is not executable yet: single-frame detection answers 501 until the detection path
+is implemented, so the chain stops before review.
 
 ## 2. Datasets and splitting
 
@@ -45,16 +48,17 @@ committed; the images themselves are not.
 | AL-06 | Parameter growth | ≤ 20% | Model summary |
 | AL-07 | Counting deviation | ≤ 15% | Three 3-minute videos, manual count |
 
-A single +0.03 margin sits close to run-to-run noise on a 500-image test set. Run the baseline and
-the improved model with three seeds and report mean ± standard deviation.
+A single +0.03 margin sits close to run-to-run noise on the 1,111-image frozen test set. Run the
+baseline and the improved model with three seeds and report mean ± standard deviation.
 
 ## 4. Test data and fixtures
 
 - Committed fixtures do not exist yet. The capture tests synthesise what they need in code — a
   sharp noise frame, a blurred copy of it, a flat frame and a blue-cast frame — and write the JPEGs
   they need into `tmp_path`; deterministic generation is why no fixtures are necessary.
-- No test may open a real camera. Capture is mocked through a fixture that returns frames.
-- Tests that need a database use a temporary SQLite file, created and dropped per session.
+- No test may open a real camera. The API tests post a JPEG built by the `a_frame()` helper.
+- Tests that need a database use a temporary SQLite file, created per test and removed with its
+  temporary directory.
 
 ## 5. Tools and commands
 

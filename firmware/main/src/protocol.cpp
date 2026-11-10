@@ -66,6 +66,10 @@ void handleLine(rig::State& state, char* text) {
     state.screen = rig::Screen::Ready;
     state.markDirty();
     protocol::emitScreen(state);
+  } else if (strcmp(command, "SCAN") == 0) {
+    // Rescan on demand. The boot scan is the only other look at the bus, and it happens before anyone has
+    // had a chance to move a wire: without this, every wiring change costs a power cycle to test.
+    protocol::emitI2CScan();
   } else if (strcmp(command, "RESULT") == 0) {
     if (handleResult(state, &cursor)) {
       protocol::emitScreen(state);

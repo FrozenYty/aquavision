@@ -95,7 +95,11 @@ void serviceCaptureTimeout(uint32_t now) {
   state.score = -1;
   state.animPhase = 0;
   state.markDirty();
+  // Both events, in this order: TIMEOUT says why the screen moved, SCREEN says where it moved to. Emitting
+  // only the first made this the one transition a PC could not observe as a screen change, and the
+  // protocol rule is that every screen change is reported.
   protocol::emitTimeout(now);
+  protocol::emitScreen(state);
 }
 
 void serviceTurbidity(uint32_t now) {
@@ -228,7 +232,7 @@ void loop() {
   serviceLeds(now);
   serviceLink(now);
 
-  // The six reachable screen/link combinations are enforced here rather than assumed. This costs a
+  // The five reachable screen/link combinations are enforced here rather than assumed. This costs a
   // comparison per loop and turns a state bug into a serial line instead of a panel that quietly lies.
   static bool invariantReported = false;
   if (!rig::invariantHolds(state) && !invariantReported) {

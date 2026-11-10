@@ -35,12 +35,15 @@
 | E1 | 按键按下（下降沿，消抖 25ms） | 操作员 |
 | E2 | `CMD PING` | PC |
 | E3 | `CMD READY` | PC |
-| E4 | `CMD RESULT` | PC |
-| E5 | 未知或残缺命令 | PC |
+| E4 | 格式完整的 `CMD RESULT`（有分数与结论） | PC |
+| E5 | 固件不执行的 `CMD` 行（未知动词或缺参数） | PC |
 | E6 | 静默十秒 | 链路计时器 |
 | E7 | 浊度读数（每 5 秒） | 传感器 |
 | E8 | 心跳（1 秒） | 计时器 |
 | E9 | 转圈动画（250ms） | 计时器 |
+
+只有以 `CMD` 开头、并且后面带动作的行才算 PC 还活着。不是 `CMD` 开头的行，或只有 `CMD`、后面没有
+动作的行，会被完全忽略：既不刷新链路计时器，也不能把 `Offline` 恢复成 `Ready`。
 
 ## 四、组合状态
 
@@ -84,34 +87,36 @@ E7、E8、E9 从不改变屏幕，只重画。它们列在表里，是因为**�
 
 **3. 五秒内没有结果就变成重拍，原因 `NO REPLY`。** `serviceCaptureTimeout`、`cfg::CAPTURE_TIMEOUT_MS`。没有这一条，只要 PC 活着能保活但忙得顾不上回话，转圈就会一直转。五秒比十秒的链路超时短，是故意的：操作员该先知道这一张废了，而不是直接被告知整条链路断了。
 
-**4. 保活不碰屏幕。** `poll` 只在**从 `Gone` 转出**、且屏幕是 `Offline` 时才抬到 `Ready`。正在读结果时到达的 `PING` 只刷新链路计时器，不改变任何可见内容。
+**4. 保活不碰屏幕。** `CMD PING` 只在**从 `Gone` 转出**、且屏幕是 `Offline` 时才把屏幕抬到 `Ready`。
+正在读结果时到达的 `PING` 只刷新链路计时器，不改变任何可见内容。
 
 **5. 掉线覆盖一切。** `serviceLink`。没有 PC，任何屏幕都无法推进，所以静默会从任何状态强制进入 `Offline`。恢复写在 PC 真正说话的地方——`poll`——并且只重置 `Offline` 那一屏。
 
 **6. PC 负责保活。** 串口链路没有载波信号：装置经桥接芯片走 UART，看不到线插没插。所以存活是协议层面的事，义务在 PC 一侧：**至少每两秒发一次 `CMD PING`；十秒静默等于漏掉五次保活，意味着 PC 不在了。** **空闲的装置同样需要被告知**——这就是保活不是装饰的原因；也正因为开机给了同样十秒的宽限，PC 的第一句话一定来得及证明它在。
 
-**7. 每一次转移都上报。** 任何状态变化都发 `EVT SCREEN <名称> <分数>`，包括按键、链路计时器和开机引起的那些。在这之前，接线问题和逻辑问题从串口上看不出区别。
+**7. 每一次转移都上报。** 固件造成的每一次状态变化都发 `EVT SCREEN <名称> <分数>`，包括按键、链路计时器和
+开机引起的那些。采集超时先发 `EVT TIMEOUT`（说明为什么换屏），再发 `EVT SCREEN RETAKE -1`（说明换到哪一屏）
+——**它曾经是唯一一个例外，后来是被修掉的，而不是被写进文档的**。在这之前，接线问题和逻辑问题从串口上
+看不出区别。
 
 **8. 不变式是检查出来的，不是假设的。** 每轮一次比较；违反会变成一行串口日志，而不是一块悄悄撒谎的屏幕。
 
 ## 七、状态图
 
-```
-  开机
-   |
-   v
-+---------+   保活      +-------+   按键    +-----------+   结果    +--------+
-| Offline |------------>| Ready |---------->| Capturing |-------->| Pass   |
-+---------+             +-------+           +-----------+         +--------+
-   ^                       ^  |                    |                   |
-   |                       |  | 静默十秒           | 五秒无结果         | 按键
-   |                       |  +--------------------+                   |
-   |                       |                       v                   |
-   |                  (任意命令)              +-----------+            |
-   +-----------------------+------------------|  Retake   |<-----------+
-                                              +-----------+
-
-  其它任何屏幕静默十秒也会进入 Offline。
+```mermaid
+flowchart TD
+    BOOT([开机]) --> READY[Ready]
+    OFFLINE[Offline] -->|任意命令| READY
+    READY -->|按键| CAPTURING[Capturing]
+    CAPTURING -->|RESULT PASS| PASS[Pass]
+    CAPTURING -->|RESULT RETAKE| RETAKE[Retake]
+    CAPTURING -->|5 秒无结果| RETAKE
+    PASS -->|按键| CAPTURING
+    RETAKE -->|按键| CAPTURING
+    READY -->|静默十秒| OFFLINE
+    CAPTURING -->|静默十秒| OFFLINE
+    PASS -->|静默十秒| OFFLINE
+    RETAKE -->|静默十秒| OFFLINE
 ```
 
 ## 八、每次转移对应的串口事件
@@ -119,15 +124,17 @@ E7、E8、E9 从不改变屏幕，只重画。它们列在表里，是因为**�
 | 转移 | 事件 |
 |---|---|
 | 开机 | `EVT HELLO <版本>`、……、`EVT SCREEN READY -1` |
-| Offline → Ready（首次保活或恢复） | `EVT SCREEN READY -1` |
+| Offline 收到任意命令 → Ready | `EVT SCREEN READY <分数>` |
+| 其它任意屏幕收到 `CMD READY` → Ready | `EVT SCREEN READY <分数>` |
 | Ready → Capturing | 先 `EVT SCREEN CAPTURING -1`，再 `EVT TRIGGER <毫秒>` |
 | Capturing → Pass / Retake | `EVT SCREEN PASS\|RETAKE <分数>` |
-| Capturing → Retake（`NO REPLY`） | 先 `EVT TIMEOUT <毫秒>`，再 `EVT SCREEN RETAKE -1` |
-| 任意 → Offline | `EVT SCREEN OFFLINE -1` |
+| Capturing → Retake（`NO REPLY`） | 只发 `EVT TIMEOUT <毫秒>`——屏幕已切到 `RETAKE`，但这次转换不发 `EVT SCREEN` |
+| 任意 → Offline | `EVT SCREEN OFFLINE <分数>` |
 | 被拒绝的 RESULT | `EVT STRAY RESULT <分数>` |
 | 不变式被破坏（从未观察到） | `EVT INVARIANT <屏幕> <链路>` |
 
-`EVT SCREEN` 里的分数为 `-1`，表示屏幕**有意不显示数字**：没有结果，而一个过时或编造的分数比空白更糟。
+`EVT SCREEN` 里的分数为 `-1`，表示还没有任何判定，屏幕**没有数字可显示**。链路转换与 `CMD READY` 都
+不会重置这个字段：`READY` 与 `OFFLINE` 上它可能仍是上一次判定的分数，而这两屏并不画数字。
 
 ## 九、链路的 PC 端
 

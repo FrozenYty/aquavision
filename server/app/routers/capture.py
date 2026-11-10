@@ -147,7 +147,7 @@ def grab_frame(
         # Idempotent by content: the second post returns the first row instead of duplicating it.
         return ok(serializers.frame(existing), message="同一帧已存在")
 
-    relative = _write(stored, digest, Path(settings.data_dir))
+    relative = _write(stored, digest, Path(settings.data_dir), body.point_code, session_id)
     verdict_ok = quality.score >= settings.quality_threshold
     asset = MediaAsset(
         frame_id=_frame_id(captured_at, digest),
@@ -281,9 +281,16 @@ def _reencode(raw: bytes) -> np.ndarray:
     return cv2.imdecode(buffer, cv2.IMREAD_COLOR)
 
 
-def _write(stored: np.ndarray, digest: str, root: Path) -> str:
+def _write(stored: np.ndarray, digest: str, root: Path, site: str, session: str) -> str:
+    """Write one frame where the data model says frames live.
+
+    `data/frames/<site>/<YYYYMMDD>/<session>/<frame_id>` - the same layout `vision/capture.py` writes. This
+    function used to drop the site and the session and file everything under the day, which made the stored
+    path disagree with `docs/data-model-en.md` §5 and put thousands of frames from different sessions in one
+    folder.
+    """
     day = datetime.now(UTC).strftime("%Y%m%d")
-    folder = root / "frames" / day
+    folder = root / "frames" / site / day / session
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / f"{digest[:16]}.jpg"
     cv2.imwrite(str(path), stored)

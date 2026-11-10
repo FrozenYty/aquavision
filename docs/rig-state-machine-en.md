@@ -41,12 +41,16 @@ is nobody to talk to.
 | E1 | Button pressed (falling edge, debounced 25 ms) | operator |
 | E2 | `CMD PING` | PC |
 | E3 | `CMD READY` | PC |
-| E4 | `CMD RESULT` | PC |
-| E5 | Unknown or malformed command | PC |
+| E4 | A well-formed `CMD RESULT` (score and verdict present) | PC |
+| E5 | A `CMD` line the firmware does not act on (unknown verb, or missing arguments) | PC |
 | E6 | Ten seconds of silence | link timer |
 | E7 | Turbidity reading (every 5 s) | sensor |
 | E8 | Heartbeat tick (1 s) | timer |
 | E9 | Spinner tick (250 ms) | timer |
+
+Only a line that starts with `CMD` and names an action counts as the PC being alive. A line that is not a
+`CMD` line, or a bare `CMD` with nothing after it, is ignored entirely: it does not refresh the link timer
+and cannot recover `Offline`.
 
 ## 4. Composite states
 
@@ -106,9 +110,9 @@ is healthy enough to keep the link alive but too busy to answer. Five seconds is
 second link timeout on purpose: the operator should learn that this shot failed before the whole link is
 declared dead.
 
-**4. A keepalive does not touch the screen.** `poll` raises `Ready` only on the transition out of `Gone`,
-and only when the screen is `Offline`. A `PING` that arrives while a verdict is being read refreshes the
-link timer and changes nothing visible.
+**4. A keepalive does not touch the screen.** A `CMD PING` raises `Ready` only on the transition out of
+`Gone`, and only when the screen is `Offline`. A `PING` that arrives while a verdict is being read
+refreshes the link timer and changes nothing visible.
 
 **5. Losing the PC overrides everything.** `serviceLink`. No screen can make progress without a PC, so
 silence forces `Offline` from anywhere. The recovery lives where the PC actually speaks - in `poll` - and
@@ -121,31 +125,31 @@ missed keepalives and means the PC is gone.** An idle rig still has to be told s
 heartbeat is not decoration - and why the boot grace of the same ten seconds is enough for the PC's first
 message to arrive and confirm that somebody is there.
 
-**7. Every transition is reported.** `EVT SCREEN <name> <score>` on every change, including the ones the
-button, the link timer and boot cause. Before this, a wiring fault and a logic fault looked identical from
-the serial port.
+**7. Every transition is reported.** `EVT SCREEN <name> <score>` on every state change the
+firmware makes, including the ones the button, the link timer and boot cause. The capture timeout emits
+`EVT TIMEOUT` first, saying why the screen moved, and then `EVT SCREEN RETAKE -1`, saying where it moved to
+(§8) - a transition that for one afternoon was the single exception, and was fixed rather than documented.
+Before the screen events existed, a wiring fault and a logic fault looked identical from the serial port.
 
 **8. The invariant is checked, not assumed.** One comparison per loop pass; a violation is a serial line
 rather than a panel that quietly lies.
 
 ## 7. Diagram
 
-```
-  boot
-   |
-   v
-+---------+   keepalive    +-------+   button    +-----------+   RESULT   +--------+
-| Offline |--------------->| Ready |------------>| Capturing |----------->| Pass   |
-+---------+                +-------+             +-----------+            +--------+
-   ^                          ^  |                     |                      |
-   |                          |  | 10 s silence        | 5 s, no verdict      | button
-   |                          |  +---------------------+                      |
-   |                          |                        v                      |
-   |                     (any command)          +-----------+                 |
-   +--------------------------+----------------|  Retake   |<----------------+
-                                               +-----------+
-
-  Offline also follows 10 s of silence from any other screen.
+```mermaid
+flowchart TD
+    BOOT([boot]) --> READY[Ready]
+    OFFLINE[Offline] -->|any command| READY
+    READY -->|button| CAPTURING[Capturing]
+    CAPTURING -->|RESULT PASS| PASS[Pass]
+    CAPTURING -->|RESULT RETAKE| RETAKE[Retake]
+    CAPTURING -->|5 s, no verdict| RETAKE
+    PASS -->|button| CAPTURING
+    RETAKE -->|button| CAPTURING
+    READY -->|10 s silence| OFFLINE
+    CAPTURING -->|10 s silence| OFFLINE
+    PASS -->|10 s silence| OFFLINE
+    RETAKE -->|10 s silence| OFFLINE
 ```
 
 ## 8. Serial events per transition
@@ -153,16 +157,18 @@ rather than a panel that quietly lies.
 | Transition | Events |
 |---|---|
 | boot | `EVT HELLO <version>`, ..., `EVT SCREEN READY -1` |
-| Offline → Ready (first keepalive or recovery) | `EVT SCREEN READY -1` |
+| any command from `Offline` → Ready | `EVT SCREEN READY <score>` |
+| `CMD READY` from any other screen → Ready | `EVT SCREEN READY <score>` |
 | Ready → Capturing | `EVT SCREEN CAPTURING -1` then `EVT TRIGGER <millis>` |
 | Capturing → Pass / Retake | `EVT SCREEN PASS\|RETAKE <score>` |
 | Capturing → Retake (`NO REPLY`) | `EVT TIMEOUT <millis>` then `EVT SCREEN RETAKE -1` |
-| any → Offline | `EVT SCREEN OFFLINE -1` |
+| any → Offline | `EVT SCREEN OFFLINE <score>` |
 | rejected RESULT | `EVT STRAY RESULT <score>` |
 | invariant broken (never observed) | `EVT INVARIANT <screen> <link>` |
 
-A score of `-1` in `EVT SCREEN` means the screen deliberately shows no number: there is no verdict, and
-a stale or invented one would be worse than a blank.
+A score of `-1` in `EVT SCREEN` means no verdict has been received yet, so the screen has no number to
+draw. The field is not reset by a link transition or by `CMD READY`: on `READY` and `OFFLINE` it can still
+carry the last verdict's score, which those screens do not draw.
 
 ## 9. The PC side of the link
 
