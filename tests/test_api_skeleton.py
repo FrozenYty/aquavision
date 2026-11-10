@@ -5,6 +5,9 @@ The first test is the one that matters most — it compares the mounted operatio
 describes an older system. The rest check behaviour that the frontend depends on: an envelope on
 every response, a token required everywhere but login, roles enforced server-side, and 501 where a
 module is honestly not built.
+
+The P2-07 section at the bottom asserts the documented payload shape of every P0 route against the
+same fixture and SQLite database.
 """
 
 from __future__ import annotations
@@ -12,16 +15,27 @@ from __future__ import annotations
 import base64
 import json
 import re
+from datetime import UTC, datetime
 from pathlib import Path
+from uuid import uuid4
 
 import cv2
 import numpy as np
 import pytest
 from app.config import get_settings
 from app.db import Base, engine_from_dsn
-from app.models import SysUser
+from app.models import (
+    DetectObject,
+    DetectTask,
+    MediaAsset,
+    ModelVersion,
+    SysUser,
+    TrainExperiment,
+)
 from app.security import hash_password
+from app.seed import seed_species
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 CONTRACT = Path(__file__).resolve().parent.parent / "docs" / "api-contract-en.md"
@@ -121,9 +135,15 @@ def test_health_answers_in_the_envelope(client):
 def test_login_returns_a_token_and_the_user(client):
     response = client.post("/api/auth/login", json={"username": "admin", "password": "password123"})
     body = response.json()
+    assert response.status_code == 200
     assert body["code"] == 0
-    assert body["data"]["user"]["role"] == "admin"
-    assert body["data"]["token"]
+    assert isinstance(body["data"]["token"], str) and body["data"]["token"]
+    assert isinstance(body["data"]["expires_at"], str)
+    user = body["data"]["user"]
+    assert user["username"] == "admin"
+    assert user["role"] == "admin"
+    assert isinstance(user["user_id"], int)
+    assert isinstance(user["real_name"], str)
 
 
 def test_wrong_password_counts_down_then_locks(client):
@@ -183,9 +203,17 @@ def test_capture_scores_the_frame_and_is_idempotent(client):
     ).json()
     assert first["code"] == 0
     frame = first["data"]
+    assert isinstance(frame["frame_id"], str)
+    assert frame["session_id"] == session["session_id"]
+    assert isinstance(frame["captured_at"], str)
+    assert isinstance(frame["quality"], dict)
     assert frame["quality"]["score"] > 0
+    assert frame["quality"]["verdict"] in {"ok", "retake"}
+    assert isinstance(frame["env"], dict) and "turbidity_rel" in frame["env"]
     assert frame["width"] == 160
-    assert "quality_components" in frame
+    assert isinstance(frame["height"], int)
+    assert set(frame["quality_components"]) == {"sharpness", "brightness", "colorcast"}
+    assert isinstance(frame["queued"], bool)
 
     second = client.post(
         f"/api/capture/sessions/{session['session_id']}/frames", json=payload, headers=auth(token)
@@ -248,6 +276,8 @@ def test_modules_that_need_a_model_say_so(client):
     assert response.status_code == 501
     body = response.json()
     assert body["code"] == 50100
+    assert body["data"] is None
+    assert isinstance(body["request_id"], str) and body["request_id"].startswith("req-")
     assert "模型" in body["message"]
 
 
@@ -386,7 +416,11 @@ def test_statistics_answer_with_real_figures(client):
     token = sign_in(client)
     quality = client.get("/api/stats/quality", headers=auth(token)).json()
     assert quality["code"] == 0
+    assert isinstance(quality["data"]["days"], int)
+    assert isinstance(quality["data"]["total"], int)
+    assert isinstance(quality["data"]["rejected"], int)
     assert quality["data"]["total"] == 0
+    assert isinstance(quality["data"]["rate"], float)
     assert quality["data"]["rate"] == 0.0
 
     trend = client.get("/api/stats/trend?days=7", headers=auth(token)).json()
@@ -400,3 +434,433 @@ def test_validation_errors_use_the_envelope(client):
     ).json()
     assert body["code"] == 40001
     assert body["data"] is None
+
+
+# --- P2-07: one payload-shape test for every P0 route -------------------------------------------
+
+
+def capture_one(client: TestClient, token: str) -> tuple[dict, dict]:
+    """Open a session and post one frame; return both payloads."""
+    session = client.post("/api/capture/sessions", headers=auth(token)).json()["data"]
+    frame = client.post(
+        f"/api/capture/sessions/{session['session_id']}/frames",
+        json={"point_code": "A3", "image_b64": a_frame()},
+        headers=auth(token),
+    ).json()["data"]
+    return session, frame
+
+
+def seed_species_rows(client: TestClient) -> None:
+    with client.app.state.session_factory() as session:
+        seed_species(session)
+
+
+def seed_task_and_box(client: TestClient, frame_id: str) -> tuple[int, int]:
+    """A queued task and one box, so the object and review routes have rows to return."""
+    with client.app.state.session_factory() as session:
+        seed_species(session)
+        asset = session.scalar(select(MediaAsset).where(MediaAsset.frame_id == frame_id))
+        task = DetectTask(
+            task_code=f"DT-{uuid4().hex[:8]}",
+            task_type=2,
+            asset_count=1,
+            status=0,
+            progress=0,
+        )
+        session.add(task)
+        session.flush()
+        box = DetectObject(
+            task_id=task.task_id,
+            asset_id=asset.asset_id,
+            frame_id=frame_id,
+            class_code="holothurian",
+            confidence=0.9,
+            x=0.1,
+            y=0.1,
+            w=0.2,
+            h=0.2,
+            is_manual=0,
+            review_status=0,
+        )
+        session.add(box)
+        session.commit()
+        return task.task_id, box.object_id
+
+
+def test_me_returns_the_signed_in_user(client):
+    token = sign_in(client, "admin")
+    body = client.get("/api/auth/me", headers=auth(token)).json()
+    assert body["code"] == 0
+    user = body["data"]
+    assert isinstance(user["user_id"], int)
+    assert user["username"] == "admin"
+    assert isinstance(user["real_name"], str)
+    assert isinstance(user["role"], str)
+
+
+def test_cameras_answers_with_an_items_list(client, monkeypatch):
+    from app.vision.capture import CaptureError
+
+    class NoCamera:
+        def __init__(self, index):
+            self.index = index
+
+        def open(self):
+            raise CaptureError("no camera in the test environment")
+
+    monkeypatch.setattr("app.vision.capture.CameraSource", NoCamera)
+    token = sign_in(client)
+    body = client.get("/api/cameras", headers=auth(token)).json()
+    assert body["code"] == 0
+    assert isinstance(body["data"]["items"], list)
+
+
+def test_opening_a_session_returns_an_id_and_a_timestamp(client):
+    token = sign_in(client)
+    body = client.post("/api/capture/sessions", headers=auth(token)).json()
+    assert body["code"] == 0
+    session = body["data"]
+    assert isinstance(session["session_id"], str)
+    assert session["session_id"].startswith("s-")
+    assert isinstance(session["opened_at"], str)
+
+
+def test_closing_a_session_reports_the_frame_count(client):
+    token = sign_in(client)
+    session, _ = capture_one(client, token)
+    body = client.post(
+        f"/api/capture/sessions/{session['session_id']}/close", headers=auth(token)
+    ).json()
+    assert body["code"] == 0
+    assert body["data"]["session_id"] == session["session_id"]
+    assert body["data"]["frames"] == 1
+    assert body["data"]["closed"] is True
+
+    missing = client.post("/api/capture/sessions/s-nope/close", headers=auth(token)).json()
+    assert missing["code"] == 40401
+
+
+def test_frame_detail_matches_the_captured_frame(client):
+    token = sign_in(client)
+    _, frame = capture_one(client, token)
+    body = client.get(f"/api/frames/{frame['frame_id']}", headers=auth(token)).json()
+    assert body["code"] == 0
+    detail = body["data"]
+    assert detail["frame_id"] == frame["frame_id"]
+    assert isinstance(detail["session_id"], str)
+    assert isinstance(detail["captured_at"], str)
+    assert isinstance(detail["quality"], dict)
+    assert isinstance(detail["quality"]["score"], int)
+    assert detail["quality"]["verdict"] in {"ok", "retake"}
+    assert isinstance(detail["env"], dict) and "turbidity_rel" in detail["env"]
+    assert isinstance(detail["width"], int) and isinstance(detail["height"], int)
+
+    missing = client.get("/api/frames/nope", headers=auth(token)).json()
+    assert missing["code"] == 40401
+
+
+def test_frame_objects_returns_boxes_and_counts(client):
+    token = sign_in(client)
+    _, frame = capture_one(client, token)
+    seed_task_and_box(client, frame["frame_id"])
+
+    body = client.get(f"/api/frames/{frame['frame_id']}/objects", headers=auth(token)).json()
+    assert body["code"] == 0
+    data = body["data"]
+    assert len(data["items"]) == 1
+    box = data["items"][0]
+    expected = {
+        "object_id": int,
+        "class_code": str,
+        "confidence": float,
+        "x": float,
+        "y": float,
+        "w": float,
+        "h": float,
+        "is_manual": int,
+        "review_status": int,
+    }
+    for key, kind in expected.items():
+        assert isinstance(box[key], kind), key
+    assert data["counts"] == {"holothurian": 1}
+
+
+def test_review_submission_returns_the_documented_result(client):
+    token = sign_in(client)
+    _, frame = capture_one(client, token)
+    _, object_id = seed_task_and_box(client, frame["frame_id"])
+
+    body = client.post(
+        f"/api/review/frames/{frame['frame_id']}",
+        json={
+            "objects": [
+                {
+                    "object_id": object_id,
+                    "class_code": "holothurian",
+                    "confidence": 0.9,
+                    "x": 0.1,
+                    "y": 0.1,
+                    "w": 0.2,
+                    "h": 0.2,
+                },
+                {
+                    "class_code": "chlamys",
+                    "confidence": 0.8,
+                    "x": 0.3,
+                    "y": 0.3,
+                    "w": 0.1,
+                    "h": 0.1,
+                },
+            ],
+            "note": "one manual box",
+        },
+        headers=auth(token),
+    ).json()
+    assert body["code"] == 0
+    data = body["data"]
+    assert data["frame_id"] == frame["frame_id"]
+    assert isinstance(data["version_no"], int)
+    assert isinstance(data["object_count"], int)
+    assert isinstance(data["hard_sample"], bool)
+    assert isinstance(data["rejected"], int)
+    assert isinstance(data["added"], int)
+    assert data["added"] == 1
+
+
+def test_batch_detection_refuses_an_empty_queue(client):
+    token = sign_in(client)
+    body = client.post("/api/detect/batches", json={"asset_count": 1}, headers=auth(token)).json()
+    assert body["code"] == 50100
+    assert body["data"] is None
+    assert "尚未实现" in body["message"]
+
+
+def test_batch_detection_creates_a_queued_task(client):
+    token = sign_in(client)
+    capture_one(client, token)
+    body = client.post("/api/detect/batches", json={"asset_count": 1}, headers=auth(token)).json()
+    assert body["code"] == 0
+    task = body["data"]
+    assert isinstance(task["task_id"], int)
+    assert isinstance(task["task_code"], str) and task["task_code"].startswith("DT")
+    assert task["type"] == "batch"
+    assert task["status"] == "queued"
+    assert isinstance(task["progress"], int)
+    assert isinstance(task["asset_count"], int)
+    assert isinstance(task["obj_count"], int)
+    assert task["model_version_id"] is None or isinstance(task["model_version_id"], int)
+    assert task["error_msg"] is None
+    assert isinstance(task["created_at"], str)
+    assert task["finished_at"] is None
+
+
+def test_task_list_and_detail_return_the_queued_task(client):
+    token = sign_in(client)
+    capture_one(client, token)
+    task = client.post("/api/detect/batches", json={"asset_count": 1}, headers=auth(token)).json()[
+        "data"
+    ]
+
+    listed = client.get("/api/tasks", headers=auth(token)).json()
+    assert listed["code"] == 0
+    assert listed["data"]["total"] == 1
+    assert listed["data"]["page"] == 1
+    assert listed["data"]["size"] == 24
+    assert listed["data"]["items"][0]["task_id"] == task["task_id"]
+
+    detail = client.get(f"/api/tasks/{task['task_id']}", headers=auth(token)).json()
+    assert detail["code"] == 0
+    assert detail["data"]["task_code"] == task["task_code"]
+    assert detail["data"]["status"] == "queued"
+
+    missing = client.get("/api/tasks/999999", headers=auth(token)).json()
+    assert missing["code"] == 40401
+
+
+def test_cancel_moves_a_queued_task_to_cancelled(client):
+    token = sign_in(client)
+    capture_one(client, token)
+    task = client.post("/api/detect/batches", json={"asset_count": 1}, headers=auth(token)).json()[
+        "data"
+    ]
+
+    body = client.post(f"/api/tasks/{task['task_id']}/cancel", headers=auth(token)).json()
+    assert body["code"] == 0
+    assert body["data"]["status"] == "cancelled"
+    assert isinstance(body["data"]["finished_at"], str)
+
+    again = client.post(f"/api/tasks/{task['task_id']}/cancel", headers=auth(token)).json()
+    assert again["code"] == 40901
+
+
+def test_retry_requeues_a_failed_task(client):
+    token = sign_in(client)
+    with client.app.state.session_factory() as session:
+        task = DetectTask(
+            task_code=f"DT-{uuid4().hex[:8]}",
+            task_type=2,
+            asset_count=1,
+            status=3,
+            progress=50,
+            error_msg="forced failure",
+            finished_at=datetime.now(UTC).replace(tzinfo=None),
+        )
+        session.add(task)
+        session.commit()
+        task_id = task.task_id
+
+    body = client.post(f"/api/tasks/{task_id}/retry", headers=auth(token)).json()
+    assert body["code"] == 0
+    assert body["data"]["status"] == "queued"
+    assert body["data"]["progress"] == 0
+    assert body["data"]["error_msg"] is None
+    assert body["data"]["finished_at"] is None
+
+    again = client.post(f"/api/tasks/{task_id}/retry", headers=auth(token)).json()
+    assert again["code"] == 40901
+
+
+def test_models_list_reports_versions_and_the_online_id(client):
+    token = sign_in(client)
+    with client.app.state.session_factory() as session:
+        session.add(
+            ModelVersion(
+                version_name="v8n-test",
+                weight_path="weights/test.pt",
+                labels_path="labels.txt",
+                dataset_ref="DUO-85:15",
+                map50=0.5,
+                map50_95=0.3,
+                recall_avg=0.6,
+                fps=30.0,
+                params_m=3.2,
+                status=1,
+                is_online=1,
+            )
+        )
+        session.commit()
+
+    body = client.get("/api/models", headers=auth(token)).json()
+    assert body["code"] == 0
+    assert body["data"]["total"] == 1
+    assert isinstance(body["data"]["online_model_id"], int)
+    item = body["data"]["items"][0]
+    expected = {
+        "model_id": int,
+        "version_name": str,
+        "dataset_ref": str,
+        "map50": float,
+        "map50_95": float,
+        "recall_avg": float,
+        "fps": float,
+        "params_m": float,
+        "is_online": bool,
+        "status": int,
+        "created_at": str,
+    }
+    for key, kind in expected.items():
+        assert isinstance(item[key], kind), key
+
+
+def test_experiments_list_reports_metrics_and_baseline(client):
+    token = sign_in(client)
+    with client.app.state.session_factory() as session:
+        session.add(
+            TrainExperiment(
+                exp_name="E0-test",
+                dataset_snapshot="DUO-85:15",
+                split_ratio="85:15",
+                seed=42,
+                epochs=30,
+                batch_size=16,
+                lr=0.01,
+                map50=0.5,
+                map50_95=0.3,
+                recall_avg=0.6,
+                fps=30.0,
+                params_m=3.2,
+                is_baseline=1,
+            )
+        )
+        session.commit()
+
+    body = client.get("/api/experiments", headers=auth(token)).json()
+    assert body["code"] == 0
+    assert body["data"]["total"] == 1
+    assert body["data"]["baseline"] == "E0-test"
+    item = body["data"]["items"][0]
+    expected = {
+        "exp_id": int,
+        "exp_name": str,
+        "dataset_snapshot": str,
+        "split_ratio": str,
+        "seed": int,
+        "epochs": int,
+        "map50": float,
+        "map50_95": float,
+        "recall_avg": float,
+        "fps": float,
+        "is_baseline": bool,
+        "created_at": str,
+    }
+    for key, kind in expected.items():
+        assert isinstance(item[key], kind), key
+    assert item["delta_map50"] == 0.0
+
+
+def test_compare_answers_not_built(client):
+    token = sign_in(client)
+    response = client.post("/api/compare/frames/any-frame", headers=auth(token))
+    assert response.status_code == 501
+    body = response.json()
+    assert body["code"] == 50100
+    assert body["data"] is None
+    assert "尚未实现" in body["message"]
+
+
+def test_species_list_returns_the_four_seeded_classes(client):
+    token = sign_in(client)
+    seed_species_rows(client)
+    body = client.get("/api/species", headers=auth(token)).json()
+    assert body["code"] == 0
+    assert body["data"]["total"] == 4
+    assert [item["class_code"] for item in body["data"]["items"]] == [
+        "holothurian",
+        "strongylocentrotus",
+        "chlamys",
+        "asterias",
+    ]
+    item = body["data"]["items"][0]
+    expected = {
+        "class_code": str,
+        "cn_name": str,
+        "latin_name": str,
+        "category": int,
+        "conf_thr": float,
+        "in_stat": bool,
+        "status": int,
+    }
+    for key, kind in expected.items():
+        assert isinstance(item[key], kind), key
+
+
+def test_species_patch_updates_one_threshold(client):
+    token = sign_in(client)
+    seed_species_rows(client)
+    body = client.patch(
+        "/api/species/holothurian",
+        json={"conf_thr": 0.66, "in_stat": False},
+        headers=auth(token),
+    ).json()
+    assert body["code"] == 0
+    assert body["data"]["conf_thr"] == 0.66
+    assert body["data"]["in_stat"] is False
+
+    missing = client.patch("/api/species/nope", json={"conf_thr": 0.5}, headers=auth(token)).json()
+    assert missing["code"] == 40401
+
+    observer = sign_in(client, "observer")
+    forbidden = client.patch(
+        "/api/species/holothurian", json={"conf_thr": 0.5}, headers=auth(observer)
+    ).json()
+    assert forbidden["code"] == 40301
