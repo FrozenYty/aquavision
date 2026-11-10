@@ -188,21 +188,21 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - the keepalive is not decoration: without it the rig declares a healthy idle system offline after
         ten seconds, and waiting for a button is what the rig does most of the time
 
-- [ ] **P2-18** Design pass over the thirteen pages · @chemflowers · the one the SRS and the copy review
-      have both been waiting for · done when
-      - **the copy review is closed**: sidebar group names, statistics subtitles and dashboard KPI
-        prefixes applied or explicitly rejected, with the reason
-      - **the `P-xx` eyebrow is gone from all twelve page headers.** It has been the only anchor tying a
-        screen to SRS §5.2, and that anchor now lives in `docs/traceability-en/zh.md` instead
-      - **no colour outside `tokens.css`**: a test fails when a hex value appears in a template or in
-        `app.css`, the same shape as `test_api_js.py`
-      - **one visual language**: every page uses the same shell, type scale and spacing rhythm, and a
-        screenshot of each page lands in `docs/images/ui/` so the next change can be compared, not
-        argued about
-      - **the SRS style holds**: deep-sea blue and teal, no clinical blue-white - the palette in
-        `tokens.css` quoted against SRS §5.1
-      - **nothing regresses**: the existing page tests pass, the three states still render, no page
-        loses a control it had
+- [ ] **P2-18** One page name per page · @chemflowers · the SRS table and the traceability matrix
+      already carry the new names (SRS V1.11); the interface still says the old ones · done when
+      - **the menu, both page titles and the traceability matrix agree with SRS §5.2 for all thirteen
+        pages.** The scheme is object plus action, four characters where the language allows, no "page"
+        suffix, no conjunction; the names themselves are the §5.2 table, which is the authority
+      - **a test enforces it**, comparing `layout.js` labels, each template's title, SRS §5.2 and
+        `docs/traceability-en/zh.md`. Four lists that are only checked by eye drift; the drift is what
+        this task exists to undo
+      - **`frame.html` and `frames.html` stop differing by one letter** - they are the result detail and
+        the image browser, and a one-letter difference is a wrong-file bug waiting to happen
+      - **the copy review closes**: sidebar group names, statistics subtitles, dashboard KPI prefixes,
+        applied or rejected with a reason
+      - **the `P-xx` eyebrow leaves the twelve page headers**; the screen-to-SRS anchor now lives in the
+        traceability matrix
+      - **nothing regresses**: the page tests pass and every existing control survives
 
 - [ ] **GATE P2** — from a cold start, someone who has not seen the system completes the slice in
       three minutes, no restart, no manual database edit

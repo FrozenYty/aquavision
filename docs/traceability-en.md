@@ -54,25 +54,25 @@ Every screen of the prototype, element by element, traced to the requirement it 
 | TM-006 | P-01 Sign-in | content | Help line | See figure 1, callout 6. In demo mode it says any account signs in (as in the screenshot); with a server it says an administrator resets passwords. | FR-M1-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-007 | P-01 Sign-in | form | Graphic captcha | Figure 1, no callout: not on screen. Required by the SRS; the endpoint takes none, so no field is shown. | FR-M1-01 | Done | Not started | Not started | Sun Jianheng | Yao Tianyu |
 
-### 4.2 P-02 Workbench (and the shared shell) (figure 2)
+### 4.2 P-02 Running overview (and the shared shell) (figure 2)
 
-![Figure 2: P-02 Workbench (and the shared shell)](images/traceability/p02-home.png)
+![Figure 2: P-02 Running overview (and the shared shell)](images/traceability/p02-home.png)
 
 | No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
 |---|---|---|---|---|---|---|---|---|---|---|
-| TM-008 | P-02 Workbench (and the shared shell) | header | Brand link | See figure 2, callout 1. Returns to the workbench from any page. | FR-M1-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-009 | P-02 Workbench (and the shared shell) | header | Demo-data badge | See figure 2, callout 2. Shown on every page while the tab runs on mock data. | FR-M1-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-010 | P-02 Workbench (and the shared shell) | header | Messages link | See figure 2, callout 3. Opens the messages tab of system administration. | FR-M8-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-011 | P-02 Workbench (and the shared shell) | header | Signed-in user | See figure 2, callout 4. Name of the signed-in account. | FR-M1-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-012 | P-02 Workbench (and the shared shell) | header | Sign-out link | See figure 2, callout 5. Clears the session and returns to the sign-in page. | FR-M1-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-013 | P-02 Workbench (and the shared shell) | header | Main menu | See figure 2, callout 6. Thirteen pages in SRS order, grouped by business domain; the current page is highlighted. Not yet filtered by role. | FR-M1-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-014 | P-02 Workbench (and the shared shell) | content | Frames today | See figure 2, callout 7. Today's frame count from the daily trend. | FR-M5-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-015 | P-02 Workbench (and the shared shell) | content | Pending review | See figure 2, callout 8. No route counts pending reviews yet; the card says so. | FR-M4-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-016 | P-02 Workbench (and the shared shell) | content | Rejection rate | See figure 2, callout 9. Seven-day rejection rate from the quality route. | FR-M2-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-017 | P-02 Workbench (and the shared shell) | content | Online model | See figure 2, callout 10. Version and mAP@0.5 of the online model. | FR-M6-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-018 | P-02 Workbench (and the shared shell) | content | Seven-day trend | See figure 2, callout 11. Frames per day. | FR-M5-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-019 | P-02 Workbench (and the shared shell) | content | Messages card | See figure 2, callout 12. Static text for now; not yet wired to the messages route. | FR-M8-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-020 | P-02 Workbench (and the shared shell) | content | Recent sessions | See figure 2, callout 13. Last four capture sessions with frame and retake counts. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-008 | P-02 Running overview (and the shared shell) | header | Brand link | See figure 2, callout 1. Returns to the workbench from any page. | FR-M1-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-009 | P-02 Running overview (and the shared shell) | header | Demo-data badge | See figure 2, callout 2. Shown on every page while the tab runs on mock data. | FR-M1-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-010 | P-02 Running overview (and the shared shell) | header | Messages link | See figure 2, callout 3. Opens the messages tab of system administration. | FR-M8-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-011 | P-02 Running overview (and the shared shell) | header | Signed-in user | See figure 2, callout 4. Name of the signed-in account. | FR-M1-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-012 | P-02 Running overview (and the shared shell) | header | Sign-out link | See figure 2, callout 5. Clears the session and returns to the sign-in page. | FR-M1-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-013 | P-02 Running overview (and the shared shell) | header | Main menu | See figure 2, callout 6. Thirteen pages in SRS order, grouped by business domain; the current page is highlighted. Not yet filtered by role. | FR-M1-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-014 | P-02 Running overview (and the shared shell) | content | Frames today | See figure 2, callout 7. Today's frame count from the daily trend. | FR-M5-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-015 | P-02 Running overview (and the shared shell) | content | Pending review | See figure 2, callout 8. No route counts pending reviews yet; the card says so. | FR-M4-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-016 | P-02 Running overview (and the shared shell) | content | Rejection rate | See figure 2, callout 9. Seven-day rejection rate from the quality route. | FR-M2-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-017 | P-02 Running overview (and the shared shell) | content | Online model | See figure 2, callout 10. Version and mAP@0.5 of the online model. | FR-M6-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-018 | P-02 Running overview (and the shared shell) | content | Seven-day trend | See figure 2, callout 11. Frames per day. | FR-M5-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-019 | P-02 Running overview (and the shared shell) | content | Messages card | See figure 2, callout 12. Static text for now; not yet wired to the messages route. | FR-M8-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-020 | P-02 Running overview (and the shared shell) | content | Recent sessions | See figure 2, callout 13. Last four capture sessions with frame and retake counts. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 
 ### 4.3 P-03 Capture control (figure 3)
 
@@ -93,108 +93,108 @@ Every screen of the prototype, element by element, traced to the requirement it 
 | TM-031 | P-03 Capture control | content | Recent frames | See figure 3, callout 11. Last eight frames; each opens the frame detail. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-032 | P-03 Capture control | content | Session table | See figure 3, callout 12. Sessions with start time, frames and retakes. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 
-### 4.4 P-04 Frame browser (figure 4)
+### 4.4 P-04 Image browser (figure 4)
 
-![Figure 4: P-04 Frame browser](images/traceability/p04-frames.png)
-
-| No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
-|---|---|---|---|---|---|---|---|---|---|---|
-| TM-033 | P-04 Frame browser | form | Session filter | See figure 4, callout 1. Filters by session id. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-034 | P-04 Frame browser | form | Site filter | See figure 4, callout 2. Filters by site. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-035 | P-04 Frame browser | form | Quality filter | See figure 4, callout 3. Passed or needs retake. | FR-M2-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-036 | P-04 Frame browser | form | Date range | See figure 4, callout 4. Start and end dates, inclusive. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-037 | P-04 Frame browser | content | Frame tile | See figure 4, callout 5. Picture, quality badge, frame id and time; a placeholder when the server sends no picture. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-038 | P-04 Frame browser | content | Selection box | See figure 4, callout 6. Selects a frame for batch detection; retake frames cannot be selected. | FR-M3-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-039 | P-04 Frame browser | content | Result link | See figure 4, callout 7. Opens the frame detail. | FR-M3-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-040 | P-04 Frame browser | actions | Batch detection | See figure 4, callout 8. Creates a detection task for the selected frames. | FR-M3-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-041 | P-04 Frame browser | content | Pagination | See figure 4, callout 9. Twelve frames per page. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-
-### 4.5 P-05 Detection tasks (figure 5)
-
-![Figure 5: P-05 Detection tasks](images/traceability/p05-tasks.png)
+![Figure 4: P-04 Image browser](images/traceability/p04-frames.png)
 
 | No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
 |---|---|---|---|---|---|---|---|---|---|---|
-| TM-042 | P-05 Detection tasks | form | Status filter | See figure 5, callout 1. Queued, running, done, failed or cancelled. | FR-M3-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-043 | P-05 Detection tasks | content | Task code | See figure 5, callout 2. Task code, type and frame count. | FR-M3-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-044 | P-05 Detection tasks | content | Progress | See figure 5, callout 3. Progress in percent; refreshed every two seconds while a task moves. | FR-M3-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-045 | P-05 Detection tasks | content | Status and queue | See figure 5, callout 4. Status, queue position and failure reason. | FR-M3-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-046 | P-05 Detection tasks | actions | Cancel | See figure 5, callout 5. Cancels a queued or running task after a confirmation. | FR-M3-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-047 | P-05 Detection tasks | actions | Retry | See figure 5, callout 6. Re-queues a failed task. | FR-M3-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-048 | P-05 Detection tasks | content | Pagination | See figure 5, callout 7. Eight tasks per page. | FR-M3-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-033 | P-04 Image browser | form | Session filter | See figure 4, callout 1. Filters by session id. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-034 | P-04 Image browser | form | Site filter | See figure 4, callout 2. Filters by site. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-035 | P-04 Image browser | form | Quality filter | See figure 4, callout 3. Passed or needs retake. | FR-M2-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-036 | P-04 Image browser | form | Date range | See figure 4, callout 4. Start and end dates, inclusive. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-037 | P-04 Image browser | content | Frame tile | See figure 4, callout 5. Picture, quality badge, frame id and time; a placeholder when the server sends no picture. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-038 | P-04 Image browser | content | Selection box | See figure 4, callout 6. Selects a frame for batch detection; retake frames cannot be selected. | FR-M3-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-039 | P-04 Image browser | content | Result link | See figure 4, callout 7. Opens the frame detail. | FR-M3-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-040 | P-04 Image browser | actions | Batch detection | See figure 4, callout 8. Creates a detection task for the selected frames. | FR-M3-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-041 | P-04 Image browser | content | Pagination | See figure 4, callout 9. Twelve frames per page. | FR-M2-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 
-### 4.6 P-06 Detection result (figure 6)
+### 4.5 P-05 Detection jobs (figure 5)
 
-![Figure 6: P-06 Detection result](images/traceability/p06-frame.png)
-
-| No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
-|---|---|---|---|---|---|---|---|---|---|---|
-| TM-049 | P-06 Detection result | actions | Back to capture | See figure 6, callout 1. Returns to the capture page. | FR-M3-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-050 | P-06 Detection result | actions | Go to review | See figure 6, callout 2. Opens this frame in the review workbench. | FR-M4-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-051 | P-06 Detection result | content | Result picture | See figure 6, callout 3. Frame with its boxes; a labelled placeholder while no route serves the picture. | FR-M3-01, FR-M3-04 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-052 | P-06 Detection result | content | Low-confidence box | See figure 6, callout 4. Translucent fill and a review tag, never colour alone. | FR-M3-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-053 | P-06 Detection result | content | Frame facts | See figure 6, callout 5. Quality, capture time and session. | FR-M2-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-054 | P-06 Detection result | content | Object list | See figure 6, callout 6. Class, confidence and review status per box; hovering a row lights its box. | FR-M3-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-055 | P-06 Detection result | content | Per-class count | See figure 6, callout 7. Boxes per class. | FR-M3-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-056 | P-06 Detection result | actions | Export results | Figure 6, no callout: not on screen. CSV, JSON and annotated images are not built yet. | FR-M3-05 | Done | Not started | Not started | Sun Jianheng | Yao Tianyu |
-
-### 4.7 P-07 Review workbench (figure 7)
-
-![Figure 7: P-07 Review workbench](images/traceability/p07-review.png)
+![Figure 5: P-05 Detection jobs](images/traceability/p05-tasks.png)
 
 | No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
 |---|---|---|---|---|---|---|---|---|---|---|
-| TM-057 | P-07 Review workbench | actions | Select tool | See figure 7, callout 1. Select and move boxes. | FR-M4-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-058 | P-07 Review workbench | actions | Draw tool | See figure 7, callout 2. Drag to draw a new box. | FR-M4-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-059 | P-07 Review workbench | actions | Delete tool | See figure 7, callout 3. Deletes the selected box. | FR-M4-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-060 | P-07 Review workbench | actions | Undo | See figure 7, callout 4. Undoes the last step (one step only). | FR-M4-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-061 | P-07 Review workbench | actions | Class selector | See figure 7, callout 5. Relabels the selected box. | FR-M4-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-062 | P-07 Review workbench | actions | Count change | See figure 7, callout 6. Count before and after the edits. | FR-M4-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-063 | P-07 Review workbench | content | Selected box | See figure 7, callout 7. Four corner handles; drag the body to move, a corner to resize. | FR-M4-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-064 | P-07 Review workbench | content | Object row | See figure 7, callout 8. Confirm or delete a box; clicking selects it on the canvas. | FR-M4-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-065 | P-07 Review workbench | actions | Add box | See figure 7, callout 9. Switches to the draw tool. | FR-M4-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-066 | P-07 Review workbench | actions | Submit review | See figure 7, callout 10. Posts the full box list; the server refuses frames that have no detection yet. | FR-M4-01, FR-M4-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-042 | P-05 Detection jobs | form | Status filter | See figure 5, callout 1. Queued, running, done, failed or cancelled. | FR-M3-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-043 | P-05 Detection jobs | content | Task code | See figure 5, callout 2. Task code, type and frame count. | FR-M3-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-044 | P-05 Detection jobs | content | Progress | See figure 5, callout 3. Progress in percent; refreshed every two seconds while a task moves. | FR-M3-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-045 | P-05 Detection jobs | content | Status and queue | See figure 5, callout 4. Status, queue position and failure reason. | FR-M3-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-046 | P-05 Detection jobs | actions | Cancel | See figure 5, callout 5. Cancels a queued or running task after a confirmation. | FR-M3-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-047 | P-05 Detection jobs | actions | Retry | See figure 5, callout 6. Re-queues a failed task. | FR-M3-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-048 | P-05 Detection jobs | content | Pagination | See figure 5, callout 7. Eight tasks per page. | FR-M3-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 
-### 4.8 P-08 Hard-sample pool (figure 8)
+### 4.6 P-06 Result detail (figure 6)
 
-![Figure 8: P-08 Hard-sample pool](images/traceability/p08-hard-samples.png)
+![Figure 6: P-06 Result detail](images/traceability/p06-frame.png)
 
 | No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
 |---|---|---|---|---|---|---|---|---|---|---|
-| TM-067 | P-08 Hard-sample pool | form | Source filter | See figure 8, callout 1. Low confidence, modified in review, or models disagree. | FR-M4-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-068 | P-08 Hard-sample pool | content | Sample tile | See figure 8, callout 2. Frame, quality and capture time. | FR-M4-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-069 | P-08 Hard-sample pool | content | Source badge | See figure 8, callout 3. Why the frame is in the pool. | FR-M4-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-070 | P-08 Hard-sample pool | actions | View | See figure 8, callout 4. Opens the frame detail. | FR-M4-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-071 | P-08 Hard-sample pool | actions | Remove | See figure 8, callout 5. Removes the frame from the pool after a confirmation. | FR-M4-03 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-072 | P-08 Hard-sample pool | content | Pagination | See figure 8, callout 6. Eight samples per page. | FR-M4-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-049 | P-06 Result detail | actions | Back to capture | See figure 6, callout 1. Returns to the capture page. | FR-M3-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-050 | P-06 Result detail | actions | Go to review | See figure 6, callout 2. Opens this frame in the review workbench. | FR-M4-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-051 | P-06 Result detail | content | Result picture | See figure 6, callout 3. Frame with its boxes; a labelled placeholder while no route serves the picture. | FR-M3-01, FR-M3-04 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-052 | P-06 Result detail | content | Low-confidence box | See figure 6, callout 4. Translucent fill and a review tag, never colour alone. | FR-M3-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-053 | P-06 Result detail | content | Frame facts | See figure 6, callout 5. Quality, capture time and session. | FR-M2-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-054 | P-06 Result detail | content | Object list | See figure 6, callout 6. Class, confidence and review status per box; hovering a row lights its box. | FR-M3-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-055 | P-06 Result detail | content | Per-class count | See figure 6, callout 7. Boxes per class. | FR-M3-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-056 | P-06 Result detail | actions | Export results | Figure 6, no callout: not on screen. CSV, JSON and annotated images are not built yet. | FR-M3-05 | Done | Not started | Not started | Sun Jianheng | Yao Tianyu |
 
-### 4.9 P-09 Dataset export (figure 9)
+### 4.7 P-07 Manual review (figure 7)
 
-![Figure 9: P-09 Dataset export](images/traceability/p09-dataset-export.png)
-
-| No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
-|---|---|---|---|---|---|---|---|---|---|---|
-| TM-073 | P-09 Dataset export | form | Snapshot name | See figure 9, callout 1. DS- name; the next free version is suggested. | FR-M4-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-074 | P-09 Dataset export | form | Reviewed only | See figure 9, callout 2. Unreviewed results are not labels. | FR-M4-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-075 | P-09 Dataset export | form | Split ratio | See figure 9, callout 3. Train, validation and test in tenths; must add up to 10. | FR-M4-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-076 | P-09 Dataset export | form | Random seed | See figure 9, callout 4. Same frames and seed give the same split. | FR-M4-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-077 | P-09 Dataset export | actions | Export | See figure 9, callout 5. Creates the snapshot and its manifest. | FR-M4-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-078 | P-09 Dataset export | content | Export result | See figure 9, callout 6. Frames, groups, split counts and manifest path as the server returns them. | FR-M4-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-079 | P-09 Dataset export | content | Snapshot history | See figure 9, callout 7. Every snapshot; rows whose splits do not add up are flagged. | FR-M4-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-
-### 4.10 P-10 Statistics dashboard (figure 10)
-
-![Figure 10: P-10 Statistics dashboard](images/traceability/p10-stats.png)
+![Figure 7: P-07 Manual review](images/traceability/p07-review.png)
 
 | No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
 |---|---|---|---|---|---|---|---|---|---|---|
-| TM-080 | P-10 Statistics dashboard | actions | Report link | See figure 10, callout 1. Opens the inspection report page. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-081 | P-10 Statistics dashboard | actions | Counting basis | See figure 10, callout 2. Switches the species chart between reviewed and raw results; its caption changes with it. The other charts do not depend on it. | FR-M5-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-082 | P-10 Statistics dashboard | content | Species composition | See figure 10, callout 3. Boxes per class over seven days. | FR-M5-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-083 | P-10 Statistics dashboard | content | Capture trend | See figure 10, callout 4. Frames per day. | FR-M5-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-084 | P-10 Statistics dashboard | content | Rejection by day | See figure 10, callout 5. Per-day bars in the prototype; the server returns totals only, stated in words. | FR-M2-03 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-085 | P-10 Statistics dashboard | content | Review corrections | See figure 10, callout 6. Per-class stack in the prototype; the server returns totals only. | FR-M4-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-086 | P-10 Statistics dashboard | content | Site heat map | Figure 10, no callout: not on screen. Site density and ranking are not built yet. | FR-M5-02 | Done | Not started | Not started | Sun Jianheng | Yao Tianyu |
+| TM-057 | P-07 Manual review | actions | Select tool | See figure 7, callout 1. Select and move boxes. | FR-M4-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-058 | P-07 Manual review | actions | Draw tool | See figure 7, callout 2. Drag to draw a new box. | FR-M4-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-059 | P-07 Manual review | actions | Delete tool | See figure 7, callout 3. Deletes the selected box. | FR-M4-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-060 | P-07 Manual review | actions | Undo | See figure 7, callout 4. Undoes the last step (one step only). | FR-M4-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-061 | P-07 Manual review | actions | Class selector | See figure 7, callout 5. Relabels the selected box. | FR-M4-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-062 | P-07 Manual review | actions | Count change | See figure 7, callout 6. Count before and after the edits. | FR-M4-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-063 | P-07 Manual review | content | Selected box | See figure 7, callout 7. Four corner handles; drag the body to move, a corner to resize. | FR-M4-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-064 | P-07 Manual review | content | Object row | See figure 7, callout 8. Confirm or delete a box; clicking selects it on the canvas. | FR-M4-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-065 | P-07 Manual review | actions | Add box | See figure 7, callout 9. Switches to the draw tool. | FR-M4-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-066 | P-07 Manual review | actions | Submit review | See figure 7, callout 10. Posts the full box list; the server refuses frames that have no detection yet. | FR-M4-01, FR-M4-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+
+### 4.8 P-08 Hard samples (figure 8)
+
+![Figure 8: P-08 Hard samples](images/traceability/p08-hard-samples.png)
+
+| No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
+|---|---|---|---|---|---|---|---|---|---|---|
+| TM-067 | P-08 Hard samples | form | Source filter | See figure 8, callout 1. Low confidence, modified in review, or models disagree. | FR-M4-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-068 | P-08 Hard samples | content | Sample tile | See figure 8, callout 2. Frame, quality and capture time. | FR-M4-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-069 | P-08 Hard samples | content | Source badge | See figure 8, callout 3. Why the frame is in the pool. | FR-M4-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-070 | P-08 Hard samples | actions | View | See figure 8, callout 4. Opens the frame detail. | FR-M4-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-071 | P-08 Hard samples | actions | Remove | See figure 8, callout 5. Removes the frame from the pool after a confirmation. | FR-M4-03 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-072 | P-08 Hard samples | content | Pagination | See figure 8, callout 6. Eight samples per page. | FR-M4-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+
+### 4.9 P-09 Data export (figure 9)
+
+![Figure 9: P-09 Data export](images/traceability/p09-dataset-export.png)
+
+| No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
+|---|---|---|---|---|---|---|---|---|---|---|
+| TM-073 | P-09 Data export | form | Snapshot name | See figure 9, callout 1. DS- name; the next free version is suggested. | FR-M4-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-074 | P-09 Data export | form | Reviewed only | See figure 9, callout 2. Unreviewed results are not labels. | FR-M4-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-075 | P-09 Data export | form | Split ratio | See figure 9, callout 3. Train, validation and test in tenths; must add up to 10. | FR-M4-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-076 | P-09 Data export | form | Random seed | See figure 9, callout 4. Same frames and seed give the same split. | FR-M4-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-077 | P-09 Data export | actions | Export | See figure 9, callout 5. Creates the snapshot and its manifest. | FR-M4-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-078 | P-09 Data export | content | Export result | See figure 9, callout 6. Frames, groups, split counts and manifest path as the server returns them. | FR-M4-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-079 | P-09 Data export | content | Snapshot history | See figure 9, callout 7. Every snapshot; rows whose splits do not add up are flagged. | FR-M4-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+
+### 4.10 P-10 Statistics (figure 10)
+
+![Figure 10: P-10 Statistics](images/traceability/p10-stats.png)
+
+| No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
+|---|---|---|---|---|---|---|---|---|---|---|
+| TM-080 | P-10 Statistics | actions | Report link | See figure 10, callout 1. Opens the inspection report page. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-081 | P-10 Statistics | actions | Counting basis | See figure 10, callout 2. Switches the species chart between reviewed and raw results; its caption changes with it. The other charts do not depend on it. | FR-M5-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-082 | P-10 Statistics | content | Species composition | See figure 10, callout 3. Boxes per class over seven days. | FR-M5-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-083 | P-10 Statistics | content | Capture trend | See figure 10, callout 4. Frames per day. | FR-M5-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-084 | P-10 Statistics | content | Rejection by day | See figure 10, callout 5. Per-day bars in the prototype; the server returns totals only, stated in words. | FR-M2-03 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-085 | P-10 Statistics | content | Review corrections | See figure 10, callout 6. Per-class stack in the prototype; the server returns totals only. | FR-M4-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-086 | P-10 Statistics | content | Site heat map | Figure 10, no callout: not on screen. Site density and ranking are not built yet. | FR-M5-02 | Done | Not started | Not started | Sun Jianheng | Yao Tianyu |
 
 ### 4.11 P-11 Inspection reports (figure 11)
 
@@ -210,51 +210,51 @@ Every screen of the prototype, element by element, traced to the requirement it 
 | TM-092 | P-11 Inspection reports | content | Report history | See figure 11, callout 6. Every generated report and its status. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-093 | P-11 Inspection reports | actions | Download | See figure 11, callout 7. No download route yet; the button says so. | FR-M5-04 | Done | Not started | Not started | Sun Jianheng | Yao Tianyu |
 
-### 4.12 P-12 Models and experiments (figure 12)
+### 4.12 P-12 Model experiments (figure 12)
 
-![Figure 12: P-12 Models and experiments](images/traceability/p12-models.png)
-
-| No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
-|---|---|---|---|---|---|---|---|---|---|---|
-| TM-094 | P-12 Models and experiments | header | Online model | See figure 12, callout 1. The single online version, or none. | FR-M6-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-095 | P-12 Models and experiments | actions | Versions tab | See figure 12, callout 2. Model versions with metrics. | FR-M6-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-096 | P-12 Models and experiments | content | Version row | See figure 12, callout 3. Dataset, mAP@0.5, mAP@0.5:0.95, recall, FPS, parameters. | FR-M6-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-097 | P-12 Models and experiments | actions | Activate or roll back | See figure 12, callout 4. Switches the online model after a confirmation. | FR-M6-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-098 | P-12 Models and experiments | actions | Experiments tab | See figure 12, callout 5. Ablation table with the change against the baseline (shown after switching). | FR-M6-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-099 | P-12 Models and experiments | actions | Species tab | See figure 12, callout 6. Per-class threshold and statistics flag, saved per row (shown after switching). | FR-M6-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-
-### 4.13 P-13 System administration (figure 13)
-
-![Figure 13: P-13 System administration](images/traceability/p13-admin.png)
+![Figure 12: P-12 Model experiments](images/traceability/p12-models.png)
 
 | No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
 |---|---|---|---|---|---|---|---|---|---|---|
-| TM-100 | P-13 System administration | actions | Accounts tab | See figure 13, callout 1. Accounts with role, status and last sign-in. | FR-M1-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-101 | P-13 System administration | content | Account row | See figure 13, callout 2. One account. | FR-M1-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-102 | P-13 System administration | actions | Disable or restore | See figure 13, callout 3. Changes the account status after a confirmation. | FR-M1-03 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-103 | P-13 System administration | actions | Reset password | See figure 13, callout 4. Sets a temporary password of at least eight characters. | FR-M1-03 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-104 | P-13 System administration | actions | Parameters tab | See figure 13, callout 5. Retention, concurrency, interval, quality threshold, camera (shown after switching). | FR-M7-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-105 | P-13 System administration | actions | Monitoring tab | See figure 13, callout 6. Queue, stored frames, disk and concurrency, refreshed every 30 s (shown after switching). | FR-M8-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-106 | P-13 System administration | actions | Operation log tab | See figure 13, callout 7. Audit trail filtered by module (shown after switching). | FR-M1-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-107 | P-13 System administration | actions | Messages tab | See figure 13, callout 8. In-app messages with mark-as-read (shown after switching). | FR-M8-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-094 | P-12 Model experiments | header | Online model | See figure 12, callout 1. The single online version, or none. | FR-M6-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-095 | P-12 Model experiments | actions | Versions tab | See figure 12, callout 2. Model versions with metrics. | FR-M6-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-096 | P-12 Model experiments | content | Version row | See figure 12, callout 3. Dataset, mAP@0.5, mAP@0.5:0.95, recall, FPS, parameters. | FR-M6-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-097 | P-12 Model experiments | actions | Activate or roll back | See figure 12, callout 4. Switches the online model after a confirmation. | FR-M6-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-098 | P-12 Model experiments | actions | Experiments tab | See figure 12, callout 5. Ablation table with the change against the baseline (shown after switching). | FR-M6-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-099 | P-12 Model experiments | actions | Species tab | See figure 12, callout 6. Per-class threshold and statistics flag, saved per row (shown after switching). | FR-M6-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+
+### 4.13 P-13 System settings (figure 13)
+
+![Figure 13: P-13 System settings](images/traceability/p13-admin.png)
+
+| No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
+|---|---|---|---|---|---|---|---|---|---|---|
+| TM-100 | P-13 System settings | actions | Accounts tab | See figure 13, callout 1. Accounts with role, status and last sign-in. | FR-M1-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-101 | P-13 System settings | content | Account row | See figure 13, callout 2. One account. | FR-M1-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-102 | P-13 System settings | actions | Disable or restore | See figure 13, callout 3. Changes the account status after a confirmation. | FR-M1-03 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-103 | P-13 System settings | actions | Reset password | See figure 13, callout 4. Sets a temporary password of at least eight characters. | FR-M1-03 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-104 | P-13 System settings | actions | Parameters tab | See figure 13, callout 5. Retention, concurrency, interval, quality threshold, camera (shown after switching). | FR-M7-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-105 | P-13 System settings | actions | Monitoring tab | See figure 13, callout 6. Queue, stored frames, disk and concurrency, refreshed every 30 s (shown after switching). | FR-M8-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-106 | P-13 System settings | actions | Operation log tab | See figure 13, callout 7. Audit trail filtered by module (shown after switching). | FR-M1-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-107 | P-13 System settings | actions | Messages tab | See figure 13, callout 8. In-app messages with mark-as-read (shown after switching). | FR-M8-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 
 ## 5. Coverage
 
 | Screen | Template | Rows | COD done | COD in progress | COD not started |
 |---|---|---|---|---|---|
 | P-01 Sign-in | `login.html` | 7 | 6 | 0 | 1 |
-| P-02 Workbench (and the shared shell) | `home.html` | 13 | 10 | 3 | 0 |
+| P-02 Running overview (and the shared shell) | `home.html` | 13 | 10 | 3 | 0 |
 | P-03 Capture control | `capture.html` | 12 | 8 | 4 | 0 |
-| P-04 Frame browser | `frames.html` | 9 | 8 | 1 | 0 |
-| P-05 Detection tasks | `tasks.html` | 7 | 5 | 2 | 0 |
-| P-06 Detection result | `frame.html` | 8 | 6 | 1 | 1 |
-| P-07 Review workbench | `review.html` | 10 | 0 | 10 | 0 |
-| P-08 Hard-sample pool | `hard-samples.html` | 6 | 5 | 1 | 0 |
-| P-09 Dataset export | `dataset-export.html` | 7 | 7 | 0 | 0 |
-| P-10 Statistics dashboard | `stats.html` | 7 | 3 | 3 | 1 |
+| P-04 Image browser | `frames.html` | 9 | 8 | 1 | 0 |
+| P-05 Detection jobs | `tasks.html` | 7 | 5 | 2 | 0 |
+| P-06 Result detail | `frame.html` | 8 | 6 | 1 | 1 |
+| P-07 Manual review | `review.html` | 10 | 0 | 10 | 0 |
+| P-08 Hard samples | `hard-samples.html` | 6 | 5 | 1 | 0 |
+| P-09 Data export | `dataset-export.html` | 7 | 7 | 0 | 0 |
+| P-10 Statistics | `stats.html` | 7 | 3 | 3 | 1 |
 | P-11 Inspection reports | `reports.html` | 7 | 6 | 0 | 1 |
-| P-12 Models and experiments | `models.html` | 6 | 5 | 1 | 0 |
-| P-13 System administration | `admin.html` | 8 | 6 | 2 | 0 |
+| P-12 Model experiments | `models.html` | 6 | 5 | 1 | 0 |
+| P-13 System settings | `admin.html` | 8 | 6 | 2 | 0 |
 
 Requirements in table 3-1 and the rows that cite them. A requirement with no row has no screen element in the prototype; the reason is given.
 

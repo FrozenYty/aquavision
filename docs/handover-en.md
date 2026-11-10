@@ -238,30 +238,36 @@ What settles it:
 | The requirement ids are real | Every `FR-Mx-xx` cited exists in `docs/srs-en.md` Table 3-1 |
 | A reader can follow it | Someone who has not seen the app finds three named elements on their screenshots |
 
-### 3.7 The design pass (task `P2-18`)
+### 3.7 One page name per page (task `P2-18`)
 
-The SRS asks for "a deep-sea blue and teal ocean palette, never the clinical blue-white of a medical
-console" (§5.1). `docs/copy-review-en.md` has been holding nine copy findings open until a pass like this
-one existed. Both are now one task, because they are the same job: making thirteen pages look like one
-instrument rather than thirteen pages.
+The pages had three names each. The menu said `Capture control`, SRS §5.2 said `Capture control page`,
+the traceability matrix said `Capture control page`; the English disagreed with itself on nine of
+thirteen (`Frame browser` against `Image browser`, `Detection tasks` against `Detection jobs`,
+`Administration` against `System administration`). And the scheme itself mixed grammars: `capture control`
+beside `image browsing`, `workbench` used both as a page type and as a modifier, `models **and**
+experiments` the only name with a conjunction in it.
 
-What is already in place, and must be used rather than replaced:
+**SRS V1.11 settles it**, and §5.2 is now the authority. The scheme:
 
-| Piece | Where |
-|---|---|
-| Colours, type scale, spacing, layout sizes | `web/static/css/tokens.css` - the only place they are defined |
-| The shared shell: top bar, menu, footer | `web/static/js/layout.js`, `web/templates/*.html` |
-| Page-level styles | `web/static/css/app.css`, which reads the tokens |
+Object plus action, four characters where the language allows, no "page" suffix, no conjunction. **The
+SRS §5.2 table and `docs/traceability-en/zh.md` already use these names; the interface still uses the old
+ones.**
 
-- **Close the copy review.** Sidebar group names, statistics subtitles, dashboard KPI prefixes. Apply or
-  reject with a reason; a finding left silently open is the habit this document exists to break.
-- **Remove the `P-xx` eyebrow** from the twelve page headers. It survived because it was the only thing
-  tying a screen to SRS §5.2 - and `docs/traceability-en/zh.md` now does that job properly.
-- **One test, the shape of `tests/test_api_js.py`:** a hex colour in a template or in `app.css` fails the
-  build. The tokens are the single source, and a rule that is not checked is a rule that drifts.
-- **Screenshots for every page**, into `docs/images/ui/`, so the next design argument is a comparison
-  rather than a memory.
-- **Nothing regresses.** The page tests, the three states and every control that exists today stay.
+What to do:
+
+- **Rename in the menu** (`web/static/js/layout.js`), **in both page titles** (the `<title>` and the
+  `<h1>` of each template), and in anything that names a page to the user.
+- **Rename the two templates whose names differ by one letter.** `frames.html` is the image browser and
+  `frame.html` is the result detail; one letter apart is a wrong-file edit waiting to happen. Name them
+  for what they are.
+- **Add the test that keeps four lists equal**: the menu labels, each template's title, SRS §5.2 and the
+  traceability matrix, for all thirteen pages. Four hand-maintained copies are exactly the drift this
+  repository keeps rediscovering; the test is the part that makes the task stay done.
+- **Do not rename the features.** `FR-M4-01` carries its own name in the SRS (a review bench) and stays that way; a page
+  name and a requirement's name are different things. Same for route names and table names.
+
+**A note on what this is worth.** A menu is scanned, not read: parallel entries are quicker to find. That
+is the reason for the scheme, and it is also why the test matters more than the rename.
 
 ### 3.8 The copy review
 

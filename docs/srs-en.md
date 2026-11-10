@@ -9,9 +9,9 @@
 | Item | Content |
 |---|---|
 | Document title | Underwater Species Detection and Monitoring for Marine Ranching Based on an Improved YOLOv8 — Software Project Requirements Specification |
-| Document number | SRS-PRJ14-V1.10-2026 |
+| Document number | SRS-PRJ14-V1.11-2026 |
 | Project number | PRJ-14 |
-| Document version | V1.10 |
+| Document version | V1.11 |
 | Phase | Phase 1: requirements analysis |
 | Prepared by | Training Group 14 |
 | Project lead | Yao Tianyu (group lead); supervisor: Wu Jianguang |
@@ -1233,18 +1233,18 @@ Interaction rules: every list page offers keyword search, filters and paging; ev
 | ID | Page | Type | Purpose | Requirements |
 |---|---|---|---|---|
 | P-01 | Sign-in | Form | Account and password, CAPTCHA, password recovery. | FR-M1-01 |
-| P-02 | Dashboard | Portal | Frames captured today, items to review, recent jobs and messages. | FR-M5-01, FR-M8-02 |
+| P-02 | Running overview | Portal | Frames captured today, items to review, recent jobs and messages. | FR-M5-01, FR-M8-02 |
 | P-03 | Capture control | Composite | Trigger capture, batch list, frame intake progress and failure reasons. | FR-M2-02 |
 | P-04 | Image browser | List | Thumbnail grid with quality scores and filters; start detection on a selection. | FR-M2-04, FR-M2-03 |
 | P-05 | Detection jobs | List | Job state, progress, queue position, cancel and retry. | FR-M3-02 |
-| P-06 | Detection results | Detail | Overlay image, target list, per-class counts, export. | FR-M3-01, FR-M3-04, FR-M3-05 |
-| P-07 | Review bench | Workspace | Add, delete and edit boxes on the canvas, compare versions, submit and roll back. | FR-M4-01, FR-M4-02 |
-| P-08 | Hard-example pool | List | Filter by origin, inspect and remove. | FR-M4-03 |
-| P-09 | Dataset export | Form | Sample range, split ratio, seed, and the snapshot record. | FR-M4-04 |
+| P-06 | Result detail | Detail | Overlay image, target list, per-class counts, export. | FR-M3-01, FR-M3-04, FR-M3-05 |
+| P-07 | Manual review | Workspace | Add, delete and edit boxes on the canvas, compare versions, submit and roll back. | FR-M4-01, FR-M4-02 |
+| P-08 | Hard samples | List | Filter by origin, inspect and remove. | FR-M4-03 |
+| P-09 | Data export | Form | Sample range, split ratio, seed, and the snapshot record. | FR-M4-04 |
 | P-10 | Statistics | Dashboard | Species composition, site heat map, trend curves, basis switching. | FR-M5-01, FR-M5-02, FR-M5-03 |
-| P-11 | Inspection report | Report | Period, template preview, generation and history. | FR-M5-04 |
-| P-12 | Models and experiments | Composite | Version list, experiment comparison, activation and rollback, dictionary and thresholds. | FR-M6-01, FR-M6-02, FR-M6-03, FR-M6-04 |
-| P-13 | Administration | Management | Accounts, parameters, runtime monitoring, log and messages. | FR-M1-03, FR-M1-04, FR-M7-01, FR-M8-01, FR-M8-02 |
+| P-11 | Inspection reports | Report | Period, template preview, generation and history. | FR-M5-04 |
+| P-12 | Model experiments | Composite | Version list, experiment comparison, activation and rollback, dictionary and thresholds. | FR-M6-01, FR-M6-02, FR-M6-03, FR-M6-04 |
+| P-13 | System settings | Management | Accounts, parameters, runtime monitoring, log and messages. | FR-M1-03, FR-M1-04, FR-M7-01, FR-M8-01, FR-M8-02 |
 
 ### 5.3 Key interaction flows
 
@@ -1524,6 +1524,7 @@ Defects found in acceptance testing are handled by severity. Critical (system un
 | V1.1 | 2026-11-03 | Yao Tianyu | Switched to direct capture from the local camera; capture-terminal modules and tables removed; 3.5 algorithm requirements and 2.4 architecture added; NFR numbering conflicts fixed; 2.3 scenarios, UC-01/UC-09 and 5.3 flows rewritten; wording inconsistent with the new architecture removed. | Implements the annotations on the final revision of 09. | Internal group review |
 | V1.2 | 2026-11-03 | Yao Tianyu | Marine-debris class and per-class metrics added; capture hardware list added (trigger board, temperature and turbidity sensors, status display); environment reporting added to the capture interface; streaming wording, team size and baseline-freeze week corrected; dataset size and acquisition risk added. | Implements the capture plan change and settles the requirements baseline. | Internal group review |
 | V1.3 | 2026-11-04 | Yao Tianyu | Marine-debris class removed and four classes restored; dataset wording unified to DUO; AL-08 and AL-09 deleted from the metric table and AL-03 limited to per-class recall; scenery list in Table 2-3 and class palette in 5.1 adjusted. | No public labels exist for that class and in-house data cannot support an independent accuracy metric; focus on four commercial and predator species to keep the metric basis consistent. | Internal group review |
+| V1.11 | 2026-11-10 | Yao Tianyu | The thirteen page names in §5.2 are one scheme now: object plus action, four characters where the language allows, no `page` suffix, no conjunction. The old set mixed grammars (`capture control` beside `image browsing`), reused `workbench` as both a page and a modifier, and disagreed with `docs/traceability-en.md` on nine of thirteen names in English. | A menu is scanned, not read: parallel entries are quicker to find, and three spellings of one page is three chances to edit the wrong file. | Internal group review |
 | V1.10 | 2026-11-07 | Yao Tianyu | The technology table no longer claims Celery and Redis: batch jobs run in a fixed thread pool inside the one FastAPI process, as ADR 03 decided. SQLAlchemy 2.0 corrected to 2.1, the version pinned in requirements. | The SRS still advertised a message broker the architecture had already rejected, and a reader comparing the two documents would have believed the system had a component it does not. | Internal group review |
 | V1.9 | 2026-11-07 | Yao Tianyu | Table 2-3 gains a status display and two status LEDs; the MCU row adds driving the display. Everything shown on the screen is English or numeric. | The screen and LEDs come from the STM32 kit already on hand, so they cost nothing; V1.4 removed the display on minimum-cost grounds and that premise no longer holds. The screen shows device state only — business data stays on the web side. | Internal group review |
 | V1.8 | 2026-11-07 | Yao Tianyu | Table 2-3 returns to the existing LED desk lamp; the strip, MOSFET and separate supply from V1.7 are withdrawn, and the MCU row goes back to trigger and turbidity. | The lamp on hand is USB-powered (DC), 4000 K, 10 W and advertised as flicker-free, so the flicker argument that justified the strip does not apply. ADR 09 is superseded by ADR 10. | Internal group review |
