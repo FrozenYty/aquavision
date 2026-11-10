@@ -20,17 +20,19 @@ that recovers and quietly wipes the result off the screen.
 
 ## 2. Link
 
-Two states, and the rig boots in the second one.
+Two states, and the rig boots in the first one with a ten-second grace.
 
 | Link | Meaning |
 |---|---|
 | `Alive` | A command arrived within `cfg::OFFLINE_AFTER_MS` |
 | `Gone` | Ten seconds of silence |
 
-There is deliberately no "never connected yet" state. It would exist only for the couple of seconds
-between power-up and the PC's first message, and the honest thing to show in that window is `OFFLINE`:
-at that moment there is indeed no PC. The handshake is therefore one line - the first keepalive raises
-`READY` - rather than a special case.
+Boot counts as `Alive`: the timer starts at power-up and a PC on the other end of the cable sends its
+first keepalive long before ten seconds are out. Booting `OFFLINE` would have the panel call itself dead
+before anything had a chance to speak, which reads as a fault rather than as "waiting". **Losing a live
+link is worth reporting; having no history yet is not.** The consequence is honest and visible: a rig on a
+bench with no PC software goes `OFFLINE` ten seconds after power-up, because at that moment there really
+is nobody to talk to.
 
 ## 3. Events
 
@@ -116,7 +118,8 @@ resets exactly the `Offline` screen.
 bridge chip and cannot see whether the cable is plugged in. Liveness is therefore a protocol matter, and
 the obligation is the PC's: **send `CMD PING` at least every two seconds; ten seconds of silence is five
 missed keepalives and means the PC is gone.** An idle rig still has to be told so, which is why the
-heartbeat is not decoration.
+heartbeat is not decoration - and why the boot grace of the same ten seconds is enough for the PC's first
+message to arrive and confirm that somebody is there.
 
 **7. Every transition is reported.** `EVT SCREEN <name> <score>` on every change, including the ones the
 button, the link timer and boot cause. Before this, a wiring fault and a logic fault looked identical from
@@ -149,7 +152,7 @@ rather than a panel that quietly lies.
 
 | Transition | Events |
 |---|---|
-| boot | `EVT HELLO <version>`, ..., `EVT SCREEN OFFLINE -1` |
+| boot | `EVT HELLO <version>`, ..., `EVT SCREEN READY -1` |
 | Offline → Ready (first keepalive or recovery) | `EVT SCREEN READY -1` |
 | Ready → Capturing | `EVT SCREEN CAPTURING -1` then `EVT TRIGGER <millis>` |
 | Capturing → Pass / Retake | `EVT SCREEN PASS\|RETAKE <score>` |

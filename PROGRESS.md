@@ -1,5 +1,11 @@
 ## 2026-11-10
 
+- **The boot screen was the last argument: `READY`, not `OFFLINE`.** A panel that announces itself dead
+  before anything has had a chance to speak reads as a fault, and the ten-second grace is far longer than
+  a connected PC needs to send its first keepalive. So the rig boots `READY` on an optimistic `Alive`, and
+  a rig on a bench with no PC software goes `OFFLINE` ten seconds later - which is correct, because there
+  is nobody there. The invariant is unchanged: `OFFLINE` if and only if the link is gone, and boot is
+  `READY` on a live link.
 - **The link model was wrong twice before it was right, and the Cartesian product is what exposed it.**
   First the rig declared itself `OFFLINE` ten seconds after every power-up, because a watchdog on
   incoming commands measures the absence of a PC nobody had promised. Then the fix - a third
