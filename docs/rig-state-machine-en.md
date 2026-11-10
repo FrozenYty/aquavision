@@ -16,7 +16,7 @@ that recovers and quietly wipes the result off the screen.
 | `Capturing` | A capture is in flight; the verdict has not arrived |
 | `Pass` | The PC returned PASS, with a score |
 | `Retake` | The PC returned RETAKE with a reason, or the rig gave up waiting |
-| `Offline` | The PC has said nothing for ten seconds |
+| `Offline` | The PC has said nothing for ten seconds. Because the PC must keep the link alive, this means a real disconnection, not an idle rig |
 
 ## 2. Events
 
@@ -76,7 +76,13 @@ state can make progress without the PC, so silence forces `Offline` from anywher
 true: a verdict or a capture belongs to the rig, and replacing it because the link came back was how a
 result could vanish from the panel one loop after it appeared.
 
-**6. Every transition is reported.** `EVT SCREEN <name> <score>` on every state change, including the
+**6. Silence means the PC is gone, because the PC keeps the link alive.** The serial link has no carrier
+signal - the rig talks UART through a bridge and cannot see the cable - so liveness is a protocol
+matter: the PC sends `CMD PING` at least every two seconds, and ten seconds of silence is five missed
+keepalives. Without that obligation the rig would declare a healthy idle system offline, which is the
+normal state of a rig waiting for a button.
+
+**7. Every transition is reported.** `EVT SCREEN <name> <score>` on every state change, including the
 ones the button and the link timer cause. Before this, a wiring question and a logic question looked
 identical from the serial port.
 
