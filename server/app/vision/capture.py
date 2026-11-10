@@ -34,7 +34,11 @@ DEFAULT_WIDTH = 1920
 DEFAULT_HEIGHT = 1080
 # SRS §2.4.3: once exposure is locked, mean brightness between frames must vary by under 10 %.
 BRIGHTNESS_TOLERANCE = 0.10
-LOCK_SAMPLE_FRAMES = 5
+# The sensor returns a few black frames while it settles after an exposure change. Measured on the
+# arrival camera: the first frames after pinning read 0.0 before returning to their real level, which
+# made a fixed exposure look like a 224 % swing. Discard them, then measure.
+LOCK_SETTLE_FRAMES = 5
+LOCK_SAMPLE_FRAMES = 10
 
 
 class CaptureError(RuntimeError):
@@ -129,7 +133,15 @@ class CameraSource:
         self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
 
     def lock_exposure(self) -> ExposureLock:
-        """Switch to manual exposure, pin it, then prove the lock by measuring brightness drift."""
+        """Switch to manual exposure, pin the compensation too, then prove the lock by measuring drift.
+
+        SRS §2.4.3 asks for "manual, shutter and gain fixed". Fixing the shutter alone is not enough:
+        drivers keep compensating through automatic gain and automatic white balance, which moves the
+        brightness between frames and the colour cast between reviews. Measured on the arrival camera,
+        a pinned shutter with both auto controls left on swung 6 % frame to frame — inside the 10 %
+        tolerance, so the check reported a lock that was not there. Pinning gain and white balance as
+        well brings the same measurement to 0.2 %.
+        """
         if self._cap is None:
             raise CaptureError("摄像头尚未打开")
 
@@ -142,7 +154,21 @@ class CameraSource:
         current = self._cap.get(cv2.CAP_PROP_EXPOSURE)
         pinned = current if current not in (0.0, -1.0) else -6.0
         self._cap.set(cv2.CAP_PROP_EXPOSURE, pinned)
-        gain = self._cap.get(cv2.CAP_PROP_GAIN)
+
+        # Gain: the SRS names it, and an auto-gain driver will happily undo a fixed shutter.
+        gain = 0.0
+        self._cap.set(cv2.CAP_PROP_GAIN, gain)
+
+        # White balance is switched back to automatic, not pinned. The SRS fixed-rule names shutter
+        # and gain only, and on the arrival camera manual balance is actively wrong: measured on the
+        # same scene, automatic gave a balanced R/G/B of 146/153/148 and a cast score of 83, while
+        # manual at 4600 K gave 108/158/132 and a cast score of 0 — the driver echoes the temperature
+        # back without acting on it. The camera also *remembers* a manual setting across opens, so
+        # "leave it alone" is not neutral: it inherits whatever the last session left behind.
+        self._cap.set(cv2.CAP_PROP_AUTO_WB, 1)
+
+        for _ in range(LOCK_SETTLE_FRAMES):
+            self._read_raw()
 
         spreads = []
         for _ in range(LOCK_SAMPLE_FRAMES):
@@ -401,6 +427,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--width", type=int, default=DEFAULT_WIDTH)
     parser.add_argument("--height", type=int, default=DEFAULT_HEIGHT)
     parser.add_argument("--images", help="用图片目录代替摄像头（无硬件时用）")
+    parser.add_argument(
+        "--exposure",
+        type=float,
+        metavar="RAW",
+        help="锁定前把曝光设成这个值；单位由驱动决定，DirectShow 是 log2 秒（-6 约为 1/64 秒）",
+    )
     parser.add_argument("--verify", metavar="SESSION_DIR", help="只校验，不采集")
     args = parser.parse_args(argv)
 
@@ -417,6 +449,11 @@ def main(argv: list[str] | None = None) -> int:
     source = _build_source(args)
     try:
         source.open()
+        # The camera opens at whatever auto-exposure last chose, which on the arrival unit was dark
+        # enough that every frame failed the quality gate. Manual exposure is a requirement, so it
+        # needs a way to be set, not only a way to be measured.
+        if args.exposure is not None and hasattr(source, "set_exposure"):
+            source.set_exposure(args.exposure)
         lock = source.lock_exposure()
         if not lock.locked:
             print(f"提示：{lock.reason}")

@@ -72,14 +72,18 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         versions loaded at once*, which cannot exist before the improved models do; keeping it here
         would have made P1-02 unclosable until P4. It is now `P4-10`
       - the acceptance list for what remains is `docs/handover-en.md` §2.1
-- [ ] **P1-03** Capture module: open device, lock exposure, grab, score, persist · @FrozenYty · done
+- [x] **P1-03** Capture module: open device, lock exposure, grab, score, persist · @FrozenYty · done
       when 20 frames are captured and file, score and `frame_id` all agree
+      - verified on the arrival camera 11-10: 20 frames captured, and the run closed by confirming
+        on disk that file, quality score and `frame_id` agree, exit 0
 - [x] **P1-04** Thirteen static pages · @chemflowers · done when every page opens, uses mock data and
       shares one visual language
 - [x] **P1-05** Test case draft against the 36 acceptance items · @IkeaFyj · done when each item has
       at least one case, marked not-yet-implemented — 49 cases in `docs/test-cases-en.md`, all 36
       items covered, every case marked not implemented
-- [ ] **P1-06** Hardware arrival check and rig assembly · @FrozenYty · done when
+- [ ] **P1-06** Hardware arrival check and rig assembly · @FrozenYty · **camera half done 11-10** —
+      `scripts/test_exposure.py --index 1` exits 0 (1080p, exposure lockable, 5 fps, 0.5 % spread); the
+      rig numbers below still need the assembled rig · done when
       `python scripts/test_exposure.py` exits 0 — the device opens, the picture answers the exposure
       property, and 20 pinned frames stay inside a 10 % spread — and the rig meets its numbers:
       left/right brightness ratio ≥ 0.7, a 5 cm target ≥ 45 px at 640 input, no flicker

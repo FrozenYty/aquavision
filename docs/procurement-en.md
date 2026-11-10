@@ -43,9 +43,17 @@ day after the lamp was checked — ADR 10.
 
 ## 3. Things to verify before assembly
 
-- **Camera exposure lock.** The seller confirms the module locks exposure over UVC. `python scripts/test_exposure.py`
-  still runs on arrival and its output is kept as evidence; if the driver disagrees with the seller,
-  fall back to fixed lighting with a 15 % brightness tolerance and record the change.
+- **Camera exposure lock — verified on arrival, 11-10.** `python scripts/test_exposure.py --index 1` exits
+  0: 1080p, exposure controllable, lock holds a 0.5 % frame-to-frame spread, 5 fps. Three things the unit
+  taught us that no datasheet said:
+  - **It is index 1**, not 0 — index 0 is the laptop's built-in camera.
+  - **Never use 720p on this unit**: that mode stalls at 1 fps. 1080p gives 5 fps (the USB 2.0 ceiling
+    for uncompressed video) and 640×480 gives 30 fps. MJPEG is ignored.
+  - **Exposure must be set explicitly** — the device opens at whatever auto-exposure last chose, which
+    was dark enough that every frame failed the quality gate. Use
+    `python -m app.vision.capture --camera 1 --exposure -6` from `server/`.
+  - **White balance must stay automatic.** Manual balance on this driver is a lie: it echoes the
+    temperature back without acting on it, and the colour cast score drops from 83 to 0.
 - **Adapter lead.** The supply ends in a barrel plug and the strip in bare wires; without the socket-to-
   terminal lead the two never meet. Reconnecting power at a cut end also needs a solderless clip (often
   included) or a soldering iron — confirm when ordering.
