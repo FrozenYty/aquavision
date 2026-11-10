@@ -129,6 +129,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
           stays, because the test plan requires dropping test images that nearly duplicate training ones
         - the manifest is `test-manifest.txt`, one `filename md5` per line, committed — the test plan
           already promised it
+        - delivered 11-10: `--seed` and `--manifest` are in the script; `test-manifest.txt` is
+          committed with 1111 lines; a test fixes the real group sizes to 5671 / 1000 and the total
+          7782. The on-disk split was not regenerated — the lead confirmed it is correct
       - **P2-06b** one baseline run recorded in `train_experiment` with every metric column filled
         - training runs on the GPU: install a **separate** environment with the CUDA build of torch.
           The runtime environment must not be touched, and a CPU run of four future experiments plus
