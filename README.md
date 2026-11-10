@@ -6,9 +6,9 @@ Underwater species detection and monitoring built on YOLOv8. A live camera feed 
 count and locate four classes — sea cucumber, sea urchin, scallop and starfish —
 with a human review loop that feeds corrections back into training.
 
-**Status**: phase P1, see [PROGRESS.md](PROGRESS.md). The backend answers (`uvicorn`, 42 contract
-routes), the thirteen pages run on mock data, and the ESP32 firmware compiles; the capture rig is not
-assembled yet.
+**Status**: phase P2, see [PROGRESS.md](PROGRESS.md). The backend answers (`uvicorn`, 42 contract
+routes), the thirteen pages call it and fall back to `?mock=1`, and the ESP32 firmware compiles; the
+capture rig is not assembled and detection still returns 501 without weights.
 
 ## Documents
 
