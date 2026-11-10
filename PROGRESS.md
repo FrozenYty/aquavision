@@ -1,5 +1,13 @@
 ## 2026-11-10
 
+- **The contract settled, so the client owes it two changes (§7).** The socket used to carry the token
+  in the query string because nothing better had been decided; §7 now requires it as the first `auth`
+  message and adds `auth_ok`, `4401` and `4408`. `P2-16` is the new task: move the client onto the
+  agreed protocol and add the test that fails when the two drift, mirroring `tests/test_api_js.py` for
+  the REST surface.
+- **The camera now produces real frames**, which changes what the backend lane can test: detection no
+  longer has to wait for synthetic images, and a capture session from this morning is on disk at 1080p.
+
 - **One footer cost an afternoon of history rewriting.** The squash-merged `P2-15` commit carried
   `Co-authored-by: Claude Code`, which GitHub counts as a second contributor. It happened because a
   squash merge copies the single local commit's message onto `main` verbatim, so a line written on
