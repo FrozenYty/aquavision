@@ -68,13 +68,13 @@ void drawHeader(U8G2& display, const rig::State& state) {
   display.setFont(u8g2_font_5x7_tf);
   display.drawStr(MARGIN, HEADER_BASELINE, "AQUAVISION");
 
-  const char* link = state.pcAlive ? "ONLINE" : "OFFLINE";
+  const char* link = state.pcAlive() ? "ONLINE" : "OFFLINE";
   const int width = display.getStrWidth(link);
   const int text_x = RIGHT_EDGE - width;
 
   // The dot sits on the text's optical centre rather than on a hand-picked baseline: a disc drawn by eye
   // landed a pixel low, which reads as "slightly wrong" without anyone being able to name the cause.
-  if (state.heartbeatOn || !state.pcAlive) {
+  if (state.heartbeatOn || !state.pcAlive()) {
     display.drawDisc(text_x - 7, dotRow(display), 1);
   }
   display.drawStr(text_x, HEADER_BASELINE, link);

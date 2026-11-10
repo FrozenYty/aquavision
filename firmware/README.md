@@ -122,9 +122,13 @@ the rig, never sent to it.
 **The PC owns the link, and silence means it is gone.** The rig cannot see whether the USB cable is
 plugged in - it talks UART through a bridge chip and has no carrier signal - so liveness is a protocol
 matter: **the PC must send `CMD PING` at least every two seconds on an open link**, and the rig declares
-`OFFLINE` after ten seconds without a command (five missed keepalives). A PC that has nothing to say still
-has to say so. Without that rule an idle rig - which is most of the time - would be indistinguishable from
-a disconnected one, and the panel would accuse a working system of being offline.
+`OFFLINE` after ten seconds without a command (five missed keepalives).
+
+The rig boots on `OFFLINE` and the first keepalive raises `READY`: there is no special first-connection
+handshake, just a screen that tells the truth until somebody speaks. From then on the two are a pair -
+`OFFLINE` if and only if the link is gone - and an idle rig stays `READY` only because the PC keeps saying
+so. `rig::invariantHolds` checks that pairing every loop pass and reports `EVT INVARIANT` if it is ever
+broken.
 
 **A verdict is the answer to a capture, so it is only accepted while one is in flight.** A RESULT in any
 other state is dropped and reported as `EVT STRAY RESULT`; the PC is told rather than left believing the

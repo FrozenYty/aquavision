@@ -58,12 +58,9 @@ void serviceButton(uint32_t now) {
     return;  // the release edge, not a press
   }
 
-  if (!state.pcAlive) {
-    // Nothing is listening, so there is nothing to capture. Say so on the screen instead of leaving
-    // it on CAPTURING forever.
-    state.screen = rig::Screen::Offline;
-    state.markDirty();
-    protocol::emitScreen(state);
+  // A capture needs a PC to receive it, and the invariant already ties `Gone` to the OFFLINE screen, so
+  // there is nothing to set here - only the refusal.
+  if (state.link != rig::Link::Alive) {
     return;
   }
   if (state.screen == rig::Screen::Capturing) {
@@ -148,24 +145,14 @@ void serviceLeds(uint32_t now) {
 
 void serviceLink(uint32_t now) {
   const bool alive = (now - lastPcMessage) < cfg::OFFLINE_AFTER_MS;
-  if (alive == state.pcAlive) {
-    return;
-  }
-  state.pcAlive = alive;
-  if (!alive) {
-    // Losing the PC overrides everything: no state can make progress without it.
-    state.screen = rig::Screen::Offline;
-    state.markDirty();
-    protocol::emitScreen(state);
-    return;
-  }
-  // The PC is back. Only a screen that was showing the link failure resets - a verdict or a capture in
-  // progress belongs to the rig and must not be replaced by the mere fact that the link recovered.
-  if (state.screen == rig::Screen::Offline) {
-    state.screen = rig::Screen::Ready;
+  if (!alive && state.link == rig::Link::Alive) {
+    state.link = rig::Link::Gone;
+    state.screen = rig::Screen::Offline;  // invariant: Offline if and only if Gone
     state.markDirty();
     protocol::emitScreen(state);
   }
+  // Recovery is handled where it happens - by `poll` setting `Alive` - and the screen reset lives in the
+  // command handlers, so a keepalive cannot overwrite a verdict that is still being read.
 }
 
 //: A result arrived from the PC: light the right LED for a moment.
@@ -200,9 +187,13 @@ void setup() {
   delay(cfg::SPLASH_MS);
 
   protocol::emitHello();
+  // The rig starts OFFLINE and becomes READY on the PC's first keepalive. That is the whole handshake:
+  // no special first-connection case, just a screen that tells the truth until somebody speaks.
   lastPcMessage = millis();
-  state.screen = rig::Screen::Ready;
+  state.link = rig::Link::Gone;
+  state.screen = rig::Screen::Offline;
   state.markDirty();
+  protocol::emitScreen(state);  // the PC should learn the starting state, not infer it
 }
 
 void loop() {
@@ -213,6 +204,15 @@ void loop() {
   // talking to the PC.
   if (protocol::poll(state)) {
     lastPcMessage = now;
+    const bool wasGone = (state.link == rig::Link::Gone);
+    state.link = rig::Link::Alive;
+    // A command is the PC's return, so the link failure screen gives way. It is the *only* screen this
+    // resets: a verdict or a capture belongs to the rig and a keepalive must not clear it.
+    if (wasGone && state.screen == rig::Screen::Offline) {
+      state.screen = rig::Screen::Ready;
+      state.markDirty();
+      protocol::emitScreen(state);
+    }
   }
   if (state.pulseLeds) {
     noteResult();
@@ -225,6 +225,14 @@ void loop() {
   serviceCaptureTimeout(now);
   serviceLeds(now);
   serviceLink(now);
+
+  // The six reachable screen/link combinations are enforced here rather than assumed. This costs a
+  // comparison per loop and turns a state bug into a serial line instead of a panel that quietly lies.
+  static bool invariantReported = false;
+  if (!rig::invariantHolds(state) && !invariantReported) {
+    invariantReported = true;
+    protocol::emitInvariant(state.screen, state.link);
+  }
 
   if (state.dirty) {
     screen::render(display, state);
