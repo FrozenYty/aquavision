@@ -1,5 +1,9 @@
 ## 2026-11-10
 
+- **Hard samples: the quality badge no longer sits on top of the source badge.** The thumbnail rule put
+  every badge inside a card in the top-right corner, so the quality badge in the meta line landed on the
+  source badge. The rule now applies only to a badge placed directly on the card; the image browser, whose
+  quality badge is meant for the corner, is unchanged. Figure 8 of the traceability matrix is recaptured.
 - **`P2-18` done: one page, one name.** The menu, every page title and heading, and the traceability matrix
   now use the SRS §5.2 names, and `tests/test_page_names.py` compares the four lists page by page (shown
   failing on five planted mismatches, then passing). `frames.html` and `frame.html` became

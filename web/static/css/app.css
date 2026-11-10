@@ -644,7 +644,8 @@ body {
   left: var(--av-space-2);
 }
 
-.av-thumb .badge {
+/* Only a badge placed directly on the card goes to the corner; one in the meta line stays in its line. */
+.av-thumb > .badge {
   position: absolute;
   top: var(--av-space-2);
   right: var(--av-space-2);
