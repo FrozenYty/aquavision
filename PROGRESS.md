@@ -95,6 +95,13 @@
   asserts status, `code`, and the documented fields and types for all 21 P0 routes, seeding tasks,
   boxes, models, experiments and species through the SQLite fixture. The failing reference was
   demonstrated once: removing `task_code` from `serializers.task` turns the batch-task test red.
+- **`P2-05a` gave the queue a consumer.** `server/app/worker.py` claims a queued `detect_task`, walks
+  the frames that have no detection rows, advances `progress` per frame, and stops when the row is
+  cancelled. A failure writes its reason; retry deletes the partial result and runs the same frames
+  again; rows left running by a crash are requeued at start-up. The detector is injected: P2-05a
+  passes none, so a task fails with "model weights are not registered" instead of inventing boxes;
+  P2-05b supplies the real one. The app starts a `max_concurrency` pool in its lifespan; tests disable
+  it.
 
 ## 2026-11-09
 

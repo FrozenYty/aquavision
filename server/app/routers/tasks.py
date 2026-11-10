@@ -10,12 +10,12 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 
 from app import serializers
 from app.deps import SessionDep, UserDep, get_current_user
 from app.envelope import CONFLICT, NOT_FOUND, ApiError, ok
-from app.models import DetectTask, ModelVersion, SysLog
+from app.models import DetectObject, DetectTask, ModelVersion, SysLog
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"], dependencies=[Depends(get_current_user)])
 
@@ -93,8 +93,11 @@ def retry_task(task_id: int, db: SessionDep, user: UserDep) -> dict[str, object]
     row = _task(db, task_id)
     if row.status != 3:
         raise ApiError(CONFLICT, "只有失败的任务可以重试")
+    # A retry reprocesses the same frames, so the previous partial result must not survive it.
+    db.execute(delete(DetectObject).where(DetectObject.task_id == task_id))
     row.status = 0
     row.progress = 0
+    row.obj_count = 0
     row.error_msg = None
     row.finished_at = None
     db.add(

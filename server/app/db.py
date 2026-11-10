@@ -32,10 +32,12 @@ def dsn_from_env() -> str:
 def engine_from_dsn(dsn: str) -> Engine:
     """Build an engine.
 
-    Pool settings stay at SQLAlchemy's defaults: the load is one team on one
-    rig, and tuning a pool before there is traffic is guesswork.
+    SQLite connections are opened with check_same_thread=False because the detection worker uses the
+    same engine from a background thread. Pool settings stay at SQLAlchemy's defaults: the load is one
+    team on one rig, and tuning a pool before there is traffic is guesswork.
     """
-    return create_engine(dsn)
+    connect_args = {"check_same_thread": False} if dsn.startswith("sqlite") else {}
+    return create_engine(dsn, connect_args=connect_args)
 
 
 class Base(DeclarativeBase):

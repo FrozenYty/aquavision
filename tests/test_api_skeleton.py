@@ -60,6 +60,8 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("DB_DSN", f"sqlite:///{(tmp_path / 'api.db').as_posix()}")
     # Reports and manifests land here, not in the repository.
     monkeypatch.setenv("AV_DATA_DIR", str(tmp_path / "data"))
+    # The queue is exercised directly in test_worker.py; a background pool here would race the tests.
+    monkeypatch.setenv("AV_WORKER_ENABLED", "0")
     get_settings.cache_clear()
 
     from app.main import create_app

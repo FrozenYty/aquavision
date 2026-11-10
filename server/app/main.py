@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Awaitable, Callable
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -54,6 +55,7 @@ from app.routers import (
     tasks,
     users,
 )
+from app.worker import Worker
 
 log = logging.getLogger("aquavision")
 
@@ -90,10 +92,33 @@ async def request_context(
     return response
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Start the detection pool with the app; stop it before the process exits."""
+    worker = None
+    if getattr(app.state, "worker_enabled", False):
+        worker = Worker(
+            app.state.session_factory,
+            workers=getattr(app.state, "max_concurrency", 1),
+            poll_seconds=getattr(app.state, "worker_poll_seconds", 1.0),
+        )
+        worker.start()
+        app.state.worker = worker
+    try:
+        yield
+    finally:
+        if worker is not None:
+            worker.stop()
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
-        title="AquaVision", version="0.1.0", docs_url="/api/docs", openapi_url="/api/openapi.json"
+        title="AquaVision",
+        version="0.1.0",
+        docs_url="/api/docs",
+        openapi_url="/api/openapi.json",
+        lifespan=lifespan,
     )
 
     dsn = settings.db_dsn
@@ -103,6 +128,9 @@ def create_app() -> FastAPI:
     app.state.engine = engine
     app.state.session_factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     app.state.dsn = dsn
+    app.state.worker_enabled = settings.worker_enabled
+    app.state.worker_poll_seconds = settings.worker_poll_seconds
+    app.state.max_concurrency = settings.max_concurrency
 
     app.middleware("http")(request_context)
 
