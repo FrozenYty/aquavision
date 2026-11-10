@@ -1,5 +1,21 @@
 ## 2026-11-10
 
+- **The datasheets arrived and one of them changed the wiring.** The ME2100A-IIC manual (rev A3,
+  2025-02-27) states 4.5-5.5 V, and its revision history shows A3 *removed* the 3.3 V specification
+  that earlier revisions carried. The interface tolerates up to 5.5 V; the ESP32 does not. **The level
+  shifter is now required**, where the assembly plan had called it skippable, and the part is already on
+  the procurement list.
+- **Two guesses were settled and one was not.** The address `0x49` and the two-byte width are confirmed;
+  the turquoise channel reads high in clear water and low in turbid water, as the code assumed. What the
+  manual never states is **which register holds the measurement** — it documents the read transaction but
+  omits the register map — so `readTurbidity()`'s bare read remains unverified in that one respect, and
+  the README says how to settle it by measurement.
+- **The datasheets are kept outside the repository on purpose.** The turbidity manual forbids disclosure
+  to third parties without written consent, and the repository is public. The facts are recorded in
+  `firmware/README.md`; the PDFs live in the submission folder beside a note explaining why.
+- **The board's blinking was the vendor's RGB demo**, and the `SHA-256 comparison failed` warning it
+  printed disappeared with the first real firmware write.
+
 - **The board arrived and the first firmware assumption was wrong.** `ARDUINO_USB_CDC_ON_BOOT=1` sent
   `Serial` to the S3's native USB port, so the CH343 UART bridge showed ROM boot messages and nothing
   from the sketch: a board that looks dead while it is running fine. Measured, then set to 0 — the

@@ -78,8 +78,10 @@ day after the lamp was checked — ADR 10.
 Assemble and power on in five steps, one at a time, so a fault is localised immediately:
 
 1. ESP32 + tactile switch — serial prints a line on each press. **Debounce first**: one press, one line.
-2. Level shifter — measure 3.3 V on VCCA and 5 V on VCCB. **If the sensor accepts 3.3 V, skip this board
-   entirely** — one module and eight wires fewer is one less thing to go intermittent.
+2. Level shifter — measure 3.3 V on VCCA and 5 V on VCCB. **This board cannot be skipped:** rev A3 of the
+   ME2100A-IIC datasheet dropped the 3.3 V specification, so the part runs at 4.5-5.5 V and its I2C
+   lines are pulled up to 5 V, which the ESP32 does not tolerate. Low side to the ESP32's 3V3 and
+   GPIO8/9; high side to 5 V and the sensor's SDA/SCL.
 3. Turbidity sensor — I2C scan finds address `0x49`; clear water reads high, cloudy reads low. Confirm a
    4.7 kΩ pull-up on both SDA and SCL; without them the reads are intermittent, which is the hardest
    fault to diagnose.

@@ -116,8 +116,30 @@ Verified on the board: the image flashes and verifies, the firmware prints `EVT 
 I2C scan reports nothing when nothing is wired. **Not yet verified:** the OLED, the LEDs and the
 button, because none of them was connected yet.
 
+## Hardware reference
+
+The three vendor documents behind the rig are kept **outside the repository**, in the submission
+folder's `datasheets/` directory — not here: the repository is public, and the turbidity manual forbids
+disclosure to third parties without written consent. Facts learned from a document can be recorded; the
+document itself cannot be republished.
+
+| Datasheet | Part | What it settled |
+|---|---|---|
+| `esp32-s3-wroom-1.pdf` | ESP32-S3-WROOM-1 | GPIO are 3.3 V, 40 mA maximum drive per pin |
+| `oled-hs96l03w2c03.pdf` | 0.96" 128x64 OLED | I2C address `0x3C`, supply 2.8–3.3 V — the 3V3 rail is correct |
+| `turbidity-me2100a-iic.pdf` | ME2100A-IIC, rev A3 | **supply 4.5–5.5 V**, address `0x49`, clean water reads high, turbid water reads low |
+
+**The turbidity sensor is a 5 V part, and that changes the wiring.** Rev A3 removed the 3.3 V
+specification earlier revisions carried, and its interface tolerates up to 5.5 V — which the ESP32 does
+not. A level shifter on SDA and SCL is **required**, not optional; the assembly plan previously called
+it skippable.
+
 ## Still not verified
 
-1. **The turbidity read is a guess.** `readTurbidity()` assumes two bytes, big-endian, from address
-   0x49. The ME2100A-IIC datasheet has not been checked against it. Confirm the register layout before
-   trusting the number on screen — a plausible but wrong reading is worse than none.
+1. **Which register the turbidity value lives in is unknown.** The manual describes how to read a
+   register — start, address write, command byte, repeated start, address read, data — but never says
+   which register holds the measurement. `readTurbidity()` currently does a bare two-byte read with no
+   command byte, relying on the device's pointer already sitting on the measurement. The address and
+   the two-byte width are now confirmed; the register is not. Resolve it by measurement once the sensor
+   is wired: try a bare read, then reads after writing commands `0x00`–`0x03`, and keep the one whose
+   value falls as the water gets turbid. A plausible but wrong number on the screen is worse than none.
