@@ -156,7 +156,7 @@ export const submitReview = (frameId, objects) =>
   request("POST", `/review/frames/${frameId}`, { body: { objects } });
 
 // ---- Stats (screen 6) ----
-export const statsSpecies = () => request("GET", "/stats/species");
+export const statsSpecies = (query) => request("GET", "/stats/species", { query });
 export const statsQuality = () => request("GET", "/stats/quality");
 export const statsTrend = () => request("GET", "/stats/trend");
 export const statsCorrections = () => request("GET", "/stats/corrections");

@@ -23,7 +23,7 @@ Every screen of the prototype, element by element, traced to the requirement it 
 
 | Version | Date | Author | Change |
 |---|---|---|---|
-| 1.0 | 2026-11-09 | Sun Jianheng | First version: 13 screens, 106 rows, one annotated screenshot per screen |
+| 1.0 | 2026-11-09 | Sun Jianheng | First version: 13 screens, 107 rows, one annotated screenshot per screen |
 
 ## 3. How to read it
 
@@ -189,11 +189,12 @@ Every screen of the prototype, element by element, traced to the requirement it 
 | No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
 |---|---|---|---|---|---|---|---|---|---|---|
 | TM-080 | P-10 Statistics dashboard | actions | Report link | See figure 10, callout 1. Opens the inspection report page. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-081 | P-10 Statistics dashboard | content | Species composition | See figure 10, callout 2. Boxes per class over seven days. | FR-M5-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-082 | P-10 Statistics dashboard | content | Capture trend | See figure 10, callout 3. Frames per day. | FR-M5-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-083 | P-10 Statistics dashboard | content | Rejection by day | See figure 10, callout 4. Per-day bars in the prototype; the server returns totals only, stated in words. | FR-M2-03 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-084 | P-10 Statistics dashboard | content | Review corrections | See figure 10, callout 5. Per-class stack in the prototype; the server returns totals only. | FR-M4-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-085 | P-10 Statistics dashboard | content | Site heat map | Figure 10, no callout: not on screen. Site density and ranking are not built yet. | FR-M5-02 | Done | Not started | Not started | Sun Jianheng | Yao Tianyu |
+| TM-081 | P-10 Statistics dashboard | actions | Counting basis | See figure 10, callout 2. Switches the species chart between reviewed and raw results; its caption changes with it. The other charts do not depend on it. | FR-M5-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-082 | P-10 Statistics dashboard | content | Species composition | See figure 10, callout 3. Boxes per class over seven days. | FR-M5-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-083 | P-10 Statistics dashboard | content | Capture trend | See figure 10, callout 4. Frames per day. | FR-M5-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-084 | P-10 Statistics dashboard | content | Rejection by day | See figure 10, callout 5. Per-day bars in the prototype; the server returns totals only, stated in words. | FR-M2-03 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-085 | P-10 Statistics dashboard | content | Review corrections | See figure 10, callout 6. Per-class stack in the prototype; the server returns totals only. | FR-M4-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-086 | P-10 Statistics dashboard | content | Site heat map | Figure 10, no callout: not on screen. Site density and ranking are not built yet. | FR-M5-02 | Done | Not started | Not started | Sun Jianheng | Yao Tianyu |
 
 ### 4.11 P-11 Inspection reports (figure 11)
 
@@ -201,13 +202,13 @@ Every screen of the prototype, element by element, traced to the requirement it 
 
 | No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
 |---|---|---|---|---|---|---|---|---|---|---|
-| TM-086 | P-11 Inspection reports | form | Period | See figure 11, callout 1. This week, this month or a custom range. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-087 | P-11 Inspection reports | form | Template | See figure 11, callout 2. Standard or brief. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-088 | P-11 Inspection reports | form | Counting basis | See figure 11, callout 3. Reviewed or raw results. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-089 | P-11 Inspection reports | actions | Generate | See figure 11, callout 4. Generates the report on the server. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-090 | P-11 Inspection reports | content | Preview | See figure 11, callout 5. Species composition, rejection and model information from the statistics routes. | FR-M5-01, FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-091 | P-11 Inspection reports | content | Report history | See figure 11, callout 6. Every generated report and its status. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-092 | P-11 Inspection reports | actions | Download | See figure 11, callout 7. No download route yet; the button says so. | FR-M5-04 | Done | Not started | Not started | Sun Jianheng | Yao Tianyu |
+| TM-087 | P-11 Inspection reports | form | Period | See figure 11, callout 1. This week, this month or a custom range. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-088 | P-11 Inspection reports | form | Template | See figure 11, callout 2. Standard or brief. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-089 | P-11 Inspection reports | form | Counting basis | See figure 11, callout 3. Reviewed or raw results. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-090 | P-11 Inspection reports | actions | Generate | See figure 11, callout 4. Generates the report on the server. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-091 | P-11 Inspection reports | content | Preview | See figure 11, callout 5. Species composition, rejection and model information from the statistics routes. | FR-M5-01, FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-092 | P-11 Inspection reports | content | Report history | See figure 11, callout 6. Every generated report and its status. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-093 | P-11 Inspection reports | actions | Download | See figure 11, callout 7. No download route yet; the button says so. | FR-M5-04 | Done | Not started | Not started | Sun Jianheng | Yao Tianyu |
 
 ### 4.12 P-12 Models and experiments (figure 12)
 
@@ -215,12 +216,12 @@ Every screen of the prototype, element by element, traced to the requirement it 
 
 | No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
 |---|---|---|---|---|---|---|---|---|---|---|
-| TM-093 | P-12 Models and experiments | header | Online model | See figure 12, callout 1. The single online version, or none. | FR-M6-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-094 | P-12 Models and experiments | actions | Versions tab | See figure 12, callout 2. Model versions with metrics. | FR-M6-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-095 | P-12 Models and experiments | content | Version row | See figure 12, callout 3. Dataset, mAP@0.5, mAP@0.5:0.95, recall, FPS, parameters. | FR-M6-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-096 | P-12 Models and experiments | actions | Activate or roll back | See figure 12, callout 4. Switches the online model after a confirmation. | FR-M6-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-097 | P-12 Models and experiments | actions | Experiments tab | See figure 12, callout 5. Ablation table with the change against the baseline (shown after switching). | FR-M6-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-098 | P-12 Models and experiments | actions | Species tab | See figure 12, callout 6. Per-class threshold and statistics flag, saved per row (shown after switching). | FR-M6-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-094 | P-12 Models and experiments | header | Online model | See figure 12, callout 1. The single online version, or none. | FR-M6-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-095 | P-12 Models and experiments | actions | Versions tab | See figure 12, callout 2. Model versions with metrics. | FR-M6-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-096 | P-12 Models and experiments | content | Version row | See figure 12, callout 3. Dataset, mAP@0.5, mAP@0.5:0.95, recall, FPS, parameters. | FR-M6-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-097 | P-12 Models and experiments | actions | Activate or roll back | See figure 12, callout 4. Switches the online model after a confirmation. | FR-M6-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-098 | P-12 Models and experiments | actions | Experiments tab | See figure 12, callout 5. Ablation table with the change against the baseline (shown after switching). | FR-M6-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-099 | P-12 Models and experiments | actions | Species tab | See figure 12, callout 6. Per-class threshold and statistics flag, saved per row (shown after switching). | FR-M6-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 
 ### 4.13 P-13 System administration (figure 13)
 
@@ -228,14 +229,14 @@ Every screen of the prototype, element by element, traced to the requirement it 
 
 | No. | Screen | Area | Control | Detail | Requirement | PD | COD | UT | Assignee | Owner |
 |---|---|---|---|---|---|---|---|---|---|---|
-| TM-099 | P-13 System administration | actions | Accounts tab | See figure 13, callout 1. Accounts with role, status and last sign-in. | FR-M1-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-100 | P-13 System administration | content | Account row | See figure 13, callout 2. One account. | FR-M1-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-101 | P-13 System administration | actions | Disable or restore | See figure 13, callout 3. Changes the account status after a confirmation. | FR-M1-03 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-102 | P-13 System administration | actions | Reset password | See figure 13, callout 4. Sets a temporary password of at least eight characters. | FR-M1-03 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-103 | P-13 System administration | actions | Parameters tab | See figure 13, callout 5. Retention, concurrency, interval, quality threshold, camera (shown after switching). | FR-M7-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-104 | P-13 System administration | actions | Monitoring tab | See figure 13, callout 6. Queue, stored frames, disk and concurrency, refreshed every 30 s (shown after switching). | FR-M8-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-105 | P-13 System administration | actions | Operation log tab | See figure 13, callout 7. Audit trail filtered by module (shown after switching). | FR-M1-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-106 | P-13 System administration | actions | Messages tab | See figure 13, callout 8. In-app messages with mark-as-read (shown after switching). | FR-M8-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-100 | P-13 System administration | actions | Accounts tab | See figure 13, callout 1. Accounts with role, status and last sign-in. | FR-M1-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-101 | P-13 System administration | content | Account row | See figure 13, callout 2. One account. | FR-M1-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-102 | P-13 System administration | actions | Disable or restore | See figure 13, callout 3. Changes the account status after a confirmation. | FR-M1-03 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-103 | P-13 System administration | actions | Reset password | See figure 13, callout 4. Sets a temporary password of at least eight characters. | FR-M1-03 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-104 | P-13 System administration | actions | Parameters tab | See figure 13, callout 5. Retention, concurrency, interval, quality threshold, camera (shown after switching). | FR-M7-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-105 | P-13 System administration | actions | Monitoring tab | See figure 13, callout 6. Queue, stored frames, disk and concurrency, refreshed every 30 s (shown after switching). | FR-M8-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-106 | P-13 System administration | actions | Operation log tab | See figure 13, callout 7. Audit trail filtered by module (shown after switching). | FR-M1-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-107 | P-13 System administration | actions | Messages tab | See figure 13, callout 8. In-app messages with mark-as-read (shown after switching). | FR-M8-02 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 
 ## 5. Coverage
 
@@ -250,7 +251,7 @@ Every screen of the prototype, element by element, traced to the requirement it 
 | P-07 Review workbench | `review.html` | 10 | 0 | 10 | 0 |
 | P-08 Hard-sample pool | `hard-samples.html` | 6 | 5 | 1 | 0 |
 | P-09 Dataset export | `dataset-export.html` | 7 | 7 | 0 | 0 |
-| P-10 Statistics dashboard | `stats.html` | 6 | 3 | 2 | 1 |
+| P-10 Statistics dashboard | `stats.html` | 7 | 3 | 3 | 1 |
 | P-11 Inspection reports | `reports.html` | 7 | 6 | 0 | 1 |
 | P-12 Models and experiments | `models.html` | 6 | 5 | 1 | 0 |
 | P-13 System administration | `admin.html` | 8 | 6 | 2 | 0 |
@@ -261,11 +262,11 @@ Requirements in table 3-1 and the rows that cite them. A requirement with no row
 |---|---|---|
 | FR-M1-01 | Sign-in and session | TM-001, TM-002, TM-003, TM-004, TM-005, TM-007, TM-008, TM-009, TM-011, TM-012 |
 | FR-M1-02 | Roles and permissions | TM-013 |
-| FR-M1-03 | Account management and reset | TM-006, TM-099, TM-100, TM-101, TM-102 |
-| FR-M1-04 | Operation log and audit | TM-105 |
+| FR-M1-03 | Account management and reset | TM-006, TM-100, TM-101, TM-102, TM-103 |
+| FR-M1-04 | Operation log and audit | TM-106 |
 | FR-M2-01 | Single-frame capture and registration | TM-021, TM-022, TM-023, TM-024 |
 | FR-M2-02 | Scheduled and continuous capture | TM-022, TM-027 |
-| FR-M2-03 | Quality scoring and retake | TM-016, TM-028, TM-029, TM-035, TM-053, TM-083 |
+| FR-M2-03 | Quality scoring and retake | TM-016, TM-028, TM-029, TM-035, TM-053, TM-084 |
 | FR-M2-04 | Batch and image search | TM-020, TM-031, TM-032, TM-033, TM-034, TM-036, TM-037, TM-041 |
 | FR-M2-05 | Retention and cleanup | none — no screen: retention runs on the server |
 | FR-M3-01 | Immediate detection | TM-025, TM-026, TM-051 |
@@ -274,17 +275,17 @@ Requirements in table 3-1 and the rows that cite them. A requirement with no row
 | FR-M3-04 | Result browsing and counting | TM-030, TM-039, TM-049, TM-051, TM-052, TM-054, TM-055 |
 | FR-M3-05 | Export | TM-056 |
 | FR-M4-01 | Review bench | TM-015, TM-050, TM-057, TM-058, TM-059, TM-061, TM-063, TM-064, TM-065, TM-066 |
-| FR-M4-02 | Review trail and versions | TM-060, TM-062, TM-066, TM-084 |
+| FR-M4-02 | Review trail and versions | TM-060, TM-062, TM-066, TM-085 |
 | FR-M4-03 | Hard-example set | TM-067, TM-068, TM-069, TM-070, TM-071, TM-072 |
 | FR-M4-04 | Dataset export | TM-073, TM-074, TM-075, TM-076, TM-077, TM-078, TM-079 |
-| FR-M5-01 | Species composition | TM-014, TM-081, TM-090 |
-| FR-M5-02 | Site and time distribution | TM-085 |
-| FR-M5-03 | Trend and comparison | TM-018, TM-082 |
-| FR-M5-04 | Inspection report | TM-080, TM-086, TM-087, TM-088, TM-089, TM-090, TM-091, TM-092 |
-| FR-M6-01 | Version registration | TM-017, TM-094, TM-095 |
-| FR-M6-02 | Activation and rollback | TM-093, TM-096 |
-| FR-M6-03 | Experiments and metric comparison | TM-097 |
-| FR-M6-04 | Species dictionary and thresholds | TM-098 |
-| FR-M7-01 | System parameters | TM-103 |
-| FR-M8-01 | Runtime monitoring | TM-104 |
-| FR-M8-02 | Messages and alerts | TM-010, TM-019, TM-106 |
+| FR-M5-01 | Species composition | TM-014, TM-081, TM-082, TM-091 |
+| FR-M5-02 | Site and time distribution | TM-086 |
+| FR-M5-03 | Trend and comparison | TM-018, TM-083 |
+| FR-M5-04 | Inspection report | TM-080, TM-087, TM-088, TM-089, TM-090, TM-091, TM-092, TM-093 |
+| FR-M6-01 | Version registration | TM-017, TM-095, TM-096 |
+| FR-M6-02 | Activation and rollback | TM-094, TM-097 |
+| FR-M6-03 | Experiments and metric comparison | TM-098 |
+| FR-M6-04 | Species dictionary and thresholds | TM-099 |
+| FR-M7-01 | System parameters | TM-104 |
+| FR-M8-01 | Runtime monitoring | TM-105 |
+| FR-M8-02 | Messages and alerts | TM-010, TM-019, TM-107 |
