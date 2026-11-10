@@ -117,7 +117,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - **P2-05b** the detection path — **blocked until `P2-06c` produces weights**, and it is the only
         part of this task that is
       - **P2-05c** `/api/stats/*` verified against rows written by 05b, figures equal to the dashboard
-- [ ] **P2-06** DUO dataset preparation and a first baseline run · @Gtechson · three checkpoints
+- [x] **P2-06** DUO dataset preparation and a first baseline run · @Gtechson · three checkpoints
       - the dataset is on the **training machine**, not on the lead's: `data/raw/DUO/DUO` (6671 + 1111)
         and `data/dataset` (5671 / 1000 / 1111). Nothing here is blocked by its absence elsewhere
       - **P2-06a** the split, and the script that produces it
@@ -142,6 +142,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
           0.770, mAP@0.5:0.95 0.561, mean recall 0.692, 499 fps, 3.14 M params; `train_experiment`
           row 1; weights under `runs/detect/data/models/baseline-e0/weights/best.pt`
       - **P2-06c** the weights registered and loadable through `model_version`, which unblocks `P2-05b`
+        - delivered 11-10: `model_version` row 1 `v8n-E0-exploratory` is online; `scripts/register_model.py`
+          turns `metrics.json` into that row; a captured frame went through `POST /api/detect/frames`
+          with the P2-05b branch and matched a manual run of the same weights
       - this is the **exploratory** run that gives the dashboard real numbers; the official E0–E4 stay
         at `P4-01..03` on the frozen dataset, and the difference is stated in the pull request
 - [x] **P2-07** API contract tests for every route · @Gtechson · done when each P0 route has at least
