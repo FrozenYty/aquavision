@@ -84,7 +84,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P1-06** Hardware arrival check and rig assembly · @FrozenYty · **camera half done 11-10** —
       `scripts/test_exposure.py --index 1` exits 0 (1080p, exposure lockable, 5 fps, 0.5 % spread);
       `scripts/test_rig.py` exists and measures the three numbers below, but they still need the
-      assembled rig · done when
+      assembled rig · **electrical half partly done 11-10**: OLED at `0x3C` draws and answers, the
+      serial command path works, and the five screens were driven without a button; LEDs wait for the
+      resistors, the button has not arrived, the turbidity sensor needs the level shifter · done when
       `python scripts/test_exposure.py` exits 0 — the device opens, the picture answers the exposure
       property, and 20 pinned frames stay inside a 10 % spread — and the rig meets its numbers:
       left/right brightness ratio ≥ 0.7, a 5 cm target ≥ 45 px at 640 input, no flicker
