@@ -16,7 +16,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Settings, loaded from the environment and `.env` if present."""
 
-    model_config = SettingsConfigDict(env_prefix="AV_", env_file=".env", extra="ignore")
+    # `populate_by_name` is not cosmetic: every field carries an explicit `validation_alias`, and with
+    # `extra="ignore"` a constructor call by field name (`Settings(rig_port=...)`) was accepted and then
+    # silently discarded, leaving the default. A setting that ignores what it was told is worse than one
+    # that refuses it - a test for the rig link hit exactly this.
+    model_config = SettingsConfigDict(
+        env_prefix="AV_", env_file=".env", extra="ignore", populate_by_name=True
+    )
 
     # Shared with scripts/init_db.py — do not rename without changing it too.
     db_dsn: str = Field(default="sqlite:///data/app.db", validation_alias="DB_DSN")

@@ -19,9 +19,11 @@ import threading
 import time
 
 import pytest
-from app.rig import protocol
+from app.config import Settings
+from app.rig import protocol, wiring
 from app.rig.link import LinkState, RigLink
 from app.rig.service import RigService
+from app.rig.wiring import build_link
 from app.vision.quality import Quality
 
 
@@ -259,3 +261,43 @@ def test_events_that_are_not_triggers_never_produce_a_verdict(name: str) -> None
     service = RigService(link, lambda: Quality(90, 90, 90, 90, "ok"), threshold=60)  # type: ignore[arg-type]
     service.handle(protocol.RigEvent(name=name, args=("1",), raw=f"EVT {name} 1"))
     assert link.sent == []
+
+
+# Wiring --------------------------------------------------------------------------------------------
+
+
+def test_build_link_turns_settings_into_a_link_that_answers_a_trigger(monkeypatch) -> None:
+    """The seam that fails silently: rename one setting and the link never starts at all."""
+    serial = pytest.importorskip("serial")
+    transport = FakeTransport()
+    monkeypatch.setattr(serial, "Serial", lambda *args, **kwargs: transport)
+    # The camera is the only part of this path that needs hardware; the verdict above it does not.
+    monkeypatch.setattr(wiring, "_camera_capture", lambda: Quality(90, 80, 70, 82, "ok"))
+
+    # The field names are not constructor keywords here: each field carries an AV_ validation alias,
+    # so the settings are fed the documented environment names instead.
+    settings = Settings.model_validate(
+        {"AV_RIG_PORT": "COM-TEST", "AV_RIG_BAUD": 115200, "AV_RIG_KEEPALIVE_SECONDS": 0.05}
+    )
+    link = build_link(settings)
+    assert link is not None
+
+    link.start()
+    try:
+        assert wait_until(lambda: link.state is LinkState.OPEN)
+        # Wait for a keepalive first. The verdict is written the moment the trigger is read, so
+        # feeding it earlier would make the order depend on which thread wins.
+        assert wait_until(lambda: "CMD PING\n" in transport.written)
+        transport.incoming.append(b"EVT TRIGGER 5000\n")
+        assert wait_until(lambda: any(line.startswith("CMD RESULT ") for line in transport.written))
+        result_at = next(
+            index for index, line in enumerate(transport.written) if line.startswith("CMD RESULT ")
+        )
+        assert "CMD PING\n" in transport.written[:result_at]
+    finally:
+        link.stop()
+
+
+def test_build_link_without_a_port_is_none() -> None:
+    """The promise to everyone not at the rig: no board, no link, no degraded state."""
+    assert build_link(Settings.model_validate({"AV_RIG_PORT": ""})) is None

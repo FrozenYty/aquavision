@@ -28,8 +28,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import threading
-import time
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Protocol, runtime_checkable
@@ -241,12 +240,3 @@ class RigLink:
             if not self.send(protocol.ping()):
                 return
             self.counters.pings += 1
-
-
-def iter_events(events: Iterable[protocol.RigEvent]) -> Iterable[protocol.RigEvent]:
-    """Convenience for tests and log tooling: iterate events unchanged."""
-    return events
-
-
-def _now() -> float:
-    return time.monotonic()
