@@ -213,16 +213,27 @@ log with its before and after value (AC-27).
 
 `/ws/capture` — one connection per browser tab.
 
+**Authentication.** The first message on every connection must be
+`{"type": "auth", "token": "<JWT>"}`. The server answers `{"type": "auth_ok"}`. A missing, invalid or
+expired token closes the socket with `4401`; no `auth` message within five seconds closes it with
+`4408`. The token never travels in the query string — query strings leak into access logs and
+referrers.
+
 | Direction | Type | Payload |
 |---|---|---|
+| client → server | `auth` | `{ "token": "<JWT>" }` — must be the first message |
+| server → client | `auth_ok` | `{}` |
 | client → server | `start` | `{ "session_id": "...", "fps": 10, "detect_interval_ms": 300 }` |
-| server → client | *binary* | JPEG bytes, one frame per message |
-| server → client | `detect` | `{ "frame_id": "...", "boxes": [], "latency_ms": 128 }` |
+| server → client | `frame` | `{ "frame_id": "...", "captured_at": "...", "quality": { "score": 66, "verdict": "ok" } }` |
+| server → client | *binary* | one JPEG per message, the image of the `frame` message immediately before it |
+| server → client | `detect` | `{ "frame_id": "...", "boxes": [], "latency_ms": 128, "model_version": "...", "conf_threshold": 0.4 }` |
 | server → client | `status` | `{ "fps": 9.8, "queue": 0, "model": "v8n-e3" }` |
 | client → server | `stop` | `{}` |
 
-Images travel as binary frames; results travel as JSON. They are correlated by `frame_id`,
-never by order.
+**Frame correlation.** A binary message and the `frame` message immediately before it form one frame
+unit; the binary carries no id of its own. Results are correlated to frames by `frame_id`, never by
+the order in which frames or results arrive. The quality score rides on the `frame` message, in the
+same shape as the frame object in §6.
 
 ## 8. Frame and result alignment
 
