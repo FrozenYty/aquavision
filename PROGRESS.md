@@ -1,5 +1,17 @@
 ## 2026-11-10
 
+- **The board arrived and the first firmware assumption was wrong.** `ARDUINO_USB_CDC_ON_BOOT=1` sent
+  `Serial` to the S3's native USB port, so the CH343 UART bridge showed ROM boot messages and nothing
+  from the sketch: a board that looks dead while it is running fine. Measured, then set to 0 — the
+  sketch now talks on UART0, one cable flashes and monitors, and no BOOT button is involved.
+  `EVT HELLO 1.1` arrives, and the factory image's `SHA-256 comparison failed` warning disappeared with
+  the first write of a real firmware.
+- **The I2C bus is now reported at boot.** `setup()` scans addresses 1-126 and prints one
+  `EVT I2C <addr>` line per device that answers, so an unplugged display or sensor is visible in the
+  serial log rather than only as a blank screen. With nothing wired it correctly reports nothing.
+- **The blinking the board arrived with was a factory RGB demo**, not a fault: `RGB Demo / 50%R /
+  50%G / 50%B` on the serial port.
+
 - **`P2-04` done: the review loop persists delete, add and relabel with one submit.** Every edit is
   local until the reviewer submits the whole set (the server's contract), delete asks first, and after
   the submit the page reloads the boxes from the server: new boxes get their ids there, rejected boxes
@@ -23,6 +35,7 @@
   not depend on it. Checked on the real server: reviewed gives 6 boxes and raw gives 8, both matching the API.
   Not ticked: the route has no site dimension, so the "empty site" criterion cannot be met, and the quality chart
   needs per-day figures the server does not return. `P3-14` (CSV) is blocked on lane B; see the PR description.
+
 - **The rig's three numbers became a script, so the tank can be judged without an opinion.**
   `scripts/test_rig.py` measures lighting uniformity, the width of a 5 cm target at 640 px, and the
   brightness drift between the first and last frame of a run; `server/app/vision/rig.py` holds the

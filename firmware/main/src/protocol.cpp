@@ -1,3 +1,5 @@
+#include <Wire.h>
+
 #include "protocol.h"
 
 #include <Arduino.h>
@@ -81,6 +83,15 @@ bool poll(rig::State& state) {
   }
 
   return sawCommand;
+}
+
+void emitI2CScan() {
+  for (uint8_t address = 1; address < 127; ++address) {
+    Wire.beginTransmission(address);
+    if (Wire.endTransmission() == 0) {
+      Serial.printf("EVT I2C %02X\n", address);
+    }
+  }
 }
 
 void emitHello() { Serial.printf("EVT HELLO %s\n", cfg::FIRMWARE_VERSION); }

@@ -19,6 +19,8 @@ bool poll(rig::State& state);
 
 //: Outgoing events. Each writes one line to `Serial`.
 void emitHello();
+// Reports every address that answers on the I2C bus, one EVT line each.
+void emitI2CScan();
 void emitTrigger(uint32_t millisNow);
 void emitTurbidity(int value);
 void emitPong();
