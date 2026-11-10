@@ -161,6 +161,10 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [x] **P2-15** Answer contract §7's three open questions · @Gtechson · unblocks `P2-08` · done when
       §7 states how the socket authenticates, how a binary frame is correlated to its `frame_id`, and
       where that frame's quality score is carried — all three, in the contract, before the route exists
+- [ ] **P2-16** Hold `live.js` to contract §7 · @chemflowers · done when the socket sends the token in
+      the first `auth` message rather than the query string, handles `4401` and `4408`, and a test fails
+      when the client and §7 disagree about a message type or a field - the mirror of
+      `tests/test_api_js.py`, which is what keeps the REST client honest
 
 - [ ] **GATE P2** — from a cold start, someone who has not seen the system completes the slice in
       three minutes, no restart, no manual database edit

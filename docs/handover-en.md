@@ -189,6 +189,11 @@ Mock data never fails, so the pages have never rendered a failure. Real data wil
   backend.
 - The quality ring, the frame strip and the latency figure take their values from the same messages,
   not from a second source.
+- **Contract §7 is now settled, and `live.js` does not match it in two places.** The token travels in
+  the query string, which §7 forbids outright — query strings leak into access logs and referrers — so
+  it has to become the first `auth` message after the connection opens. And §7 now names `auth_ok`,
+  `4401` and `4408`, which the client has to handle. `P2-16` asks for a test of that protocol, in the
+  same shape as `tests/test_api_js.py`: when the client and the contract disagree, the test fails.
 
 ### 3.5 Dataset export page (task `P2-09`)
 
