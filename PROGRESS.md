@@ -1,5 +1,16 @@
 ## 2026-11-10
 
+- **The backend lane has produced nothing since 11-08, and part of that is a scheduling fault of mine.**
+  `P2-05` and `P2-06` were assigned as parallel tasks, but detection needs weights and weights come from
+  the baseline — they are strictly sequential. Worse, the prerequisite is not on this machine:
+  `scripts/prepare_dataset.py` reads `data/raw/DUO/DUO`, and `data/` does not exist here. A task whose
+  first step is impossible should say so on the first day.
+- **Both tasks are now checkpoints rather than black boxes.** `P2-05` is 05a (queue consumer on
+  synthetic rows, unblocked), 05b (detection, waiting on weights) and 05c (statistics verified). `P2-06`
+  is 06a (split), 06b (baseline), 06c (weights). Three merges each, so progress is visible without
+  asking.
+- **`P2-15` added: the three contract §7 questions**, which block the frontend's live capture page and
+  cost a paragraph to answer. They are cheap work sitting in front of expensive work.
 - **The frontend lane delivered five of six tasks, and left the sixth open on purpose.** `P2-09`,
   `P2-10`, `P2-11`, `P2-12` and `P2-14` are ticked and verified here; `P2-08` is built but not ticked,
   because the server has no `/ws/capture`, nothing posts frames to the API, and detection still returns

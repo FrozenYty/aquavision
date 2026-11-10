@@ -97,16 +97,21 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       **Backend and model · @Gtechson**
 
 - [ ] **P2-05** Finish P1-02: detection, the queue consumer, reviewed statistics · @Gtechson · closes
-      AC-05, AC-07, AC-10, AC-12 · done
-      when `POST /api/detect/frames/{id}` returns boxes from real weights, a batch task advances to
-      `done` on its own, and `/api/stats/*` matches the dashboard — the acceptance list is
-      `docs/handover-en.md` §2
-- [ ] **P2-06** DUO dataset preparation and a first baseline run · @Gtechson · done when the split is
-      written to disk with a manifest, one baseline experiment is recorded in `train_experiment`, and
-      its weights load through `model_version`
-      - this is the **exploratory** run that unblocks P2-01 and gives the dashboard real numbers; the
-        official E0–E4 experiments stay at P4-01..03 on the frozen dataset, and the difference is
-        stated in the pull request so nobody thinks the work is done twice
+      AC-05, AC-07, AC-10, AC-12 · three checkpoints, each its own pull request
+      - **P2-05a** the queue consumer, driven by synthetic `detect_task` rows — **no weights needed,
+        start here**
+      - **P2-05b** the detection path — **blocked until `P2-06c` produces weights**, and it is the only
+        part of this task that is
+      - **P2-05c** `/api/stats/*` verified against rows written by 05b, figures equal to the dashboard
+- [ ] **P2-06** DUO dataset preparation and a first baseline run · @Gtechson · three checkpoints
+      - **P2-06a** the split on disk with a manifest, counts summing to the total, same seed same split
+      - **P2-06b** one baseline run recorded in `train_experiment` with every metric column filled
+      - **P2-06c** the weights registered and loadable through `model_version`, which unblocks `P2-05b`
+      - **first action, not last:** say where the dataset is. `scripts/prepare_dataset.py` reads
+        `data/raw/DUO/DUO`, and **that directory does not exist in this workspace** — if the data lives
+        on one machine only, that belongs in the first hour of the day, not the third day of the week
+      - this is the **exploratory** run that gives the dashboard real numbers; the official E0–E4 stay
+        at `P4-01..03` on the frozen dataset, and the difference is stated in the pull request
 - [ ] **P2-07** API contract tests for every route · @Gtechson · done when each P0 route has at least
       one test asserting status, envelope and payload shape, and the suite still runs without a
       database server
@@ -133,6 +138,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [x] **P2-14** Requirements traceability matrix over every prototype screen · @chemflowers · done
       when each screen in `web/templates/` has rows in `docs/traceability-en/zh.md`, every referenced
       screenshot exists in the repository, and every requirement id it cites exists in the SRS
+- [ ] **P2-15** Answer contract §7's three open questions · @Gtechson · unblocks `P2-08` · done when
+      §7 states how the socket authenticates, how a binary frame is correlated to its `frame_id`, and
+      where that frame's quality score is carried — all three, in the contract, before the route exists
 
 - [ ] **GATE P2** — from a cold start, someone who has not seen the system completes the slice in
       three minutes, no restart, no manual database edit

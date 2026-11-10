@@ -16,6 +16,34 @@ true next lives here.
 
 ## 2. For Gao Tianxiang — the backend and the model
 
+### 2.0 The order, and the one thing to say first
+
+The three tasks in this section are **not parallel**. The dependency is:
+
+```
+P2-06a  split on disk
+   └─ P2-06b  baseline run
+        └─ P2-06c  weights registered
+             └─ P2-05b  the detection path          ← the only part that waits
+P2-07   contract tests                              ← start here, nothing blocks it
+P2-05a  queue consumer, synthetic rows              ← also unblocked
+P2-15   contract §7 answers                         ← unblocked, and it unblocks the frontend
+```
+
+**Before any of it: say where the dataset is.** `scripts/prepare_dataset.py` reads `data/raw/DUO/DUO`,
+and that directory does not exist in this workspace. If the data lives on one machine only, that is a
+blocker and it belongs in the first hour — not in a message on Thursday explaining why nothing merged.
+
+**Four rules for this week, and they are not style preferences:**
+
+1. **A task is not started until a pull request exists.** No branch means not started, and the honest
+   report is "not started", not "in progress".
+2. **A pull request that is open at the end of the day needs a sentence saying why.** Silence reads as
+   progress; it is not.
+3. **Smaller pull requests, more often.** `P2-06` is three merges, not one. A branch that lives for
+   three days cannot be reviewed, and its conflicts become someone else's problem.
+4. **The checks are pasted in the pull request.** All of them, every time. §4 spells out which.
+
 ### 2.1 Finish `P1-02` (task `P2-05`)
 
 **Read this before opening a branch.** Most of `P1-02` is already built, by the lead, because the phase
