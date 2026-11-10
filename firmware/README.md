@@ -171,11 +171,15 @@ the turbidity manual forbids disclosure to third parties without written consent
 document can be recorded; the document itself cannot be republished. The hardware lead holds copies and
 will provide them on request.
 
-| Datasheet | Part | What it settled |
+| Document | Part | What it settled |
 |---|---|---|
-| `esp32-s3-wroom-1.pdf` | ESP32-S3-WROOM-1 | GPIO are 3.3 V, 40 mA maximum drive per pin |
-| `oled-hs96l03w2c03.pdf` | 0.96" 128x64 OLED | I2C address `0x3C`, supply 2.8–3.3 V — the 3V3 rail is correct |
-| `turbidity-me2100a-iic.pdf` | ME2100A-IIC, rev A3 | **supply 4.5–5.5 V**, address `0x49`, clean water reads high, turbid water reads low |
+| Manufacturer datasheet | ESP32-S3-WROOM-1 | GPIO are 3.3 V, 40 mA maximum drive per pin |
+| Module datasheet | 0.96" 128x64 OLED, SSD1306 | I2C address `0x3C`, supply 2.8–3.3 V — the 3V3 rail is correct |
+| Sensor manual, rev A3 | ME2100A-IIC turbidity sensor | **supply 4.5–5.5 V**, address `0x49`, clean water reads high, turbid water reads low |
+
+The last column is what this project measured or read and decided to rely on. A document that is not in
+the repository cannot be cited by filename: **the name of a PDF on someone's disk is as unportable as a
+path**, and a reader who cannot open the file gains nothing from knowing what it is called.
 
 **The turbidity sensor is a 5 V part, and that changes the wiring.** Rev A3 removed the 3.3 V
 specification earlier revisions carried, and its interface tolerates up to 5.5 V — which the ESP32 does

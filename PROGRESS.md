@@ -1,5 +1,16 @@
 ## 2026-11-10
 
+- **A filename is as unportable as a path.** The hardware reference listed the three vendor PDFs by
+  filename - `esp32-s3-wroom-1.pdf` and two more - and those files are on the lead's disk, not in the
+  repository. A reader who cannot open a document gains nothing from knowing what somebody else called it.
+  The table now names the kind of document (manufacturer datasheet, module datasheet, sensor manual rev A3)
+  and says what each settled; the paragraph says the copies are held by the hardware lead.
+- **`firmware/README.md` has a Chinese counterpart** (`firmware/README-zh.md`), and the pairing is
+  enforced: `check-bilingual.py` used to know only about `docs/*-en/zh` and the root README, so a second
+  README could drift unpaired forever. It now pairs the firmware one too - and said `MISSING` on the first
+  run, because the file it demands did not exist yet. A check that fails before the work is written is the
+  only kind worth adding after it.
+
 - **The hardware reference described a folder that exists on one machine only.** It said the three vendor
   PDFs are kept "in the submission folder's `datasheets/` directory", which is a location on the lead's
   disk and meaningless to anyone reading the public repository. It now says the documents are not in the

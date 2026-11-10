@@ -23,8 +23,10 @@ ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
 
-ROOT_PAIRS = [
+#: README pairs outside `docs/`. Each is (english, chinese), relative to the repository root.
+READMES = [
     ("README.md", "README-zh.md"),
+    ("firmware/README.md", "README-zh.md"),
 ]
 
 
@@ -43,10 +45,11 @@ def iter_pairs() -> Iterator[tuple[Path, Path]]:
     for en_path in sorted(DOCS.glob("*-en.md")):
         yield en_path, en_path.with_name(en_path.name[: -len("-en.md")] + "-zh.md")
 
-    for en_name, zh_name in ROOT_PAIRS:
+    for en_name, zh_name in READMES:
         en_path = ROOT / en_name
         if en_path.exists():
-            yield en_path, ROOT / zh_name
+            # The Chinese file sits beside the English one, not at the repository root.
+            yield en_path, en_path.parent / zh_name
 
 
 def report(pairs: list[tuple[Path, Path]]) -> int:
