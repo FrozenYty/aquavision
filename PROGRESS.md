@@ -1,5 +1,18 @@
 ## 2026-11-10
 
+- **The rig's electrical half started, and the first module works.** The OLED was wired directly to the
+  ESP32 - `3V3`, `GND`, `GPIO8`, `GPIO9` - because it is a 3.3 V part and needs no level shifter. The
+  boot scan reports `EVT I2C 3C`, the splash draws, and `CMD PING` answers `EVT PONG`: the I2C bus, the
+  display and the PC-to-board command path are all confirmed at once, with a serial port and no button.
+- **The five screens were driven from the serial port**, which is what makes a buttonless bring-up
+  possible: `CMD RESULT` with PASS, and with LOWLIGHT, COLORCAST and UNKNOWN reasons, plus `OFFLINE`
+  by staying silent past the ten-second timeout. The LED pulses could not be observed - the 330 ohm
+  resistors had not arrived - so the two LEDs remain unverified while the logic behind them is not.
+- **The board has two USB connectors, and they do different things.** The sketch writes to UART0, which
+  reaches the PC only through the CH343 bridge on the `UART`-marked connector; the `USB`-marked one
+  exposes the S3's native USB and shows ROM boot messages only. Plugged into the wrong one, a working
+  board looks mute.
+
 - **The datasheets arrived and one of them changed the wiring.** The ME2100A-IIC manual (rev A3,
   2025-02-27) states 4.5-5.5 V, and its revision history shows A3 *removed* the 3.3 V specification
   that earlier revisions carried. The interface tolerates up to 5.5 V; the ESP32 does not. **The level

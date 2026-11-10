@@ -113,8 +113,17 @@ That is how a missing display or an unplugged sensor becomes visible in the seri
 as a blank screen — during assembly it is the fastest check there is.
 
 Verified on the board: the image flashes and verifies, the firmware prints `EVT HELLO 1.1`, and the
-I2C scan reports nothing when nothing is wired. **Not yet verified:** the OLED, the LEDs and the
-button, because none of them was connected yet.
+I2C scan reports nothing when nothing is wired.
+
+**The OLED is verified.** Wired directly to the ESP32 - `VCC` to `3V3`, `SDA` to `GPIO8`, `SCL` to
+`GPIO9` - the scan reports `EVT I2C 3C`, the splash draws, and `CMD PING` answers `EVT PONG`, so the
+PC-to-board command path works as well as the display. The five screens were then driven from the
+serial port without a button: `CMD RESULT 94 PASS OK`, `CMD RESULT 30 RETAKE LOWLIGHT`,
+`CMD RESULT 55 RETAKE COLORCAST`, `CMD RESULT 20 RETAKE UNKNOWN`, and `OFFLINE` by simply staying
+silent for the ten-second timeout.
+
+**Not yet verified:** the two status LEDs, because the 330 ohm resistors had not arrived; the button,
+which had not arrived either; and the turbidity sensor, which needs the level shifter first.
 
 ## Hardware reference
 
