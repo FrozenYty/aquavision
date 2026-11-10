@@ -28,6 +28,7 @@ rig::State state;
 uint32_t lastPcMessage = 0;
 uint32_t lastTurbidity = 0;
 uint32_t lastHeartbeat = 0;
+uint32_t lastAnimation = 0;
 uint32_t ledPassUntil = 0;
 uint32_t ledRetakeUntil = 0;
 uint32_t lastButtonEdge = 0;
@@ -94,6 +95,20 @@ void serviceHeartbeat(uint32_t now) {
   }
 }
 
+// Advance the CAPTURING spinner. Only that state animates: every other screen changes when something
+// happens, and a redraw every quarter second would be noise.
+void serviceAnimation(uint32_t now) {
+  if (state.screen != rig::Screen::Capturing) {
+    return;
+  }
+  if (now - lastAnimation < cfg::SPIN_PERIOD_MS) {
+    return;
+  }
+  lastAnimation = now;
+  state.animPhase = (state.animPhase + 1) % 3;
+  state.markDirty();
+}
+
 void serviceLeds(uint32_t now) {
   digitalWrite(cfg::PIN_LED_PASS, now < ledPassUntil ? HIGH : LOW);
   digitalWrite(cfg::PIN_LED_RETAKE, now < ledRetakeUntil ? HIGH : LOW);
@@ -149,7 +164,12 @@ void setup() {
 void loop() {
   const uint32_t now = millis();
 
-  protocol::poll(state);
+  // A command from the PC *is* the PC being alive. The return value used to be discarded, so the link
+  // timer only ever started at boot and the rig declared OFFLINE ten seconds later however much it was
+  // talking to the PC.
+  if (protocol::poll(state)) {
+    lastPcMessage = now;
+  }
   if (state.pulseLeds) {
     noteResult();
     state.pulseLeds = false;
@@ -157,6 +177,7 @@ void loop() {
   serviceButton(now);
   serviceTurbidity(now);
   serviceHeartbeat(now);
+  serviceAnimation(now);
   serviceLeds(now);
   serviceLink(now);
 

@@ -30,10 +30,14 @@ struct State {
   int score = 0;
   Reason reason = Reason::None;
   int turbidity = -1;   // -1 means no reading yet; the screen shows "--"
-  int trend = -1;       // -1 unknown, 0 flat, 1 rising, 2 falling
+  // No trend field. The screen used to draw a triangle for rising, falling and steady, decided by an
+  // absolute threshold of two counts on a reading that spans 700-16000 - two counts is noise at that
+  // scale, so the mark flickered. A trend worth showing has to be relative, and until there is a reason
+  // for one, the reading itself is the honest display.
   int frames = 0;       // accepted or judged, this session
   bool pcAlive = false;
   bool heartbeatOn = true;
+  uint8_t animPhase = 0;  // which of the three spinner dots is lit, 0-2
 
   //: Set when something visible changed. The renderer clears it. A redraw per frame would flicker and
   //: waste the I2C bus; a redraw on change is enough.
@@ -47,12 +51,6 @@ struct State {
   void markDirty() { dirty = true; }
 
   void noteTurbidity(int value) {
-    if (turbidity >= 0 && value >= 0) {
-      const int delta = value - turbidity;
-      trend = delta > 2 ? 1 : (delta < -2 ? 2 : 0);
-    } else {
-      trend = -1;
-    }
     turbidity = value;
     markDirty();
   }

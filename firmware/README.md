@@ -57,32 +57,45 @@ saves buying anything if the parts box already has a bag of 1 kΩ.
 
 ## The screen
 
-128 × 64, monochrome. Five bands, with every baseline a named constant so nothing shifts between
-states:
+128 x 64, monochrome, five bands whose baselines are named constants so nothing shifts between states:
 
 ```
-y 0                                      AQUAVISION  ·  online, disc blinks while idle
-y 9   ─────────────────────────────────────────────────────────────────────────────
-y26   QUALITY                                    86      label 5x7, value 24 px, same row
-y35   ████████████████████████████████████████████████████████████████████████████
-y49   █                              PASS >=60                                  █
-y51   ─────────────────────────────────────────────────────────────────────────────
-y62   TURB 12 ^                                          FRAMES 34                       5x7
+y 1..7    AQUAVISION                                  ONLINE        disc on the caps' centre row
+y 8       -------------------------------------------------------
+y 12..31                              94                            18 px score, right-aligned
+          QUALITY                                                   7x13 bold label, rows 17-26
+y 33..53  +-----------------------------------------------------+
+          |                       RETAKE                        |    filled = PASS, outline = RETAKE
+          +-----------------------------------------------------+
+y 54      -------------------------------------------------------
+y 55..62  TURB 12400                                  FRAMES 12
 ```
 
-The footer says `TURB`, not `TURBIDITY`: at 6 px per glyph the full word runs to x=88 while
-`FRAMES 34` starts at x=70, and the two collide. Dropping the frame counter would let the full word
-back in — a trade worth making only if the counter turns out to matter less than the label.
+**Shape carries the verdict.** A pass fills the banner, a retake outlines it, so the two are
+distinguishable from across the room before a single letter is legible. The score row's label is the
+word `QUALITY` on a pass and the reason on a retake — that is what let the banner shrink to one word
+instead of stacking two lines into twenty pixels, which left one pixel between them and read as a
+smudge.
 
-The label and the number **share a centre line** (`Y_LABEL_BASELINE` 26, `Y_VALUE_BASELINE` 32) —
-a 5x7 label sitting above a 24 px number reads as two unrelated rows, which is how the first draft of
-this code looked.
+**The label and the number share a centre line.** Measured on the panel: the score font reports ascent
+19, so at baseline 31 its digits occupy rows 12-31; the bold 7x13 label reports ascent 9, so at baseline
+26 it occupies 17-26. Both centre on 21.5. A 5x7 label at the same baseline sat 1.5 px low.
 
-A retake replaces the footer's turbidity reading with the reason — `LOW LIGHT`, `BLUR`, `COLOR CAST` —
-because a score without a cause tells the operator nothing to do.
+**The footer keeps one gutter width.** Label, six pixels, value - the same in both columns. The
+turbidity value is left-aligned after that gutter because right-aligning it left a two-pixel gap after a
+five-digit reading and a wide one after a three-digit reading: two different gaps in one row. The
+placeholder is five dashes, matching the width of the reading, so the row does not jump when data
+arrives.
 
-Everything on the screen is ASCII. That is deliberate: a Chinese font costs one to two megabytes of
-flash for the fourteen words this screen needs, and the labels stay unambiguous either way.
+**States without a score use the free band.** READY puts `PRESS TO CAPTURE` there and CAPTURING puts
+three dots, one lit at a time at a quarter-second. At three pixels a filled and a hollow mark were
+indistinguishable; at radius 2 the animation reads. OFFLINE replaces the whole screen with three centred
+lines - the earlier single line at 12 px was wider than the panel and lost its last letters.
+
+**There is no trend mark.** The code drew a triangle for rising, falling and steady, decided by an
+absolute threshold of two counts on a reading that spans 700-16000. Two counts is noise at that scale, so
+the mark flickered; and at five digits it collided with `FRAMES`. A trend worth showing has to be
+relative, and until there is a reason for one the reading itself is the honest display.
 
 ## Serial protocol
 
@@ -118,8 +131,8 @@ I2C scan reports nothing when nothing is wired.
 **The OLED is verified.** Wired directly to the ESP32 - `VCC` to `3V3`, `SDA` to `GPIO8`, `SCL` to
 `GPIO9` - the scan reports `EVT I2C 3C`, the splash draws, and `CMD PING` answers `EVT PONG`, so the
 PC-to-board command path works as well as the display. The five screens were then driven from the
-serial port without a button: `CMD RESULT 94 PASS OK`, `CMD RESULT 30 RETAKE LOWLIGHT`,
-`CMD RESULT 55 RETAKE COLORCAST`, `CMD RESULT 20 RETAKE UNKNOWN`, and `OFFLINE` by simply staying
+serial port without a button: `CMD RESULT 94 PASS OK`, `CMD RESULT 30 RETAKE LOW_LIGHT`,
+`CMD RESULT 55 RETAKE COLOR_CAST`, `CMD RESULT 20 RETAKE UNKNOWN`, and `OFFLINE` by simply staying
 silent for the ten-second timeout.
 
 **Not yet verified:** the two status LEDs, because the 330 ohm resistors had not arrived; the button,
