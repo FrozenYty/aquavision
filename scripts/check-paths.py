@@ -26,10 +26,21 @@ PATTERNS = [
 ]
 
 
+#: Directories that hold generated or vendored content rather than documents.
+SKIPPED = {".git", ".pio", "__pycache__", "node_modules", "data", ".venv"}
+
+
 def documents() -> list[Path]:
-    """Every Markdown file the team reads."""
-    files = sorted(ROOT.glob("*.md")) + sorted((ROOT / "docs").rglob("*.md"))
-    return [path for path in files if path.name != "check-paths.md"]
+    """Every Markdown file in the repository, not just the ones at the top.
+
+    This used to scan the root and `docs/` only, which is how `firmware/README.md` kept a path to a
+    folder outside the repository: the subdirectory READMEs were never looked at. A rule that covers
+    half the files is a rule with a hole the size of the other half.
+    """
+    files = [
+        path for path in ROOT.rglob("*.md") if not SKIPPED & set(path.relative_to(ROOT).parts[:-1])
+    ]
+    return sorted(path for path in files if path.name != "check-paths.md")
 
 
 def main() -> int:

@@ -17,7 +17,8 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
@@ -25,7 +26,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import envelope
 from app.config import get_settings
-from app.db import engine_from_dsn
+from app.db import PROJECT_ROOT, engine_from_dsn, resolve_dsn
 from app.envelope import (
     BAD_PARAM,
     INTERNAL,
@@ -121,7 +122,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    dsn = settings.db_dsn
+    dsn = resolve_dsn(settings.db_dsn)
     if dsn.startswith("sqlite:///"):
         Path(dsn.removeprefix("sqlite:///")).parent.mkdir(parents=True, exist_ok=True)
     engine = engine_from_dsn(dsn)
@@ -182,6 +183,18 @@ def create_app() -> FastAPI:
 
     for router in ROUTERS:
         app.include_router(router)
+
+    # The backend serves the pages as well as the API, so a browser has one origin for both. Without this
+    # the frontend's relative `/api` calls went to whichever static server was serving the pages and came
+    # back as "interface not found" - a proxy was assumed and never committed, so a newcomer needed two
+    # terminals, two ports and a proxy to see a page talk to the API.
+    @app.get("/", include_in_schema=False)
+    def index() -> RedirectResponse:
+        return RedirectResponse(url="/templates/login.html")
+
+    web_root = PROJECT_ROOT / "web"
+    if web_root.is_dir():
+        app.mount("/", StaticFiles(directory=web_root, html=True), name="web")
     return app
 
 
