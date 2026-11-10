@@ -33,6 +33,7 @@ TOOL_PATTERNS = (
 # A human co-author is ordinary teamwork and is allowed: the subject of the rule is attribution to a
 # tool, not collaboration. Only the patterns above are refused.
 
+
 def git(*args: str) -> str:
     try:
         return subprocess.run(
