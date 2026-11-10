@@ -1,5 +1,16 @@
 ## 2026-11-10
 
+- **OFFLINE was measuring the wrong thing.** The rig declared the PC gone after ten seconds of silence,
+  but silence is what a healthy idle system produces: nothing needs to be said between a capture and the
+  next button press. The link has no carrier signal - the rig talks UART through a bridge chip and cannot
+  see the cable - so liveness has to be a protocol matter: **the PC now owes a `CMD PING` every two
+  seconds**, and ten seconds of silence is five missed keepalives, which does mean a real disconnection.
+  The obligation is written into `firmware/README.md` and rule 6 of the state machine.
+- **Writing that rule exposed a task nobody owned.** The architecture draws `MCU -. serial .-> CAP`, and
+  no task in `PLAN.md` implemented the PC half of it: opening the port, keeping it alive, turning a
+  trigger into a capture, answering with a verdict, and logging the rig's own events. That is now `P2-17`,
+  in the capture lane.
+
 - **The rig's state machine was written out as a five-by-ten table, and every cell now has an answer.**
   `docs/rig-state-machine-en/zh.md` lists five states against ten events, with the resulting state and
   the code that enforces it. The table found six things the firmware did not handle.

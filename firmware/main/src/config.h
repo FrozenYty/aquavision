@@ -27,7 +27,9 @@ constexpr uint8_t TURBIDITY_ADDR = 0x49;
 constexpr uint32_t SERIAL_BAUD = 115200;
 constexpr uint32_t BUTTON_DEBOUNCE_MS = 25;
 constexpr uint32_t LED_PULSE_MS = 300;
-constexpr uint32_t OFFLINE_AFTER_MS = 10000;  // silence from the PC for this long flips to OFFLINE
+// The PC is required to send `CMD PING` at least every two seconds, so ten seconds of silence is five
+// missed keepalives and therefore a real disconnection rather than an idle rig.
+constexpr uint32_t OFFLINE_AFTER_MS = 10000;
 // A capture that gets no verdict by then is reported as NO REPLY. Shorter than OFFLINE_AFTER_MS on
 // purpose: the operator should learn that this shot failed before the whole link is declared dead.
 constexpr uint32_t CAPTURE_TIMEOUT_MS = 5000;

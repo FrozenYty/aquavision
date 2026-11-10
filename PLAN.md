@@ -181,6 +181,13 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       when the client and §7 disagree about a message type or a field - the mirror of
       `tests/test_api_js.py`, which is what keeps the REST client honest
 
+- [ ] **P2-17** The PC side of the rig link · @FrozenYty · **nothing owns this today** — the architecture
+      draws `MCU -. serial .-> CAP` and no task implements it · done when the server opens the port,
+      keeps it alive with `CMD PING` every two seconds, turns an `EVT TRIGGER` into a capture, answers
+      with `CMD RESULT`, and surfaces `EVT SCREEN`, `EVT TIMEOUT` and `EVT STRAY RESULT` in the log
+      - the keepalive is not decoration: without it the rig declares a healthy idle system offline after
+        ten seconds, and waiting for a button is what the rig does most of the time
+
 - [ ] **GATE P2** — from a cold start, someone who has not seen the system completes the slice in
       three minutes, no restart, no manual database edit
 
