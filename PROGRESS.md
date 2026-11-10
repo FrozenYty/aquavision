@@ -1,5 +1,22 @@
 ## 2026-11-10
 
+- **One footer cost an afternoon of history rewriting.** The squash-merged `P2-15` commit carried
+  `Co-authored-by: Claude Code`, which GitHub counts as a second contributor. It happened because a
+  squash merge copies the single local commit's message onto `main` verbatim, so a line written on
+  someone's machine becomes permanent history.
+- **The suggested repair would have damaged a different commit.** By the time it was proposed, two more
+  commits had merged on top; `git commit --amend` rewrites only the tip, so it would have replaced the
+  message of the camera work and left the offending commit untouched. The repair has to be a rebase of
+  the three affected commits.
+- **`main` was rewritten to `c279872`**, message-only: `90ad154` → `83850dd`, `d0b68af` → `f5c77c5`,
+  `eef7a82` → `c279872`. The tree before and after is identical (`9a2ba2e`), which is the check that
+  proves only the message moved; a copy of the old branch is kept as `backup/pre-trailer-rewrite` until
+  the team has reset.
+- **The rule now lives where it can be enforced.** `CONTRIBUTING.md` §2 forbids attribution footers,
+  `scripts/check-commit-messages.py` fails on one, CI runs it on every pull request, and `AGENTS.md` §6
+  lists it. The check was proved to fail against the old commit and pass against the rewritten history
+  before being trusted.
+
 - **The camera arrived and the device half of `P1-03` is closed.** `scripts/test_exposure.py --index 1`
   exits 0 on the real unit: 1080p, exposure controllable and lockable to a 0.5 % frame-to-frame spread,
   5 fps. Twenty frames went through the pipeline, which closed by confirming on disk that the file,

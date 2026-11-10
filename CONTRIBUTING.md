@@ -31,6 +31,40 @@ Modules: `capture`, `detect`, `review`, `stats`, `model`, `web`, `firmware`, `do
 
 One commit does one thing. If the message needs "and", split the commit.
 
+**Never add a footer that credits a tool.** No `Co-authored-by:` naming an AI assistant or a code
+generator, and do not leave one that an assistant wrote for you:
+
+```
+Co-authored-by: Claude Code <noreply@anthropic.com>     ← rejected
+```
+
+A squash merge copies the single commit's message onto `main` verbatim, and GitHub counts that trailer
+as another contributor — so a one-line footer becomes a name on the repository's contributor list.
+Removing it afterwards means rewriting `main`, which changes every hash on the branch and forces every
+clone to reset. `scripts/check-commit-messages.py` fails the build when one appears, and CI runs it on
+every pull request.
+
+Human co-authors are ordinary teamwork and are allowed: the rule is about crediting a tool, not about
+collaboration.
+
+**If one lands anyway**, this is the repair, and it must be done when nobody has an open branch:
+
+```bash
+git fetch && git checkout main && git pull --ff-only
+git branch backup/pre-trailer-rewrite && git branch tmp main
+
+git checkout <bad-commit>
+git commit --amend -m "<the same message, minus the footer>"
+git rebase --onto HEAD <bad-commit> tmp
+
+git diff <old-main-tip> tmp      # must be empty: content unchanged, only the message differs
+git checkout main && git reset --hard tmp
+git push --force-with-lease origin main
+```
+
+Force-pushing `main` needs branch protection relaxed for the minute it takes, and everyone else must
+run `git fetch && git reset --hard origin/main` afterwards. That cost is why the check exists.
+
 ## 3. Pull requests
 
 - Keep a PR under **400 changed lines**. Larger work is split.

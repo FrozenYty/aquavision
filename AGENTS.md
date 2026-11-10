@@ -90,6 +90,8 @@ python scripts/check-bilingual.py      # bilingual pairs in sync
 python scripts/check-language.py       # no Chinese in English documents
 python scripts/check-progress.py       # PROGRESS.md well formed
 python scripts/check-paths.py          # no machine-specific paths
+python scripts/check-adr-index.py      # every decision record is listed in the architecture table
+python scripts/check-commit-messages.py --range origin/main..HEAD   # no tool credited as co-author
 python -m ruff check .                 # lint
 python -m ruff format --check .        # format
 pytest -q                              # tests
