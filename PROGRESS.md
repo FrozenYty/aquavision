@@ -1,5 +1,15 @@
 ## 2026-11-10
 
+- **The design pass is now a task with a definition, not an intention.** `P2-18` collects the three things
+  that have been waiting for it: the SRS §5.1 palette requirement ("deep-sea blue and teal, never the
+  clinical blue-white of a medical console"), the nine copy findings in `docs/copy-review-en/zh.md`, and
+  the `P-xx` eyebrow that twelve page headers still carry because it was once the only anchor from a
+  screen to SRS §5.2 - an anchor the traceability matrix now provides properly.
+- **The measure of "beautified" is a test, not an opinion.** The palette already lives only in
+  `tokens.css` (the single hardcoded colour outside it is one line in `app.css`), so a check in the shape
+  of `test_api_js.py` makes the rule enforceable: a hex value in a template fails the build. Pages also
+  get a screenshot each in `docs/images/ui/`, so the next design argument is a comparison.
+
 - **The boot screen was the last argument: `READY`, not `OFFLINE`.** A panel that announces itself dead
   before anything has had a chance to speak reads as a fault, and the ten-second grace is far longer than
   a connected PC needs to send its first keepalive. So the rig boots `READY` on an optimistic `Alive`, and
