@@ -1,5 +1,20 @@
 ## 2026-11-10
 
+- **The link model was wrong twice before it was right, and the Cartesian product is what exposed it.**
+  First the rig declared itself `OFFLINE` ten seconds after every power-up, because a watchdog on
+  incoming commands measures the absence of a PC nobody had promised. Then the fix - a third
+  "never connected yet" state - was argued down in one sentence: the PC sends a keepalive every two
+  seconds, so `OFFLINE` plus a keepalive *is* `READY`, and the window between power-up and the first
+  message is honestly `OFFLINE`. Two link states, booting on the second one.
+- **The product of screens and link states turned a rule into a machine-checked invariant.** Five
+  screens times two link states is ten combinations; five of them must never exist, and all five are
+  excluded by one sentence: `OFFLINE` if and only if the link is gone, everything else needs a live PC.
+  `rig::invariantHolds` encodes it and the main loop checks it every pass, reporting `EVT INVARIANT` if
+  it is ever broken. It has not fired.
+- **The product also found dead code.** The button handler carried a branch for "pressed while the PC is
+  gone -> show OFFLINE", which by the invariant was unreachable: the screen was already `OFFLINE`.
+  Deleted, along with the third link state that had made the earlier fix look necessary.
+
 - **OFFLINE was measuring the wrong thing.** The rig declared the PC gone after ten seconds of silence,
   but silence is what a healthy idle system produces: nothing needs to be said between a capture and the
   next button press. The link has no carrier signal - the rig talks UART through a bridge chip and cannot

@@ -32,6 +32,9 @@ void emitTimeout(uint32_t millisNow);
 //: dropped message leaves the PC believing the rig accepted it, which is why TCP answers an unexpected
 //: segment with a reset instead of ignoring it.
 void emitStrayResult(int score);
+//: A screen/link combination that should be impossible. Never expected on the wire; if it appears, the
+//: state machine has a hole and the panel is showing something it should not.
+void emitInvariant(rig::Screen screen, rig::Link link);
 void emitTurbidity(int value);
 void emitPong();
 

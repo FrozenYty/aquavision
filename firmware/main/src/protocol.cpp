@@ -137,6 +137,10 @@ void emitTimeout(uint32_t millisNow) {
 
 void emitStrayResult(int score) { Serial.printf("EVT STRAY RESULT %d\n", score); }
 
+void emitInvariant(rig::Screen screen, rig::Link link) {
+  Serial.printf("EVT INVARIANT %s %s\n", screenName(screen), rig::linkName(link));
+}
+
 void emitTrigger(uint32_t millisNow) { Serial.printf("EVT TRIGGER %lu\n", (unsigned long)millisNow); }
 
 void emitTurbidity(int value) { Serial.printf("EVT TURBIDITY %d\n", value); }
