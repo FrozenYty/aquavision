@@ -1,5 +1,25 @@
 ## 2026-11-10
 
+- **The rig's state machine was written out as a five-by-ten table, and every cell now has an answer.**
+  `docs/rig-state-machine-en/zh.md` lists five states against ten events, with the resulting state and
+  the code that enforces it. The table found six things the firmware did not handle.
+- **Six rules, each from a way the rig would have failed a demo.** A capture in flight ignores the button
+  (a second press used to become a second frame); a verdict is accepted only while a capture is in flight
+  and otherwise dropped **and reported** as `EVT STRAY RESULT`; a capture with no verdict after five
+  seconds becomes a retake with `NO REPLY` and no score (the spinner used to turn forever); a keepalive
+  `PING` refreshes the link without touching the screen; losing the PC overrides everything but
+  recovering from it only resets `OFFLINE` (a recovered link used to wipe a verdict off the panel); and
+  every transition is reported, because before that a wiring fault and a logic fault looked identical
+  from the serial port.
+- **All of it was verified on the board**, not in the code: two presses produced one `EVT TRIGGER`, a
+  press during a verdict started the next capture, the timeout fired exactly 5000 ms after the trigger
+  (`EVT TRIGGER 5280` → `EVT TIMEOUT 10280`), a verdict in the wrong state produced `EVT STRAY RESULT`,
+  and a keepalive left the PASS screen alone.
+- **The floating button wire was itself a finding.** Presses the operator never made showed up as
+  `EVT TRIGGER`; a 20 cm jumper hanging off an input is an antenna. The test sequence had to be redesigned
+  around it, and the lesson belongs to the assembly: the real switch connects the pin to ground, so it
+  does not float.
+
 - **The panel design was rebuilt against the hardware, and the first version lost four arguments to it.**
   Shape now carries the verdict - a filled banner for PASS, an outline for RETAKE - because at 128x64 the
   words alone were the only difference. The retake reason moved from a second line in the banner (one

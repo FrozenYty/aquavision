@@ -31,6 +31,7 @@
 | 知道原型展示什么 | `prototype-zh.md` |
 | 某个词该叫什么 | `glossary-en-zh.md` |
 | 为什么当初这么定 | `adr/` |
+| 知道装置在任何情况下会做什么 | `rig-state-machine-zh.md` |
 
 ## 二、文档地图
 
@@ -46,6 +47,7 @@
 | `procurement-en/zh.md` | 买什么、为什么买这些、怎么验收 | 换硬件 | @FrozenYty |
 | `copy-review-en/zh.md` | 界面文案的审阅结论，按页面 | 文案重写或页面集合变化 | @FrozenYty |
 | `handover-en/zh.md` | 交接出去的工作，以及它必须达到的标准 | 有事项关闭或新增 | @FrozenYty |
+| `rig-state-machine-en/zh.md` | 每一个状态与事件组合的结果 | 新增状态或事件时 | @FrozenYty |
 | `test-cases-en/zh.md` | 每条验收项一条用例，以及怎么跑 | 验收项变化，或某条用例被执行 | @IkeaFyj |
 | `glossary-en-zh.md` | 每个概念的唯一叫法 | 出现新概念 | @FrozenYty |
 | `adr/01-10` | 为什么这样定、什么时候该重审 | 不改写，只被新 ADR 取代 | 该篇作者 |

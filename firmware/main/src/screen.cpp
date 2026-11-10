@@ -89,6 +89,12 @@ void drawScoreRow(U8G2& display, const rig::State& state, const char* label) {
   display.setFont(u8g2_font_7x13B_tf);
   display.drawStr(MARGIN, LABEL_BASELINE, label);
 
+  if (state.score < 0) {
+    // No verdict, so no number. A blank is honest; a stale or invented score is not.
+    display.setFont(u8g2_font_5x7_tf);
+    return;
+  }
+
   // Values are right-aligned so two- and three-digit numbers share an edge; centred numbers jump about,
   // which is the one thing a gauge must not do.
   //
@@ -133,6 +139,8 @@ const char* reasonWords(rig::Reason reason) {
       return "BLUR";
     case rig::Reason::ColorCast:
       return "COLOR CAST";
+    case rig::Reason::NoReply:
+      return "NO REPLY";
     case rig::Reason::None:
       return "OK";
     default:

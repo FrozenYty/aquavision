@@ -15,6 +15,8 @@ const char* reasonToken(Reason reason) {
       return "COLOR_CAST";
     case Reason::None:
       return "NONE";
+    case Reason::NoReply:
+      return "NO_REPLY";
     default:
       return "UNKNOWN";
   }
@@ -35,6 +37,9 @@ Reason reasonFromToken(const char* token) {
   }
   if (strcmp(token, "NONE") == 0) {
     return Reason::None;
+  }
+  if (strcmp(token, "NO_REPLY") == 0) {
+    return Reason::NoReply;
   }
   return Reason::Unknown;
 }
