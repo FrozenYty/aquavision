@@ -154,7 +154,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [x] **P2-14** Requirements traceability matrix over every prototype screen · @chemflowers · done
       when each screen in `web/templates/` has rows in `docs/traceability-en/zh.md`, every referenced
       screenshot exists in the repository, and every requirement id it cites exists in the SRS
-- [ ] **P2-15** Answer contract §7's three open questions · @Gtechson · unblocks `P2-08` · done when
+- [x] **P2-15** Answer contract §7's three open questions · @Gtechson · unblocks `P2-08` · done when
       §7 states how the socket authenticates, how a binary frame is correlated to its `frame_id`, and
       where that frame's quality score is carried — all three, in the contract, before the route exists
 
