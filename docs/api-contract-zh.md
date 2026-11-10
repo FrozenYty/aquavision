@@ -49,7 +49,7 @@
 ## 五、分页与时间
 
 ```
-GET /api/frames?page=1&size=24&site=A3&from=2026-11-01&to=2026-11-03
+GET /api/frames?page=1&size=24&site=A3&start=2026-11-01&end=2026-11-03
 ```
 
 ```json
@@ -58,7 +58,7 @@ GET /api/frames?page=1&size=24&site=A3&from=2026-11-01&to=2026-11-03
 
 - `size` 默认 24，最大 100。
 - 时间一律 ISO 8601 带时区，库内存 UTC，展示转本地。
-- 日期筛选两端都含，按服务端时区解释。
+- 日期筛选用 `start` 与 `end`，两端都含，按服务端时区解释。不叫 `from` 与 `to`，是因为 `from` 是 Python 保留字，而这个参数名会出现在生成的 OpenAPI 文档里。
 
 ## 六、REST 接口
 

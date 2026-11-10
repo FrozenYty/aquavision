@@ -11,7 +11,7 @@
 | Unit | Quality scoring, coordinate conversion, threshold logic | `pytest` | Every commit |
 | API | Envelope, error codes, permissions, pagination | `pytest` + `httpx` | Every PR |
 | End-to-end | Capture → detect → review → report | Manual script | Weekly |
-| Model | mAP, per-class recall, counting deviation | `scripts/evaluate.py` | Each model version |
+| Model | mAP, per-class recall, counting deviation | `scripts/train_baseline.py` | Each model version |
 
 Coverage is not a target. The rule is simpler: **any module with a branch that can silently
 produce a wrong number must have a test.** That means quality scoring, coordinate conversion,
@@ -50,8 +50,9 @@ the improved model with three seeds and report mean ± standard deviation.
 
 ## 4. Test data and fixtures
 
-- `tests/fixtures/` holds three small JPEGs (one sharp, one blurred, one overexposed) and one
-  recorded detection result. Total under 200 KB, committed.
+- Committed fixtures do not exist yet. The capture tests synthesise what they need in code — a
+  sharp noise frame, a blurred copy of it, a flat frame and a blue-cast frame — and write the JPEGs
+  they need into `tmp_path`; deterministic generation is why no fixtures are necessary.
 - No test may open a real camera. Capture is mocked through a fixture that returns frames.
 - Tests that need a database use a temporary SQLite file, created and dropped per session.
 
@@ -61,12 +62,14 @@ the improved model with three seeds and report mean ± standard deviation.
 ruff check .            # lint
 ruff format --check .   # formatting
 pytest -q               # all tests
-python scripts/evaluate.py --weights data/models/<version>/best.pt --split test
+python scripts/train_baseline.py   # train, then evaluate on the frozen test split
 python scripts/check-bilingual.py
 ```
 
-Model evaluation prints a table and writes `metrics.json` next to the weights, so a version and its
-numbers are never separated.
+Evaluation is not separated from training yet. `scripts/train_baseline.py` trains the baseline and
+then evaluates the best weights on the frozen test split, writing `metrics.json` into the run
+directory; `scripts/register_model.py` reads that file and writes the `model_version` row, so a
+version and its numbers are never separated.
 
 ## 6. Defect handling
 
