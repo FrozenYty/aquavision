@@ -10,6 +10,10 @@ is silent, and finding out which is the first question every other check depends
     python scripts/test_rig_link.py --port COM5 --seconds 10
 
 Exit codes: 0 a PONG arrived, 1 no PONG in time or the port could not be opened.
+
+Opening the port resets the board: the bridge chip's DTR and RTS lines feed the auto-reset circuit, so
+the sketch restarts and reports a fresh `EVT SCREEN READY` before this tool's first ping arrives. That is
+normal - do not read it as the rig having been online already.
 """
 
 from __future__ import annotations

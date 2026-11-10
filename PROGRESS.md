@@ -1,5 +1,24 @@
 ## 2026-11-10
 
+- **The PC and the board talked to each other for the first time, and the keepalive lifecycle was
+  observed on the panel rather than argued from the source.** On one open port: keepalives held `READY`;
+  thirteen seconds of silence produced `EVT SCREEN OFFLINE`; the next keepalive raised `EVT SCREEN READY`
+  again. Then the real server, with `AV_RIG_PORT=COM5`, opened the port, logged the rig's `READY`, and on
+  a button press took `EVT TRIGGER`, failed to find a camera, stayed silent - and five seconds later the
+  rig's own `EVT TIMEOUT` arrived. That is the failure path working as designed: no invented score, the
+  silence is answered by the firmware's timeout.
+- **Opening the serial port resets the board, and that is now written down in both firmware READMEs.**
+  DTR and RTS feed the bridge chip's auto-reset circuit, so every program that opens `COM5` restarts the
+  sketch. It looks like a fault the first time - the log begins with the ROM banner - and it changes how
+  the keepalive has to be tested: on a port held open, not by reconnecting, because the boot and the
+  ten-second link timer start together.
+- **A hardware feature whose logs are invisible is a hardware feature nobody can debug.** The server's
+  own loggers emitted nothing: uvicorn configures `uvicorn.*` and leaves the root alone, and without a
+  root handler every `app.rig` INFO line was dropped. `rig: link configured on COM5`, `rig: port open`,
+  `rig: screen READY` and the capture failure now appear in the terminal. One `basicConfig` in
+  `create_app`, and the difference between "the link is running" and "the link never started" stopped
+  being invisible.
+
 - **A filename is as unportable as a path.** The hardware reference listed the three vendor PDFs by
   filename - `esp32-s3-wroom-1.pdf` and two more - and those files are on the lead's disk, not in the
   repository. A reader who cannot open a document gains nothing from knowing what somebody else called it.
