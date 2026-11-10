@@ -309,7 +309,7 @@ high-traffic single-column indices only:
 
 ```
 data/
-  frames/YYYY/MM/DD/<session_id>/<frame_id>.jpg
+  frames/<site>/<YYYYMMDD>/<session_id>/<frame_id>.jpg
   thumbs/YYYY/MM/DD/<frame_id>.jpg
   results/<frame_id>.json
   models/<version_name>/{best.pt,labels.txt,metrics.json}
@@ -321,7 +321,7 @@ migration.
 
 ## 6. Lifecycle
 
-- Frames are kept indefinitely; thumbnails and intermediate files expire after 90 days.
+- Frames are kept indefinitely; thumbnails and intermediate files are cleanup candidates after `retention_days` (30 by default, `AV_RETENTION_DAYS`).
 - Deleting a frame is a soft delete first, physical removal after 7 days.
 - Model versions are never deleted once online; they are marked offline.
 - Logs are kept 180 days, then exported and dropped.

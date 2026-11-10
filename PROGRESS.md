@@ -1,5 +1,29 @@
 ## 2026-11-10
 
+- **A documentation audit against the code found thirty-five claims that were not true, and fifteen of
+  them are fixed.** The pattern was the same in every case: a number or a name written once in a document
+  and never compared to the thing it described. Two examples worth naming: the stack table promised
+  ECharts while `web/static/vendor/` holds only Bootstrap and `charts.js` draws its own SVG; the SRS
+  promised a WebSocket endpoint that no router implements. Both are now what the code is, and the plans
+  are marked as plans.
+- **The layer diagram described a structure that does not exist.** It drew `api/ -> services/ -> repo/`,
+  and the code has `routers/` and a flat `app/` with no services or repo packages at all. The diagram now
+  shows the real shape and states which part is the target; a diagram of an intended layer that is drawn
+  as if it were present makes the reader distrust every other diagram in the document.
+- **Four numbers were corrected by asking the file rather than the memory.** The bill of materials had
+  nine items and ¥377.42 in its header while its own table summed to eleven and ¥388.32 - and the honest
+  repair was not to change one number but to say **when** each item joined the list, because the 11-05
+  order really was nine items and the resistors and button came later. Frames are stored under a
+  `<site>/<YYYYMMDD>/` level the data model never mentioned. The retention default was 90 days in one
+  document, 7 in another and 30 in the code; it is 30 everywhere now.
+- **Seven documents outside my lane were left alone and recorded instead.** The API contract documents
+  `from=`/`to=` for a route that reads `start`/`end` - a filter written from the contract silently returns
+  unfiltered data - and the test plan names a script and a fixture directory that do not exist. That is
+  `P2-19`, for the two lanes that own those files: fixing another lane's document inside this diff is the
+  habit the handover forbids, and it is also how a reviewable change becomes unreviewable.
+- **Correction to the 11-10 entry above**: the state machine lists **nine** events, not ten; the ten was
+  the product of five screens and two link states.
+
 - **The repository could not be run from a clean clone, and the README described a workflow that did not
   work.** An audit against the code found four blockers: the FastAPI app mounted routers only, so the
   pages and the API were on different ports and every call from a page answered "interface not found";

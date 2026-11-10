@@ -31,8 +31,8 @@ No page references an external URL for code, styles or fonts.
   `@5` CDN URL can, and the version is visible in every diff that touches it.
 - **No lockfile, no toolchain.** Consistent with ADR 04: nobody installs Node to get the
   dependencies; cloning the repository is enough.
-- **Small.** About 0.4 MB today and roughly 1.5 MB with ECharts, well under the 20 MB limit in
-  `CONTRIBUTING.md`.
+- **Small.** About 0.4 MB today and roughly 1.5 MB with ECharts, so a clone stays quick and a diff
+  stays readable — the line `CONTRIBUTING.md` draws. It deliberately sets no size number.
 
 ## Consequences
 

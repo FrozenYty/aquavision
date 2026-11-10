@@ -15,7 +15,7 @@
 | Phase | Phase 1: requirements analysis |
 | Prepared by | Training Group 14 |
 | Project lead | Yao Tianyu (group lead); supervisor: Wu Jianguang |
-| Technology stack | Frontend HTML5/CSS3/JavaScript + Bootstrap 5 + ECharts · Backend Python 3.11 (FastAPI + SQLAlchemy) + PostgreSQL 14 · Algorithm PyTorch 2.1 + Ultralytics YOLOv8 + OpenCV · Capture USB camera (1080P, fixed-focus adjustable, manual exposure, driver-free UVC) + OpenCV capture (the microcontroller is an optional enhancement, not part of the main stack) |
+| Technology stack | Frontend HTML5/CSS3/JavaScript + Bootstrap 5 + hand-rolled SVG charts · Backend Python 3.11 (FastAPI + SQLAlchemy), SQLite locally and PostgreSQL 14 in deployment · Algorithm PyTorch 2.1 + Ultralytics YOLOv8 + OpenCV · Capture USB camera (1080P, fixed-focus adjustable, manual exposure, driver-free UVC) + OpenCV capture (the microcontroller is an optional enhancement, not part of the main stack) |
 | Project duration | 8 weeks |
 | Date | 2026-11-03 |
 | Classification | Internal (teaching use) |
@@ -192,13 +192,13 @@ The system has three layers — capture, service and presentation — which exch
 
 | Element | Choice and requirement |
 |---|---|
-| Frontend | HTML5 + CSS3 + JavaScript (ES6), Bootstrap 5 grid and forms, ECharts 5 charts (bar, line, pie, heat map), Canvas annotation surface, Fetch against the REST API, polling for job progress plus result-page refresh, high-fidelity HTML prototype in the prototype phase |
+| Frontend | HTML5 + CSS3 + JavaScript (ES6), Bootstrap 5 grid and forms, hand-rolled SVG charts (bar, line, pie, heat map), Canvas annotation surface, Fetch against the REST API, polling for job progress plus result-page refresh, high-fidelity HTML prototype in the prototype phase |
 | Backend | Python 3.11 + FastAPI (REST) + Pydantic validation + SQLAlchemy 2.1 ORM + JWT authentication. Asynchronous jobs run in a fixed thread pool inside the same process — no Celery, no Redis (ADR 03) |
 | Algorithm | PyTorch 2.1 + Ultralytics YOLOv8 (baseline and improved) + OpenCV 4.x (frame extraction, preprocessing, drawing) + NumPy + Albumentations (augmentation) + ONNX / ONNXRuntime (accelerated inference) |
 | Database | PostgreSQL 14 (UTF-8), five table groups by domain — user, image, detection, model, alert — with indexes and partitioning for large tables |
 | File storage | Local filesystem for originals, extracted frames, thumbnails and result images; paths configured centrally and cleaned automatically by retention days |
 | Tooling | Git, GitHub private repository, Postman for API debugging, VS Code, PyCharm, DBeaver, Label Studio for cross-checking annotations |
-| Deployment | Development on Windows 10 / Python 3.11; a single Linux server (NVIDIA GPU, at least 8 GB VRAM, inference peak at most 6 GB; training on rented GPUs or a group laptop with a discrete GPU, demonstration on the same machine), Nginx reverse proxy + Uvicorn + Celery worker + Redis + PostgreSQL 14 |
+| Deployment | Development on Windows 10 / Python 3.11; a single Linux server (NVIDIA GPU, at least 8 GB VRAM, inference peak at most 6 GB; training on rented GPUs or a group laptop with a discrete GPU, demonstration on the same machine), Nginx reverse proxy + Uvicorn + PostgreSQL 14 |
 | Browser | The last two major versions of Chrome or Edge, 1366×768 and above, usable down to 375 px width |
 
 **Table 2-3 Capture and demonstration equipment**
@@ -358,7 +358,7 @@ Each requirement states description, input, processing, output, business rules a
 | Priority | P0 (origin: carried over) |
 | Description | Sign-in by phone or email, verifying a CAPTCHA and the password, issuing an access token and a refresh token. |
 | Input | Phone or email, password, CAPTCHA |
-| Processing | Verify CAPTCHA → look up the account → verify the password hash → check lockout → issue a JWT (2 h) and a refresh token (7 d) |
+| Processing | Verify CAPTCHA → look up the account → verify the password hash → check lockout → issue a JWT (8 h, no refresh token) |
 | Output | Access token, basic user details, role code; on failure the specific reason and remaining lockout time |
 | Business rules | Password 8-20 characters with letters and digits; five consecutive failures lock the account for 15 minutes; passwords stored salted and hashed, never in clear; only enabled accounts may sign in |
 | Acceptance | After five wrong attempts the account locks and shows the remaining time; the password column holds a hash; a correct password is still refused while locked |

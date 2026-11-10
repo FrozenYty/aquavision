@@ -21,7 +21,9 @@ fixed thread pool of two workers, and task state lives in PostgreSQL rather than
 - Detection rate and display rate are already decoupled (`detect_interval_ms`), which is the real
   performance concern; separating the process does not help with it.
 - Task state in the database survives a restart, which an in-memory queue does not.
-- Single process means single deployment: `uvicorn app.main:app` and a `.env` file.
+- Single process means single deployment: `cd server && uvicorn app.main:app`, or from the repository
+  root `python -m uvicorn app.main:app --app-dir server`, plus a `.env` file. `--app-dir` adds `server/`
+  to the import path, because the `app` package lives there and cannot be imported from the root.
 
 ## Consequences
 

@@ -91,7 +91,7 @@ Sign in with `admin` and the password from step 4.
 pytest -q
 ```
 
-167 tests, about a minute. No camera, no database server and no network are needed.
+171 tests, about a minute. No camera, no database server and no network are needed.
 
 ### When something goes wrong
 
@@ -138,7 +138,7 @@ sign-in. Mock mode hides backend defects by design — use it to show the interf
 | [Data model](docs/data-model-en.md) | Thirteen tables, fields, indexes, file storage |
 | [Test plan](docs/test-plan-en.md) | Test levels, dataset splitting, metrics and acceptance |
 | [Glossary](docs/glossary-en-zh.md) | English ↔ Chinese, the single word list shared by code and docs |
-| [Decisions](docs/adr/) | Ten accepted decisions and their reasoning; `docs/architecture-en.md` §10 lists them |
+| [Decisions](docs/adr/) | Ten decision records, one of them superseded, with the reasoning; `docs/architecture-en.md` §10 lists them |
 
 English is the source of truth for design documents; the Chinese files are reference versions and
 must be updated in the same commit.
@@ -161,8 +161,8 @@ tests/       tests
 |---|---|
 | Capture | USB camera (1080P, manual exposure, UVC) with OpenCV |
 | Detection | PyTorch + Ultralytics YOLOv8n, three improvements: underwater colour correction, EMA attention, WIoU v3 |
-| Backend | Python 3.11, FastAPI, SQLAlchemy 2.1, PostgreSQL 14 |
-| Frontend | HTML5, Bootstrap 5.3.3, ECharts 5, plain ES modules, no build step; libraries vendored in `web/static/vendor/` |
+| Backend | Python 3.11, FastAPI, SQLAlchemy 2.1; SQLite for a local run, PostgreSQL 14 for deployment |
+| Frontend | HTML5, Bootstrap 5.3.3, hand-rolled SVG charts, plain ES modules, no build step; Bootstrap is vendored in `web/static/vendor/` |
 | Rig controller | ESP32-S3 on the Arduino framework, built with PlatformIO; a 0.96" OLED and two status LEDs |
 
 Targets: mAP@0.5 ≥ 0.75 on the four species, +0.03 over the baseline, and

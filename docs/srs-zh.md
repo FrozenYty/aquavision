@@ -15,7 +15,7 @@
 | 所属阶段 | 第一阶段：需求分析 |
 | 编制单位 | 第 14 实训小组 |
 | 项目负责人 | 姚天宇（组长） 指导教师：吴剑光 |
-| 开发技术栈 | 前端 HTML5/CSS3/JavaScript + Bootstrap 5 + ECharts 图表 · 后端 Python 3.11（FastAPI + SQLAlchemy）+ PostgreSQL 14 · 算法 PyTorch 2.1 + Ultralytics YOLOv8 + OpenCV · 采集 USB 摄像头（1080P、定焦可调、手动曝光、免驱 UVC）+ OpenCV 采集（单片机为可选增强，不进主栈） |
+| 开发技术栈 | 前端 HTML5/CSS3/JavaScript + Bootstrap 5 + 手写 SVG 图表 · 后端 Python 3.11（FastAPI + SQLAlchemy），本地用 SQLite、部署用 PostgreSQL 14 · 算法 PyTorch 2.1 + Ultralytics YOLOv8 + OpenCV · 采集 USB 摄像头（1080P、定焦可调、手动曝光、免驱 UVC）+ OpenCV 采集（单片机为可选增强，不进主栈） |
 | 项目周期 | 8 周 |
 | 编制日期 | 2026-11-03 |
 | 文档密级 | 内部公开（教学使用） |
@@ -192,13 +192,13 @@
 
 | 环境要素 | 选型与要求 |
 |---|---|
-| 前端技术 | HTML5 + CSS3 + JavaScript（ES6），Bootstrap 5 栅格与表单组件，ECharts 5 图表（柱状图、折线图、饼图、热力图），Canvas 标注画布，Fetch 调用 RESTful 接口，轮询任务进度 + 结果页刷新，原型阶段输出高保真 HTML 原型 |
+| 前端技术 | HTML5 + CSS3 + JavaScript（ES6），Bootstrap 5 栅格与表单组件，手写 SVG 图表（柱状图、折线图、饼图、热力图），Canvas 标注画布，Fetch 调用 RESTful 接口，轮询任务进度 + 结果页刷新，原型阶段输出高保真 HTML 原型 |
 | 后端技术 | Python 3.11 + FastAPI（RESTful 接口）+ Pydantic 参数校验 + SQLAlchemy 2.1 ORM + JWT 身份认证。异步任务由同一进程内的固定线程池执行，不引 Celery、不引 Redis（ADR 03） |
 | 算法技术 | PyTorch 2.1 + Ultralytics YOLOv8（基线模型与改进模型）+ OpenCV 4.x（抽帧、预处理、绘制）+ NumPy + Albumentations（数据增强）+ ONNX / ONNXRuntime（推理加速） |
 | 数据库 | PostgreSQL 14（utf8 编码），按业务域建立用户域、影像域、检测域、模型域与告警域五组表，使用索引与分区优化大表查询 |
 | 文件存储 | 本地文件系统存储原始影像、抽帧图、缩略图与结果图，路径由系统参数统一配置，支持按保留天数自动清理 |
 | 开发工具 | Git 版本管理、GitHub/Gitee 私有仓库、Postman 接口调试、VS Code、PyCharm、DBeaver 数据库客户端、Label Studio 对照校验 |
-| 部署环境 | 开发机 Windows 10 / Python 3.11；服务端单机 Linux 服务器（NVIDIA GPU，显存 ≥ 8GB，推理峰值 ≤ 6GB；训练使用租用 GPU 或组内带独立显卡的笔记本，演示环境为同一台机器），Nginx 反向代理 + Uvicorn 应用进程 + Celery Worker + Redis + PostgreSQL 14 |
+| 部署环境 | 开发机 Windows 10 / Python 3.11；服务端单机 Linux 服务器（NVIDIA GPU，显存 ≥ 8GB，推理峰值 ≤ 6GB；训练使用租用 GPU 或组内带独立显卡的笔记本，演示环境为同一台机器），Nginx 反向代理 + 单个 Uvicorn 应用进程 + PostgreSQL 14 |
 | 浏览器要求 | Chrome / Edge 最近两个大版本，1366×768 及以上分辨率，兼容移动端 375px 宽度浏览 |
 
 表 2-3 采集端与演示装置清单
@@ -358,9 +358,9 @@ M8 运维监控
 | 需求编号 | FR-M1-01 |
 | 功能名称 | 登录与会话 |
 | 优先级 | P0（来源：沿用） |
-| 需求描述 | 支持手机号或邮箱登录，校验图形验证码与密码，签发访问令牌与刷新令牌。 |
+| 需求描述 | 支持手机号或邮箱登录，校验图形验证码与密码，签发访问令牌（有效期 8 小时，无刷新令牌）。 |
 | 输入 | 手机号或邮箱、登录密码、图形验证码 |
-| 处理 | 校验验证码 → 查询账号 → 校验密码哈希 → 校验锁定状态 → 签发 JWT（2 小时）与刷新令牌（7 天） |
+| 处理 | 校验验证码 → 查询账号 → 校验密码哈希 → 校验锁定状态 → 签发 JWT（8 小时，无刷新令牌） |
 | 输出 | 访问令牌、用户基本信息、角色码；失败时返回具体原因与剩余锁定时间 |
 | 业务规则 | 密码长度 8~20 位且含字母与数字；连续 5 次失败锁定 15 分钟；密码加盐哈希存储，不得明文；只有已启用账号可登录 |
 | 验收要点 | 连续输错 5 次后账号锁定并提示剩余解锁时间；数据库密码字段为哈希值；锁定期间输入正确密码仍被拒绝 |
