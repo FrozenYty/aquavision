@@ -13,6 +13,10 @@
     <div class="av-page-header">
       <h1>统计看板</h1>
       <div class="av-page-actions">
+        <label class="small text-secondary align-self-center" for="basis">统计口径</label>
+        <select class="form-select form-select-sm w-auto" id="basis" aria-label="统计口径">
+          <option value="reviewed">复核后结果</option><option value="raw">原始识别结果</option>
+        </select>
         <a class="btn btn-primary text-nowrap" href="reports.html">生成巡检报告</a>
       </div>
     </div>
@@ -20,25 +24,25 @@
     <div class="row g-3">
       <div class="col-lg-6">
         <section class="av-card">
-          <h2 class="av-card-title">物种组成 <small class="text-secondary fw-normal">近 7 日目标框数</small></h2>
+          <h2 class="av-card-title">物种组成 <small class="text-secondary fw-normal" id="cap-species">近 7 日目标框数 · 复核后结果</small></h2>
           <div id="chart-species"></div>
         </section>
       </div>
       <div class="col-lg-6">
         <section class="av-card">
-          <h2 class="av-card-title">采集量趋势 <small class="text-secondary fw-normal">每日收帧</small></h2>
+          <h2 class="av-card-title">采集量趋势 <small class="text-secondary fw-normal">每日收帧 · 不区分口径</small></h2>
           <div id="chart-trend"></div>
         </section>
       </div>
       <div class="col-lg-6">
         <section class="av-card">
-          <h2 class="av-card-title">质量拦截率 <small class="text-secondary fw-normal">低质量帧占比</small></h2>
+          <h2 class="av-card-title">质量拦截率 <small class="text-secondary fw-normal">低质量帧占比 · 近 7 日，不区分口径</small></h2>
           <div id="chart-quality"></div>
         </section>
       </div>
       <div class="col-lg-6">
         <section class="av-card">
-          <h2 class="av-card-title">复核修正分布 <small class="text-secondary fw-normal">人工改动汇总</small></h2>
+          <h2 class="av-card-title">复核修正分布 <small class="text-secondary fw-normal">人工改动汇总 · 近 7 日，不区分口径</small></h2>
           <div id="chart-corrections"></div>
         </section>
       </div>
@@ -68,13 +72,28 @@
     // class therefore show the totals in words until the contract offers the breakdown.
     const summary = (html) => `<p class="small mb-0">${html}</p>`;
 
-    loadInto($("chart-species"), api.statsSpecies, {
+    // The basis changes this chart and its caption together; the other three charts do not depend on it.
+    const BASIS_TEXT = { reviewed: "复核后结果", raw: "原始识别结果" };
+    const BASIS_EMPTY = {
+      reviewed: "所选口径下还没有复核过的结果。只有复核过（确认或修改）的帧计入这个口径，切换到原始识别结果可以看到未复核的框。",
+      raw: "还没有识别结果。识别任务完成后，这里会按原始识别结果统计目标框。",
+    };
+    function speciesCaption() {
+      const demo = api.USE_MOCK ? "（演示数据不区分口径）" : "";
+      $("cap-species").textContent = `近 7 日目标框数 · ${BASIS_TEXT[$("basis").value]}${demo}`;
+    }
+    function loadSpecies() {
+      speciesCaption();
+      return loadInto($("chart-species"), () => api.statsSpecies({ basis: $("basis").value, days: 7 }), {
       isEmpty: (d) => (Array.isArray(d) ? d : d.items).length === 0,
-      empty: "所选时间内还没有识别结果",
+      empty: BASIS_EMPTY[$("basis").value],
       render: (d) => renderSpeciesDonut($("chart-species"), Array.isArray(d)
         ? d
         : d.items.map((r) => ({ class_code: r.class_code, box_count: r.count }))),
-    });
+      });
+    }
+    $("basis").addEventListener("change", loadSpecies);
+    loadSpecies();
 
     loadInto($("chart-trend"), api.statsTrend, {
       isEmpty: (d) => (Array.isArray(d) ? d : d.items).length < 2,
