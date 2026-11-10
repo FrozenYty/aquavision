@@ -1,8 +1,9 @@
 # 07 — Verification happens locally before a push
 
-- **Status:** Accepted
+- **Status:** Superseded in part by ADR 11
 - **Date:** 2026-11-05
 - **Supersedes:** —
+- **Superseded by:** ADR 11, for the `pytest` clause only; the rest of this record stands
 
 ## Context
 
@@ -33,8 +34,9 @@ python scripts/check-language.py
 python scripts/check-progress.py
 ```
 
-`pytest` stays CI-only until its dependencies can be installed on every workstation without pulling
-torch.
+~~`pytest` stays CI-only until its dependencies can be installed on every workstation without pulling
+torch.~~ **Superseded by ADR 11:** `requirements-server.txt` made that dependency set installable
+without torch, so the condition is met.
 
 ## Rationale
 

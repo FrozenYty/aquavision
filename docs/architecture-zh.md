@@ -174,3 +174,4 @@ AV_WORKER_POLL_SECONDS=1.0
 | [08](adr/08-four-tables-added.md) | 九张表扩到十三张：快照、报告与参数原先没有落点 |
 | [09](adr/09-led-fill-light.md) | ~~补光改用 12V 灯条 + MOS 管~~ —— **已被 10 取代** |
 | [10](adr/10-desk-lamp-fill-light.md) | 补光用现有台灯：USB 直流供电、无频闪，不必另买光源 |
+| [11](adr/11-pytest-runs-locally.md) | 测试在每个工作站本地跑：只在 CI 跑的测试，人推的时候会绕过去 |
