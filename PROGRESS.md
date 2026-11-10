@@ -1,5 +1,13 @@
 ## 2026-11-10
 
+- **`P2-18` done: one page, one name.** The menu, every page title and heading, and the traceability matrix
+  now use the SRS §5.2 names, and `tests/test_page_names.py` compares the four lists page by page (shown
+  failing on five planted mismatches, then passing). `frames.html` and `frame.html` became
+  `image-browser.html` and `result-detail.html`, and a test refuses template names one character apart. The
+  `P-xx` eyebrow left the page headers; the shell now finds the current page by its menu link. The copy
+  review's three open items are closed: the group names and statistics subtitles applied, the current-model
+  label applied, and the "today" prefix rejected because two of those cards are not daily figures against the
+  real server.
 - **A documentation audit against the code found thirty-five claims that were not true, and fifteen of
   them are fixed.** The pattern was the same in every case: a number or a name written once in a document
   and never compared to the thing it described. Two examples worth naming: the stack table promised

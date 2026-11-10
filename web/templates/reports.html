@@ -13,7 +13,7 @@
     <div class="av-page-header">
       <h1>巡检报告</h1>
       <div class="av-page-actions">
-        <a class="btn btn-outline-primary text-nowrap" href="stats.html">查看统计看板</a>
+        <a class="btn btn-outline-primary text-nowrap" href="stats.html">查看统计分析</a>
       </div>
     </div>
 
@@ -68,7 +68,7 @@
     import { esc, fmtTime, loadInto, toast } from "../static/js/ui.js";
     import { CLASSES } from "../static/js/boxes.js";
 
-    renderShell("P-11");
+    renderShell();
 
     const $ = (id) => document.getElementById(id);
     const TEMPLATE = { standard: "标准巡检", brief: "简版" };

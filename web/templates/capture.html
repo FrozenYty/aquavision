@@ -61,7 +61,7 @@
 
       <div class="col-12">
         <section class="av-card">
-          <h2 class="av-card-title">最近帧 <small class="text-secondary fw-normal">点一帧查看识别结果</small></h2>
+          <h2 class="av-card-title">最近帧 <small class="text-secondary fw-normal">点一帧查看结果详情</small></h2>
           <div class="av-strip" id="strip"><div class="av-empty w-100">开始采集后，最近的帧会排在这里。</div></div>
         </section>
       </div>
@@ -88,7 +88,7 @@
     import { CLASSES, countByClass, stageHtml } from "../static/js/boxes.js";
     import { openFeed } from "../static/js/live.js";
 
-    renderShell("P-03");
+    renderShell();
 
     const $ = (id) => document.getElementById(id);
     const STATUS = {
@@ -155,7 +155,7 @@
       const retake = f.quality?.verdict === "retake";
       const thumb = f.image_url ? `<img src="${esc(f.image_url)}" alt="">` : '<span class="av-strip-blank"></span>';
       strip.insertAdjacentHTML("afterbegin", `
-        <a class="av-strip-item${retake ? " is-retake" : ""}" href="frame.html?id=${encodeURIComponent(f.frame_id)}">
+        <a class="av-strip-item${retake ? " is-retake" : ""}" href="result-detail.html?id=${encodeURIComponent(f.frame_id)}">
           ${thumb}<span class="av-mono">${esc(f.frame_id.slice(-9))}</span>
           <span>${f.quality ? (retake ? "需重拍" : `质量 ${f.quality.score}`) : "—"}</span>
         </a>`);

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>数据集导出 · AquaVision</title>
+  <title>数据导出 · AquaVision</title>
   <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
   <link rel="stylesheet" href="../static/css/tokens.css">
   <link rel="stylesheet" href="../static/css/app.css">
@@ -11,9 +11,9 @@
 <body>
   <main class="av-content">
     <div class="av-page-header">
-      <h1>数据集导出</h1>
+      <h1>数据导出</h1>
       <div class="av-page-actions">
-        <a class="btn btn-outline-primary text-nowrap" href="hard-samples.html">查看难例池</a>
+        <a class="btn btn-outline-primary text-nowrap" href="hard-samples.html">查看难例样本</a>
       </div>
     </div>
 
@@ -71,7 +71,7 @@
     import * as api from "../static/js/api.js";
     import { esc, fmtTime, loadInto, toast } from "../static/js/ui.js";
 
-    renderShell("P-09");
+    renderShell();
 
     const $ = (id) => document.getElementById(id);
     // The datasets route's status words.

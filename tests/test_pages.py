@@ -23,9 +23,8 @@ PAGES = sorted(TEMPLATES.glob("*.html"))
 LOGIN = "login.html"
 
 
-def page_id_of(html: str) -> str | None:
-    match = re.search(r'renderShell\("(P-\d+)"\)', html)
-    return match.group(1) if match else None
+def uses_shell(html: str) -> bool:
+    return re.search(r"renderShell\(\)", html) is not None
 
 
 def test_there_are_pages_to_check():
@@ -61,11 +60,9 @@ def test_element_ids_are_unique(page: Path):
 def test_every_page_except_login_uses_the_shared_shell(page: Path):
     html = page.read_text(encoding="utf-8")
     if page.name == LOGIN:
-        assert page_id_of(html) is None, (
-            "the login page stands alone and should not render the shell"
-        )
+        assert not uses_shell(html), "the login page stands alone and should not render the shell"
         return
-    assert page_id_of(html), f"{page.name} never calls renderShell(pageId)"
+    assert uses_shell(html), f"{page.name} never calls renderShell()"
 
 
 def test_menu_entries_point_to_pages_that_exist():
@@ -77,11 +74,10 @@ def test_menu_entries_point_to_pages_that_exist():
 
 
 def test_menu_page_ids_match_the_templates():
-    """Every page id in the menu should be rendered by exactly one template."""
+    """Every page that renders the shell must have a menu entry; the shell finds the current page by it."""
     menu = LAYOUT_JS.read_text(encoding="utf-8")
-    menu_ids = set(re.findall(r'id:\s*"(P-\d+)"', menu))
-    rendered = {page_id_of(page.read_text(encoding="utf-8")) for page in PAGES}
-    rendered.discard(None)
+    menu_hrefs = set(re.findall(r'href:\s*"([^"]+\.html)"', menu))
+    rendered = {page.name for page in PAGES if uses_shell(page.read_text(encoding="utf-8"))}
 
-    unlinked = sorted(rendered - menu_ids)
+    unlinked = sorted(rendered - menu_hrefs)
     assert not unlinked, f"{unlinked} render but are absent from the menu, so they are unreachable"

@@ -58,7 +58,7 @@
     import * as api from "../static/js/api.js";
     import { esc, fmtTime, loadInto, qualityBadge, renderPager, toast } from "../static/js/ui.js";
 
-    renderShell("P-04");
+    renderShell();
 
     const $ = (id) => document.getElementById(id);
     const selected = new Set();
@@ -81,7 +81,7 @@
               ${selected.has(f.frame_id) ? "checked" : ""} ${f.quality.verdict === "ok" ? "" : "disabled title=\"需重拍的帧不进入识别\""}>
             ${qualityBadge(f.quality)}
             <div class="av-thumb-meta"><div class="av-mono text-truncate">${esc(f.frame_id)}</div>${fmtTime(f.captured_at)}
-              <a class="float-end" href="frame.html?id=${encodeURIComponent(f.frame_id)}">识别结果</a></div>
+              <a class="float-end" href="result-detail.html?id=${encodeURIComponent(f.frame_id)}">结果详情</a></div>
           </label>
         </div>`).join("");
       renderPager($("pager"), data, (n) => { page = n; load(); });

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>系统管理 · AquaVision</title>
+  <title>系统设置 · AquaVision</title>
   <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
   <link rel="stylesheet" href="../static/css/tokens.css">
   <link rel="stylesheet" href="../static/css/app.css">
@@ -11,7 +11,7 @@
 <body>
   <main class="av-content">
     <div class="av-page-header">
-      <h1>系统管理</h1>
+      <h1>系统设置</h1>
     </div>
 
     <section class="av-card" id="tabs">
@@ -81,7 +81,7 @@
     import * as api from "../static/js/api.js";
     import { bindTabs, confirmAction, esc, fmtTime, loadInto, toast } from "../static/js/ui.js";
 
-    renderShell("P-13");
+    renderShell();
 
     function $(id) { return document.getElementById(id); }
     const ROLE = { admin: "管理员", analyst: "分析员", algo: "算法员", observer: "采集员" };

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>难例池 · AquaVision</title>
+  <title>难例样本 · AquaVision</title>
   <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
   <link rel="stylesheet" href="../static/css/tokens.css">
   <link rel="stylesheet" href="../static/css/app.css">
@@ -11,9 +11,9 @@
 <body>
   <main class="av-content">
     <div class="av-page-header">
-      <h1>难例池</h1>
+      <h1>难例样本</h1>
       <div class="av-page-actions">
-        <a class="btn btn-outline-primary text-nowrap" href="review.html">去复核工作台</a>
+        <a class="btn btn-outline-primary text-nowrap" href="review.html">去人工复核</a>
       </div>
     </div>
 
@@ -39,7 +39,7 @@
     import * as api from "../static/js/api.js";
     import { confirmAction, esc, fmtTime, loadInto, qualityBadge, renderPager, toast } from "../static/js/ui.js";
 
-    renderShell("P-08");
+    renderShell();
 
     const $ = (id) => document.getElementById(id);
     // The server's source codes (FR-M4-03).
@@ -63,7 +63,7 @@
               <div class="av-mono text-truncate">${esc(h.frame_id)}</div>
               <div>${h.quality ? qualityBadge(h.quality) : ""} ${h.captured_at ? fmtTime(h.captured_at).slice(5, 15) : ""}</div>
               <div class="d-flex gap-1 mt-2">
-                <a class="btn btn-sm btn-outline-secondary" href="frame.html?id=${encodeURIComponent(h.frame_id)}">查看</a>
+                <a class="btn btn-sm btn-outline-secondary" href="result-detail.html?id=${encodeURIComponent(h.frame_id)}">查看</a>
                 <button class="btn btn-sm btn-outline-danger" data-frame="${esc(h.frame_id)}" type="button">移出</button>
               </div>
             </div>
@@ -78,16 +78,16 @@
       return loadInto($("grid"), () => api.listHardSamples({ ...filters, page, size: 8 }), {
         render,
         isEmpty: (data) => data.items.length === 0,
-        empty: '没有符合条件的难例。复核时修改过的帧会自动进入这里，去 <a href="review.html">复核工作台</a> 看看。',
+        empty: '没有符合条件的难例。复核时修改过的帧会自动进入这里，去 <a href="review.html">人工复核</a> 看看。',
       });
     }
 
     $("grid").addEventListener("click", async (event) => {
       const id = event.target.closest("button[data-frame]")?.dataset.frame;
-      if (!id || !confirmAction(`把帧 ${id} 移出难例池？之后导出数据集不再包含它。`)) return;
+      if (!id || !confirmAction(`把帧 ${id} 移出难例样本？之后导出数据集不再包含它。`)) return;
       try {
         await api.removeHardSample(id);
-        toast("已移出难例池", "success");
+        toast("已移出难例样本", "success");
         await load();
       } catch (err) {
         toast(err.message, "danger");

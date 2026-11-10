@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>识别结果 · AquaVision</title>
+  <title>结果详情 · AquaVision</title>
   <link rel="stylesheet" href="../static/vendor/bootstrap-5.3.3/bootstrap.min.css">
   <link rel="stylesheet" href="../static/css/tokens.css">
   <link rel="stylesheet" href="../static/css/app.css">
@@ -11,10 +11,10 @@
 <body>
   <main class="av-content">
     <div class="av-page-header">
-      <h1>识别结果</h1>
+      <h1>结果详情</h1>
       <div class="av-page-actions">
         <a class="btn btn-outline-secondary text-nowrap" href="capture.html">返回采集</a>
-        <a class="btn btn-outline-primary text-nowrap" href="frames.html">影像浏览</a>
+        <a class="btn btn-outline-primary text-nowrap" href="image-browser.html">影像浏览</a>
         <a class="btn btn-primary text-nowrap" id="btn-review" href="review.html">去复核</a>
       </div>
     </div>
@@ -51,7 +51,7 @@
     import { esc, fmtTime, loadInto, qualityBadge } from "../static/js/ui.js";
     import { CLASSES, countByClass, stageHtml, statusBadge } from "../static/js/boxes.js";
 
-    renderShell("P-06");
+    renderShell();
 
     const $ = (id) => document.getElementById(id);
     function render({ frame, boxes }) {

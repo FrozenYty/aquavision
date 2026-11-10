@@ -1,4 +1,4 @@
-// Shared shell: top bar, left menu and footer. Every page except login calls renderShell(pageId).
+// Shared shell: top bar, left menu and footer. Every page except login calls renderShell().
 // Menu groups follow the business domains of SRS §5.1; page IDs follow the SRS page list (§5.2).
 
 import { USE_MOCK, clearSession, currentUser, hasSession, toLogin } from "./api.js";
@@ -7,41 +7,41 @@ import { esc } from "./ui.js";
 // Page ids follow SRS §5.2. Entries without href are not built in the prototype: they stay in the
 // menu, greyed and tagged P2, so the full system reads as a schedule rather than as missing pages.
 const MENU = [
-  { group: "概览", items: [{ id: "P-02", label: "工作台", href: "home.html" }] },
+  { group: "概览", items: [{ id: "P-02", label: "运行总览", href: "home.html" }] },
   {
     group: "采集",
     items: [
       { id: "P-03", label: "采集控制", href: "capture.html" },
-      { id: "P-04", label: "影像浏览", href: "frames.html" },
+      { id: "P-04", label: "影像浏览", href: "image-browser.html" },
     ],
   },
   {
     group: "识别",
     items: [
       { id: "P-05", label: "识别任务", href: "tasks.html" },
-      { id: "P-06", label: "识别结果", href: "frame.html" },
+      { id: "P-06", label: "结果详情", href: "result-detail.html" },
     ],
   },
   {
-    group: "复核与回流",
+    group: "复核",
     items: [
-      { id: "P-07", label: "复核工作台", href: "review.html" },
-      { id: "P-08", label: "难例池", href: "hard-samples.html" },
-      { id: "P-09", label: "数据集导出", href: "dataset-export.html" },
+      { id: "P-07", label: "人工复核", href: "review.html" },
+      { id: "P-08", label: "难例样本", href: "hard-samples.html" },
+      { id: "P-09", label: "数据导出", href: "dataset-export.html" },
     ],
   },
   {
-    group: "统计与报告",
+    group: "统计",
     items: [
-      { id: "P-10", label: "统计看板", href: "stats.html" },
+      { id: "P-10", label: "统计分析", href: "stats.html" },
       { id: "P-11", label: "巡检报告", href: "reports.html" },
     ],
   },
   {
-    group: "模型与系统",
+    group: "系统",
     items: [
-      { id: "P-12", label: "模型与实验", href: "models.html" },
-      { id: "P-13", label: "系统管理", href: "admin.html" },
+      { id: "P-12", label: "模型实验", href: "models.html" },
+      { id: "P-13", label: "系统设置", href: "admin.html" },
     ],
   },
 ];
@@ -89,17 +89,6 @@ function sidebarHtml(pageId) {
   ).join("");
 }
 
-// "P-03 / 采集" above the page title, taken from the menu so it never drifts.
-function addEyebrow(pageId) {
-  const h1 = document.querySelector(".av-page-header h1");
-  const group = MENU.find(({ items }) => items.some((item) => item.id === pageId));
-  if (!h1 || !group) return;
-  const eyebrow = document.createElement("span");
-  eyebrow.className = "av-eyebrow";
-  eyebrow.textContent = `${pageId} / ${group.group}`;
-  h1.prepend(eyebrow);
-}
-
 // Every page says plainly that its numbers are not real while the mock is on (prototype §4).
 function addPrototypeBadge() {
   const h1 = document.querySelector(".av-page-header h1");
@@ -119,7 +108,14 @@ function startClock(el) {
   setInterval(tick, 1000);
 }
 
-export function renderShell(pageId) {
+// The current page is the menu entry whose href is this file, so no template has to name its own id.
+function currentPageId() {
+  const file = location.pathname.split("/").pop();
+  return MENU.flatMap(({ items }) => items).find((item) => item.href === file)?.id;
+}
+
+export function renderShell() {
+  const pageId = currentPageId();
   // No token, no page: an empty table behind a missing login helps nobody (handover §3.2).
   if (!hasSession()) {
     toLogin();
@@ -142,7 +138,6 @@ export function renderShell(pageId) {
   footer.textContent = DATA_SOURCE;
   content.append(footer);
 
-  addEyebrow(pageId);
   addPrototypeBadge();
   startClock(topbar.querySelector(".av-clock"));
 
