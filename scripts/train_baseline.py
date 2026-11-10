@@ -124,24 +124,31 @@ def train_and_record(args: argparse.Namespace) -> dict:
         Path(args.data), dataset, train_subset, val_subset, dataset / "test" / "images"
     )
 
-    model = YOLO(args.model)
-    model.train(
-        data=str(data_yaml),
-        epochs=args.epochs,
-        imgsz=args.imgsz,
-        batch=args.batch,
-        seed=args.seed,
-        device=args.device,
-        workers=args.workers,
-        project=args.project,
-        name=args.name,
-        exist_ok=True,
-        pretrained=True,
-        patience=args.epochs,
-        verbose=True,
-    )
+    project = Path(args.project).resolve().as_posix()
+    if args.resume:
+        model = YOLO(str(args.resume))
+        model.train(resume=True)
+    else:
+        model = YOLO(args.model)
+        model.train(
+            data=str(data_yaml),
+            epochs=args.epochs,
+            imgsz=args.imgsz,
+            batch=args.batch,
+            seed=args.seed,
+            device=args.device,
+            workers=args.workers,
+            project=project,
+            name=args.name,
+            exist_ok=True,
+            pretrained=True,
+            patience=args.epochs,
+            verbose=True,
+        )
 
-    best = Path(args.project) / args.name / "weights" / "best.pt"
+    trainer = getattr(model, "trainer", None)
+    run_dir = Path(trainer.save_dir) if trainer is not None else Path(args.project) / args.name
+    best = run_dir / "weights" / "best.pt"
     if best.exists():
         model = YOLO(str(best))
     metrics_obj = model.val(
@@ -150,7 +157,7 @@ def train_and_record(args: argparse.Namespace) -> dict:
         imgsz=args.imgsz,
         batch=args.batch,
         device=args.device,
-        project=args.project,
+        project=project,
         name=f"{args.name}-test",
         exist_ok=True,
     )
@@ -171,7 +178,6 @@ def train_and_record(args: argparse.Namespace) -> dict:
         "seed": args.seed,
         "weights": best.resolve().as_posix(),
     }
-    run_dir = Path(args.project) / args.name
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
 
@@ -200,6 +206,7 @@ def main() -> int:
     parser.add_argument("--dataset", type=Path, default=Path("data/dataset"))
     parser.add_argument("--data", type=Path, default=Path("data/baseline.yaml"))
     parser.add_argument("--model", default="yolov8n.pt")
+    parser.add_argument("--resume", type=Path, default=None, help="last.pt to continue")
     parser.add_argument("--train-limit", type=int, default=1800)
     parser.add_argument("--val-limit", type=int, default=200)
     parser.add_argument("--epochs", type=int, default=30)
