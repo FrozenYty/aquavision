@@ -82,8 +82,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       at least one case, marked not-yet-implemented — 49 cases in `docs/test-cases-en.md`, all 36
       items covered, every case marked not implemented
 - [ ] **P1-06** Hardware arrival check and rig assembly · @FrozenYty · **camera half done 11-10** —
-      `scripts/test_exposure.py --index 1` exits 0 (1080p, exposure lockable, 5 fps, 0.5 % spread); the
-      rig numbers below still need the assembled rig · done when
+      `scripts/test_exposure.py --index 1` exits 0 (1080p, exposure lockable, 5 fps, 0.5 % spread);
+      `scripts/test_rig.py` exists and measures the three numbers below, but they still need the
+      assembled rig · done when
       `python scripts/test_exposure.py` exits 0 — the device opens, the picture answers the exposure
       property, and 20 pinned frames stay inside a 10 % spread — and the rig meets its numbers:
       left/right brightness ratio ≥ 0.7, a 5 cm target ≥ 45 px at 640 input, no flicker

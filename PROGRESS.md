@@ -1,11 +1,23 @@
 ## 2026-11-10
 
+- **The rig's three numbers became a script, so the tank can be judged without an opinion.**
+  `scripts/test_rig.py` measures lighting uniformity, the width of a 5 cm target at 640 px, and the
+  brightness drift between the first and last frame of a run; `server/app/vision/rig.py` holds the
+  measurement and `tests/test_rig_measure.py` covers it on generated frames. Ten tests, all of which
+  state a number from the procurement document rather than a shape of code.
+- **The first version passed a desk photo as a good rig.** It reported a 346 px target by finding the
+  bright window, and its 60th-percentile threshold swallowed the whole frame once the target occupied
+  only a few percent of it. Otsu's threshold plus a fill-ratio and an upper width bound fixed both:
+  the desk photo now reports 0 px, and a 318 px square at 1080p is measured as exactly 106 px at 640 —
+  the number it should be. A check that can be fooled by the scene is worse than no check.
+
 - **`P3-15` partly done: thresholds are viewable and editable on P-12, unknown codes are refused, and the
   page says the truth about scope.** The batch route takes its own `conf_thr` (default 0.50) and never reads
   the species dictionary, so a saved threshold does not change detection yet. The caption says so; the
   task stays open until the route reads the dictionary (lane B). Checked on the real server: 0.55 saved
   and kept after a reload; 1.2 refused in the browser; an unknown code in the scratch database shown as
   a refusal, not a row.
+
 - **The contract settled, so the client owes it two changes (§7).** The socket used to carry the token
   in the query string because nothing better had been decided; §7 now requires it as the first `auth`
   message and adds `auth_ok`, `4401` and `4408`. `P2-16` is the new task: move the client onto the

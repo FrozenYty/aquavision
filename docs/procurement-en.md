@@ -88,8 +88,10 @@ Assemble and power on in five steps, one at a time, so a fault is localised imme
    head, corners taut, no warp.
 5. Display and LEDs — an I2C scan shows both `0x3C` (OLED) and `0x49` (turbidity); the screen boots to
    `AQUAVISION` then settles on `READY`; a button press pulses the green or yellow LED for 300 ms.
-6. Camera — exposure lock, `python scripts/test_exposure.py` exits 0; at a fixed light level, left/right
-   brightness ratio ≥ 0.7 and a 5 cm target ≥ 45 px at 640.
+6. Camera — exposure lock, `python scripts/test_exposure.py` exits 0; then `python scripts/test_rig.py`
+   exits 0, which measures the left/right brightness ratio, the 5 cm target width and the brightness
+   drift of a ten-minute run under a fixed light level. **Both are required**: the first asks whether
+   the camera can be used, the second whether the picture is good enough to detect on.
 
 ## 5. Acceptance numbers
 
