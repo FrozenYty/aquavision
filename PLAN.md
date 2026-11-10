@@ -181,7 +181,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       when the client and §7 disagree about a message type or a field - the mirror of
       `tests/test_api_js.py`, which is what keeps the REST client honest
 
-- [ ] **P2-17** The PC side of the rig link · @FrozenYty · **nothing owns this today** — the architecture
+- [x] **P2-17** The PC side of the rig link · @FrozenYty · delivered 11-10; the architecture
       draws `MCU -. serial .-> CAP` and no task implements it · done when the server opens the port,
       keeps it alive with `CMD PING` every two seconds, turns an `EVT TRIGGER` into a capture, answers
       with `CMD RESULT`, and surfaces `EVT SCREEN`, `EVT TIMEOUT` and `EVT STRAY RESULT` in the log
@@ -204,7 +204,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         traceability matrix
       - **nothing regresses**: the page tests pass and every existing control survives
 
-- [ ] **P2-19** Two documents that disagree with the code, in other lanes · @Gtechson + @IkeaFyj ·
+- [x] **P2-19** Two documents that disagree with the code, in other lanes · @Gtechson + @IkeaFyj ·
       found by the 11-10 audit, left alone because fixing another lane's document inside this diff is the
       habit the handover forbids · done when
       - **`docs/api-contract-en/zh.md` §5** documents `from=`/`to=` on `GET /api/frames`; the route reads
