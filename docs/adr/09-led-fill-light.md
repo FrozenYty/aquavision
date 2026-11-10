@@ -2,7 +2,7 @@
 
 - **Status:** Superseded by ADR 10
 - **Date:** 2026-11-07
-- **Supersedes:** the "two desk lamps" decision recorded in `procurement.md` §2
+- **Supersedes:** the "two desk lamps" decision recorded in `procurement-en.md` / `procurement-zh.md` §2
 - **Superseded by:** ADR 10, after the lamp on hand proved to be a DC source with no visible flicker
 
 ## Context

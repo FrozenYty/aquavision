@@ -65,7 +65,7 @@ than a schema decision now.
 
 ## Consequences
 
-- SRS rises to V1.5; the data model, the README and the twelve-table references move with it in the
+- SRS rises to V1.5; the data model, the README and the thirteen-table references move with it in the
   same change. The revision history records what changed and why.
 - `EXPECTED_COLUMNS` grows to thirteen entries, so a column added on one side only fails a test.
 - The database is still created from scratch by `scripts/init_db.py`; there is no migration tool, and

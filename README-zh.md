@@ -132,7 +132,7 @@ python -m http.server 8765 --directory web
 | [数据模型](docs/data-model-zh.md) · [English](docs/data-model-en.md) | 十三张表、字段、索引、文件存储 |
 | [测试计划](docs/test-plan-zh.md) · [English](docs/test-plan-en.md) | 测试分层、数据集划分、指标与验收 |
 | [术语表](docs/glossary-en-zh.md) | 中英对照，代码与文档共用的唯一词表 |
-| [决策记录](docs/adr/) | 十条已采纳的决定及其理由；逐条列在 `docs/architecture-zh.md` 第十节 |
+| [决策记录](docs/adr/) | 十份决策记录（其中一份已被取代）及其理由；逐条列在 `docs/architecture-zh.md` 第十节 |
 
 设计文档以英文版为准，中文为对照版，两者必须在同一次提交内同步。
 
@@ -154,8 +154,8 @@ tests/       测试
 |---|---|
 | 采集 | USB 摄像头（1080P、手动曝光、UVC）配合 OpenCV |
 | 识别 | PyTorch + Ultralytics YOLOv8n，三项改进：水下色彩校正、EMA 注意力、WIoU v3 |
-| 后端 | Python 3.11、FastAPI、SQLAlchemy 2.1、PostgreSQL 14 |
-| 前端 | HTML5、Bootstrap 5.3.3、ECharts 5、原生 ES 模块，无构建步骤；依赖库已本地化于 `web/static/vendor/` |
+| 后端 | Python 3.11、FastAPI、SQLAlchemy 2.1；本地跑用 SQLite，部署用 PostgreSQL 14 |
+| 前端 | HTML5、Bootstrap 5.3.3、手写 SVG 图表、原生 ES 模块，无构建步骤；Bootstrap 已本地化于 `web/static/vendor/` |
 | 装置控制 | ESP32-S3（Arduino 框架，PlatformIO 构建）；0.96 寸 OLED 与两颗状态指示灯 |
 
 指标目标：四类目标 mAP@0.5 ≥ 0.75，比基线提升 +0.03，推理速度不低于基线的 90%。

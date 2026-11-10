@@ -86,7 +86,7 @@ One process, four concerns:
 | Capture | Background thread, 10 fps | Keeps the latest frame without blocking requests |
 | Detection | Inference every ~300 ms | Decoupled from display rate; see ADR 03 |
 | Batch jobs | Fixed thread pool, 2 workers | No Celery, no Redis; task state lives in PostgreSQL |
-| API | Async FastAPI handlers | Serves REST and one WebSocket endpoint |
+| API | Async FastAPI handlers | Serves REST; one WebSocket endpoint is planned and not yet implemented, so the capture page polls |
 
 **Detection rate is not the display rate.** The camera pushes frames at 10 fps; detection runs
 every 300 ms and the newest boxes are reused for intermediate frames. On a GPU both run at full
@@ -113,7 +113,7 @@ together the file on disk, the database row and the detection result.
 
 | What | Where | Why |
 |---|---|---|
-| Frames | `data/frames/YYYY/MM/DD/<session>/<frame_id>.jpg` | Thousands per day; a flat folder stalls the file browser |
+| Frames | `data/frames/<site>/<YYYYMMDD>/<session>/<frame_id>.jpg` | Thousands per day; a flat folder stalls the file browser |
 | Thumbnails | `data/thumbs/...` | List views never load full images |
 | Results | `data/results/<frame_id>.json` | Lets a result be re-read without the database |
 | Weights | `data/models/<version>/` | Versioned, never overwritten |

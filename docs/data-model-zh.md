@@ -303,7 +303,7 @@
 
 ```
 data/
-  frames/年/月/日/<session_id>/<frame_id>.jpg
+  frames/<站点>/<年月日>/<session_id>/<frame_id>.jpg
   thumbs/年/月/日/<frame_id>.jpg
   results/<frame_id>.json
   models/<version_name>/{best.pt,labels.txt,metrics.json}
@@ -314,7 +314,7 @@ data/
 
 ## 六、生命周期
 
-- 原始帧长期保留；缩略图与中间文件 90 天后过期。
+- 原始帧长期保留；缩略图与中间文件超过 `retention_days`（默认 30 天，`AV_RETENTION_DAYS`）即成为清理对象。
 - 删帧先软删，7 天后物理删除。
 - 模型版本一旦上线就不再删除，只标记为离线。
 - 日志保留 180 天，之后导出归档。

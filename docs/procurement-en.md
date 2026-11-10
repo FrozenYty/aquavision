@@ -4,7 +4,7 @@
 
 > Owner: @FrozenYty · Revisit when: the hardware changes
 
-Final bill of materials, frozen on 2026-11-05: nine items, two channels, ¥377.42. This is the list the
+Final bill of materials: nine items were ordered on 2026-11-05 (¥377.42), and the 330 ohm resistors and the trigger button joined the list on 2026-11-10, making eleven items and ¥388.32. This is the list the
 rig is built from; changing it means changing PLAN.md P0-03 and this document together. Brand names
 and the Chinese search strings are listed in the Chinese version; this file describes the same parts
 in English.
@@ -33,7 +33,7 @@ day after the lamp was checked — ADR 10.
 
 | Item | Why not |
 |---|---|
-| Capture light | Two desk lamps with tracing paper as a diffuser and a white card reflector. Removes an entire 5 V rail and six wires. |
+| Capture light | The team's existing Midea MT-10T4 desk lamp: 10 W, 4000 K, USB-powered, no visible flicker. Buying a light is only revisited if the acceptance numbers are not met (ADR 10). |
 | Acrylic tank | Ultra-clear glass is cheaper, has no stress birefringence, and keeps cross-polarisation working. |
 | Target models | Real seafood bought on the day. Natural colour, natural sinking, naturally wet and specular — which is what the polariser exists for. |
 | Scenery | Stones and plants found on site. One dark stone shaped like a sea cucumber is enough to stage a false positive. |
@@ -54,14 +54,6 @@ day after the lamp was checked — ADR 10.
     `python -m app.vision.capture --camera 1 --exposure -6` from `server/`.
   - **White balance must stay automatic.** Manual balance on this driver is a lie: it echoes the
     temperature back without acting on it, and the colour cast score drops from 83 to 0.
-- **Adapter lead.** The supply ends in a barrel plug and the strip in bare wires; without the socket-to-
-  terminal lead the two never meet. Reconnecting power at a cut end also needs a solderless clip (often
-  included) or a soldering iron — confirm when ordering.
-- **Strip colour temperature.** Choose 4000 K neutral white: water absorbs red first and pushes the
-  image blue-green, and a warm source cancels half of that. A 6000 K source adds to the shift, and with
-  white balance locked the red gain is raised to compensate, which lifts noise on exactly the dark
-  targets this project has to see. Buy both runs from the same batch; mixing them puts a colour gradient
-  across the tank.
 - **Button.** The XKB8080-W must be the **momentary** version. A latching one stays closed after the
   press and needs a second press to release, while the firmware triggers on the closing edge once —
   the result is one frame per two presses. Check the listing says momentary before ordering. Six pins
@@ -75,7 +67,7 @@ day after the lamp was checked — ADR 10.
 
 ## 4. Assembly order
 
-Assemble and power on in five steps, one at a time, so a fault is localised immediately:
+Assemble and power on in six steps, one at a time, so a fault is localised immediately:
 
 1. ESP32 + tactile switch — serial prints a line on each press. **Debounce first**: one press, one line.
 2. Level shifter — measure 3.3 V on VCCA and 5 V on VCCB. **This board cannot be skipped:** rev A3 of the

@@ -31,7 +31,8 @@ water-temperature and turbidity sensors, OLED status display. It never touches i
 ## Consequences
 
 - The compliant path is trivially demonstrable: unplug the camera and no image can enter.
-- A serial protocol must be defined between the ESP32 and the server (see `api-contract`).
+- A serial protocol must be defined between the ESP32 and the server (see the "Serial protocol"
+  section of `firmware/README.md`, and the rules in `docs/rig-state-machine-en.md`).
 - The camera must support manual exposure; auto-exposure would invalidate the quality score.
 
 ## Revisit when

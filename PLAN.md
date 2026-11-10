@@ -204,6 +204,16 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         traceability matrix
       - **nothing regresses**: the page tests pass and every existing control survives
 
+- [ ] **P2-19** Two documents that disagree with the code, in other lanes · @Gtechson + @IkeaFyj ·
+      found by the 11-10 audit, left alone because fixing another lane's document inside this diff is the
+      habit the handover forbids · done when
+      - **`docs/api-contract-en/zh.md` §5** documents `from=`/`to=` on `GET /api/frames`; the route reads
+        `start`/`end`, and an undeclared query parameter is silently ignored, so a filter written from
+        the contract returns unfiltered data (lane B)
+      - **`docs/test-plan-en/zh.md`** names `scripts/evaluate.py` as the model-evaluation tool and
+        describes `tests/fixtures/` as holding three JPEGs; neither exists - metrics come out of
+        `train_baseline.py`, and the tests synthesise their frames (lane D)
+
 - [ ] **GATE P2** — from a cold start, someone who has not seen the system completes the slice in
       three minutes, no restart, no manual database edit
 
