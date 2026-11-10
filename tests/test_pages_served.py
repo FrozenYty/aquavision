@@ -9,10 +9,9 @@ origin true - without it, a refactor that drops the mount would look like a fron
 from __future__ import annotations
 
 import pytest
-from sqlalchemy.orm import sessionmaker
-
 from app.config import get_settings
 from app.db import Base, engine_from_dsn
+from sqlalchemy.orm import sessionmaker
 
 
 @pytest.fixture
@@ -24,9 +23,8 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("AV_WORKER_ENABLED", "0")
     get_settings.cache_clear()
 
-    from fastapi.testclient import TestClient
-
     from app.main import create_app
+    from fastapi.testclient import TestClient
 
     app = create_app()
     engine = engine_from_dsn(dsn)
