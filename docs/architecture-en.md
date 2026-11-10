@@ -172,3 +172,4 @@ per working directory.
 | [08](adr/08-four-tables-added.md) | Nine tables become thirteen: snapshots, reports and parameters had nowhere to live |
 | [09](adr/09-led-fill-light.md) | ~~Fill light becomes a 12 V strip driven by a MOSFET~~ — **superseded by 10** |
 | [10](adr/10-desk-lamp-fill-light.md) | Fill light is the existing lamp: USB-powered DC, no visible flicker, nothing to buy |
+| [11](adr/11-pytest-runs-locally.md) | Tests run on every workstation: a suite that only runs in CI is a suite people push past |
