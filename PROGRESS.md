@@ -1,5 +1,9 @@
 ## 2026-11-10
 
+- **The path rule was enforced where it could be checked, and forgotten where it travels furthest.**
+  `check-paths.py` reads the repository's documents; it cannot see a task brief handed to someone to
+  forward. A brief went out carrying a path from this machine, and it had to be pointed out twice.
+  `AGENTS.md` §6 now says the rule is wider than the check's reach.
 - **`P1-02` could not have been closed as written.** Its "done when" required every P0 route to return
   real data, and one of them — `POST /api/compare/frames/{id}` — needs two registered model versions
   loaded at once, which cannot exist before P4. The task would have stayed open for another month for a

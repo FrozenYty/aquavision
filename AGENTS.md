@@ -95,6 +95,11 @@ python -m ruff format --check .        # format
 pytest -q                              # tests
 ```
 
+`check-paths.py` reads the repository's documents, but the rule it enforces is wider than its reach:
+anything you write for someone else to read — a task brief, a message meant to be forwarded, an answer
+that will be pasted into a group chat — uses paths relative to the repository root, never an absolute
+path on the machine that wrote it. Say "the repository root" rather than where the repository is.
+
 If `ruff` is missing, install it rather than skipping the check. On Windows a sandbox can block pip's
 unpack directory; run the install outside the sandbox or with elevated permission. CI is the final
 authority, but "CI will catch it" is not a reason to push without looking.
