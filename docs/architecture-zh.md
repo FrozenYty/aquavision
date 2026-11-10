@@ -37,12 +37,17 @@ flowchart LR
 ## 三、分层与依赖规则
 
 ```
-api/  →  services/  →  repo/  →  models/
-              ↓
-           vision/
+routers/  →  serializers/  →  SQLAlchemy 会话  →  models/
+                  ↓
+               vision/
 ```
 
-**依赖只能单向流动。** `api` 不碰 SQL，`services` 不碰 HTTP，`vision` 被 `services` 调用，
+**目标**：`api/ → services/ → repo/ → models/`，`services` 位于路由与数据访问之间。
+**现状**比目标低一层：路由、校验与业务逻辑都在 `server/app/routers/` 里，`models.py` 承载表定义，
+`repo/` 与 `services/` 这两个包还不存在。**不存在的层不能画成存在**——本节既说明代码要往哪走，
+也说明为什么；下面的规则正是让这次移动仍然可能的前提。
+
+**依赖只能单向流动。** 路由不直接执行裸 SQL，业务逻辑不构造 HTTP 响应，`vision` 由路由调用，
 不反向回调。
 
 | 层 | 职责 | 不许做 |
@@ -87,7 +92,7 @@ tests/
 | 采集 | 后台线程，10 fps | 保证取到最新帧，且不阻塞请求 |
 | 识别 | 每约 300 ms 推理一次 | 与显示帧率解耦，见 ADR 03 |
 | 批量任务 | 固定线程池，2 个工作线程 | 不引 Celery 与 Redis，任务状态存 PostgreSQL |
-| 接口 | FastAPI 异步处理 | 同时提供 REST 与一个 WebSocket |
+| 接口 | FastAPI 异步处理 | 提供 REST；一个 WebSocket 端点已规划但尚未实现，所以采集页改用轮询 |
 
 **识别频率不等于显示帧率。** 摄像头按 10 fps 推帧，识别每 300 ms 跑一次，中间帧复用
 最新的框。有独显时两者都跑满；在 CPU 上这样能保住画面流畅，而不是掉到 3 fps。
@@ -113,7 +118,7 @@ flowchart TD
 
 | 内容 | 位置 | 原因 |
 |---|---|---|
-| 原始帧 | `data/frames/年/月/日/<会话>/<frame_id>.jpg` | 一天几千帧，平铺目录会把文件浏览器卡死 |
+| 原始帧 | `data/frames/<站点>/<年月日>/<会话>/<frame_id>.jpg` | 一天几千帧，平铺目录会把文件浏览器卡死 |
 | 缩略图 | `data/thumbs/...` | 列表页永远不加载原图 |
 | 识别结果 | `data/results/<frame_id>.json` | 不查库也能直读某帧结果 |
 | 模型权重 | `data/models/<版本>/` | 按版本存放，永不覆盖 |

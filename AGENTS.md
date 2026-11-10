@@ -25,7 +25,7 @@ AquaVision — underwater species detection and monitoring. A USB camera feeds a
 YOLOv8 detection, then human review; corrections flow back into training. Four classes: sea
 cucumber, sea urchin, scallop, starfish.
 
-One FastAPI process, a static frontend, and an ESP32 that only handles trigger, light and sensors.
+One FastAPI process, a static frontend, and an ESP32 that only handles the trigger, the turbidity sensor and its panel.
 
 Phase and task state live in `PLAN.md`. Recent changes live in `PROGRESS.md`. Do not restate either
 one here — stale summaries are worse than none.
@@ -106,7 +106,7 @@ If `ruff` is missing, install it rather than skipping the check. On Windows a sa
 unpack directory; run the install outside the sandbox or with elevated permission. CI is the final
 authority, but "CI will catch it" is not a reason to push without looking.
 
-**A passing local run proves less than it looks.** The three document checks never look at Python
+**A passing local run proves less than it looks.** The five document checks never look at Python
 code, and a script can execute correctly while still failing static analysis: a name read before the
 branch that assigns it is an `F821` that no runtime test will hit. Run `ruff` on every change to
 Python — that is what catches it.
