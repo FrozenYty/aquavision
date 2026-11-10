@@ -57,6 +57,16 @@ P2-15   契约 §7 的三个问题               ← 没有前置，而且它解
 | 十三张表 | `server/app/models.py` | 完成；后四张的原因见 ADR 08 |
 | 契约覆盖测试 | `tests/test_api_skeleton.py` | 通过——**不许削弱** |
 
+**卡着 `P1-02` 的就是两条路由**，而且正是需要权重的那两条：
+
+| 路由 | 需求 | 何时关闭 |
+|---|---|---|
+| `POST /api/detect/frames/{id}` | FR-M3-01 | `P2-05b` |
+| `POST /api/detect/batches` | FR-M3-02 | `P2-05b` |
+
+`POST /api/compare/frames/{id}` 原本也在这一列，**已移到 `P4-10`**：它需要同时加载两个已注册版本，
+留在这里会让 `P1-02` 直到 P4 都关不掉。**这是对任务的更正，不是放宽。**
+
 还缺什么：
 
 1. **真实的检测链路。** `POST /api/detect/frames/{id}` 与 `/api/detect/batches` 因为没有权重返回

@@ -1,5 +1,12 @@
 ## 2026-11-10
 
+- **`P1-02` could not have been closed as written.** Its "done when" required every P0 route to return
+  real data, and one of them — `POST /api/compare/frames/{id}` — needs two registered model versions
+  loaded at once, which cannot exist before P4. The task would have stayed open for another month for a
+  reason that has nothing to do with the work in it. `compare` is now `P4-10`; `P1-02` closes on the two
+  detection routes and the reviewed statistics, which is `P2-05`.
+- **What keeps `P1-02` open is exactly two routes**, both waiting on weights: `POST /api/detect/frames`
+  (FR-M3-01) and `POST /api/detect/batches` (FR-M3-02).
 - **The backend lane has produced nothing since 11-08, and part of that is a scheduling fault of mine.**
   `P2-05` and `P2-06` were assigned as parallel tasks, but detection needs weights and weights come from
   the baseline — they are strictly sequential. Worse, the prerequisite is not on this machine:
