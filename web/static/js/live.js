@@ -9,6 +9,7 @@
 // any field may be missing, and the page draws what arrives.
 
 import * as api from "./api.js";
+import { clearSession, toLogin } from "./api.js";
 
 const SOCKET_TIMEOUT_MS = 3000;
 const POLL_MS = 1000;
@@ -17,10 +18,8 @@ const MOCK_LATENCY_MS = 2000; // the prototype's latency figure moves every two 
 
 function socketUrl() {
   const scheme = location.protocol === "https:" ? "wss:" : "ws:";
-  // Browsers cannot set headers on a WebSocket; the contract does not say how it authenticates yet,
-  // so the token rides as a query parameter for when it does.
-  const token = encodeURIComponent(localStorage.getItem("av_token") ?? "");
-  return `${scheme}//${location.host}/ws/capture?token=${token}`;
+  // The token is not in the URL (api-contract §7): the first message on the socket carries it.
+  return `${scheme}//${location.host}/ws/capture`;
 }
 
 // Frame ids start with the capture time (YYYYMMDDTHHMMSS-…), so they order as strings.
@@ -79,15 +78,16 @@ function pollingFeed(sessionId, onUpdate, onError) {
   };
 }
 
-// Resolves to a stop function once the socket is open, or rejects when it cannot open in time.
+// Resolves to a stop function once the server has accepted the token (auth_ok) and the session has
+// been started; rejects when that does not happen in time, so the caller falls back to polling.
 function socketFeed(sessionId, onUpdate, onState) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(socketUrl());
     ws.binaryType = "blob";
-    let header = null; // optional { type: "frame", frame_id, captured_at, quality } before a JPEG
+    let header = null; // the `frame` message immediately before a JPEG (api-contract §7)
     let shownFrame = null;
     let lastUrl = null;
-    let opened = false;
+    let authed = false;
     let stopping = false;
     const timeout = setTimeout(() => {
       ws.close();
@@ -95,35 +95,46 @@ function socketFeed(sessionId, onUpdate, onState) {
     }, SOCKET_TIMEOUT_MS);
 
     ws.onopen = () => {
-      opened = true;
-      clearTimeout(timeout);
-      ws.send(JSON.stringify({ type: "start", session_id: sessionId, fps: 10, detect_interval_ms: 300 }));
-      resolve(() => {
-        stopping = true;
-        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "stop" }));
-        ws.close();
-        if (lastUrl) URL.revokeObjectURL(lastUrl);
-      });
+      ws.send(JSON.stringify({ type: "auth", token: localStorage.getItem("av_token") ?? "" }));
     };
     ws.onerror = () => {
       clearTimeout(timeout);
       reject(new Error("socket error"));
     };
-    // A socket that never opened has already handed over to polling; only a dropped one is news.
-    ws.onclose = () => {
-      if (opened && !stopping) onState("closed");
+    // 4401: the token was refused. Not a socket problem, so the user is sent to sign in again.
+    ws.onclose = (event) => {
+      if (event.code === 4401) {
+        clearSession();
+        toLogin();
+        return;
+      }
+      // 4408: no auth message within five seconds. This client sends it at once, so this means a stall.
+      if (event.code === 4408) return onState("auth_timeout");
+      if (authed && !stopping) onState("closed");
     };
 
     ws.onmessage = (event) => {
       if (event.data instanceof Blob) {
         if (lastUrl) URL.revokeObjectURL(lastUrl);
         lastUrl = URL.createObjectURL(event.data);
-        shownFrame = header?.frame_id ?? shownFrame;
         onUpdate({ image_url: lastUrl, frame_id: header?.frame_id, captured_at: header?.captured_at, quality: header?.quality, boxes: [] });
+        shownFrame = header?.frame_id ?? shownFrame;
         header = null;
         return;
       }
       const msg = JSON.parse(event.data);
+      if (msg.type === "auth_ok") {
+        authed = true;
+        clearTimeout(timeout);
+        ws.send(JSON.stringify({ type: "start", session_id: sessionId, fps: 10, detect_interval_ms: 300 }));
+        resolve(() => {
+          stopping = true;
+          if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "stop" }));
+          ws.close();
+          if (lastUrl) URL.revokeObjectURL(lastUrl);
+        });
+        return;
+      }
       if (msg.type === "frame") header = msg;
       // §8: a result for a frame older than the one on screen is dropped, never queued.
       if (msg.type === "detect" && !newer(shownFrame ?? "", msg.frame_id)) {
