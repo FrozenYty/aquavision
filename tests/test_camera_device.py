@@ -103,8 +103,24 @@ def test_lock_holds_when_brightness_is_steady():
     lock.close()
 
 
+def test_lock_pins_gain_and_returns_white_balance_to_automatic():
+    """The SRS names shutter and gain. Manual balance made the colour cast worse on the real camera,
+    which remembers the manual setting across opens, so the lock asks for automatic explicitly."""
+    camera = CameraSource(index=0)
+    camera.open()
+    result = camera.lock_exposure()
+    device = camera._cap  # the fake, so the properties it received can be read back
+    assert device.props[capture.cv2.CAP_PROP_GAIN] == 0.0
+    assert device.props[capture.cv2.CAP_PROP_AUTO_WB] == 1.0
+    assert result.gain_raw == 0.0
+    camera.close()
+
+
 def test_lock_reports_drift_instead_of_pretending():
-    CONFIG["frames"] = [100.0, 140.0, 100.0, 140.0, 100.0]
+    # Settling frames first (the sensor does return them), then the drift the check must catch.
+    CONFIG["frames"] = [0.0] * capture.LOCK_SETTLE_FRAMES + [100.0, 140.0] * (
+        capture.LOCK_SAMPLE_FRAMES // 2
+    )
     camera = CameraSource(index=0)
     camera.open()
     result = camera.lock_exposure()

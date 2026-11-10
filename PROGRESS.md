@@ -1,5 +1,21 @@
 ## 2026-11-10
 
+- **The camera arrived and the device half of `P1-03` is closed.** `scripts/test_exposure.py --index 1`
+  exits 0 on the real unit: 1080p, exposure controllable and lockable to a 0.5 % frame-to-frame spread,
+  5 fps. Twenty frames went through the pipeline, which closed by confirming on disk that the file,
+  the quality score and the frame id all agree.
+- **Four defects were found by using it, not by reading the code.** The capture CLI had no way to set
+  exposure at all, though manual exposure is an SRS requirement; gain was read and never fixed, though
+  the SRS says "shutter and gain fixed"; the lock measured the sensor settling and reported a 224 %
+  drift on a locked exposure; and forcing manual white balance turned every frame green (cast score 0
+  against 83 for automatic) because this driver echoes the temperature back without acting on it.
+- **The unit has one broken mode and one hard ceiling.** 720p stalls at 1 fps; 1080p runs at 5 fps,
+  which is the USB 2.0 bandwidth for uncompressed video; 640×480 gives 30 fps. MJPEG is ignored. The
+  rig captures stills, so 1080p at 5 fps is enough — but nothing may use 720p.
+- **Image quality has not passed, and should not have.** With a good exposure the frames score 49–50:
+  brightness 72, cast 83–86, **sharpness 21** — a desk with no tank, no fill light and no target has
+  nothing sharp in it. The gate is right to reject them; `P1-06`'s rig numbers wait for assembly.
+
 - **Correction: the dataset was never missing.** The entry above says the prerequisite for `P2-06` was
   not on this machine. True, and irrelevant — it is on the training machine, as the owner of that lane
   pointed out within the hour: 6671 + 1111 raw images and a 5671 / 1000 / 1111 split, both present.

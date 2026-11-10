@@ -30,6 +30,8 @@ from app.vision.capture import CameraSource, CaptureError
 # SRS NFR-U-08: once exposure is locked, mean brightness between frames varies by under 10 %.
 TOLERANCE = 0.10
 DEFAULT_FRAMES = 20
+# Frames discarded after the lock: the sensor is still settling from the exposure sweep.
+SETTLE_FRAMES = 8
 # Exposure units differ per backend (log2 seconds on DirectShow, absolute on V4L2), so the response
 # test uses a relative step rather than an absolute exposure time.
 RESPONSE_STEPS = (3.0,)
@@ -124,6 +126,8 @@ def check_response(source: CameraSource) -> list[Check]:
         frames, _ = sample_brightness(source, 3)
         readings.append(statistics.fmean(frames))
 
+    source.set_exposure(base)  # leave the device where it was found, not at the end of a sweep
+
     bright, dark = max(readings), min(readings)
     ratio = (bright - dark) / bright if bright > 0 else 0.0
     changed = ratio > 0.05
@@ -139,17 +143,31 @@ def check_response(source: CameraSource) -> list[Check]:
 
 
 def check_stability(source: CameraSource, frames: int) -> list[Check]:
-    """Pin the exposure and confirm 20 frames stay within the tolerance."""
+    """Pin the exposure and confirm the frames stay within the tolerance.
+
+    The verdict comes from the measurement taken *after* the lock, not from the one the lock itself
+    reported: an earlier version printed the fresh number beside the old verdict, so a 639 % swing
+    appeared in a line that said "passed". Settling frames are dropped first — the probe has just
+    swept exposure up and down, and the sensor needs a moment before it can be called stable.
+    """
     lock = source.lock_exposure()
+    for _ in range(SETTLE_FRAMES):
+        source.read()
     values, fps = sample_brightness(source, frames)
     spread = relative_spread(values)
+    held = lock.locked and spread <= TOLERANCE
+
+    reason = ""
+    if not lock.locked:
+        reason = f"；{lock.reason}"
+    elif not held:
+        reason = f"；锁定后重新测量为 {spread:.1%}，超过上限"
 
     checks = [
         Check(
             "曝光锁定",
-            lock.locked,
-            f"帧间亮度波动 {spread:.1%}（上限 {TOLERANCE:.0%}）"
-            + ("" if lock.locked else f"；{lock.reason}"),
+            held,
+            f"帧间亮度波动 {spread:.1%}（上限 {TOLERANCE:.0%}）" + reason,
         )
     ]
     checks.append(Check("帧率", fps >= 5.0, f"{fps:.1f} 帧/秒（连续读帧，非持续采集）"))
