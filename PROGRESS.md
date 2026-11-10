@@ -1,5 +1,21 @@
 ## 2026-11-10
 
+- **One page had three names, and the English had two.** The menu said `Capture control`, SRS §5.2 said
+  `Capture control page`, and nine of the thirteen English names disagreed between the SRS and the
+  traceability matrix (`Frame browser` against `Image browser`, `Detection tasks` against `Detection
+  jobs`, `Administration` against `System administration`). The Chinese scheme was mixed too: object plus
+  noun beside noun plus verb, `workbench` used both as a page type and as a modifier, and one name with a
+  conjunction in it.
+- **SRS V1.11 fixes the scheme**: object plus action, four characters where the language allows, no page
+  suffix, no conjunction. The §5.2 table and `docs/traceability-en/zh.md` now carry the new names - 146
+  replacements across the two matrices - and §5.2 is the authority the interface has to match.
+- **The features keep their own names.** `FR-M4-01` is still the review bench, `/api/hard-samples` is
+  still the hard-sample route, and the dataset-export feature is still that: renaming a page is not
+  renaming a requirement, a route or a table. Only the four lists that name *pages* move together.
+- **The task now asks for the test, not the rename.** Four hand-maintained lists - menu labels, page
+  titles, SRS §5.2, the traceability matrix - kept equal by a check are the only reason this stays fixed;
+  the rename alone would drift again by Friday.
+
 - **The design pass is now a task with a definition, not an intention.** `P2-18` collects the three things
   that have been waiting for it: the SRS §5.1 palette requirement ("deep-sea blue and teal, never the
   clinical blue-white of a medical console"), the nine copy findings in `docs/copy-review-en/zh.md`, and
