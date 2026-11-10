@@ -151,6 +151,12 @@
   passes none, so a task fails with "model weights are not registered" instead of inventing boxes;
   P2-05b supplies the real one. The app starts a `max_concurrency` pool in its lifespan; tests disable
   it.
+- **`P2-06a` put the split under a seed and the test set under a manifest.** `prepare_dataset.py` now
+  takes `--seed` (42) and `--manifest`; the split test uses the real group sizes (6455 singles, 106
+  pairs, one four) and asserts 5671 / 1000, same seed same split, and 7782 total. `test-manifest.txt`
+  is committed with 1111 `filename md5` lines, generated from the frozen official test set; the
+  images stay out of git. The split already on disk was not regenerated — the lead confirmed it is
+  correct; the seed governs a fresh run.
 
 ## 2026-11-09
 

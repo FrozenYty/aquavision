@@ -1,22 +1,27 @@
 """Prepare the AquaVision training dataset from the raw DUO release (P0-01).
 
 Reads the COCO files under data/raw/DUO/DUO/, cleans them, groups near-identical
-frames so they never cross split boundaries, and writes a YOLO dataset plus
-data/dataset-stats.json.
+frames so they never cross split boundaries, and writes a YOLO dataset,
+data/dataset-stats.json and the frozen test manifest.
 
 DUO ships without video or sequence ids and renames frames to 1.jpg..N.jpg, so
 "split by video" is implemented with perceptual hashing: frames within a small
 hamming distance are treated as one group and always stay in the same split.
 The official DUO test set is kept untouched (1111 images >= the required 500).
-The train split is divided into train/val by group.
+The remaining 6671 images are dealt 85:15 into train/validation by group; --seed
+decides the group order, so the same seed reproduces the same split. The test
+manifest lists `filename md5` for the frozen 1111 images; the images stay out of
+git.
 
-Usage: python scripts/prepare_dataset.py
+Usage: python scripts/prepare_dataset.py [--seed 42]
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import random
 import shutil
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -28,6 +33,7 @@ CLASS_CODES = ["holothurian", "strongylocentrotus", "chlamys", "asterias"]
 DUO_TO_INDEX = {"holothurian": 0, "echinus": 1, "scallop": 2, "starfish": 3}
 
 VAL_RATIO = 0.15
+DEFAULT_SEED = 42
 MIN_TEST_IMAGES = 500
 HAMMING_MAX = 3  # frames this close are treated as one group
 HASH_BANDS = 4  # 64-bit hash split into 16-bit bands for fast lookup
@@ -126,18 +132,39 @@ def load_split(raw: Path, split: str, image_dir: Path):
     return records, dropped_ann, unreadable
 
 
-def split_train_val(records: list[dict]) -> tuple[list[dict], list[dict], list[list[str]]]:
+def split_groups(groups: list[list[str]], target: int, seed: int) -> set[str]:
+    """Deal whole hash groups into validation until the target is reached.
+
+    The seed shuffles groups within each size bucket. Largest groups still go first, so a big sequence
+    stays atomic and the target is not overshot by a small group; the seed decides the ties, which is
+    what makes the split reproducible without fixing it to one arbitrary input order.
+    """
+    buckets: dict[int, list[list[str]]] = defaultdict(list)
+    for group in groups:
+        buckets[len(group)].append(group)
+    rng = random.Random(seed)
+    order: list[list[str]] = []
+    for size in sorted(buckets, reverse=True):
+        bucket = buckets[size]
+        rng.shuffle(bucket)
+        order.extend(bucket)
+
+    val_names: set[str] = set()
+    for group in order:
+        if len(val_names) >= target:
+            break
+        val_names.update(group)
+    return val_names
+
+
+def split_train_val(
+    records: list[dict], seed: int = DEFAULT_SEED
+) -> tuple[list[dict], list[dict], list[list[str]]]:
     """Group by hash, then deal whole groups into val until VAL_RATIO is reached."""
     hashes = {r["file_name"]: dhash64(r["path"]) for r in records}
     groups = group_frames(hashes)
     target = int(len(records) * VAL_RATIO)
-    groups.sort(key=len, reverse=True)
-
-    val_names: set[str] = set()
-    for group in groups:  # largest groups first keeps big sequences atomic
-        if len(val_names) >= target:
-            break
-        val_names.update(group)
+    val_names = split_groups(groups, target, seed)
 
     train = [r for r in records if r["file_name"] not in val_names]
     val = [r for r in records if r["file_name"] in val_names]
@@ -169,6 +196,21 @@ def write_split(records: list[dict], out: Path, name: str) -> dict:
     }
 
 
+def write_test_manifest(records: list[dict], out: Path, path: Path) -> int:
+    """Write `filename md5` for the frozen test split, one line per image.
+
+    The filenames are the ones written under `<out>/test/images`, so the manifest is checked against
+    the files the evaluation reads. The images themselves stay out of git.
+    """
+    lines = []
+    for rec in sorted(records, key=lambda r: r["file_name"]):
+        name = f"test-{Path(rec['file_name']).stem}.jpg"
+        digest = hashlib.md5((out / "test" / "images" / name).read_bytes()).hexdigest()
+        lines.append(f"{name} {digest}")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return len(lines)
+
+
 def write_dataset_yaml(out: Path) -> None:
     names = "\n".join(f"  {i}: {code}" for i, code in enumerate(CLASS_CODES))
     (out / "dataset.yaml").write_text(
@@ -184,6 +226,8 @@ def main() -> int:
     parser.add_argument("--raw", type=Path, default=Path("data/raw/DUO/DUO"))
     parser.add_argument("--out", type=Path, default=Path("data/dataset"))
     parser.add_argument("--stats", type=Path, default=Path("data/dataset-stats.json"))
+    parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    parser.add_argument("--manifest", type=Path, default=Path("test-manifest.txt"))
     args = parser.parse_args()
 
     train_all, dropped_ann, unreadable = load_split(
@@ -193,10 +237,14 @@ def main() -> int:
     if len(test) < MIN_TEST_IMAGES:
         raise SystemExit(f"test set has {len(test)} images, need >= {MIN_TEST_IMAGES}")
 
-    train, val, groups = split_train_val(train_all)
+    train, val, groups = split_train_val(train_all, seed=args.seed)
     stats = {
         "source": "DUO (github.com/chongweiliu/DUO), COCO instances",
         "class_codes": CLASS_CODES,
+        "split": {
+            "rule": "85:15 over the non-test images; official test frozen",
+            "seed": args.seed,
+        },
         "splits": {
             "train": write_split(train, args.out, "train"),
             "val": write_split(val, args.out, "val"),
@@ -211,10 +259,16 @@ def main() -> int:
             "groups": len(groups),
             "largest_group": max(len(g) for g in groups),
         },
+        "manifest": {
+            "path": str(args.manifest),
+            "lines": write_test_manifest(test, args.out, args.manifest),
+        },
     }
+    stats["total_images"] = sum(split["images"] for split in stats["splits"].values())
     write_dataset_yaml(args.out)
     args.stats.write_text(json.dumps(stats, indent=2), encoding="utf-8")
     print(json.dumps(stats, indent=2))
+    print(f"Wrote {args.manifest}")
     print(f"Wrote {args.stats}")
     return 0
 
