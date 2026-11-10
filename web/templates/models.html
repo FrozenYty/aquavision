@@ -51,7 +51,8 @@
             <tbody id="species"></tbody>
           </table>
         </div>
-        <p class="small text-secondary mt-2 mb-0">类别码顺序与模型 labels.txt 一致，不能在这里增删或调序。</p>
+        <div id="species-refused"></div>
+        <p class="small text-secondary mt-2 mb-0">阈值已保存到物种字典，但目前还不影响识别：新建的识别任务使用自己请求中的置信度（默认 0.50），尚未读取这里的阈值。接入之前，改这里不会改变任何识别结果。已完成的任务保存着创建时的阈值，它们的结果不会因此改变。类别码顺序与模型 labels.txt 一致，不能在这里增删或调序。</p>
       </div>
     </section>
   </main>
@@ -60,6 +61,7 @@
     import { renderShell } from "../static/js/layout.js";
     import * as api from "../static/js/api.js";
     import { bindTabs, confirmAction, esc, fmtTime, loadInto, toast } from "../static/js/ui.js";
+    import { CLASSES } from "../static/js/boxes.js";
 
     renderShell("P-12");
     bindTabs($("tabs"));
@@ -92,8 +94,15 @@
       }).join("");
     }
 
+    // The four classes this page and the boxes know how to draw. A code outside them is refused, not
+    // shown with a save button: saving it would be a silent change to a class the model may not have.
     function renderSpecies({ items }) {
-      $("species").innerHTML = items.map((s) => `<tr data-code="${s.class_code}">
+      const known = items.filter((s) => s.class_code in CLASSES);
+      const unknown = items.filter((s) => !(s.class_code in CLASSES)).map((s) => s.class_code);
+      $("species-refused").innerHTML = unknown.length
+        ? `<div class="alert alert-danger small mt-2 mb-0">已拒绝显示类别码 ${unknown.map(esc).join("、")}：它们不在前端识别的四类中，请对照模型的 labels.txt 与物种字典。</div>`
+        : "";
+      $("species").innerHTML = known.map((s) => `<tr data-code="${s.class_code}">
         <td class="av-mono">${s.class_code}</td>
         <td><span class="av-class av-class-${s.class_code}">${esc(s.cn_name)}</span></td>
         <td>${CATEGORY[s.category] ?? s.category}</td>
@@ -133,11 +142,16 @@
       const ok = thr >= 0.05 && thr <= 0.95;
       input.classList.toggle("is-invalid", !ok);
       if (!ok) return;
+      const button = event.target.closest("[data-save]");
+      button.disabled = true;
       try {
         await api.updateSpecies(row.dataset.code, { conf_thr: thr, in_stat: row.querySelector('input[type="checkbox"]').checked });
-        toast("已保存，新任务按新阈值过滤", "success");
+        toast(`${CLASSES[row.dataset.code]} 的阈值已保存（识别任务暂未读取，见页面说明）`, "warning");
+        await loadSpecies();
       } catch (err) {
         toast(err.message, "danger");
+      } finally {
+        button.disabled = false;
       }
     });
 

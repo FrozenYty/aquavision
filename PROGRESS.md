@@ -1,5 +1,11 @@
 ## 2026-11-10
 
+- **`P3-15` partly done: thresholds are viewable and editable on P-12, unknown codes are refused, and the
+  page says the truth about scope.** The batch route takes its own `conf_thr` (default 0.50) and never reads
+  the species dictionary, so a saved threshold does not change detection yet. The caption says so; the
+  task stays open until the route reads the dictionary (lane B). Checked on the real server: 0.55 saved
+  and kept after a reload; 1.2 refused in the browser; an unknown code in the scratch database shown as
+  a refusal, not a row.
 - **The contract settled, so the client owes it two changes (§7).** The socket used to carry the token
   in the query string because nothing better had been decided; §7 now requires it as the first `auth`
   message and adds `auth_ok`, `4401` and `4408`. `P2-16` is the new task: move the client onto the
