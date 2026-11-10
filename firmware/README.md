@@ -124,10 +124,11 @@ plugged in - it talks UART through a bridge chip and has no carrier signal - so 
 matter: **the PC must send `CMD PING` at least every two seconds on an open link**, and the rig declares
 `OFFLINE` after ten seconds without a command (five missed keepalives).
 
-The rig boots on `OFFLINE` and the first keepalive raises `READY`: there is no special first-connection
-handshake, just a screen that tells the truth until somebody speaks. From then on the two are a pair -
-`OFFLINE` if and only if the link is gone - and an idle rig stays `READY` only because the PC keeps saying
-so. `rig::invariantHolds` checks that pairing every loop pass and reports `EVT INVARIANT` if it is ever
+The rig boots on `READY` with a ten-second grace, which is far longer than the PC needs to send its first
+keepalive. A panel that calls itself dead before anything has had a chance to speak reads as a fault
+rather than as waiting. From then on the two are a pair - `OFFLINE` if and only if the link is gone - and
+an idle rig stays `READY` only because the PC keeps saying so. A rig on a bench with no PC software goes
+`OFFLINE` ten seconds after power-up, which is correct: there is nobody on the other end. `rig::invariantHolds` checks that pairing every loop pass and reports `EVT INVARIANT` if it is ever
 broken.
 
 **A verdict is the answer to a capture, so it is only accepted while one is in flight.** A RESULT in any

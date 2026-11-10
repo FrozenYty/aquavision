@@ -187,11 +187,13 @@ void setup() {
   delay(cfg::SPLASH_MS);
 
   protocol::emitHello();
-  // The rig starts OFFLINE and becomes READY on the PC's first keepalive. That is the whole handshake:
-  // no special first-connection case, just a screen that tells the truth until somebody speaks.
+  // The rig starts READY with a ten-second grace: a PC on the other end of the cable sends its first
+  // keepalive long before it expires. Booting OFFLINE would show the panel calling itself dead before
+  // anything has had a chance to speak, and the operator would be looking at a screen that reads like a
+  // fault. Losing a live link is worth reporting; having no history yet is not.
   lastPcMessage = millis();
-  state.link = rig::Link::Gone;
-  state.screen = rig::Screen::Offline;
+  state.link = rig::Link::Alive;
+  state.screen = rig::Screen::Ready;
   state.markDirty();
   protocol::emitScreen(state);  // the PC should learn the starting state, not infer it
 }
