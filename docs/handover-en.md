@@ -113,9 +113,22 @@ run: it proves the pipeline end to end and gives the dashboard real numbers. The
 experiments remain `P4-01..03` on the frozen dataset — say so in the pull request, so no one thinks the
 work is being done twice.
 
-- **Split DUO once, deterministically**, and write the split to disk with a manifest: 7782 images,
-  official test 1111 held out, the rest split 7:2:1 by the rule the data model already describes. The
-  same seed must produce the same split, and the counts must sum to the total — checked, not assumed.
+- **Split DUO once, deterministically**, and write the split to disk with a manifest: 7782 images, the
+  official test 1111 frozen, and the remaining 6671 divided 85:15 into train and validation. That is
+  what `docs/test-plan-en.md` §2 asks for — validation at 10–15 %, a frozen test set of at least 500,
+  reported on and never tuned against. The same seed must produce the same split, and the counts must
+  sum to the total — checked, not assumed.
+- **`7:2:1` is not this split.** It is the ratio of the dataset-export feature (FR-M4-04), which the
+  application writes at run time from a reviewed pool. The earlier wording of this task copied it onto
+  the training split; that was the lead's error, not yours to reconcile.
+- **`scripts/prepare_dataset.py` has to change.** It hard-codes `VAL_RATIO = 0.15`, takes no `--seed`,
+  and writes no manifest. Adding them is part of this task, with a test for the determinism claim — the
+  grouping hash it already uses stays, because the test plan requires dropping test images that nearly
+  duplicate training ones.
+- **Train on the GPU, in a separate environment.** The runtime environment has the CPU build of torch;
+  leave it alone and create a second environment for training. Four experiments plus an ablation on CPU
+  is not a schedule anyone can keep, and a CPU-only run would also make every metric incomparable to
+  the speed targets later.
 - **One baseline run recorded in `train_experiment`** with every metric column filled: `map50`,
   `map50_95`, `recall_avg`, `fps`, `params_m`, plus the snapshot name, seed, epochs and batch size.
   An empty metric cell fails this task.
