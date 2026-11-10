@@ -1,5 +1,15 @@
 ## 2026-11-10
 
+- **Correction: the dataset was never missing.** The entry above says the prerequisite for `P2-06` was
+  not on this machine. True, and irrelevant — it is on the training machine, as the owner of that lane
+  pointed out within the hour: 6671 + 1111 raw images and a 5671 / 1000 / 1111 split, both present.
+  Checking one machine and reporting its absence as a blocker for someone else's work is how a
+  scheduling problem gets invented.
+- **The training split is 85:15, and the `7:2:1` in that task was wrong.** Two different splits share
+  the word "split": the training split, where `docs/test-plan-en.md` §2 asks for 10–15 % validation and a
+  frozen test set of 500+, and the dataset-export feature (FR-M4-04), where 7:2:1 is the ratio the
+  application writes at run time. The task copied the second onto the first. The existing 5671 / 1000 /
+  1111 is therefore correct as it stands; what it lacks is a seed and a manifest, not a new ratio.
 - **The path rule was enforced where it could be checked, and forgotten where it travels furthest.**
   `check-paths.py` reads the repository's documents; it cannot see a task brief handed to someone to
   forward. A brief went out carrying a path from this machine, and it had to be pointed out twice.

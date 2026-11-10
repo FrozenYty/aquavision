@@ -108,12 +108,24 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         part of this task that is
       - **P2-05c** `/api/stats/*` verified against rows written by 05b, figures equal to the dashboard
 - [ ] **P2-06** DUO dataset preparation and a first baseline run · @Gtechson · three checkpoints
-      - **P2-06a** the split on disk with a manifest, counts summing to the total, same seed same split
+      - the dataset is on the **training machine**, not on the lead's: `data/raw/DUO/DUO` (6671 + 1111)
+        and `data/dataset` (5671 / 1000 / 1111). Nothing here is blocked by its absence elsewhere
+      - **P2-06a** the split, and the script that produces it
+        - **the split is 85:15 train/validation over the 6671 non-test images**, and DUO's official
+          1111 stays frozen as the reported test set — `docs/test-plan-en.md` §2 asks for validation at
+          10–15 % and a frozen test set of at least 500 images, and this satisfies both
+        - **`7:2:1` does not apply here.** It is the ratio of the *dataset-export feature* (FR-M4-04,
+          SRS §5 table `split_ratio`), a different thing that the application writes at run time. The
+          earlier wording of this task copied it onto the training split and was wrong
+        - `scripts/prepare_dataset.py` needs `--seed` and a manifest; the grouping hash it already uses
+          stays, because the test plan requires dropping test images that nearly duplicate training ones
+        - the manifest is `test-manifest.txt`, one `filename md5` per line, committed — the test plan
+          already promised it
       - **P2-06b** one baseline run recorded in `train_experiment` with every metric column filled
+        - training runs on the GPU: install a **separate** environment with the CUDA build of torch.
+          The runtime environment must not be touched, and a CPU run of four future experiments plus
+          an ablation is not a schedule anyone can keep
       - **P2-06c** the weights registered and loadable through `model_version`, which unblocks `P2-05b`
-      - **first action, not last:** say where the dataset is. `scripts/prepare_dataset.py` reads
-        `data/raw/DUO/DUO`, and **that directory does not exist in this workspace** — if the data lives
-        on one machine only, that belongs in the first hour of the day, not the third day of the week
       - this is the **exploratory** run that gives the dashboard real numbers; the official E0–E4 stay
         at `P4-01..03` on the frozen dataset, and the difference is stated in the pull request
 - [ ] **P2-07** API contract tests for every route · @Gtechson · done when each P0 route has at least
