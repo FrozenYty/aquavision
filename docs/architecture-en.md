@@ -123,17 +123,33 @@ together the file on disk, the database row and the detection result.
 
 ## 8. Configuration
 
-Everything environmental lives in `.env`, read through `pydantic-settings`:
+Everything environmental lives in `.env`, read through `pydantic-settings`. The names below are the
+ones `server/app/config.py` actually reads - an earlier version of this table listed three of them
+without their prefix and one that does not exist at all, and because the settings model ignores unknown
+keys, following it produced a server that started and silently ignored its configuration:
 
 ```
-CAMERA_INDEX=0
-DETECT_INTERVAL_MS=300
-QUALITY_THRESHOLD=60
-DB_DSN=postgresql://...
-MODEL_DIR=data/models
+DB_DSN=postgresql://...            # no AV_ prefix: scripts/init_db.py reads the same name
+AV_JWT_SECRET=<long random string> # default is public; /api/health reports whether it is still default
+AV_JWT_HOURS=8
+AV_DATA_DIR=data
+AV_RETENTION_DAYS=30
+AV_MAX_CONCURRENCY=2
+AV_DETECT_INTERVAL_MS=300
+AV_QUALITY_THRESHOLD=60
+AV_CAMERA_INDEX=0
+AV_WORKER_ENABLED=1
+AV_WORKER_POLL_SECONDS=1.0
 ```
 
-No path, port or threshold is hard-coded in business code.
+Two things `.env` does not do, both learned the hard way: the file is resolved against the **process
+working directory**, so a `.env` at the repository root is invisible to a server started from `server/`;
+and `scripts/init_db.py` does not read it at all, only the process environment. Set the variables in the
+shell instead if that is simpler.
+
+No path, port or threshold is hard-coded in business code. Relative SQLite paths are anchored to the
+repository root by `app.db.resolve_dsn`, so the database is one file per repository rather than one file
+per working directory.
 
 ## 9. Non-goals
 

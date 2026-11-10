@@ -1,5 +1,25 @@
 ## 2026-11-10
 
+- **The repository could not be run from a clean clone, and the README described a workflow that did not
+  work.** An audit against the code found four blockers: the FastAPI app mounted routers only, so the
+  pages and the API were on different ports and every call from a page answered "interface not found";
+  `init_db` seeded species and no account, so a correct database still could not be logged into; the
+  SQLite path was relative to the process working directory, so `init_db` from the root and `uvicorn`
+  from `server/` built two databases and the health check passed on the empty one; and `requirements.txt`
+  pulls torch through `ultralytics` plus a second OpenCV build, which is why CI had silently installed a
+  hand-picked list instead.
+- **All four are fixed in code, not in prose.** `web/` is mounted on the app with `/` redirecting to the
+  sign-in page; `init_db` creates the first account and prints its password once; `app.db.resolve_dsn`
+  anchors relative SQLite paths to the repository root; `requirements-server.txt` is the server and test
+  set on its own. Four tests in `tests/test_pages_served.py` hold the single origin down.
+- **The README is now a walkthrough that was executed, not written from memory** - environment,
+  install, database, one start command, three URLs, the test command, and a table of the five failures
+  someone actually hits. The configuration section of the architecture document had three wrong variable
+  names and one that does not exist, and now matches `config.py`.
+- **`check-paths.py` was scanning the root and `docs/` only**, which is how `firmware/README.md` could
+  keep a path to a folder outside the repository: the subdirectory READMEs were never read. It now walks
+  every Markdown file in the repository, proved by planting a path and watching it fail.
+
 - **One page had three names, and the English had two.** The menu said `Capture control`, SRS §5.2 said
   `Capture control page`, and nine of the thirteen English names disagreed between the SRS and the
   traceability matrix (`Frame browser` against `Image browser`, `Detection tasks` against `Detection

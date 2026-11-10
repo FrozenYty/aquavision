@@ -8,16 +8,124 @@
 
 > 本文为 `README.md` 的中文对照版，以英文版为准。
 
-**当前状态**：P2 阶段，进展见 [PROGRESS.md](PROGRESS.md)。后端可用（`uvicorn`，42 条契约路由），
-十三张页面接真实接口，可用 `?mock=1` 退回模拟数据，ESP32 固件可编译；采集装置尚未组装，没有权重时
-检测接口仍返回 501。
+**当前状态**：P2 阶段，进展见 [PROGRESS.md](PROGRESS.md)。后端在同一源下同时提供接口与十三个页面，
+在全新数据库上可以正常登录，ESP32 固件可编译并能驱动面板。没有权重时检测仍返回 501，
+采集装置尚未组装，摄像头链路由硬件决定。
+
+## 快速开始
+
+以下每一步都在干净克隆上实际跑过才写下来。**哪一步不work，那是这份文档的缺陷，请说出来。**
+
+**需要**：Python 3.11 或更高版本，其它都可以没有。摄像头、ESP32 与训练环境都是可选的，
+没有它们应用照样能启动。
+
+### 一、克隆并进入
+
+```bash
+git clone https://github.com/FrozenYty/aquavision.git
+cd aquavision
+```
+
+### 二、创建环境
+
+```bash
+python -m venv .venv
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+# Windows cmd
+.venv\Scripts\activate.bat
+# macOS / Linux
+source .venv/bin/activate
+```
+
+### 三、安装依赖
+
+```bash
+python -m pip install -r requirements-server.txt
+```
+
+这是网页应用与它测试所需的全部依赖。`requirements.txt` 是**完整**环境，额外固定了 `ultralytics`，
+它会连带拉下 torch、torchvision 和第二个 OpenCV 构建——好几个 GB，而服务端从不 import 它。
+只有在要训练的那台机器上才用完整版。
+
+### 四、创建数据库
+
+```bash
+python scripts/init_db.py
+```
+
+它建十三张表、灌入四个物种，并**只在空库上**创建第一个账号。**密码只打印一次，请立刻记下。**
+
+```
+username: admin
+password: <只打印一次，之后无法找回>
+```
+
+想自己指定就加 `--admin-password`（或设 `AV_ADMIN_PASSWORD`），想换库就加 `--dsn` 或设 `DB_DSN`。
+脚本是幂等的：再跑一次什么都不会变，也**不会重置密码**。
+
+### 五、启动
+
+```bash
+python -m uvicorn app.main:app --app-dir server --port 8000
+```
+
+**一个进程**。它同时提供接口和页面，所以没有第二个服务器，也没有要配的代理。
+
+### 六、打开
+
+| 内容 | 地址 |
+|---|---|
+| 应用本体 | <http://127.0.0.1:8000/> —— 会跳到登录页 |
+| 可交互的接口文档 | <http://127.0.0.1:8000/api/docs> |
+| 健康状态与配置 | <http://127.0.0.1:8000/api/health> |
+
+用第四步打印的 `admin` 与密码登录。
+
+### 七、跑测试
+
+```bash
+pytest -q
+```
+
+167 个测试，约一分钟。不需要摄像头、数据库服务或网络。
+
+### 出问题的时候
+
+| 现象 | 原因与处理 |
+|---|---|
+| 密码是对的，登录却说「账号或密码不正确」 | 服务端打开的库不是你建的那个。两边都用**仓库根目录**下的 `data/app.db`，与从哪个目录启动无关，所以先确认两个终端里都没设 `DB_DSN`。 |
+| `Address already in use` | 8000 被占用——停掉另一个进程，或换 `--port 8001`。 |
+| 每个页面都说「没有找到接口服务」 | 页面是从别处打开的（比如另一个标签里还留着 `python -m http.server`）。请打开第六步的地址。 |
+| 页面空白，控制台提到 CORS 或 `Origin null` | HTML 是从文件系统直接打开的。它必须经由 HTTP 提供——第五步就是那个服务器。 |
+| `ModuleNotFoundError: app` | 启动时漏了 `--app-dir server`，或目录不对。 |
+
+### 现在能做什么，还不能做什么
+
+这份清单是诚实的，因为夸大的 README 比简短的更糟。
+
+- **能用**：登录与角色、帧列表与详情、复核提交、统计分析、数据集导出、系统设置——都走真实数据表与真实数据库。
+- **没有硬件也能用**：以上全部；采集相关页面会退化为空列表。
+- **还不能**：注册权重之前检测返回 501（`P2-05`）；采集页没有 `/ws/capture`，因此改用轮询；ESP32 装置链路在 PC 侧尚无实现（`P2-17`）。
+
+### 不想起后端：原型模式
+
+页面也可以跑在模拟数据上，用于没有数据库的演示：
+
+```bash
+python -m http.server 8765 --directory web
+```
+
+然后打开 <http://127.0.0.1:8765/templates/login.html?mock=1>。该参数只对当前标签页生效，会把所有调用
+切到 `web/static/mock/`；不加则调用真实接口并要求登录。**模拟模式按设计会掩盖后端缺陷**——
+它用来展示界面，不用来测试。
 
 ## 文档
 
 | 文档 | 说明 |
 |---|---|
 | [文档索引](docs/INDEX-zh.md) | 哪份文档回答什么，以及改一处要连带改哪些 |
-| [需求定义书 V1.10](docs/srs-zh.md) | 功能需求 29 条、用例 9 个、数据表 13 张、验收项 36 条 |
+| [需求定义书 V1.11](docs/srs-zh.md) | 功能需求 29 条、用例 9 个、数据表 13 张、验收项 36 条 |
 | [任务计划](PLAN.md) | 阶段、任务与门禁，团队的任务契约 |
 | [总体架构](docs/architecture-zh.md) · [English](docs/architecture-en.md) | 分层、依赖规则、运行时模型、一帧的生命周期 |
 | [接口约定](docs/api-contract-zh.md) · [English](docs/api-contract-en.md) | REST 路径、响应封装、错误码、WebSocket 协议 |
@@ -28,62 +136,50 @@
 
 设计文档以英文版为准，中文为对照版，两者必须在同一次提交内同步。
 
-## 结构
+## 目录结构
 
 ```
 docs/        设计文档与需求定义书
 docs/adr/    架构决策记录
-scripts/     数据准备、训练评估、文档校验
-server/      服务端（FastAPI）
-web/         前端静态页面
-firmware/    单片机固件（ESP32）
+scripts/     数据集准备、训练、数据库初始化、文档检查
+server/      FastAPI 后端——接口，以及从这个版本起的页面
+web/         静态前端页面
+firmware/    ESP32 固件
 tests/       测试
 ```
 
-## 技术路线
+## 技术栈
 
-| 层 | 选型 |
+| 层次 | 选择 |
 |---|---|
-| 采集 | USB 摄像头（1080P、手动曝光、免驱 UVC）+ OpenCV |
+| 采集 | USB 摄像头（1080P、手动曝光、UVC）配合 OpenCV |
 | 识别 | PyTorch + Ultralytics YOLOv8n，三项改进：水下色彩校正、EMA 注意力、WIoU v3 |
-| 服务 | Python 3.11、FastAPI、SQLAlchemy 2.1、PostgreSQL 14 |
-| 前端 | HTML5、Bootstrap 5.3.3、ECharts 5，原生 ES 模块，无构建步骤；第三方库放在 `web/static/vendor/` |
-| 采集控制 | ESP32-S3，Arduino 框架 + PlatformIO 构建；0.96 寸 OLED 与两个状态灯 |
+| 后端 | Python 3.11、FastAPI、SQLAlchemy 2.1、PostgreSQL 14 |
+| 前端 | HTML5、Bootstrap 5.3.3、ECharts 5、原生 ES 模块，无构建步骤；依赖库已本地化于 `web/static/vendor/` |
+| 装置控制 | ESP32-S3（Arduino 框架，PlatformIO 构建）；0.96 寸 OLED 与两颗状态指示灯 |
 
-目标指标：四类物种 mAP@0.5 ≥ 0.75，改进模型较基线提升 ≥ 0.03，
-推理速度不低于基线 90%。
-
-## 前端预览
-
-页面无需构建。用静态服务器打开 `web/` 目录：
-
-```bash
-python -m http.server 8765 --directory web
-```
-
-然后访问 <http://localhost:8765/templates/login.html?mock=1>。`?mock=1` 让这个浏览器标签页的页面使用
-`web/static/mock/` 的模拟数据，没有后端也能打开原型；不带它时，每个页面都调用真实接口，并要求先登录。
+指标目标：四类目标 mAP@0.5 ≥ 0.75，比基线提升 +0.03，推理速度不低于基线的 90%。
 
 ## 团队
 
-| 成员 | 负责 |
+| 成员 | 分工 |
 |---|---|
-| 姚天宇 | 采集链路、系统架构、需求文档 |
-| 高天翔 | 算法训练与改进、推理服务、后端接口 |
-| 孙健恒 | 前端页面、数据标注与数据集 |
-| 付怡佳 | 文档、测试用例、验收核对 |
+| 姚天宇 | 采集链路、系统架构、需求定义 |
+| 高天翔 | 模型训练与改进、推理服务、后端接口 |
+| 孙健恒 | 前端页面、标注与数据集 |
+| 付怡佳 | 文档、测试用例、验收检查 |
 
-## 协作
+## 贡献
 
-第一次提交前请读 [CONTRIBUTING.md](CONTRIBUTING.md)（仅英文）。
-分支、提交、Pull Request 与文档规则都在那里。
+第一次提交前请先读 [CONTRIBUTING.md](CONTRIBUTING.md)：
+分支、提交、拉取请求与文档规则都在那里。
 
-如果你是 AI 助手，先读 [AGENTS.md](AGENTS.md)，它会告诉你该在哪条线上干活。
+如果你是 AI 助手，先读 [AGENTS.md](AGENTS.md)——它说明你属于哪条线。
 
-## 许可
+## 许可证
 
 MIT，见 [LICENSE](LICENSE)。
 
 ## 说明
 
-训练数据来自公开水下数据集与小组自采影像，不含真实调查数据与个人信息。
+训练数据来自公开水下数据集与团队自行拍摄的影像，不含真实调查数据与个人信息。

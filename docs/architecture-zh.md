@@ -123,17 +123,30 @@ flowchart TD
 
 ## 八、配置
 
-所有环境相关的东西放 `.env`，经 `pydantic-settings` 读取：
+所有环境相关的东西放 `.env`，经 `pydantic-settings` 读取。**下面这些才是 `server/app/config.py`
+真正读取的名字**——本表早先的版本有三个少了前缀、还有一个根本不存在；而设置模型会忽略未知键，
+所以照着旧表配置会得到一个「能启动、但静默忽略配置」的服务：
 
 ```
-CAMERA_INDEX=0
-DETECT_INTERVAL_MS=300
-QUALITY_THRESHOLD=60
-DB_DSN=postgresql://...
-MODEL_DIR=data/models
+DB_DSN=postgresql://...            # 不带 AV_ 前缀：scripts/init_db.py 读的是同一个名字
+AV_JWT_SECRET=<足够长的随机串>      # 默认值公开；/api/health 会报告它是否仍是默认值
+AV_JWT_HOURS=8
+AV_DATA_DIR=data
+AV_RETENTION_DAYS=30
+AV_MAX_CONCURRENCY=2
+AV_DETECT_INTERVAL_MS=300
+AV_QUALITY_THRESHOLD=60
+AV_CAMERA_INDEX=0
+AV_WORKER_ENABLED=1
+AV_WORKER_POLL_SECONDS=1.0
 ```
 
-业务代码里不允许出现硬编码的路径、端口与阈值。
+`.env` 有两件它做不到的事，都是踩过才知道的：文件是相对**进程工作目录**解析的，所以放在仓库根目录
+的 `.env` 对从 `server/` 启动的服务是不可见的；而 `scripts/init_db.py` 根本不读它，只读进程环境变量。
+嫌麻烦就直接在 shell 里设。
+
+业务代码里不允许出现硬编码的路径、端口与阈值。相对 SQLite 路径由 `app.db.resolve_dsn` 锚定到
+仓库根目录，所以数据库是「每个仓库一个文件」，而不是「每个工作目录一个文件」。
 
 ## 九、不做什么
 
