@@ -48,7 +48,7 @@ Never return a bare HTTP 500 with a stack trace. Wrap it as `50001` and log the 
 ## 5. Pagination and time
 
 ```
-GET /api/frames?page=1&size=24&site=A3&from=2026-11-01&to=2026-11-03
+GET /api/frames?page=1&size=24&site=A3&start=2026-11-01&end=2026-11-03
 ```
 
 ```json
@@ -57,7 +57,7 @@ GET /api/frames?page=1&size=24&site=A3&from=2026-11-01&to=2026-11-03
 
 - `size` defaults to 24, maximum 100.
 - All timestamps are ISO 8601 with offset, stored in UTC, rendered in the local zone.
-- Date filters are inclusive on both ends, interpreted in the server time zone.
+- Date filters are `start` and `end`, inclusive on both ends, interpreted in the server time zone. They are not named `from`/`to` because `from` is a reserved word in Python, and the parameter name is what appears in the generated OpenAPI document.
 
 ## 6. REST endpoints
 
