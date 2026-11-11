@@ -1,5 +1,14 @@
 ## 2026-11-11
 
+- **`P3-05` is ticked. The three tasks I opened this session around the review flow are now all closed** -
+  the acceptance that exposed the pool defect, the decision that fixed it, the versions and rollback API
+  it needed, and the panel that uses them.
+- **A gap the panel PR flagged went to the task that owns it, not to a new one.** Prototype mode
+  (`?mock=1`) is documented as running every page without a backend, and the mock does not answer the two
+  new review routes, so the version panel shows a load-failure there. That is honest - it invents no
+  timeline - but a documented mode that half-works is a demo liability, so the requirement sits under
+  `P3-06` demo mode, whose owner is already responsible for the demo working in every mode it claims.
+
 - **`P3-05` closes with a panel, and its decisions are tested rather than inspected.** The review page
   can now list a frame's versions and restore one; the panel's choices - how an entry reads, whether the
   restore button may act, and what a finished rollback means for the canvas - live in
