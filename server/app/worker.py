@@ -4,8 +4,8 @@ The task row is the queue. A worker claims a queued task, walks its frames, and 
 after each one. Cancellation is a row state, not an in-memory flag, so a cancel from the API is seen
 before the next frame; a restart leaves nothing behind because every task is a row.
 
-There is no model yet. `process_task` takes a detector callable; the production worker passes none,
-which fails the task with a reason instead of inventing boxes. P2-05b supplies the real detector.
+The detector is injected. P2-05b supplies the real one, which the app loads at start-up; when it
+could not be loaded the task fails with that same reason rather than inventing boxes.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ import logging
 import threading
 from collections.abc import Callable
 from datetime import UTC, datetime
+from functools import partial
 from typing import Any
 
 from sqlalchemy import delete, select
@@ -76,20 +77,23 @@ def process_task(
     detector: Detector | None = None,
     on_progress: ProgressHook | None = None,
     should_stop: Callable[[], bool] | None = None,
+    reason: str = NO_DETECTOR,
 ) -> None:
     """Run one task's frames to done, failure, or cancellation.
 
     `detector` is injected so P2-05a can be tested without weights and P2-05b can replace it. With
-    no detector the task fails with a stated reason; this function never writes a box of its own.
+    no detector the task fails with `reason` — the sentence the loader produced when it could not
+    build one; this function never writes a box of its own.
     """
     with session_factory() as session:
         task = session.get(DetectTask, task_id)
         if task is None or task.status not in (QUEUED, RUNNING):
             return
         if detector is None:
-            _finish(session, task, FAILED, NO_DETECTOR)
+            _finish(session, task, FAILED, reason)
             return
 
+        run = _runner(detector, task)
         frames = _frames_for(session, task)
         if not frames:
             _finish(session, task, DONE, None)
@@ -111,7 +115,7 @@ def process_task(
                 return
 
             try:
-                boxes = detector(asset)
+                boxes = run(asset)
                 for box in boxes:
                     session.add(
                         DetectObject(
@@ -150,6 +154,7 @@ def run_once(
     session_factory: sessionmaker,
     detector: Detector | None = None,
     claim_lock: threading.Lock | None = None,
+    reason: str = NO_DETECTOR,
 ) -> bool:
     """Claim and process one task. Returns True when a task was taken."""
     if claim_lock is None:
@@ -159,7 +164,7 @@ def run_once(
             task_id = claim_one(session_factory)
     if task_id is None:
         return False
-    process_task(session_factory, task_id, detector)
+    process_task(session_factory, task_id, detector, reason=reason)
     return True
 
 
@@ -172,11 +177,13 @@ class Worker:
         workers: int = 2,
         poll_seconds: float = 1.0,
         detector: Detector | None = None,
+        unavailable_reason: str | None = None,
     ):
         self._session_factory = session_factory
         self._workers = max(1, workers)
         self._poll_seconds = max(0.05, poll_seconds)
         self._detector = detector
+        self._unavailable_reason = unavailable_reason or NO_DETECTOR
         self._stop = threading.Event()
         self._claim_lock = threading.Lock()
         self._threads: list[threading.Thread] = []
@@ -200,12 +207,31 @@ class Worker:
                     self._session_factory,
                     detector=self._detector,
                     claim_lock=self._claim_lock,
+                    reason=self._unavailable_reason,
                 )
             except Exception:  # noqa: BLE001 - one bad task must not kill the pool
                 log.exception("detect worker iteration failed")
                 worked = False
             if not worked:
                 self._stop.wait(self._poll_seconds)
+
+
+def _runner(detector: Detector, task: DetectTask) -> Detector:
+    """Bind the task's own inference parameters when the detector accepts them.
+
+    A test injects a plain callable and gets it back unchanged; the real `Detector` gets the row's
+    `conf_thr`, `iou_thr` and `max_det`, so a batch task means what its row says instead of silently
+    running at the module defaults.
+    """
+    predict = getattr(detector, "predict", None)
+    if callable(predict):
+        return partial(
+            predict,
+            conf_thr=float(task.conf_thr),
+            iou_thr=float(task.iou_thr),
+            max_det=int(task.max_det),
+        )
+    return detector
 
 
 def _frames_for(session: Session, task: DetectTask) -> list[MediaAsset]:

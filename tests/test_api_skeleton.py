@@ -35,7 +35,7 @@ from app.models import (
 from app.security import hash_password
 from app.seed import seed_species
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import sessionmaker
 
 CONTRACT = Path(__file__).resolve().parent.parent / "docs" / "api-contract-en.md"
@@ -271,16 +271,19 @@ def test_reviewing_a_frame_without_results_is_refused(client):
     assert body["code"] == 40401
 
 
-def test_modules_that_need_a_model_say_so(client):
-    """The one remaining 501 is the one that genuinely cannot run: no weights, no detection."""
+def test_detection_without_weights_says_why(client):
+    """A captured frame with no usable model still answers 501, and no box is invented."""
     token = sign_in(client)
-    response = client.post("/api/detect/frames/any-frame", headers=auth(token))
+    _, frame = capture_one(client, token)
+    client.app.state.detector = None
+    client.app.state.detector_error = "没有在线模型版本"
+    response = client.post(f"/api/detect/frames/{frame['frame_id']}", headers=auth(token))
     assert response.status_code == 501
     body = response.json()
     assert body["code"] == 50100
     assert body["data"] is None
     assert isinstance(body["request_id"], str) and body["request_id"].startswith("req-")
-    assert "模型" in body["message"]
+    assert "没有在线模型版本" in body["message"]
 
 
 def test_datasets_and_reports_start_empty_rather_than_failing(client):
@@ -866,3 +869,145 @@ def test_species_patch_updates_one_threshold(client):
         "/api/species/holothurian", json={"conf_thr": 0.5}, headers=auth(observer)
     ).json()
     assert forbidden["code"] == 40301
+
+
+# --- P2-05b: the detection path, with a fake detector --------------------------------------------
+
+
+class FakeDetector:
+    """The detector's contract without a weight file: one box, a model id and a version name."""
+
+    def __init__(self, model_id: int, version_name: str = "fake-v8n"):
+        self.model_version_id = model_id
+        self.version_name = version_name
+        self.calls = 0
+
+    def predict(self, asset, conf_thr=0.5, iou_thr=0.45, max_det=100):
+        self.calls += 1
+        return [
+            {
+                "class_code": "holothurian",
+                "confidence": 0.9,
+                "x": 0.1,
+                "y": 0.1,
+                "w": 0.2,
+                "h": 0.2,
+            }
+        ]
+
+    def __call__(self, asset):
+        return self.predict(asset)
+
+
+def register_fake_model(client) -> int:
+    """An online `model_version` row, so the task's foreign key points at something real."""
+    with client.app.state.session_factory() as session:
+        model = ModelVersion(
+            version_name=f"fake-v8n-{uuid4().hex[:6]}",
+            weight_path="weights/fake.pt",
+            labels_path="labels.txt",
+            status=1,
+            is_online=1,
+        )
+        session.add(model)
+        session.commit()
+        return model.model_id
+
+
+def test_detect_frame_rejects_a_frame_that_never_came_through_capture(client):
+    token = sign_in(client)
+    response = client.post("/api/detect/frames/not-a-captured-frame", headers=auth(token))
+    assert response.status_code == 404
+    body = response.json()
+    assert body["code"] == 40401
+    assert body["data"] is None
+
+
+def test_detect_frame_writes_boxes_with_the_contract_fields(client):
+    token = sign_in(client)
+    _, frame = capture_one(client, token)
+    seed_species_rows(client)
+    model_id = register_fake_model(client)
+    client.app.state.detector = FakeDetector(model_id)
+
+    body = client.post(f"/api/detect/frames/{frame['frame_id']}", headers=auth(token)).json()
+    assert body["code"] == 0
+    data = body["data"]
+    assert data["frame_id"] == frame["frame_id"]
+    assert data["model_version"] == "fake-v8n"
+    assert data["conf_threshold"] == 0.5
+    assert isinstance(data["task_id"], int)
+    assert isinstance(data["latency_ms"], int) and data["latency_ms"] >= 0
+
+    # Contract §6 "Detection box": every documented field, in its documented type, normalised.
+    assert len(data["boxes"]) == 1
+    box = data["boxes"][0]
+    assert isinstance(box["object_id"], int)
+    assert box["class_code"] == "holothurian"
+    assert isinstance(box["confidence"], float) and 0.0 <= box["confidence"] <= 1.0
+    for axis in ("x", "y", "w", "h"):
+        assert isinstance(box[axis], float) and 0.0 <= box[axis] <= 1.0, axis
+    assert box["x"] + box["w"] <= 1.0
+    assert box["y"] + box["h"] <= 1.0
+    assert box["is_manual"] == 0
+    assert box["review_status"] == 0
+
+    with client.app.state.session_factory() as session:
+        task = session.get(DetectTask, data["task_id"])
+        assert task.status == 2
+        assert task.progress == 100
+        assert task.obj_count == 1
+        assert task.model_version_id == model_id
+        assert task.finished_at is not None
+        rows = session.scalars(
+            select(DetectObject).where(DetectObject.frame_id == frame["frame_id"])
+        ).all()
+        assert len(rows) == 1
+        assert rows[0].task_id == task.task_id
+
+
+def test_the_loader_names_the_reason_it_cannot_build_a_detector(client):
+    """The sentence in the 501 comes from here, and each one names something to act on."""
+    from app.detector import load_online
+
+    factory = client.app.state.session_factory
+    settings = get_settings()
+
+    detector, reason = load_online(factory, settings)
+    assert detector is None
+    assert "没有在线模型版本" in reason
+
+    register_fake_model(client)  # its weight_path is weights/fake.pt, which is not on disk
+    detector, reason = load_online(factory, settings)
+    assert detector is None
+    assert "权重文件不存在" in reason
+
+    register_fake_model(client)  # two online rows break the one-online rule: refuse, do not guess
+    detector, reason = load_online(factory, settings)
+    assert detector is None
+    assert "拒绝猜测" in reason
+
+
+def test_detect_frame_reports_a_failing_model_and_leaves_a_failed_task(client):
+    token = sign_in(client)
+    _, frame = capture_one(client, token)
+    model_id = register_fake_model(client)
+
+    class BrokenDetector(FakeDetector):
+        def predict(self, asset, conf_thr=0.5, iou_thr=0.45, max_det=100):
+            raise RuntimeError("weight tensor is truncated")
+
+    client.app.state.detector = BrokenDetector(model_id)
+    response = client.post(f"/api/detect/frames/{frame['frame_id']}", headers=auth(token))
+
+    assert response.status_code == 500
+    body = response.json()
+    assert body["code"] == 50001
+    assert body["data"] is None
+    assert "weight tensor is truncated" in body["message"]
+
+    with client.app.state.session_factory() as session:
+        task = session.scalar(select(DetectTask).order_by(DetectTask.task_id.desc()).limit(1))
+        assert task.status == 3
+        assert "weight tensor is truncated" in (task.error_msg or "")
+        assert session.scalar(select(func.count(DetectObject.object_id))) == 0
