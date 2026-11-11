@@ -3,8 +3,9 @@
 # `requirements.txt` is the full environment: it pins `ultralytics`, which pulls torch and torchvision -
 # several gigabytes, plus a second OpenCV (`opencv-python`, the GUI build) that shares the `cv2`
 # namespace with the headless one pinned here. The server never imports torch, so a machine that only
-# runs the backend and the tests should install this file instead. CI already did exactly that by hand;
-# this is the same list written down.
+# runs the backend and the tests should install this file instead.
+# CI installs this file directly (`.github/workflows/ci.yml`), so its pins, not a hand-written copy,
+# are the versions the checks run.
 #
 # Python 3.11 or newer (`datetime.UTC` is used in app/security.py). Install: pip install -r requirements-server.txt
 fastapi==0.162.0
@@ -17,10 +18,9 @@ python-jose[cryptography]==3.5.0
 bcrypt==4.3.0
 opencv-python-headless==5.0.0.93
 numpy==2.4.6
-pillow==13.0.0
 # pyserial: the PC side of the ESP32 rig link (P2-17).
 pyserial==3.5
-# Development: the test client needs httpx, which the full requirements.txt leaves to the training env.
+# Development: the test client is starlette's, and it needs httpx; requirements.txt pins the same one.
 pytest==9.2.0
 httpx==0.28.1
 ruff==0.17.3

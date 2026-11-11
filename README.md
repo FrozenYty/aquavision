@@ -91,7 +91,7 @@ Sign in with `admin` and the password from step 4.
 pytest -q
 ```
 
-171 tests, about a minute. No camera, no database server and no network are needed.
+229 tests, about a minute. No camera, no database server and no network are needed.
 
 ### When something goes wrong
 
@@ -111,10 +111,11 @@ Honest list, because a README that overstates is worse than a short one.
   dataset export, system settings — against real tables and a real database.
 - **Works without hardware**: everything above; the camera pages fall back to an empty list.
 - **Not yet**: `P3-01`'s batch acceptance - a hundred frames, progress while it runs, resume after a
-  restart - though `POST /api/detect/batches` already queues the task; the live capture page has no
-  `/ws/capture` socket, so it polls. The rig link's PC half exists (`server/app/rig/`) and stays
-  dormant until `AV_RIG_PORT` names a port; `scripts/test_rig_link.py` is the first thing to run when a
-  board is plugged in.
+  restart - though `POST /api/detect/batches` already queues the task; the live capture page streams
+  over `/ws/capture` as api-contract §7 defines it, with polling only the fallback when the socket
+  cannot be served. The rig link's PC half exists (`server/app/rig/`) and stays dormant until
+  `AV_RIG_PORT` names a port; `scripts/test_rig_link.py` is the first thing to run when a board is
+  plugged in.
 
 ### Prototype mode, no backend
 
@@ -140,7 +141,7 @@ sign-in. Mock mode hides backend defects by design — use it to show the interf
 | [Data model](docs/data-model-en.md) | Fourteen tables, fields, indexes, file storage |
 | [Test plan](docs/test-plan-en.md) | Test levels, dataset splitting, metrics and acceptance |
 | [Glossary](docs/glossary-en-zh.md) | English ↔ Chinese, the single word list shared by code and docs |
-| [Decisions](docs/adr/) | Twelve decision records with the reasoning: 09 is superseded by 10, 07's pytest clause by 11, and 12 amends 08; `docs/architecture-en.md` §10 lists them |
+| [Decisions](docs/adr/) | Thirteen decision records with the reasoning: 09 is superseded by 10, 07's pytest clause by 11, and 12 amends 08; `docs/architecture-en.md` §10 lists them |
 
 English is the source of truth for design documents; the Chinese files are reference versions and
 must be updated in the same commit.
@@ -188,13 +189,16 @@ If you are an AI assistant, read [AGENTS.md](AGENTS.md) first — it tells you w
 
 ## Model weights
 
-`models/<version_name>/` holds the model this project delivers - `best.pt`, `labels.txt` and
-`metrics.json` - tracked here rather than published elsewhere, so a clean clone can register a version
-and run detection. The decision, and what it costs, is in [ADR 13](docs/adr/13-weights-in-the-repository.md).
+`models/<version_name>/` is where the model this project delivers goes - `best.pt`, `labels.txt` and
+`metrics.json` - tracked here rather than published elsewhere, so that a clean clone can register a
+version and run detection once the files are there. **The directory is empty in this revision: no weight
+file has been delivered yet.** The delivered copy is still owed by training, and until it lands a clean
+clone has nothing to register and the detection route answers 501 because no model weights are
+registered. The decision, and what it costs, is in [ADR 13](docs/adr/13-weights-in-the-repository.md).
 
-- **What is here.** The exploratory baseline (YOLOv8n). It exists so the dashboard and the demonstration
-  have real numbers; it is **not** the official E0 baseline, which is trained on the frozen dataset at
-  `P4-01`. Do not quote its metrics as this project's result.
+- **What goes here first.** The exploratory baseline (YOLOv8n), whose purpose is to give the dashboard
+  and the demonstration real numbers. It is **not** the official E0 baseline, which is trained on the
+  frozen dataset at `P4-01`. Do not quote its metrics as this project's result.
 - **Where it came from.** Trained by this team on the DUO dataset. **No DUO image is redistributed
   here** - `datasets/` is ignored - only the weights learned from it.
 - **How to use it.** `python scripts/register_model.py --weights models/<version_name>/best.pt`, then

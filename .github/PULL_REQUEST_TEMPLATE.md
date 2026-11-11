@@ -22,11 +22,7 @@
 
 ## Checklist
 
-- [ ] `ruff check .` and `ruff format --check .` pass
-- [ ] `pytest -q` passes
-- [ ] `python scripts/check-bilingual.py` passes (if docs changed)
-- [ ] `python scripts/check-language.py` passes (no Chinese in English documents)
-- [ ] `python scripts/check-progress.py` passes (if `PROGRESS.md` changed)
+- [ ] Every check in `CONTRIBUTING.md` §4 passes locally (CI runs the same list)
 - [ ] Bilingual pairs updated in this same PR
 - [ ] `docs/` updated if behaviour changed
 - [ ] No weights, datasets or `.env` included

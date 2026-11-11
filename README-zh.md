@@ -88,7 +88,7 @@ python -m uvicorn app.main:app --app-dir server --port 8000
 pytest -q
 ```
 
-167 个测试，约一分钟。不需要摄像头、数据库服务或网络。
+229 个测试，约一分钟。不需要摄像头、数据库服务或网络。
 
 ### 出问题的时候
 
@@ -106,7 +106,7 @@ pytest -q
 
 - **能用**：登录与角色、帧列表与详情、复核提交、统计分析、数据集导出、系统设置——都走真实数据表与真实数据库。
 - **没有硬件也能用**：以上全部；采集相关页面会退化为空列表。
-- **还不能**：批量识别尚未满足 `P3-01` 的验收（一百帧、运行中可查进度、重启后继续），但接口本身已经会建排队任务；采集页没有 `/ws/capture`，因此改用轮询。装置链路的 PC 端已经存在（`server/app/rig/`），但只有设置了 `AV_RIG_PORT` 才会启动；插上板子后第一件事是跑 `scripts/test_rig_link.py`。
+- **还不能**：批量识别尚未满足 `P3-01` 的验收（一百帧、运行中可查进度、重启后继续），但接口本身已经会建排队任务；采集页按 api-contract 第七节走 `/ws/capture` 实时流，轮询只是 socket 无法提供时的兜底。装置链路的 PC 端已经存在（`server/app/rig/`），但只有设置了 `AV_RIG_PORT` 才会启动；插上板子后第一件事是跑 `scripts/test_rig_link.py`。
 
 ### 不想起后端：原型模式
 
@@ -132,7 +132,7 @@ python -m http.server 8765 --directory web
 | [数据模型](docs/data-model-zh.md) · [English](docs/data-model-en.md) | 十四张表、字段、索引、文件存储 |
 | [测试计划](docs/test-plan-zh.md) · [English](docs/test-plan-en.md) | 测试分层、数据集划分、指标与验收 |
 | [术语表](docs/glossary-en-zh.md) | 中英对照，代码与文档共用的唯一词表 |
-| [决策记录](docs/adr/) | 十二份决策记录及其理由：09 已被 10 取代，07 的 pytest 条款已被 11 取代，12 增补了 08；逐条列在 `docs/architecture-zh.md` 第十节 |
+| [决策记录](docs/adr/) | 十三份决策记录及其理由：09 已被 10 取代，07 的 pytest 条款已被 11 取代，12 增补了 08；逐条列在 `docs/architecture-zh.md` 第十节 |
 
 设计文档以英文版为准，中文为对照版，两者必须在同一次提交内同步。
 
@@ -178,9 +178,9 @@ tests/       测试
 
 ## 模型权重
 
-`models/<version_name>/` 存放本项目交付的模型——`best.pt`、`labels.txt` 与 `metrics.json`——纳入版本库而不是另行发布，这样一份干净的克隆也能注册版本并跑起识别。这项决定及其代价见 [ADR 13](docs/adr/13-weights-in-the-repository.md)。
+`models/<version_name>/` 是本项目交付的模型要放的地方——`best.pt`、`labels.txt` 与 `metrics.json`——纳入版本库而不是另行发布，这样文件到位之后，一份干净的克隆也能注册版本并跑起识别。**这一版里该目录是空的：还没有任何权重文件被交付。** 这份副本仍欠在训练那一侧；在它落地之前，干净的克隆没有东西可注册，识别路由会返回 501，因为没有任何模型权重被注册。这项决定及其代价见 [ADR 13](docs/adr/13-weights-in-the-repository.md)。
 
-- **这里是什么。** 探索性基线（YOLOv8n）。它的作用是让仪表盘和演示有真实数字；它**不是**官方 E0 基线——E0 在 `P4-01` 用冻结数据集训练。不要把它的指标当作本项目的结果引用。
+- **首先要放进来的是什么。** 探索性基线（YOLOv8n），它的用途是让仪表盘和演示有真实数字。它**不是**官方 E0 基线——E0 在 `P4-01` 用冻结数据集训练。不要把它的指标当作本项目的结果引用。
 - **它从哪来。** 本项目团队在 DUO 数据集上训练得到。**本仓库不再分发任何 DUO 图像**——`datasets/` 在忽略列表里——只分发从中学到的权重。
 - **怎么用。** `python scripts/register_model.py --weights models/<version_name>/best.pt`，然后以管理员身份激活该版本。目录布局见[数据模型](docs/data-model-zh.md)第五节。
 - **许可与引用。** 代码为 MIT。权重由本项目团队以同样条款提供。DUO 数据集归其作者所有且未声明自身许可，因此使用这些权重时请引用 [DUO 论文](https://arxiv.org/abs/2106.05681)。

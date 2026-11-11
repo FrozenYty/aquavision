@@ -25,8 +25,12 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install tooling
-        run: pip install ruff
+      - name: Install dependencies
+        run: |
+          # One source of truth: requirements-server.txt was written down because CI used to mirror
+          # this list by hand (ADR 11). Installing the file means a version bump is exercised here,
+          # and ruff and pytest are pinned by it too.
+          python -m pip install -r requirements-server.txt
 
       - name: Lint
         run: ruff check .
@@ -56,11 +60,6 @@ jobs:
       - name: Tests
         run: |
           if compgen -G "tests/test_*.py" > /dev/null; then
-            # Only what the tests import; requirements.txt pulls torch via ultralytics.
-            # Only what the tests import. requirements.txt pulls torch via ultralytics, which CI
-          # does not need to check an HTTP skeleton.
-          pip install pytest numpy opencv-python-headless sqlalchemy \
-                      fastapi uvicorn httpx pydantic-settings "python-jose[cryptography]" bcrypt
             pytest -q
           else
             echo "no tests yet"

@@ -1,5 +1,48 @@
 ## 2026-11-11
 
+- **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint
+  scopes - document normalization, code-versus-documents, acceptance traceability, repository hygiene -
+  reported without touching a file; five different agents then did the repairs. That separation is the
+  repository's own rule, and it is what let the hygiene auditor report a gigabyte of leaked test
+  directories it did not clean up itself.
+- **What the audit found clean is worth recording so nobody re-derives it.** The contract's 45 route rows
+  match the mounted routes one for one; the data model matches `models.py` on all 14 tables, every
+  column and every type, with zero differences; no orphan documents, orphan modules or broken relative
+  links across 48 files; and `.gitignore` told the truth about the tracked tree (no path both tracked and
+  ignored). The `from`/`to` defect this repository once fixed stayed fixed.
+- **The systemic finding is the one that matters: the checks compare headings, and every real defect was
+  row-level or block-level.** Four shapes appeared - a header row lost in all six Chinese NFR tables, two
+  table rows missing from the *English* SRS version of Table 2-3 while its own revision record said they
+  were added, a whole page-name table present only in Chinese, and counts that silently diverged (the
+  handover said four uncalled routes, the Chinese said five). Heading parity proves the pair has the same
+  shape, never that it says the same thing.
+- **"English is the source of truth" was not being enforced in either direction.** The report format and
+  the token lifetime were corrected in Chinese and left stale in English; the uncalled-route list was the
+  reverse. Whichever side a reader trusted, one language carried the wrong fact.
+- **Eight blockers closed**, including the two this session itself introduced: the architecture document
+  still called `/ws/capture` "planned and not yet implemented" hours after it was mounted, and three
+  documents described `models/` as holding a delivered model when the directory was empty. Both were
+  mine, and both are now what the code actually does.
+- **A real bug came out of the documents disagreeing.** A relative `weight_path` was resolved against
+  `Path.cwd()`, so detection worked from the repository root and failed from any other working directory
+  - contradicting ADR 13 and the anchor `app/db.py` already used. The fix has a test that fails on the
+  old code (it did: `load_online failed from the working directory …second-working-directory`).
+- **The leaked test directories were a silent `ignore_errors=True`.** `tests/tmp/` held **5,432
+  directories and 1,080 MiB**, one database per test run, because the Windows handle was still open when
+  the fixture tried to remove it. The fixture now disposes the engines and retries, and a directory it
+  genuinely cannot remove fails the test instead of being swallowed. Measured after a full run: **0
+  directories, 0 MiB**.
+- **Two acceptance items that had no test now have one**: the four frame filters (AC-08 - session, site,
+  quality and date range, alone and as an intersection, with the filtered total) and the hard-example
+  pool (AC-17 - a correction enters it, each frame appears once, removal clears the flag and keeps the
+  evidence). The contract test also gained the **reverse** direction, so a mounted route missing from the
+  contract now fails; it had only ever checked the forward one.
+- **One finding was held back on purpose.** The date filter compares a naive local-looking date against
+  a naive-UTC column, so an operator's 03:00 local capture on 2 November falls into the 1 November filter
+  and is silently absent from its own day. The contract says "server time zone". That is either a
+  contract bug or a code bug, and choosing needs a decision rather than a patch - a test now pins the
+  present behaviour so it cannot change by accident.
+
 - **The delivered model now lives in the repository, and the rule that forbade it is rewritten rather
   than bypassed.** Putting a `.pt` under a directory the ignore file excludes would have been a
   contradiction the next reader would find in a `git status`. ADR 13 records the reversal, including
