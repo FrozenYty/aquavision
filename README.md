@@ -186,6 +186,24 @@ Branches, commits, pull requests and document rules all live there.
 
 If you are an AI assistant, read [AGENTS.md](AGENTS.md) first — it tells you which lane you are in.
 
+## Model weights
+
+`models/<version_name>/` holds the model this project delivers - `best.pt`, `labels.txt` and
+`metrics.json` - tracked here rather than published elsewhere, so a clean clone can register a version
+and run detection. The decision, and what it costs, is in [ADR 13](docs/adr/13-weights-in-the-repository.md).
+
+- **What is here.** The exploratory baseline (YOLOv8n). It exists so the dashboard and the demonstration
+  have real numbers; it is **not** the official E0 baseline, which is trained on the frozen dataset at
+  `P4-01`. Do not quote its metrics as this project's result.
+- **Where it came from.** Trained by this team on the DUO dataset. **No DUO image is redistributed
+  here** - `datasets/` is ignored - only the weights learned from it.
+- **How to use it.** `python scripts/register_model.py --weights models/<version_name>/best.pt`, then
+  activate the version as an administrator. The layout is in [data model](docs/data-model-en.md)
+  section 5.
+- **Licence and citation.** The code is MIT. These weights are offered under the same terms by this
+  team. The DUO dataset belongs to its authors and declares no licence of its own, so cite
+  [the DUO paper](https://arxiv.org/abs/2106.05681) whenever you use these weights.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

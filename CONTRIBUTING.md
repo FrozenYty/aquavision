@@ -107,28 +107,43 @@ negotiated. Comments and docstrings are English.
 - Never commit:
 
 ```
-*.pt  *.onnx          model weights
-data/                 frames, thumbnails, exports
+data/                 frames, thumbnails, exports - the runtime data root
 datasets/             training and test data
+runs/                 training output: checkpoints, logs, predictions
 *.mp4  *.avi          video
 .env                  secrets
 ```
 
-Weights go to GitHub Releases. Datasets go to external storage; link them from the README with a
-checksum.
+- **Delivered model weights are tracked**, in `models/<version_name>/`: `best.pt`, `labels.txt` and
+  `metrics.json`, which is what SRS section 4 says a version delivers together. Do not put them under
+  `data/`: that directory is the runtime data root and moves with `AV_DATA_DIR`, so a tracked artefact
+  there would be a file whose address changes with configuration.
 
 Size is a consequence, not a target. What decides is whether a file needs to share history with the
 code:
 
-- **It does** for source, documents, and the small images a document references. A reader expects them
-  beside the text, and they change a little at a time.
-- **It does not** for weights, datasets, video, and generated documents. They are large, they change
-  wholesale every time they are produced, and git keeps every version forever — a repository that
-  accepted them would grow without ever becoming more useful.
+- **It does** for source, documents, the small images a document references, and **the delivered model
+  of a version this project ships**. Someone who clones the repository should be able to register that
+  version and run it; an open-source project that cannot produce a model from a clean clone is open
+  source in name only.
+- **It does not** for datasets, captured frames, video, training checkpoints and every intermediate a
+  training run leaves behind. They are large, they are produced wholesale and thrown away, and git
+  keeps every version forever.
 
-A clone should feel quick and a diff should stay readable. If either stops being true, something moved
-to the wrong side of that line. No number is written down: one would only be argued with at the
-boundary, and the boundary is never where the problem is.
+**This reverses what this section said until 2026-11-11**, and the reversal is recorded in ADR 13. The
+old rule sent weights to GitHub Releases, but nothing was ever published there - zero releases, zero
+tags - and the README never carried the checksum the rule promised, so the rule's useful half had never
+been implemented. What it did produce was a project whose model could not be obtained from the
+repository at all.
+
+The cost is real, and it is why the list above stays tight: **the repository carries each delivered
+version forever.** Deliver only what SRS section 4 requires, never an intermediate checkpoint, and never
+a second copy of the same weights in another format unless a document requires it.
+
+A clone should still feel quick and a diff should still stay readable. If either stops being true,
+something moved to the wrong side of that line. No number is written down: one would only be argued
+with at the boundary, and the boundary is never where the problem is.
+
 
 ## 6. Documents
 

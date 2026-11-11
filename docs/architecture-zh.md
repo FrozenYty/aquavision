@@ -186,3 +186,4 @@ AV_WORKER_POLL_SECONDS=1.0
 | [10](adr/10-desk-lamp-fill-light.md) | 补光用现有台灯：USB 直流供电、无频闪，不必另买光源 |
 | [11](adr/11-pytest-runs-locally.md) | 测试在每个工作站本地跑：只在 CI 跑的测试，人推的时候会绕过去 |
 | [12](adr/12-detect-task-items.md) | 任务的帧在创建时分配，不再由查询临时发现；`detect_task_item` 使表增至十四张 |
+| [13](adr/13-weights-in-the-repository.md) | 交付的模型权重进仓库；数据集、采集帧与训练产物仍在外 |

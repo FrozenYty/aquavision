@@ -1,14 +1,19 @@
-# Model weights, datasets and video: never in the repository. They live in Releases or external
-# storage, linked from the README with a checksum.
-*.pt
-*.onnx
-*.engine
+# Delivered model weights ARE tracked, in `models/<version_name>/` - the artefacts SRS section 4 says
+# go online together. See ADR 13; the rule used to forbid them and was reversed on 2026-11-11.
+# Everything else stays out: datasets, captured frames, training runs, video, and any weight that is
+# not a delivered one.
 data/
 datasets/
 runs/
 *.mp4
 *.avi
 *.mov
+*.pt
+*.onnx
+*.engine
+# ... except the delivered artefacts. These negations must follow the patterns above to win.
+!models/
+!models/**
 
 # Secrets and local configuration.
 .env
