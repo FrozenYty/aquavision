@@ -1,5 +1,17 @@
 ## 2026-11-11
 
+- **`P3-06` is ticked, and one of its three clauses needed a reading rather than a claim.** "One action
+  resets the data" and "leaves the system in the state a rehearsal starts from" are both evidenced by
+  tests. "Hides debug output" was met by the reset leaving no trace of the previous run - every count
+  returns zero, so no page shows a leftover figure - and the prototype notice is a `?mock=1` surface a
+  rehearsal never uses. That interpretation is written into the task, so a future surface that starts
+  printing developer detail on a page is caught by a sentence rather than by memory.
+- **CI caught what my own check had not, and the cause was my ordering.** I ran the document checks and
+  then edited `PROGRESS.md`, quoting the server's Chinese refusal message inside English prose. The check
+  had already passed on the older state, so it proved nothing about what I committed. The lesson is not
+  "be careful with quotes" - it is that **a check is only evidence about the revision it ran on**, which
+  is why the progress entry now describes the reason in English instead of reproducing it.
+
 - **Demo mode exists, and the destructive endpoint is hard to fire by accident.** `POST /api/demo/reset`
   is admin-only and gated on `AV_DEMO_ENABLED`, which defaults to off; when it is off the route answers
   **404, not 403** - a data-wiping endpoint should not tell a prober it exists. The gate runs before the

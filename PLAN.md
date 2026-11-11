@@ -287,12 +287,31 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - the panel's state-by-event matrix (idle / open / selected / confirming / restoring against open /
         select / confirm / cancel / Esc / a second click while restoring) is complete, every cell filled
         or marked ignored - it is in the #150 description
-- [ ] **P3-06** Demo mode · @FrozenYty · closes AC-36 · done when one action resets the data, hides
-      debug output, and leaves the system in the state a rehearsal starts from
-      - also owns **prototype-mode parity**: `?mock=1` is a documented way to run every page without a
-        backend, and `web/static/mock/index.js` does not answer the two review-version routes, so the new
-        panel shows its load-failure state there. The error is honest - it invents no timeline - but a
-        documented mode that half-works is a demo liability, so the mock routes belong with this task
+- [x] **P3-06** Demo mode · @FrozenYty · closes AC-36 · delivered 11-11 (#152)
+      - **one action resets the data.** `POST /api/demo/reset` empties the ten business tables and the
+        stored frame files, and answers with a per-table count, the number of files actually unlinked and
+        the model still online - a boolean would make the operator trust the reset instead of seeing it.
+        The page's control is on P-13 behind a typed `RESET`, and states what it deletes **and what it
+        keeps** before it is pressed
+      - **the endpoint cannot fire by accident.** Admin only, gated on `AV_DEMO_ENABLED` which defaults
+        off, and when it is off the answer is **404, not 403** - a data-wiping route should not tell a
+        prober it exists. The gate runs before the role check
+      - **the rehearsal state is the kept state**: `model_version` stays online, `species_dict` stays so
+        the model's class order can be validated, `sys_user` stays because deleting the caller's own
+        account mid-request is a lockout. Tests assert the business tables empty **and** those four
+        survive, and that a reset deployment still logs in afterwards
+      - **"hides debug output" is satisfied by leaving no trace of the previous run**, and that is the
+        reading this task was closed on: every count is zero after a reset, so no page shows a leftover
+        figure, and the prototype notice appears only under `?mock=1`, which a rehearsal against the
+        server never uses. If a future surface starts printing developer detail on a page, this bullet is
+        where it should be caught
+      - **prototype-mode parity is restored.** `?mock=1` answers both review-version routes from the
+        tab's own recorded reviews - an empty list for a tab that reviewed nothing, never fixture entries
+        presented as history - and answers the reset against its own store. That work exposed three mock
+        id generators that assumed a non-empty list
+      - **not covered:** the reset does not stop a running worker, so it assumes a rehearsal starts from a
+        still system. Resetting mid-batch can leave the worker writing rows just deleted; `P3-12` is where
+        that belongs if it ever bites
 - [ ] **P3-07** Report generation and history · @chemflowers · closes AC-22 · done when a report is
       generated as Markdown from the same queries the dashboard uses, its figures equal the dashboard,
       and the footer carries the model version and the basis — **not Word or PDF; SRS V1.6 settled that**
