@@ -966,6 +966,104 @@ def test_detect_frame_writes_boxes_with_the_contract_fields(client):
         assert rows[0].task_id == task.task_id
 
 
+def test_boxes_come_back_by_frame_id(client):
+    """P2-02: what detection stored, the query route returns — same rows, same ids, same counts."""
+    token = sign_in(client)
+    _, frame = capture_one(client, token)
+    seed_species_rows(client)
+    client.app.state.detector = FakeDetector(register_fake_model(client))
+
+    detected = client.post(f"/api/detect/frames/{frame['frame_id']}", headers=auth(token)).json()[
+        "data"
+    ]
+    body = client.get(f"/api/frames/{frame['frame_id']}/objects", headers=auth(token)).json()
+    assert body["code"] == 0
+    assert body["data"]["items"] == detected["boxes"]
+    assert body["data"]["counts"] == {"holothurian": 1}
+
+    missing = client.get("/api/frames/no-such-frame/objects", headers=auth(token)).json()
+    assert missing["code"] == 40401
+
+
+def test_a_frame_with_no_detection_returns_an_empty_result(client):
+    token = sign_in(client)
+    _, frame = capture_one(client, token)
+    body = client.get(f"/api/frames/{frame['frame_id']}/objects", headers=auth(token)).json()
+    assert body["code"] == 0
+    assert body["data"] == {"items": [], "counts": {}}
+
+
+def test_detecting_the_same_frame_twice_leaves_one_automatic_result(client):
+    """A second run replaces the previous automatic set; a duplicate would be counted twice."""
+    token = sign_in(client)
+    _, frame = capture_one(client, token)
+    seed_species_rows(client)
+    client.app.state.detector = FakeDetector(register_fake_model(client))
+
+    first = client.post(f"/api/detect/frames/{frame['frame_id']}", headers=auth(token)).json()[
+        "data"
+    ]
+    second = client.post(f"/api/detect/frames/{frame['frame_id']}", headers=auth(token)).json()[
+        "data"
+    ]
+
+    assert first["task_id"] != second["task_id"]
+    objects = client.get(f"/api/frames/{frame['frame_id']}/objects", headers=auth(token)).json()[
+        "data"
+    ]
+    assert objects["items"] == second["boxes"]
+    assert objects["counts"] == {"holothurian": 1}
+    with client.app.state.session_factory() as session:
+        rows = session.scalars(
+            select(DetectObject).where(DetectObject.frame_id == frame["frame_id"])
+        ).all()
+        assert len(rows) == 1
+
+
+def test_redetection_keeps_the_boxes_a_reviewer_drew(client):
+    token = sign_in(client)
+    _, frame = capture_one(client, token)
+    seed_species_rows(client)
+    client.app.state.detector = FakeDetector(register_fake_model(client))
+    client.post(f"/api/detect/frames/{frame['frame_id']}", headers=auth(token))
+
+    # The reviewer's canvas is the authority: the automatic box is not in it, so it is rejected.
+    reviewed = client.post(
+        f"/api/review/frames/{frame['frame_id']}",
+        json={
+            "objects": [
+                {
+                    "class_code": "chlamys",
+                    "confidence": 1.0,
+                    "x": 0.3,
+                    "y": 0.3,
+                    "w": 0.1,
+                    "h": 0.1,
+                }
+            ],
+            "note": "drawn by hand",
+        },
+        headers=auth(token),
+    ).json()
+    assert reviewed["code"] == 0
+    after_review = client.get(
+        f"/api/frames/{frame['frame_id']}/objects", headers=auth(token)
+    ).json()["data"]["items"]
+    manual_id = next(item["object_id"] for item in after_review if item["is_manual"] == 1)
+
+    client.post(f"/api/detect/frames/{frame['frame_id']}", headers=auth(token))
+    objects = client.get(f"/api/frames/{frame['frame_id']}/objects", headers=auth(token)).json()[
+        "data"
+    ]
+    by_id = {item["object_id"]: item for item in objects["items"]}
+    assert manual_id in by_id
+    assert by_id[manual_id]["is_manual"] == 1
+    assert by_id[manual_id]["class_code"] == "chlamys"
+    # The automatic box came back with the new run, and the rejected one is gone with the old set.
+    assert objects["counts"] == {"chlamys": 1, "holothurian": 1}
+    assert sum(1 for item in objects["items"] if item["is_manual"] == 0) == 1
+
+
 def test_the_loader_names_the_reason_it_cannot_build_a_detector(client):
     """The sentence in the 501 comes from here, and each one names something to act on."""
     from app.detector import load_online

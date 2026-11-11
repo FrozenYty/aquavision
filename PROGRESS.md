@@ -43,6 +43,14 @@
   and what they are called is a working detail of one session's setup, not a rule of this repository**, so
   the roster stays out of the file the other members' assistants read. It was written in and then cut
   back out the same morning on the owner's instruction.
+- **`P2-02` closes the result loop: one automatic set per frame, and it comes back by `frame_id`.**
+  Re-running detection replaces the previous automatic boxes instead of appending a second set — every
+  statistic would count a duplicate twice — and keeps the boxes a reviewer drew, which the model
+  cannot reproduce. The policy is now stated in `docs/data-model-*.md` §3.5 and pinned by tests:
+  detecting twice leaves one set, a hand-drawn box survives the re-run, and
+  `GET /api/frames/{frame_id}/objects` returns exactly the rows detection wrote, counts included.
+  Checked on the scratch server as well: 20 boxes stored, the query returned the same 20 object ids,
+  and a second run left the count at 20 with a new task row.
 - **`P2-05b` runs the online weights for real, and the single-frame route no longer answers 501.**
   The model comes from the `model_version` row with `is_online = 1` and is loaded once at start-up; no
   weight path appears in the code. A frame posted through the capture route went through

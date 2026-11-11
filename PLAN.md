@@ -101,8 +101,11 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - delivered 11-11: a frame posted through the capture route went through
         `POST /api/detect/frames` on the online baseline, and the response carried 20 boxes,
         `model_version` and a measured `latency_ms`
-- [ ] **P2-02** Result persistence and query API · @Gtechson · done when boxes land in
+- [x] **P2-02** Result persistence and query API · @Gtechson · done when boxes land in
       `detect_object` and querying by `frame_id` returns them
+      - delivered 11-11: detection writes the rows, the query route returns them with their counts,
+        and a re-run replaces the automatic set instead of duplicating it (the policy is in
+        `docs/data-model-*.md` §3.5)
 - [x] **P2-03** Capture and review pages on real data · @chemflowers · closes AC-08, AC-13 · done when no mock data is left
       on those two pages
 - [x] **P2-04** Minimal review loop: delete, add, relabel · @chemflowers @Gtechson · closes AC-17 · done when the

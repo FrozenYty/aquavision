@@ -147,6 +147,9 @@
 | `reviewed_at` | TIMESTAMP | NULL | 复核时间 |
 | `created_at` | TIMESTAMP | DEFAULT now() | 生成时间 |
 
+**每帧只保留一份自动结果。** 重复识别覆盖 `is_manual = 0` 的行，而不是追加第二份结果——否则每个统计口径都会把它算两遍；
+复核者手绘的框保留，因为模型无法复现它们。已被复核记录过的旧结果不会消失，它保存在那次复核的 `sys_log` 行里，前后两次的内容都在。
+
 ### 3.6 species_dict 物种字典表
 
 上线时四行种子：`holothurian`、`strongylocentrotus`、`chlamys`、`asterias`。

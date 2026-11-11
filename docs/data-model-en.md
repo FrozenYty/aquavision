@@ -152,6 +152,11 @@ Append only; never updated or deleted in place (archival is an export).
 | `reviewed_at` | TIMESTAMP | NULL | Review time |
 | `created_at` | TIMESTAMP | DEFAULT now() | Creation time |
 
+**One automatic result per frame.** Re-running detection replaces the rows where `is_manual = 0`
+rather than appending a second set, which every count would multiply; boxes a reviewer drew are kept,
+because the model cannot reproduce them. A set that a review already recorded is not lost: it stays
+in that review's `sys_log` row, with the before and after values.
+
 ### 3.6 species_dict
 
 Four seed rows at launch: `holothurian`, `strongylocentrotus`, `chlamys`, `asterias`.
