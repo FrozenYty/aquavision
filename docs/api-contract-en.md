@@ -322,6 +322,11 @@ unit; the binary carries no id of its own. Results are correlated to frames by `
 the order in which frames or results arrive. The quality score rides on the `frame` message, in the
 same shape as the frame object in §6.
 
+**No capture source.** After accepting the token, a server that cannot capture closes the socket with
+`1011` and a reason instead of synthesising frames. That close is sent before `auth_ok`, so a client
+waiting for authentication takes its REST polling path and the capture page reports that the live feed
+is unavailable.
+
 ## 8. Frame and result alignment
 
 - The server assigns `frame_id` at capture time and includes it in every result.

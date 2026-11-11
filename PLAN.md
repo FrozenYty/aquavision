@@ -182,9 +182,26 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 
       **Frontend and interface · @chemflowers**
 
-- [ ] **P2-08** The capture page streams real frames · @chemflowers · done when `capture.html` shows
-      live detections from `/ws/capture` (or polling if the socket is unavailable), and the mock path
-      stays behind `USE_MOCK`
+- [ ] **P2-08** The capture page streams real frames · **@Gtechson** · widened 11-11 when the task was
+      checked: the page and the client are **already built and guarded** - `web/static/js/live.js`
+      implements contract §7 in full (auth first, 4401/4408, the binary unit after its `frame`, `detect`
+      correlated by `frame_id`, stale results dropped) and `tests/test_live_socket.py` holds it to the
+      contract as text. **What is missing is the server: there is no WebSocket route at all.** The task
+      was filed against lane C, which had already delivered its half. Done when
+      - `/ws/capture` answers §7: auth first, `auth_ok`, `4401` on a bad token, `4408` when no auth
+        arrives within five seconds, `start`/`stop`, one binary JPEG immediately after its `frame`
+        message, a `detect` carrying `latency_ms` and `model_version`, and `status`
+      - **the socket is the required path.** Polling is the fallback when the socket cannot be served,
+        not an alternative way to satisfy this task - the earlier wording said "or polling", which let a
+        polling-only page tick the box. A test must show the fallback happens rather than the page going
+        quiet
+      - **detection runs off the event loop** (`run_in_threadpool`). It is synchronous CPU work; awaited
+        inline it stalls the other twelve pages for every connected tab
+      - **no camera on this machine** (decided 11-11): the socket is served and then closed with `1011`
+        and a reason, and the page falls back to polling and says so. **No synthetic frames** - a
+        rehearsal with invented pictures is worse than one that admits it has none
+      - the mock path stays behind `USE_MOCK`, and §8's stale-result rule is exercised by a test:
+        correlating by arrival order instead of `frame_id` looks fine until two frames overlap
 - [x] **P2-09** Dataset export page against the real API · @chemflowers · closes AC-18 · done when a snapshot can be
       exported, listed and refreshed with no mock data, and the split counts match the server
 - [x] **P2-10** `api.js` tells the truth · @chemflowers · done when no `provisional` marker remains, a
