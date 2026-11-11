@@ -49,12 +49,12 @@ FRAME = {
     "captured_at": "2026-11-03T01:10:00+00:00",
 }
 TRICKY = [
-    'a, comma',
+    "a, comma",
     'a "quote"',
     "a\nnewline",
     "a\r\nCRLF",
     "海参, 刺参",
-    ' leading space',
+    " leading space",
     "",
 ]
 
@@ -107,10 +107,23 @@ def test_comma_quote_newline_and_chinese_survive_a_round_trip():
 @needs_node
 def test_the_header_is_the_servers_field_names():
     columns = run("m.RESULT_COLUMNS")
-    box_fields = ["object_id", "class_code", "confidence", "x", "y", "w", "h", "is_manual", "review_status"]
+    box_fields = [
+        "object_id",
+        "class_code",
+        "confidence",
+        "x",
+        "y",
+        "w",
+        "h",
+        "is_manual",
+        "review_status",
+    ]
     frame_fields = ["frame_id", "session_id", "point_code", "captured_at"]
     assert all(field in columns for field in box_fields + frame_fields)
-    assert [c for c in columns if c not in box_fields + frame_fields] == ["class_name", "review_status_name"]
+    assert [c for c in columns if c not in box_fields + frame_fields] == [
+        "class_name",
+        "review_status_name",
+    ]
 
 
 @needs_node
@@ -135,5 +148,7 @@ def test_the_filename_carries_the_frame_id_and_the_time():
 
 def test_the_page_exports_through_the_module_and_refuses_an_empty_result():
     page = DETAIL.read_text(encoding="utf-8")
-    assert "toCsv(" in page and "csvFilename(" in page, "result-detail.html must export through csv.js"
+    assert "toCsv(" in page and "csvFilename(" in page, (
+        "result-detail.html must export through csv.js"
+    )
     assert "boxes.length === 0" in page, "an empty result must be refused before any file is made"
