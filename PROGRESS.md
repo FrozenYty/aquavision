@@ -1,5 +1,13 @@
 ## 2026-11-11
 
+- **`P3-05` in part: the review canvas zooms, and every gesture has a defined answer to every event.** Zoom
+  (50% to 400%, buttons, keys, Ctrl + wheel at the pointer) changes the stage's real width inside a scrolling
+  viewport, never a CSS transform, so one tested function, `toImageCoords`, converts pointer positions at any
+  zoom and scroll. `tests/test_review_canvas.py` runs that geometry under Node. Checked in the browser: at 400%
+  a dragged box moves exactly with the pointer, a box drawn at 50% matches the dragged rectangle, a box dragged
+  off the picture stops at its edge, Esc mid-drag puts the box back, and a press before the picture has loaded
+  draws nothing (the first try drew on a 16 px broken-image strip, which is why readiness is now checked).
+  Not ticked: two versions and a rollback between them need routes the server does not have (lane B).
 - **The task board and the briefs now say the same thing.** `P2-05b` still carried "blocked until the
   weights arrive" a day after the weights were registered and activated, which is exactly how a team loses
   a day waiting for a door that is open. The blocker is cleared in writing, and the checkpoint now has its
