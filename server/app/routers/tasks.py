@@ -1,7 +1,8 @@
 """Detection tasks: listing, progress, cancel and retry (FR-M3-02, AC-11).
 
-A task row is the queue. Nothing executes yet — the worker arrives with the model — but the record,
-its state machine and its guards are real, because the interface and the review flow both read them.
+A task row is the queue. `app.worker` claims the rows and walks their frames; this module only reads and
+writes the record, its state machine and its guards, because the interface and the review flow both read
+them.
 """
 
 from __future__ import annotations

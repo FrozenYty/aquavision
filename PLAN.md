@@ -251,6 +251,17 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P3-01** Batch detection, the pool and progress · @Gtechson · closes AC-11 · done when a
       100-frame task completes, progress is queryable while it runs, and a restart mid-task resumes
       it rather than losing it
+      - **verified through the API on 11-11** - `tests/test_batch_acceptance.py` runs a 100-frame task to
+        done, polls `GET /api/tasks/{id}` while it is in flight, and cuts a run short before restarting
+        it through `Worker.start()`, after which the task resumes and finishes with one box per frame.
+        The mid-flight test **was shown to fail** when the worker stopped advancing progress: the
+        readings then sit at `('running', 0)` and the assertion prints that series
+      - **still open: the pool.** Two workers claim the same frames. Measured 11-11 with two queued
+        tasks, `workers=2` and `asset_count=10` each: both tasks finished with `obj_count=10` and the
+        **same ten `asset_id`s**. `_frames_for` selects the frames that have no `detect_object` row, and
+        two workers read that list before either writes, so the second claims what the first is already
+        running. The cost is doubled inference and two task rows claiming the same assets. Closing it
+        needs a claim marker - a task id on the frame, or a join table - which is a data-model decision
 - [ ] **P3-02** Statistics dashboard · @chemflowers · closes AC-19, AC-20, AC-21 · done when the four
       charts render from `/api/stats/*`, the basis switch changes both the figures and the caption,
       and the empty site shows an empty state rather than a blank chart
@@ -304,7 +315,22 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P3-15** Species dictionary and per-class thresholds · @chemflowers · closes AC-26 · done when the
       four classes and their thresholds can be viewed and edited on P-12, a threshold change applies to
       new jobs and not to finished ones, and a class code that disagrees with `labels.txt` is refused
+      - **spans two lanes as written.** The page is lane C's; applying a threshold to new jobs and
+        refusing a class code that disagrees with `labels.txt` are both in `server/`, which is lane B's
+        and read-only for C. Agree the split with lane B before starting, rather than in review
+      - the data already supports it: `species_dict.conf_thr` exists and **nothing reads it** -
+        `detect.py` passes the caller's `conf_thr` straight to the model
 
+- [ ] **P3-16** Review versions and rollback · @Gtechson · **unblocks `P3-05`**, which names this work only
+      inside its own text and cannot close without it · the material is already stored: `review` writes the
+      full before/after box list into `sys_log`, and `detect_object.version_no` marks a hand-drawn box ·
+      done when
+      - `GET /api/review/frames/{frame_id}/versions` lists each submission with its time, its author and
+        the box count before and after - read from `sys_log`, not recomputed from the current boxes
+      - a rollback restores a chosen submission's box set as a **new** version rather than deleting
+        history: the record of the mistake is the training signal, so it is kept
+      - the frame's counts follow the rollback, and a reviewer without the role is refused - each path
+        has a test
 - [ ] **GATE P3** — all 36 acceptance items demonstrated live, one after another, no manual database
       edits in between, and every item traceable to the task that closed it
 
