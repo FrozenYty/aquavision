@@ -1,5 +1,11 @@
 ## 2026-11-11
 
+- **`P3-01` is ticked, with the evidence written next to it rather than a bare box.** Its three
+  acceptance points were verified through the API on #145 and the pool defect that verification exposed
+  was closed by ADR 12 on #146, so the box now carries what proved it: the two test files, the red
+  mid-flight assertion, the `OVERLAP: 0` measurement, and the one thing it does not prove - that the
+  100-frame run uses an injected stub detector and the weights are a separate test.
+
 - **The pool defect is fixed by a decision, not a patch.** ADR 12 makes a task own its frames: a new
   table `detect_task_item` (fourteen tables), the frames assigned when the task is created, a
   compare-and-swap claim that holds no lock across inference, and a frame the model finds nothing in
