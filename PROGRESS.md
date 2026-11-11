@@ -7,7 +7,8 @@
   something behind the door.
 - **The reset reports what it deleted instead of a boolean.** Per-table counts, the number of image files
   actually unlinked, and the model still online. The keep-list is deliberate and commented: `model_version`
-  (a rehearsal whose first capture answers "模型权重未注册" is the opposite of rehearsal-ready),
+  (a rehearsal whose first capture answers the "no model weights registered" reason is the
+  opposite of rehearsal-ready),
   `species_dict` (detection validates the model's class order against it), `sys_user` and `sys_param`
   (deleting the caller's account mid-request is a lockout, not a reset).
 - **A file another process still holds cannot fail a reset that has already committed** - the unlink
