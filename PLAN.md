@@ -273,23 +273,26 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       that produced it
 - [ ] **P3-04** Account management · @Gtechson · closes AC-03, AC-04 · done when an account can be created,
       disabled and restored, a disabled account cannot sign in, and its history stays queryable
-- [ ] **P3-05** Review canvas: drag, zoom, add, delete · @chemflowers · closes AC-15, AC-16 ·
-      **the canvas half is done; what remains is the version panel.** Drag, select, draw and delete worked
-      already, and zoom was delivered by #137 - it changes the stage's real width inside a scrolling
-      viewport, **never a CSS transform**, and `tests/test_review_canvas.py` runs the real module under
-      Node, checking the coordinate conversion at two zoom levels
-      - **the blocker is gone:** `P3-16` delivered `GET /api/review/frames/{id}/versions` and
-        `POST /api/review/frames/{id}/rollback` on 11-11, so two versions and a rollback between them can
-        be shown. Nothing on the server side is waiting
-      - remaining work is the page: list the frame's versions, let a reviewer pick one, and restore it
-        without a reload. The panel needs a **state-by-event matrix** of its own (idle / versions open /
-        confirming / restoring, against open / select / confirm / cancel / Esc), every cell filled or
-        marked ignored - the edges are where an unstated interaction breaks, and this one deletes nothing
-        but does overwrite the reviewer's canvas
-      - a refused rollback (`409`, no-op or another frame's entry) must leave the canvas untouched and say
-        why, rather than appearing to succeed
+- [x] **P3-05** Review canvas: drag, zoom, add, delete · @chemflowers · closes AC-15, AC-16 ·
+      delivered 11-11 (#137 zoom, #150 the version panel)
+      - drag, select, draw and delete were already there; zoom (`#137`) changes the stage's real width
+        inside a scrolling viewport, **never a CSS transform**, and `tests/test_review_canvas.py` runs the
+        real `canvas.js` under Node, checking the coordinate conversion at two zoom levels
+      - the version panel (`#150`) lists a frame's versions and restores one through the `P3-16` routes.
+        Its decisions are pure functions in `web/static/js/versions.js`, run under Node by
+        `tests/test_review_versions_page.py` rather than asserted by grepping the page
+      - **a refused rollback returns before the two lines that write to the canvas**, which is asserted
+        as an ordering: `409` is a normal outcome, shows the server's rule sentence, keeps the selection,
+        and says the canvas was not touched
+      - the panel's state-by-event matrix (idle / open / selected / confirming / restoring against open /
+        select / confirm / cancel / Esc / a second click while restoring) is complete, every cell filled
+        or marked ignored - it is in the #150 description
 - [ ] **P3-06** Demo mode · @FrozenYty · closes AC-36 · done when one action resets the data, hides
       debug output, and leaves the system in the state a rehearsal starts from
+      - also owns **prototype-mode parity**: `?mock=1` is a documented way to run every page without a
+        backend, and `web/static/mock/index.js` does not answer the two review-version routes, so the new
+        panel shows its load-failure state there. The error is honest - it invents no timeline - but a
+        documented mode that half-works is a demo liability, so the mock routes belong with this task
 - [ ] **P3-07** Report generation and history · @chemflowers · closes AC-22 · done when a report is
       generated as Markdown from the same queries the dashboard uses, its figures equal the dashboard,
       and the footer carries the model version and the basis — **not Word or PDF; SRS V1.6 settled that**
