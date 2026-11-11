@@ -50,6 +50,7 @@ from app.routers import (
     detect,
     experiments,
     hard_samples,
+    live,
     models,
     reports,
     review,
@@ -79,6 +80,7 @@ ROUTERS = (
     species.router,
     system.router,
     demo.router,
+    live.router,
 )
 
 

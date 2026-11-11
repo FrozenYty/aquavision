@@ -1,5 +1,28 @@
 ## 2026-11-11
 
+- **`P2-08` was not a page task at all.** It was filed against lane C as "the capture page streams real
+  frames", and lane C had already delivered: `live.js` implements contract §7 in full and
+  `tests/test_live_socket.py` holds it to the contract as text. Grepping the server for `websocket`
+  returned nothing. **The only missing piece was the endpoint**, and the task had been sitting on the
+  wrong lane. Corrected in the plan, with the reason, so the next person who opens it does not re-derive
+  it.
+- **An acceptance wording let a half-answer pass.** The task said "live detections from `/ws/capture`
+  (or polling if the socket is unavailable)". That "or" meant a polling-only page could tick the box, so
+  it now says the socket is the required path and polling is the fallback - with a test that shows the
+  fallback happening instead of the page going quiet.
+- **The server keeps inference off the event loop.** Detection is synchronous CPU work; awaited inline it
+  would stall every other page for each connected tab. It runs in a threadpool, one inference in flight
+  at a time, and the `frame` header and its JPEG are sent under one lock so `detect` or `status` cannot
+  land between them - §7's adjacency is held by the lock rather than by timing.
+- **No camera, so no pictures, and the page says so.** The socket is served, the token is validated, and
+  the connection closes with `1011` and a reason; the client falls back to REST polling. No synthetic
+  frames were invented. Reading the client first showed why the close has to come **before** `auth_ok`:
+  after `auth_ok` a close only calls `onState("closed")` and never rejects, so the fallback would not run.
+- **That reading also exposed the limit of the fix.** The client's fallback is driven by its own
+  three-second timeout rather than by the close, and a socket that dies **after** `auth_ok` - a camera
+  unplugged mid-demo - reports "closed" and does not fall back at all. Out of this task's scope, recorded
+  for `P3-12` failure and recovery rather than left to be discovered on stage.
+
 - **`P3-06` is ticked, and one of its three clauses needed a reading rather than a claim.** "One action
   resets the data" and "leaves the system in the state a rehearsal starts from" are both evidenced by
   tests. "Hides debug output" was met by the reset leaving no trace of the previous run - every count
