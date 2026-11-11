@@ -71,18 +71,16 @@ What exists and must not be rewritten:
 registered versions loaded at once, so leaving it here would have made `P1-02` unclosable until P4.
 That is a correction to the task, not a relaxation of it.
 
-What is left:
+**All four closed on 2026-11-11** by `P2-05a` (queue consumer), `P2-05b` (detection path) and `P2-05c`
+(statistics against the rows detection wrote). The record of what each delivery had to prove is in
+`PLAN.md`; this section only keeps what is still open:
 
-1. **A real detection path.** `POST /api/detect/frames/{id}` and `/api/detect/batches` return 501
-   because no weight file exists. Load the model once at start-up from `model_version.weight_path`, run
-   inference, write `detect_object`, and delete the 501.
-2. **A queue consumer.** `detect_task` rows are written and never processed. A worker that picks up
-   queued tasks, updates `progress` per frame, honours cancel within five seconds (AC-11), and marks a
-   failure with a reason.
-3. **`POST /api/detect/frames` must refuse a frame that never came through capture** (AC-10) — the
-   guard belongs in the handler, not only in the interface.
-4. **Statistics on real results.** `/api/stats/*` filters by review status already; confirm the figures
-   match the dashboard once detection writes rows.
+1. **Batch acceptance, not the endpoint.** `POST /api/detect/batches` queues a task the worker consumes;
+   it answers 501 only when the database holds no frame at all. What remains is `P3-01`: a hundred-frame
+   run, progress queryable while it runs, and a restart that resumes instead of losing the task.
+2. **Per-class thresholds and `class_filter`** are `P3-15`. The worker ignores `class_filter` today, and
+   detection uses the caller's `conf_thr`, not the per-class values in `species_dict`.
+3. **`/ws/capture` does not exist** (`P2-08`), so the live socket's `detect` message has no producer.
 
 | Claim | The check |
 |---|---|
