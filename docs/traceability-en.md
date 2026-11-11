@@ -136,7 +136,7 @@ Every screen of the prototype, element by element, traced to the requirement it 
 | TM-053 | P-06 Result detail | content | Frame facts | See figure 6, callout 5. Quality, capture time and session. | FR-M2-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-054 | P-06 Result detail | content | Object list | See figure 6, callout 6. Class, confidence and review status per box; hovering a row lights its box. | FR-M3-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-055 | P-06 Result detail | content | Per-class count | See figure 6, callout 7. Boxes per class. | FR-M3-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-056 | P-06 Result detail | actions | Export results | Figure 6, no callout: not on screen. CSV, JSON and annotated images are not built yet. | FR-M3-05 | Done | Not started | Not started | Sun Jianheng | Yao Tianyu |
+| TM-056 | P-06 Result detail | actions | Export results | See figure 6, callout 8. Exports the boxes listed on this page as CSV, one row per box: UTF-8 with a byte-order mark so Excel shows Chinese class names; an empty result says so and makes no file. JSON and annotated images are not built yet. | FR-M3-05 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
 
 ### 4.7 P-07 Manual review (figure 7)
 
@@ -248,7 +248,7 @@ Every screen of the prototype, element by element, traced to the requirement it 
 | P-03 Capture control | `capture.html` | 12 | 8 | 4 | 0 |
 | P-04 Image browser | `image-browser.html` | 9 | 8 | 1 | 0 |
 | P-05 Detection jobs | `tasks.html` | 7 | 5 | 2 | 0 |
-| P-06 Result detail | `result-detail.html` | 8 | 6 | 1 | 1 |
+| P-06 Result detail | `result-detail.html` | 8 | 6 | 2 | 0 |
 | P-07 Manual review | `review.html` | 11 | 0 | 11 | 0 |
 | P-08 Hard samples | `hard-samples.html` | 6 | 5 | 1 | 0 |
 | P-09 Data export | `dataset-export.html` | 7 | 7 | 0 | 0 |

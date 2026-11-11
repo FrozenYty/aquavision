@@ -15,6 +15,7 @@
       <div class="av-page-actions">
         <a class="btn btn-outline-secondary text-nowrap" href="capture.html">返回采集</a>
         <a class="btn btn-outline-primary text-nowrap" href="image-browser.html">影像浏览</a>
+        <button class="btn btn-outline-primary text-nowrap" id="btn-export" type="button" disabled>导出 CSV</button>
         <a class="btn btn-primary text-nowrap" id="btn-review" href="review.html">去复核</a>
       </div>
     </div>
@@ -48,13 +49,41 @@
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
     import * as api from "../static/js/api.js";
-    import { esc, fmtTime, loadInto, qualityBadge } from "../static/js/ui.js";
-    import { CLASSES, countByClass, stageHtml, statusBadge } from "../static/js/boxes.js";
+    import { esc, fmtTime, loadInto, qualityBadge, toast } from "../static/js/ui.js";
+    import { CLASSES, REVIEW_STATUS, countByClass, stageHtml, statusBadge } from "../static/js/boxes.js";
+    import { RESULT_COLUMNS, csvFilename, resultRows, toCsv } from "../static/js/csv.js";
 
     renderShell();
 
     const $ = (id) => document.getElementById(id);
+    let shown = null; // the frame and boxes on screen: the export writes exactly these, so its rows equal the page's count
+
+    // One row per box listed on this page. An empty result says so and makes no file: an empty CSV would
+    // read as "exported, nothing found" when nothing was exported at all.
+    function exportCsv() {
+      if (!shown) return;
+      const { frame, boxes } = shown;
+      if (boxes.length === 0) {
+        toast(`帧 ${frame.frame_id} 没有识别结果，没有可导出的内容`, "warning");
+        return;
+      }
+      const text = toCsv(RESULT_COLUMNS, resultRows(frame, boxes, CLASSES, REVIEW_STATUS));
+      const url = URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" }));
+      const link = Object.assign(document.createElement("a"), {
+        href: url,
+        download: csvFilename(frame.frame_id, new Date(), { mock: api.USE_MOCK }),
+      });
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+      toast(`已导出 ${boxes.length} 行（每个目标一行）`, "success");
+    }
+    $("btn-export").addEventListener("click", exportCsv);
+
     function render({ frame, boxes }) {
+      shown = { frame, boxes };
+      $("btn-export").disabled = false;
       $("frame-id").textContent = frame.frame_id;
       $("btn-review").href = `review.html?id=${encodeURIComponent(frame.frame_id)}`;
       $("stage").className = frame.quality.verdict === "ok" ? "" : "is-retake";
