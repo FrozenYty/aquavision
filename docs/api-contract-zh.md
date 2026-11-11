@@ -90,6 +90,8 @@ GET /api/frames?page=1&size=24&site=A3&start=2026-11-01&end=2026-11-03
 | GET | `/api/frames/{frame_id}` | 帧详情 | FR-M3-04 | P0 |
 | GET | `/api/frames/{frame_id}/objects` | 检测框 | FR-M3-04 | P0 |
 | POST | `/api/review/frames/{frame_id}` | 提交复核 | FR-M4-01 | P0 |
+| GET | `/api/review/frames/{frame_id}/versions` | 复核版本历史 | FR-M4-02 | P1 |
+| POST | `/api/review/frames/{frame_id}/rollback` | 回滚到某个复核版本 | FR-M4-02 | P1 |
 | GET | `/api/hard-samples` | 难例池 | FR-M4-03 | P1 |
 | DELETE | `/api/hard-samples/{frame_id}` | 移出难例池 | FR-M4-03 | P1 |
 | GET | `/api/datasets` | 数据集快照 | FR-M4-04 | P1 |
@@ -162,6 +164,38 @@ POST /api/review/frames/{frame_id}
 `hard_sample` 表示这一帧是否进入了难例池（FR-M4-03）。
 
 请求里的每个框包含 `object_id`（可选，复核中人工补画的框省略）、`class_code`、`confidence`、`x`、`y`、`w`、`h`；`is_manual` 与 `review_status` 由服务端决定，不从请求读取。响应还会带回 `frame_id`、`rejected`（本次复核去掉的框数）、`added`（人工补画的框数）与请求里的 `note`。
+
+### 复核版本与回滚
+
+```
+GET /api/review/frames/{frame_id}/versions
+
+→ {
+  "frame_id": "20261103T193012-0042",
+  "items": [
+    {
+      "log_id": 87,
+      "action": "submit",
+      "created_at": "2026-11-03T19:34:10+00:00",
+      "author": "高天翔",
+      "before_count": 12,
+      "after_count": 11
+    }
+  ]
+}
+```
+
+`items` 按时间倒序，每条对应一次 `submit` 或 `rollback`。`before_count` 与 `after_count` 从该条记录保存的框列表解析，不由当前框重新计算：`before_count` 统计当时库里的全部框（此前已驳回的也算），`after_count` 统计该次操作后保留的集合。`author` 是显示名，只有自动动作写入的记录为 `null`。没有复核记录的帧返回空的 `items`；帧不存在返回 `40401`。
+
+```
+POST /api/review/frames/{frame_id}/rollback
+{ "log_id": 87 }
+
+→ { "log_id": 87, "frame_id": "20261103T193012-0042", "version_no": 4, "object_count": 11,
+    "hard_sample": true, "rejected": 2, "added": 1 }
+```
+
+回滚把该条记录 `after_value` 里的框集合恢复为一个**新版本**，历史永不删除或改写。帧里存在、但目标集合里没有的框标记为 `review_status = 3`（已驳回）而不是删除；目标集合里、当前没有对应行的框以人工框补入，`review_status = 2`。回滚本身会向时间线追加一条 `rollback` 记录，带自己的前后框列表；响应与复核提交一致，另加它回滚到的 `log_id`。角色与提交相同（`analyst`、`algo`、`admin`）；读取时间线对所有已登录用户开放。不存在的 `log_id` 返回 `40401`；属于另一帧的 `log_id`，或目标集合与当前集合相同时返回 `40901`，且不写入任何记录。
 
 ### 数据集快照
 
