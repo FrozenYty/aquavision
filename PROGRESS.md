@@ -1,5 +1,14 @@
 ## 2026-11-11
 
+- **The traceability matrix was reviewed row by row before it goes to review, and it was behind the code.**
+  Seventeen elements still read "in progress" though the server had gained their routes; each was checked on
+  the real server today and moved to done: batch detection, cancel and retry; every review-canvas element at
+  200% zoom, with the stored boxes matching the page after a reload; hard-sample removal; and account
+  disable, restore and password reset, with sign-in refused and then accepted accordingly. Two elements SRS
+  §5.2 lists but the pages lack had no row at all, which made P-07 read as finished: recent jobs on P-02 and
+  version compare and rollback on P-07 (blocked on lane B). The UT column now says which elements a test
+  actually runs. The first history entry claimed 108 rows for version 1.0, which had 106; the history now
+  records each version from git.
 - **`P3-14` done: the result detail page exports its boxes as CSV.** One row per box listed on the page,
   the server's field names as the header plus a Chinese class name and review status, UTF-8 with a byte-order
   mark and CRLF so Excel reads the Chinese. Escaping is a pure function in `web/static/js/csv.js`, and
