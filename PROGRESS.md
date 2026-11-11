@@ -1,5 +1,23 @@
 ## 2026-11-11
 
+- **`P3-05` is unblocked.** Its rollback half needed an API that returns a frame's review versions and
+  restores one of them, and `P3-16` delivered both. The material was already there and no storage was
+  added: `review` has always written the complete before/after box list into `sys_log`, so the timeline
+  is read from what was recorded rather than recomputed from whatever boxes survive now.
+- **The rule that turns a box list into rows was extracted, not copied.** `submit` and the new rollback
+  share one helper, so a version arriving by either path is applied identically - two copies of that
+  rule is how the two paths would drift apart. Rejected boxes are still marked, never deleted (AC-15),
+  and a rollback writes its own history entry, so the rollback is part of the record instead of an
+  invisible correction.
+- **A no-op rollback is refused rather than recorded.** Rolling back to the set the frame already has
+  answers `CONFLICT` and writes nothing: an entry saying "nothing changed" pushes the versions that
+  matter out of a reader's attention. The two refusal codes are distinguished on purpose - an unknown
+  `log_id` is a `404`, a `log_id` belonging to another frame is a `409`.
+- **A stale number that was visible to clients is fixed and now cannot drift.** `/api/health` published
+  `contract_routes: 42` as a literal; the two new routes made it 44 and only the count in the test was
+  moving. The field is now tied to the contract table by an assertion, which is the difference between
+  fixing a number once and fixing the class of defect.
+
 - **`P3-01` is ticked, with the evidence written next to it rather than a bare box.** Its three
   acceptance points were verified through the API on #145 and the pool defect that verification exposed
   was closed by ADR 12 on #146, so the box now carries what proved it: the two test files, the red

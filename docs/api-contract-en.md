@@ -90,6 +90,8 @@ the number of routes is a consequence, not a target.
 | GET | `/api/frames/{frame_id}` | Frame detail | FR-M3-04 | P0 |
 | GET | `/api/frames/{frame_id}/objects` | Detection boxes | FR-M3-04 | P0 |
 | POST | `/api/review/frames/{frame_id}` | Submit a review | FR-M4-01 | P0 |
+| GET | `/api/review/frames/{frame_id}/versions` | Review version history | FR-M4-02 | P1 |
+| POST | `/api/review/frames/{frame_id}/rollback` | Roll back to a review version | FR-M4-02 | P1 |
 | GET | `/api/hard-samples` | Hard-example pool | FR-M4-03 | P1 |
 | DELETE | `/api/hard-samples/{frame_id}` | Remove a hard example | FR-M4-03 | P1 |
 | GET | `/api/datasets` | Dataset snapshots | FR-M4-04 | P1 |
@@ -167,6 +169,50 @@ server and are not read from the request. The response also reports `frame_id`, 
 removed by this review), `added` (boxes drawn by hand) and the submitted `note`.
 
 Coordinates are normalised to `0..1`, relative to the image, origin at the top-left corner.
+
+### Review versions and rollback
+
+```
+GET /api/review/frames/{frame_id}/versions
+
+→ {
+  "frame_id": "20261103T193012-0042",
+  "items": [
+    {
+      "log_id": 87,
+      "action": "submit",
+      "created_at": "2026-11-03T19:34:10+00:00",
+      "author": "Gao Tianxiang",
+      "before_count": 12,
+      "after_count": 11
+    }
+  ]
+}
+```
+
+`items` is newest first, one entry per `submit` or `rollback`. `before_count` and `after_count` are
+parsed from the box lists stored with the entry, not recomputed from the frame's current boxes:
+`before_count` counts every box stored at that moment (boxes already rejected earlier included), and
+`after_count` counts the accepted set after the action. `author` is the display name, and is `null`
+only for a row written by an automated action. A frame with no reviews answers an empty `items`; a
+frame that does not exist answers `40401`.
+
+```
+POST /api/review/frames/{frame_id}/rollback
+{ "log_id": 87 }
+
+→ { "log_id": 87, "frame_id": "20261103T193012-0042", "version_no": 4, "object_count": 11,
+    "hard_sample": true, "rejected": 2, "added": 1 }
+```
+
+Rollback restores the box set recorded as that entry's `after_value` as a **new** version; history is
+never deleted or rewritten. Boxes in the frame but not in the target set are marked
+`review_status = 3` (rejected) rather than removed; boxes in the target set with no current row are
+added as manual boxes with `review_status = 2`. The action appends a `rollback` entry to the timeline
+with its own before and after lists, and the response mirrors a review submission plus the `log_id`
+it replayed. The roles are the same as a submission (`analyst`, `algo`, `admin`); reading the timeline
+is open to every signed-in user. A `log_id` that does not exist answers `40401`; one that belongs to
+another frame, or a target set equal to the current set, answers `40901` without writing anything.
 
 ### Dataset snapshot
 
