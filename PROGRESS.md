@@ -1,5 +1,30 @@
 ## 2026-11-11
 
+- **The delivered model now lives in the repository, and the rule that forbade it is rewritten rather
+  than bypassed.** Putting a `.pt` under a directory the ignore file excludes would have been a
+  contradiction the next reader would find in a `git status`. ADR 13 records the reversal, including
+  why the old rule lost: it enforced its useful half by keeping weights out and never executed the half
+  that would have made them available - **zero releases, zero tags, and no download link or checksum in
+  the README**, so a clean clone could not produce a model at all.
+- **The layout choice was the substance, not a detail.** The data model put weights under `data/models/`,
+  which is the runtime data root and moves with `AV_DATA_DIR` - a tracked artefact there is a file whose
+  address is a configuration value. Delivered weights sit at the repository root instead, and
+  `model_version.weight_path` stays relative so a registration made on one machine resolves on another.
+  That is the one place this change deliberately departs from the data model, and the data model says so
+  now.
+- **The negative ignore rules were tested, not assumed.** `models/<version>/best.pt` is seen by `git`
+  while a `.pt` in `data/` stays ignored; re-including a path under an excluded directory does not work
+  in git, so the patterns had to be ordered and the result verified with a throwaway file.
+- **Provenance is now part of the deliverable.** DUO declares **no licence of its own** - the upstream
+  repository's licence field is empty and the data ships through cloud links for academic use - so the
+  README states what the weights are, that they are the exploratory baseline rather than the official
+  E0, that **no DUO image is redistributed here**, and how to cite the dataset. Silence would have been
+  the one indefensible option.
+- **What is still owed: the file itself.** No `.pt` exists yet on the development machine, so this change
+  prepares the repository to receive it - the rule, the layout, the licence statement and the
+  registration path are settled. `P2-13` and `GATE P2` remain blocked on a real 4-class weight file,
+  which is training's to produce.
+
 - **`GATE P1` is passed, on four criteria that were run rather than argued.** A real `uvicorn` process
   answered `/api/health` with `{"status": "ok", "database": "ok", "routes": 47, "contract_routes": 45}`;
   `scripts/init_db.py` exited 0 against an empty database; the file held the fourteen tables by name;

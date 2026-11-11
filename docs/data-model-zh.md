@@ -326,16 +326,22 @@
 
 ## 五、文件存储
 
+两个根目录，这个区分很重要：一个随代码交付，一个在运行期产生。
+
 ```
-data/
+models/<version_name>/        交付物，纳入版本库（ADR 13）
+  best.pt  labels.txt  metrics.json
+
+data/                         运行期数据，被 git 忽略，随 AV_DATA_DIR 移动
   frames/<站点>/<年月日>/<session_id>/<frame_id>.jpg
   thumbs/年/月/日/<frame_id>.jpg
   results/<frame_id>.json
-  models/<version_name>/{best.pt,labels.txt,metrics.json}
   exports/
 ```
 
-数据库只存相对路径。换数据根目录是改配置，不是做迁移。
+交付的模型放在仓库根目录而不是 `data/` 下，这是有意的：纳入版本管理的产物，不该放在位置由配置决定的目录里。
+
+数据库只存相对路径。交付权重的路径按仓库根目录解析，因此在一台机器上做的注册在另一台机器上依然有效。换数据根目录是改配置，不是做迁移。
 
 ## 六、生命周期
 

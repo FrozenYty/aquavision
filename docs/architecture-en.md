@@ -190,3 +190,4 @@ per working directory.
 | [10](adr/10-desk-lamp-fill-light.md) | Fill light is the existing lamp: USB-powered DC, no visible flicker, nothing to buy |
 | [11](adr/11-pytest-runs-locally.md) | Tests run on every workstation: a suite that only runs in CI is a suite people push past |
 | [12](adr/12-detect-task-items.md) | A task is assigned its frames when it is created, not discovered by a query; `detect_task_item` makes fourteen tables |
+| [13](adr/13-weights-in-the-repository.md) | The delivered model is tracked in the repository; datasets, frames and training runs stay out |

@@ -335,17 +335,25 @@ high-traffic single-column indices only:
 
 ## 5. File storage
 
+Two roots, and the split matters: one is delivered with the code, the other is produced at run time.
+
 ```
-data/
+models/<version_name>/        delivered, tracked in the repository (ADR 13)
+  best.pt  labels.txt  metrics.json
+
+data/                         runtime, ignored by git, moves with AV_DATA_DIR
   frames/<site>/<YYYYMMDD>/<session_id>/<frame_id>.jpg
   thumbs/YYYY/MM/DD/<frame_id>.jpg
   results/<frame_id>.json
-  models/<version_name>/{best.pt,labels.txt,metrics.json}
   exports/
 ```
 
-The database stores relative paths only. Moving the data root is a configuration change, never a
-migration.
+The delivered model sits at the repository root rather than under `data/` on purpose: a tracked
+artefact must not live under a directory whose location is a configuration value.
+
+The database stores relative paths only. A delivered weight's path resolves against the repository root,
+so a registration made on one machine is valid on another. Moving the data root is a configuration
+change, never a migration.
 
 ## 6. Lifecycle
 
