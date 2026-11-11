@@ -74,12 +74,48 @@
 
       <ul data-panel="messages" class="list-unstyled mb-0 d-grid gap-2" id="messages" hidden></ul>
     </section>
+
+    <section class="av-card av-danger-card mt-3" id="demo-reset">
+      <h2 class="av-card-title">演示复位
+        <span class="badge text-bg-danger ms-2">会删除数据</span></h2>
+      <p class="small text-secondary mb-2">把这个部署交回演示开始前的状态。这个动作不可撤销，请先读完下面两组内容。仅当服务端设置了 <code>AV_DEMO_ENABLED=1</code> 时才会执行；否则服务端会拒绝，并在下方说明原因。</p>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="av-kpi-label">会删除</div>
+          <ul class="small mb-0">
+            <li>采集帧及磁盘上的图像文件，以及这些帧上的检测框</li>
+            <li>识别任务、巡检报告、数据集快照、训练实验</li>
+            <li>站内消息与操作日志</li>
+          </ul>
+        </div>
+        <div class="col-md-6">
+          <div class="av-kpi-label">会保留</div>
+          <ul class="small mb-0">
+            <li>账号、角色与登录状态</li>
+            <li>物种字典</li>
+            <li>模型版本（含当前上线状态）</li>
+            <li>运行参数</li>
+          </ul>
+        </div>
+      </div>
+      <div class="mt-3">
+        <label class="form-label small" for="reset-token">输入 <code>RESET</code> 以启用按钮（这是唯一的确认，没有二次弹窗）</label>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <input class="form-control form-control-sm av-mono av-reset-input" id="reset-token" type="text"
+            autocomplete="off" spellcheck="false">
+          <button class="btn btn-sm btn-danger text-nowrap" id="btn-demo-reset" type="button" disabled>立即复位演示数据</button>
+        </div>
+        <div class="small text-secondary mt-1" id="reset-hint">先输入 RESET 才能启用按钮</div>
+      </div>
+      <div id="reset-result" class="mt-3"></div>
+    </section>
   </main>
 
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
     import * as api from "../static/js/api.js";
     import { bindTabs, confirmAction, esc, fmtTime, loadInto, toast } from "../static/js/ui.js";
+    import { resetGate, resetView } from "../static/js/demo.js";
 
     renderShell();
 
@@ -213,6 +249,65 @@
         fail(err);
       }
     });
+
+    // ---- Demo reset: a typed confirmation, one destructive call, and the server's own counts ----
+    let resetting = false;
+
+    const syncReset = () => {
+      const gate = resetGate({ token: $("reset-token").value.trim(), busy: resetting });
+      $("btn-demo-reset").disabled = !gate.enabled;
+      $("reset-hint").textContent = gate.hint;
+    };
+
+    // One drawing function for both outcomes: only a success view carries rows, so a 404 or a failure
+    // can never be drawn as a result table.
+    const renderReset = (view) => {
+      const box = $("reset-result");
+      if (view.state === "success") {
+        const rows = view.rows.map((row) => `<tr>
+          <td>${esc(row.label)} <span class="text-secondary small">${esc(row.table)}</span></td>
+          <td class="text-end av-mono">${row.count}</td></tr>`).join("");
+        box.innerHTML = `<div class="alert alert-success" role="status">
+            <strong>${esc(view.title)}</strong> ${esc(view.text)}</div>
+          <div class="table-responsive av-reset-table">
+            <table class="table table-sm align-middle mb-2">
+              <thead><tr><th>表</th><th class="text-end">删除行数</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+          <p class="small text-secondary mb-0">移除图像文件 ${view.files} 个 · 当前上线模型：${esc(view.model)}</p>`;
+        return;
+      }
+      box.innerHTML = `<div class="alert alert-${view.state === "off" ? "warning" : "danger"} mb-0" role="alert">
+        <strong>${esc(view.title)}</strong> ${esc(view.text)}</div>`;
+    };
+
+    $("reset-token").addEventListener("input", syncReset);
+
+    $("btn-demo-reset").onclick = async () => {
+      const gate = resetGate({ token: $("reset-token").value.trim(), busy: resetting });
+      if (!gate.enabled) return; // the typed token is the only gate; there is no dialog to click through
+      resetting = true;
+      syncReset();
+      $("reset-result").innerHTML = "";
+      try {
+        const result = await api.demoReset();
+        $("reset-token").value = "";
+        renderReset(resetView({ result }));
+        toast("演示数据已复位", "success");
+        // The tabs already loaded on this page are stale now; the affected ones are re-read in place.
+        loadMonitor(true);
+        loadLogs();
+        loadMessages();
+      } catch (err) {
+        const view = resetView({ error: err });
+        renderReset(view);
+        toast(view.title, view.state === "off" ? "warning" : "danger");
+      } finally {
+        resetting = false;
+        syncReset();
+      }
+    };
 
     loadUsers();
     loadParams();

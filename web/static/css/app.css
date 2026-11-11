@@ -996,6 +996,28 @@ body {
   opacity: 0.6;
 }
 
+/* ---- Demo reset (P3-06): a destructive control, drawn as one ---- */
+
+.av-danger-card {
+  border-color: var(--av-danger);
+}
+
+.av-danger-card::before {
+  background: var(--av-danger);
+}
+
+.av-danger-card .av-card-title .badge {
+  font-weight: 400;
+}
+
+.av-reset-input {
+  max-width: 12rem;
+}
+
+.av-reset-table {
+  max-width: 26rem;
+}
+
 /* ---- Class swatches, one per class_code ---- */
 
 .av-class {
