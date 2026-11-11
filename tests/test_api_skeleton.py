@@ -106,9 +106,13 @@ def auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def a_frame() -> str:
-    """A sharp, textured JPEG, base64 encoded — flat grey scores zero for sharpness."""
-    image = np.random.default_rng(0).integers(0, 255, (120, 160, 3), dtype=np.uint8)
+def a_frame(seed: int = 0) -> str:
+    """A sharp, textured JPEG, base64 encoded — flat grey scores zero for sharpness.
+
+    The seed picks the pixels: capture refuses a second frame with the same hash (AC-05), so a test
+    that needs two frames asks for two seeds.
+    """
+    image = np.random.default_rng(seed).integers(0, 255, (120, 160, 3), dtype=np.uint8)
     ok, buffer = cv2.imencode(".jpg", image)
     assert ok
     return base64.b64encode(buffer.tobytes()).decode("ascii")
@@ -444,12 +448,12 @@ def test_validation_errors_use_the_envelope(client):
 # --- P2-07: one payload-shape test for every P0 route -------------------------------------------
 
 
-def capture_one(client: TestClient, token: str) -> tuple[dict, dict]:
+def capture_one(client: TestClient, token: str, seed: int = 0) -> tuple[dict, dict]:
     """Open a session and post one frame; return both payloads."""
     session = client.post("/api/capture/sessions", headers=auth(token)).json()["data"]
     frame = client.post(
         f"/api/capture/sessions/{session['session_id']}/frames",
-        json={"point_code": "A3", "image_b64": a_frame()},
+        json={"point_code": "A3", "image_b64": a_frame(seed)},
         headers=auth(token),
     ).json()["data"]
     return session, frame
@@ -1062,6 +1066,60 @@ def test_redetection_keeps_the_boxes_a_reviewer_drew(client):
     # The automatic box came back with the new run, and the rejected one is gone with the old set.
     assert objects["counts"] == {"chlamys": 1, "holothurian": 1}
     assert sum(1 for item in objects["items"] if item["is_manual"] == 0) == 1
+
+
+# --- P2-05c: the statistics are the rows, on the basis the route names ---------------------------
+
+
+def test_stats_figures_follow_the_rows_detection_and_review_wrote(client):
+    token = sign_in(client)
+    _, first = capture_one(client, token, seed=1)
+    _, second = capture_one(client, token, seed=2)
+    seed_species_rows(client)
+    client.app.state.detector = FakeDetector(register_fake_model(client))
+    for frame in (first, second):
+        body = client.post(f"/api/detect/frames/{frame['frame_id']}", headers=auth(token)).json()
+        assert body["code"] == 0
+
+    raw = client.get("/api/stats/species?basis=raw", headers=auth(token)).json()["data"]
+    assert raw["basis"] == "raw"
+    assert raw["total"] == 2
+    assert [(item["class_code"], item["count"]) for item in raw["items"]] == [("holothurian", 2)]
+    assert sum(item["share"] for item in raw["items"]) == pytest.approx(1.0)
+
+    reviewed = client.get("/api/stats/species?basis=reviewed", headers=auth(token)).json()["data"]
+    assert reviewed["total"] == 2
+
+    # The reviewer rejects the one box in the first frame: raw still counts it, reviewed does not.
+    rejected = client.post(
+        f"/api/review/frames/{first['frame_id']}", json={"objects": []}, headers=auth(token)
+    ).json()
+    assert rejected["code"] == 0
+
+    after = client.get("/api/stats/species?basis=reviewed", headers=auth(token)).json()["data"]
+    assert after["total"] == 1
+    raw_after = client.get("/api/stats/species?basis=raw", headers=auth(token)).json()["data"]
+    assert raw_after["total"] == 2
+
+    corrections = client.get("/api/stats/corrections", headers=auth(token)).json()["data"]
+    assert corrections["rejected"] == 1
+    assert corrections["modified"] == 0
+    assert corrections["added"] == 0
+    assert corrections["total"] == 1
+
+    # The two capture-side figures count the frames that exist, not a fixture.
+    with client.app.state.session_factory() as session:
+        frames_total = session.scalar(select(func.count(MediaAsset.asset_id)))
+        rejected_frames = session.scalar(
+            select(func.count()).select_from(MediaAsset).where(MediaAsset.quality_flag == 1)
+        )
+    quality = client.get("/api/stats/quality", headers=auth(token)).json()["data"]
+    assert quality["total"] == frames_total
+    assert quality["rejected"] == rejected_frames
+
+    trend = client.get("/api/stats/trend", headers=auth(token)).json()["data"]
+    today = datetime.now(UTC).date().isoformat()
+    assert next(item["frames"] for item in trend["items"] if item["date"] == today) == frames_total
 
 
 def test_the_loader_names_the_reason_it_cannot_build_a_detector(client):
