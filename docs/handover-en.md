@@ -57,7 +57,7 @@ What exists and must not be rewritten:
 | Capture ingest, quality scoring, dedup, clock guard | `routers/capture.py` | done |
 | Review, hard-example pool | `routers/review.py`, `routers/hard_samples.py` | done |
 | Datasets, reports, parameters | `routers/datasets.py`, `reports.py`, `system.py` | done |
-| Thirteen tables | `server/app/models.py` | done; ADR 08 explains the last four |
+| Fourteen tables | `server/app/models.py` | done; ADR 08 explains the four from V1.5, ADR 12 the task-item table |
 | Contract coverage test | `tests/test_api_skeleton.py` | passing — **do not weaken it** |
 
 **What keeps `P1-02` open is exactly two routes**, and they are the two that need weights:

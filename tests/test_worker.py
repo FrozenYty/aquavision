@@ -1,24 +1,24 @@
 """The detection queue consumer (P2-05a).
 
 The worker is exercised against a plain SQLite database, without the HTTP app: the task row is the
-queue, so the tests can seed frames and a task, run the consumer, and read the row back. A detector is
-injected because P2-05a runs before weights exist; the production worker passes none and fails the
-task with a reason rather than inventing boxes.
+queue, and a task owns its frames through `detect_task_item` (ADR 12), so the tests seed frames, create
+a task through `create_batch`, run the consumer, and read the rows back. A detector is injected because
+P2-05a runs before weights exist; the production worker passes none and fails the task with a reason
+rather than inventing boxes.
 """
 
 from __future__ import annotations
 
 import time
 from datetime import UTC, datetime
-from uuid import uuid4
 
 import pytest
 from app.config import get_settings
 from app.db import Base, engine_from_dsn
-from app.models import DetectObject, DetectTask, MediaAsset, SysUser
-from app.routers.tasks import retry_task
+from app.models import DetectObject, DetectTask, DetectTaskItem, MediaAsset, SysUser
+from app.routers.tasks import BatchBody, create_batch, retry_task
 from app.seed import seed_species
-from app.worker import process_task, requeue_stale, run_once
+from app.worker import ITEM_DONE, process_task, requeue_stale, run_once
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import sessionmaker
@@ -58,19 +58,10 @@ def add_frames(factory: sessionmaker, count: int = 100) -> None:
         session.commit()
 
 
-def add_task(factory: sessionmaker, asset_count: int = 100, status: int = 0) -> int:
+def add_task(factory: sessionmaker, asset_count: int = 100) -> int:
+    """Create a task through the real entry point, so it owns the frames it will run (ADR 12)."""
     with factory() as session:
-        task = DetectTask(
-            task_code=f"DT-{uuid4().hex[:8]}",
-            task_type=2,
-            asset_count=asset_count,
-            status=status,
-            progress=0,
-            obj_count=0,
-        )
-        session.add(task)
-        session.commit()
-        return task.task_id
+        return create_batch(session, BatchBody(asset_count=asset_count)).task_id
 
 
 def task_state(factory: sessionmaker, task_id: int) -> dict:
@@ -93,6 +84,22 @@ def count_objects(factory: sessionmaker, task_id: int | None = None) -> int:
         return session.scalar(stmt) or 0
 
 
+def asset_ids(factory: sessionmaker) -> set[int]:
+    """Every frame in the database; a test explains a task's share by subtracting from this."""
+    with factory() as session:
+        return set(session.scalars(select(MediaAsset.asset_id)))
+
+
+def item_assets(factory: sessionmaker, task_id: int) -> set[int]:
+    """The frames a task owns, which is the item rows rather than whatever boxes exist."""
+    with factory() as session:
+        return set(
+            session.scalars(
+                select(DetectTaskItem.asset_id).where(DetectTaskItem.task_id == task_id)
+            )
+        )
+
+
 def one_box(_asset: MediaAsset) -> list[dict]:
     return [
         {
@@ -104,6 +111,10 @@ def one_box(_asset: MediaAsset) -> list[dict]:
             "h": 0.2,
         }
     ]
+
+
+def no_boxes(_asset: MediaAsset) -> list[dict]:
+    return []
 
 
 def test_queue_runs_100_frames_to_done(session_factory):
@@ -121,6 +132,30 @@ def test_queue_runs_100_frames_to_done(session_factory):
     assert progress == sorted(progress)
     assert progress[0] == 1 and progress[-1] == 100
     assert count_objects(session_factory, task_id) == 100
+
+
+def test_a_frame_with_no_boxes_finishes_and_is_not_queued_again(session_factory):
+    """Zero boxes is a result, not the absence of one: the frame is done and the next task skips it."""
+    add_frames(session_factory, 10)
+    first = add_task(session_factory, asset_count=5)
+    process_task(session_factory, first, detector=no_boxes)
+
+    state = task_state(session_factory, first)
+    assert state["status"] == 2
+    assert state["progress"] == 100
+    assert state["obj_count"] == 0
+    assert count_objects(session_factory, first) == 0
+
+    with session_factory() as session:
+        items = list(session.scalars(select(DetectTaskItem).where(DetectTaskItem.task_id == first)))
+    assert {item.state for item in items} == {ITEM_DONE}
+    assert {item.box_count for item in items} == {0}
+
+    second = add_task(session_factory, asset_count=5)
+    assert item_assets(session_factory, first).isdisjoint(item_assets(session_factory, second))
+    assert item_assets(session_factory, first) | item_assets(session_factory, second) == asset_ids(
+        session_factory
+    )
 
 
 def test_cancel_at_frame_40_stops_within_five_seconds(session_factory):
@@ -194,42 +229,47 @@ def test_failure_is_retryable(session_factory):
     assert state["obj_count"] == 100
 
 
-def test_restart_requeues_a_running_task_and_reprocesses(session_factory):
+def test_restart_resumes_and_keeps_the_frames_already_finished(session_factory):
+    """A crash leaves done items done; the resumed task continues instead of restarting (ADR 12)."""
     add_frames(session_factory, 100)
-    task_id = add_task(session_factory, status=1)
-    with session_factory() as session:
-        task = session.get(DetectTask, task_id)
-        task.progress = 40
-        task.obj_count = 40
-        asset = session.scalar(select(MediaAsset).order_by(MediaAsset.asset_id).limit(1))
-        session.add(
-            DetectObject(
-                task_id=task_id,
-                asset_id=asset.asset_id,
-                frame_id=asset.frame_id,
-                class_code="holothurian",
-                confidence=0.9,
-                x=0.1,
-                y=0.1,
-                w=0.2,
-                h=0.2,
-                is_manual=0,
-                review_status=0,
-            )
-        )
-        session.commit()
-    assert count_objects(session_factory, task_id) == 1
-    assert requeue_stale(session_factory) == 1
+    task_id = add_task(session_factory)
+    calls = {"n": 0}
 
+    def detector(asset):
+        calls["n"] += 1
+        return one_box(asset)
+
+    # Stop the first run after forty frames: the row a killed process leaves behind.
+    process_task(session_factory, task_id, detector=detector, should_stop=lambda: calls["n"] >= 40)
+    state = task_state(session_factory, task_id)
+    assert state["status"] == 1
+    assert state["progress"] == 40
+    assert state["obj_count"] == 40
+    assert count_objects(session_factory, task_id) == 40
+
+    # A crash can also land after an item was claimed but before it finished; that one is not done.
+    with session_factory() as session:
+        interrupted = session.scalar(
+            select(DetectTaskItem)
+            .where(DetectTaskItem.task_id == task_id, DetectTaskItem.state == 0)
+            .order_by(DetectTaskItem.item_id)
+            .limit(1)
+        )
+        interrupted.state = 1
+        interrupted.claimed_at = datetime.now(UTC).replace(tzinfo=None)
+        session.commit()
+
+    assert requeue_stale(session_factory) == 1
     state = task_state(session_factory, task_id)
     assert state["status"] == 0
-    assert state["progress"] == 0
-    assert state["obj_count"] == 0
-    assert count_objects(session_factory, task_id) == 0
+    assert state["progress"] == 40
+    assert state["obj_count"] == 40
+    assert count_objects(session_factory, task_id) == 40
 
     assert run_once(session_factory, detector=one_box) is True
     state = task_state(session_factory, task_id)
     assert state["status"] == 2
+    assert state["progress"] == 100
     assert state["obj_count"] == 100
     assert count_objects(session_factory, task_id) == 100
 

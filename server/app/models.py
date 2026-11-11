@@ -1,4 +1,4 @@
-"""The thirteen tables of the data model, as SQLAlchemy declarative models (P1-01).
+"""The fourteen tables of the data model, as SQLAlchemy declarative models (P1-01).
 
 The field-by-field dictionary in docs/data-model-en.md §3 is the source of truth;
 every column here is transcribed from it, in dictionary order. Types follow §2:
@@ -369,6 +369,34 @@ class Report(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
+class DetectTaskItem(Base):
+    """One frame assigned to one task, and the outcome for it (data model §3.14, ADR 12).
+
+    A task does not discover its frames: `create_batch` writes one item per frame when the task is
+    created, so the work list is fixed and every worker sees the same one. The row is also where
+    "finished" lives - `box_count = 0` with `state = done` is a result, not an absence of one, which
+    `detect_object` cannot express because a box needs a class and a geometry.
+    """
+
+    __tablename__ = "detect_task_item"
+    __table_args__ = (
+        UniqueConstraint("task_id", "asset_id", name="uq_detect_task_item_asset"),
+        Index("ix_detect_task_item_task_state", "task_id", "state"),
+    )
+
+    item_id: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)
+    task_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("detect_task.task_id"), index=True)
+    asset_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("media_asset.asset_id"), index=True
+    )
+    state: Mapped[int] = mapped_column(
+        SmallInteger, server_default="0"
+    )  # 0 pending / 1 running / 2 done / 3 failed
+    box_count: Mapped[int] = mapped_column(Integer, server_default="0")
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
 TABLES = (
     SysUser,
     SysLog,
@@ -383,6 +411,7 @@ TABLES = (
     Dataset,
     DatasetItem,
     Report,
+    DetectTaskItem,
 )
 
 # Column counts from data model §1 — the dictionary is the contract, and this
@@ -402,4 +431,5 @@ EXPECTED_COLUMNS = {
     "dataset": 9,
     "dataset_item": 5,
     "report": 12,
+    "detect_task_item": 7,
 }

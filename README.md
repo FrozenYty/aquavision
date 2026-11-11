@@ -54,7 +54,7 @@ the server never imports it. Use the full file only on a machine that trains.
 python scripts/init_db.py
 ```
 
-It creates the thirteen tables, seeds the four species, and — on an empty database only — creates the
+It creates the fourteen tables, seeds the four species, and — on an empty database only — creates the
 first account. **It prints that account's password once**; copy it.
 
 ```
@@ -133,14 +133,14 @@ sign-in. Mock mode hides backend defects by design — use it to show the interf
 | Document | Notes |
 |---|---|
 | [Documentation index](docs/INDEX-en.md) | Which document answers what, and what else changes with it |
-| [SRS v1.11](docs/srs-en.md) | 29 functional requirements, 9 use cases, 13 tables, 36 acceptance items |
+| [SRS v1.12](docs/srs-en.md) | 29 functional requirements, 9 use cases, 14 tables, 36 acceptance items |
 | [Plan](PLAN.md) | Phases, tasks and gates — the task contract for the team |
 | [Architecture](docs/architecture-en.md) | Layers, dependency rules, runtime model, frame lifecycle |
 | [API contract](docs/api-contract-en.md) | REST paths, response envelope, error codes, WebSocket protocol |
-| [Data model](docs/data-model-en.md) | Thirteen tables, fields, indexes, file storage |
+| [Data model](docs/data-model-en.md) | Fourteen tables, fields, indexes, file storage |
 | [Test plan](docs/test-plan-en.md) | Test levels, dataset splitting, metrics and acceptance |
 | [Glossary](docs/glossary-en-zh.md) | English ↔ Chinese, the single word list shared by code and docs |
-| [Decisions](docs/adr/) | Ten decision records, one of them superseded, with the reasoning; `docs/architecture-en.md` §10 lists them |
+| [Decisions](docs/adr/) | Twelve decision records with the reasoning: 09 is superseded by 10, 07's pytest clause by 11, and 12 amends 08; `docs/architecture-en.md` §10 lists them |
 
 English is the source of truth for design documents; the Chinese files are reference versions and
 must be updated in the same commit.

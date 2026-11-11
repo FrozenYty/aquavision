@@ -7,9 +7,10 @@
 
 ## 1. Entities
 
-Thirteen tables. Three of them carry the business core, the rest support it, and four were added
-after the skeleton proved the original nine could not hold what the requirements ask for — see ADR 08
-for why, and `srs-en.md` §4.1 for the revised decision.
+Fourteen tables. Three of them carry the business core, the rest support it. Four were added after
+the skeleton proved the original nine could not hold what the requirements ask for — see ADR 08 for
+why, and `srs-en.md` §4.1 for the revised decision — and `detect_task_item` followed when a task's
+frame list moved from a query every worker re-ran to a set the task owns (ADR 12).
 
 | Table | Purpose | Columns |
 |---|---|---|
@@ -26,6 +27,7 @@ for why, and `srs-en.md` §4.1 for the revised decision.
 | `dataset` | An exported dataset snapshot | 9 |
 | `dataset_item` | One frame in one snapshot, and its split | 5 |
 | `report` | A generated inspection report and its file | 12 |
+| `detect_task_item` | One frame assigned to one detection task, with its state and box count | 7 |
 
 ## 2. Naming and types
 
@@ -42,7 +44,7 @@ for why, and `srs-en.md` §4.1 for the revised decision.
 Never store a comma-separated list in a column. If a value repeats, it belongs in its own table.
 The single exception is `detect_task.class_filter`: it holds a **JSON array** such as
 `["holothurian","chlamys"]`, NULL meaning all classes — it is configuration, not an entity, and
-does not justify a tenth table.
+does not justify a table of its own.
 
 ## 3. Table structure
 
@@ -295,6 +297,25 @@ Unique on (`dataset_id`, `asset_id`); indexed on (`dataset_id`, `split`).
 
 The document is a file; this row is what makes the history queryable by period, template and basis.
 
+### 3.14 detect_task_item
+
+A task's work list, written when the task is created. Each row is one frame the task owns.
+
+| Column | Type | Constraint / default | Notes |
+|---|---|---|---|
+| `item_id` | BIGINT | PK, auto increment | Primary key |
+| `task_id` | BIGINT | FK→detect_task, NOT NULL | Owning task |
+| `asset_id` | BIGINT | FK→media_asset, NOT NULL | Frame assigned to it |
+| `state` | SMALLINT | DEFAULT 0 | 0 pending / 1 running / 2 done / 3 failed |
+| `box_count` | INT | DEFAULT 0 | Objects found; 0 is a result, not an absence |
+| `claimed_at` | TIMESTAMP | NULL | When a worker claimed it |
+| `finished_at` | TIMESTAMP | NULL | When detection finished for it |
+
+Unique on (`task_id`, `asset_id`); indexed on (`task_id`, `state`) to claim the next pending item.
+
+A frame with no objects is recorded as `done` with `box_count = 0`: zero is a result, not the absence
+of one, so no later task picks the frame up again.
+
 ## 4. Indices
 
 Foreign-key columns are always indexed (rule in §2); this table lists composite and
@@ -309,6 +330,8 @@ high-traffic single-column indices only:
 | `detect_object` | `(task_id, class_code)` | Per-task class counts |
 | `detect_object` | `(review_status)` | Review queue |
 | `sys_log` | `(created_at)` | Audit queries by date |
+| `detect_task_item` | `(task_id, asset_id)` | Unique: one item per frame per task |
+| `detect_task_item` | `(task_id, state)` | Claim the next pending item of a task |
 
 ## 5. File storage
 
@@ -329,4 +352,7 @@ migration.
 - Frames are kept indefinitely; thumbnails and intermediate files are cleanup candidates after `retention_days` (30 by default, `AV_RETENTION_DAYS`).
 - Deleting a frame is a soft delete first, physical removal after 7 days.
 - Model versions are never deleted once online; they are marked offline.
+- A detection task writes its item rows when it is created; a restart returns `running` items to
+  pending and leaves finished ones finished, so a resumed batch does not reprocess frames it already
+  has results for.
 - Logs are kept 180 days, then exported and dropped.

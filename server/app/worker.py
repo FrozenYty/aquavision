@@ -1,8 +1,10 @@
 """The detection queue consumer (P2-05a, FR-M3-02, AC-11).
 
-The task row is the queue. A worker claims a queued task, walks its frames, and advances `progress`
-after each one. Cancellation is a row state, not an in-memory flag, so a cancel from the API is seen
-before the next frame; a restart leaves nothing behind because every task is a row.
+The task row is the queue. A worker claims a queued task, walks the frames the task owns - its
+`detect_task_item` rows, written when the task was created (ADR 12) - and records each frame's outcome
+on its item row. Cancellation is a row state, not an in-memory flag, so a cancel from the API is seen
+before the next frame; a restart leaves nothing behind because every task and every frame it owns is a
+row.
 
 The detector is injected. P2-05b supplies the real one, which the app loads at start-up; when it
 could not be loaded the task fails with that same reason rather than inventing boxes.
@@ -17,10 +19,10 @@ from datetime import UTC, datetime
 from functools import partial
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.models import DetectObject, DetectTask, MediaAsset
+from app.models import DetectObject, DetectTask, DetectTaskItem, MediaAsset
 
 log = logging.getLogger("aquavision.worker")
 
@@ -33,24 +35,38 @@ DONE = 2
 FAILED = 3
 CANCELLED = 4
 
+#: detect_task_item.state codes (data model §3.14). This module only moves an item forward; putting
+#: one back to pending is the router's job (create_batch and retry_task).
+ITEM_PENDING = 0
+ITEM_RUNNING = 1
+ITEM_DONE = 2
+ITEM_FAILED = 3
+
 NO_DETECTOR = "模型权重未注册，无法识别"
 
 
 def requeue_stale(session_factory: sessionmaker) -> int:
-    """Put tasks left running by a crash back in the queue, dropping their partial results.
+    """Put tasks left running by a crash back in the queue, keeping the frames already finished.
 
-    One process owns the queue; a row still marked running at start-up has no worker behind it.
-    Reprocessing is idempotent because the task row, not memory, is the state.
+    One process owns the queue; a row still marked running at start-up has no worker behind it. An
+    item still running is work that was interrupted and returns to pending; a done item keeps its
+    boxes, so the resumed task continues instead of reprocessing what it already has (ADR 12).
     """
     with session_factory() as session:
         rows = list(session.scalars(select(DetectTask).where(DetectTask.status == RUNNING)))
         for row in rows:
-            session.execute(delete(DetectObject).where(DetectObject.task_id == row.task_id))
+            session.execute(
+                update(DetectTaskItem)
+                .where(
+                    DetectTaskItem.task_id == row.task_id,
+                    DetectTaskItem.state == ITEM_RUNNING,
+                )
+                .values(state=ITEM_PENDING, claimed_at=None)
+            )
             row.status = QUEUED
-            row.progress = 0
-            row.obj_count = 0
             row.error_msg = None
             row.finished_at = None
+            _sync_progress(session, row)
         session.commit()
         return len(rows)
 
@@ -79,7 +95,7 @@ def process_task(
     should_stop: Callable[[], bool] | None = None,
     reason: str = NO_DETECTOR,
 ) -> None:
-    """Run one task's frames to done, failure, or cancellation.
+    """Run the frames this task owns to done, failure, or cancellation.
 
     `detector` is injected so P2-05a can be tested without weights and P2-05b can replace it. With
     no detector the task fails with `reason` — the sentence the loader produced when it could not
@@ -93,17 +109,15 @@ def process_task(
             _finish(session, task, FAILED, reason)
             return
 
-        run = _runner(detector, task)
-        frames = _frames_for(session, task)
-        if not frames:
+        if _item_count(session, task_id) == 0:
             _finish(session, task, DONE, None)
             return
 
+        run = _runner(detector, task)
         task.status = RUNNING
         session.commit()
-        total = len(frames)
 
-        for index, asset in enumerate(frames, start=1):
+        while True:
             if should_stop is not None and should_stop():
                 return
             # End the read transaction before the detector runs; a cancel from another session must
@@ -113,6 +127,15 @@ def process_task(
             session.commit()
             if cancelled:
                 return
+
+            claim = _claim_item(session, task_id)
+            if claim is None:
+                break
+            item_id, asset_id = claim
+            asset = session.get(MediaAsset, asset_id)
+            # The claim and the frame read are the only open transactions; inference runs with none,
+            # for the same reason the read above was ended.
+            session.commit()
 
             try:
                 boxes = run(asset)
@@ -132,11 +155,20 @@ def process_task(
                             review_status=0,
                         )
                     )
-                task.obj_count = (task.obj_count or 0) + len(boxes)
-                task.progress = max(task.progress or 0, int(index * 100 / total))
+                session.execute(
+                    update(DetectTaskItem)
+                    .where(DetectTaskItem.item_id == item_id)
+                    .values(
+                        state=ITEM_DONE,
+                        box_count=len(boxes),
+                        finished_at=datetime.now(UTC).replace(tzinfo=None),
+                    )
+                )
+                _sync_progress(session, task)
                 session.commit()
             except Exception as exc:  # noqa: BLE001 - the reason belongs on the task row
                 session.rollback()
+                _fail_item(session, item_id)
                 task = session.get(DetectTask, task_id)
                 if task is not None and task.status != CANCELLED:
                     _finish(session, task, FAILED, str(exc) or type(exc).__name__)
@@ -234,21 +266,68 @@ def _runner(detector: Detector, task: DetectTask) -> Detector:
     return detector
 
 
-def _frames_for(session: Session, task: DetectTask) -> list[MediaAsset]:
-    """The frames with no detection rows yet, capped at the task's requested asset count.
-
-    A frame with zero boxes is indistinguishable from an unprocessed one without a join table; the
-    data model has none. That is a P2-05b concern, not a reason to invent a marker here.
-    """
-    done = select(DetectObject.asset_id)
-    return list(
-        session.scalars(
-            select(MediaAsset)
-            .where(MediaAsset.asset_id.not_in(done))
-            .order_by(MediaAsset.asset_id)
-            .limit(task.asset_count)
+def _item_count(session: Session, task_id: int) -> int:
+    return (
+        session.scalar(
+            select(func.count())
+            .select_from(DetectTaskItem)
+            .where(DetectTaskItem.task_id == task_id)
         )
+        or 0
     )
+
+
+def _claim_item(session: Session, task_id: int) -> tuple[int, int] | None:
+    """Take the next pending item, or None when the task has no work left.
+
+    Compare-and-swap rather than a held lock: two workers may read the same pending row, and only an
+    update that still sees `pending` may run it. A zero row count means another worker won, so this
+    takes the next one - and no lock is held across inference.
+    """
+    while True:
+        candidate = session.execute(
+            select(DetectTaskItem.item_id, DetectTaskItem.asset_id)
+            .where(DetectTaskItem.task_id == task_id, DetectTaskItem.state == ITEM_PENDING)
+            .order_by(DetectTaskItem.item_id)
+            .limit(1)
+        ).first()
+        if candidate is None:
+            return None
+        item_id, asset_id = candidate
+        claimed = session.execute(
+            update(DetectTaskItem)
+            .where(DetectTaskItem.item_id == item_id, DetectTaskItem.state == ITEM_PENDING)
+            .values(state=ITEM_RUNNING, claimed_at=datetime.now(UTC).replace(tzinfo=None))
+        )
+        session.commit()
+        if claimed.rowcount:
+            return int(item_id), int(asset_id)
+
+
+def _fail_item(session: Session, item_id: int) -> None:
+    """Mark the item this worker was running as failed; a retry puts it back to pending."""
+    session.execute(
+        update(DetectTaskItem)
+        .where(DetectTaskItem.item_id == item_id)
+        .values(state=ITEM_FAILED, finished_at=datetime.now(UTC).replace(tzinfo=None))
+    )
+
+
+def _sync_progress(session: Session, task: DetectTask) -> None:
+    """Set progress and obj_count from the task's own items, never from whatever boxes exist.
+
+    `detect_object` cannot answer either question: a frame the model found nothing in produced no row.
+    The items can, because a done item is a finished frame whether or not it contains anything.
+    """
+    total = _item_count(session, task.task_id)
+    finished, boxes = session.execute(
+        select(
+            func.count(DetectTaskItem.item_id),
+            func.coalesce(func.sum(DetectTaskItem.box_count), 0),
+        ).where(DetectTaskItem.task_id == task.task_id, DetectTaskItem.state == ITEM_DONE)
+    ).one()
+    task.progress = int(finished * 100 / total) if total else 0
+    task.obj_count = int(boxes)
 
 
 def _finish(session: Session, task: DetectTask, status: int, reason: str | None) -> None:

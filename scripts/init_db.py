@@ -1,4 +1,4 @@
-"""Create the thirteen tables, seed the species dictionary and the first account (P1-01).
+"""Create the fourteen tables, seed the species dictionary and the first account (P1-01).
 
 Acceptance (PLAN.md P1-01): the script runs on an empty database, four classes are
 seeded, and an operator can log in afterwards. It is idempotent — safe to re-run on a
@@ -65,7 +65,7 @@ def init_db(dsn: str, admin_password: str | None = None) -> None:
     engine = engine_from_dsn(dsn)
 
     # The model is the DDL: create_all issues CREATE TABLE IF NOT EXISTS for
-    # each of the thirteen tables, so an existing schema is left alone.
+    # each of the fourteen tables, so an existing schema is left alone.
     Base.metadata.create_all(engine)
 
     with Session(engine) as session:
@@ -105,7 +105,7 @@ def init_db(dsn: str, admin_password: str | None = None) -> None:
             print(f"  mismatch: {problem}", file=sys.stderr)
         raise SystemExit(1)
 
-    print("OK: thirteen tables, four classes in labels.txt order, an account to log in with")
+    print("OK: fourteen tables, four classes in labels.txt order, an account to log in with")
 
 
 def main() -> None:

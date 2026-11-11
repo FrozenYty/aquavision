@@ -11,17 +11,21 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 
 from app import serializers
 from app.deps import SessionDep, UserDep, get_current_user
 from app.envelope import CONFLICT, NOT_FOUND, ApiError, ok
-from app.models import DetectObject, DetectTask, ModelVersion, SysLog
+from app.models import DetectObject, DetectTask, DetectTaskItem, MediaAsset, ModelVersion, SysLog
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"], dependencies=[Depends(get_current_user)])
 
 #: States in which a task can be cancelled: queued or running.
 CANCELLABLE = (0, 1)
+
+#: detect_task_item.state code (data model §3.14). The router only writes `pending`: both creating a
+#: task and retrying one mean "this frame has not been run yet".
+ITEM_PENDING = 0
 
 
 class BatchBody(BaseModel):
@@ -94,8 +98,15 @@ def retry_task(task_id: int, db: SessionDep, user: UserDep) -> dict[str, object]
     row = _task(db, task_id)
     if row.status != 3:
         raise ApiError(CONFLICT, "只有失败的任务可以重试")
-    # A retry reprocesses the same frames, so the previous partial result must not survive it.
+    # A retry is a fresh attempt at the same work: every item goes back to pending and the boxes the
+    # failed run produced are dropped. This is deliberately not what a restart does - a restart keeps
+    # the finished items (ADR 12), while a retry is the operator asking for the run again.
     db.execute(delete(DetectObject).where(DetectObject.task_id == task_id))
+    db.execute(
+        update(DetectTaskItem)
+        .where(DetectTaskItem.task_id == task_id)
+        .values(state=ITEM_PENDING, box_count=0, claimed_at=None, finished_at=None)
+    )
     row.status = 0
     row.progress = 0
     row.obj_count = 0
@@ -121,7 +132,12 @@ def next_task_code(db) -> str:
 
 
 def create_batch(db, body: BatchBody) -> DetectTask:
-    """Insert a queued batch task. Shared with `/api/detect/batches`."""
+    """Insert a queued batch task and assign the frames it will run (ADR 12).
+
+    The selection happens once, here. A task's work list is fixed at creation and identical for every
+    worker, and frames already detected or already owned by another task are skipped - otherwise two
+    batches created back to back would claim the same frames before either had run.
+    """
     online = db.scalar(select(ModelVersion).where(ModelVersion.is_online == 1))
     row = DetectTask(
         task_code=next_task_code(db),
@@ -136,6 +152,20 @@ def create_batch(db, body: BatchBody) -> DetectTask:
         progress=0,
     )
     db.add(row)
+    db.flush()
+    assigned = db.scalars(
+        select(MediaAsset.asset_id)
+        .where(
+            MediaAsset.asset_id.not_in(select(DetectObject.asset_id)),
+            MediaAsset.asset_id.not_in(select(DetectTaskItem.asset_id)),
+        )
+        .order_by(MediaAsset.asset_id)
+        .limit(body.asset_count)
+    ).all()
+    db.add_all(
+        DetectTaskItem(task_id=row.task_id, asset_id=asset_id, state=ITEM_PENDING)
+        for asset_id in assigned
+    )
     db.commit()
     db.refresh(row)
     return row

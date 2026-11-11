@@ -54,7 +54,7 @@ P2-15   契约 §7 的三个问题               ← 没有前置，而且它解
 | 采集入库、质量打分、去重、时钟容差 | `routers/capture.py` | 完成 |
 | 复核、难例池 | `routers/review.py`、`routers/hard_samples.py` | 完成 |
 | 数据集、报告、参数 | `routers/datasets.py`、`reports.py`、`system.py` | 完成 |
-| 十三张表 | `server/app/models.py` | 完成；后四张的原因见 ADR 08 |
+| 十四张表 | `server/app/models.py` | 完成；V1.5 加的四张见 ADR 08，任务项表见 ADR 12 |
 | 契约覆盖测试 | `tests/test_api_skeleton.py` | 通过——**不许削弱** |
 
 **卡着 `P1-02` 的就是两条路由**，而且正是需要权重的那两条：
