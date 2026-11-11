@@ -62,9 +62,11 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 
 - [x] **P1-01** DDL script and species dictionary seed · @Gtechson · done when `scripts/init_db.py`
       runs on an empty database and four classes are seeded
-- [ ] **P1-02** FastAPI skeleton: every contract route, envelope, error codes, JWT · @Gtechson ·
+- [x] **P1-02** FastAPI skeleton: every contract route, envelope, error codes, JWT · @Gtechson ·
       closes when the queue consumer, the two detection routes and the reviewed statistics are real —
       that is `P2-05a`, `P2-05b` and `P2-05c`, and nothing else
+      - delivered 11-11: the three checkpoints are in, so no route answers 501 by default any more —
+        the two detection routes run the registered model, or say why it could not run
       - mounted by @FrozenYty on 11-06: envelope, guards, all 42 routes, 21 of them returning real data
       - **two P0 routes still answer 501**: `POST /api/detect/frames/{id}` (FR-M3-01) and
         `POST /api/detect/batches` (FR-M3-02) — they need weights, so they close with `P2-06c`
@@ -113,8 +115,11 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 
       **Backend and model · @Gtechson**
 
-- [ ] **P2-05** Finish P1-02: detection, the queue consumer, reviewed statistics · @Gtechson · closes
+- [x] **P2-05** Finish P1-02: detection, the queue consumer, reviewed statistics · @Gtechson · closes
       AC-05, AC-07, AC-10, AC-12 · three checkpoints, each its own pull request
+      - delivered 11-11: 05a merged 11-10, 05b runs the online weights and writes the results, and
+        05c checked the four `/api/stats/*` figures against those rows with a direct count on the
+        same database
       - **P2-05a** the queue consumer, driven by synthetic `detect_task` rows — **no weights needed,
         start here**
         - delivered 11-10: `server/app/worker.py` claims queued tasks, advances `progress`, honours

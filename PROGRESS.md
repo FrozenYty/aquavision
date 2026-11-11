@@ -34,6 +34,13 @@
   and what they are called is a working detail of one session's setup, not a rule of this repository**, so
   the roster stays out of the file the other members' assistants read. It was written in and then cut
   back out the same morning on the owner's instruction.
+- **`P2-05c` checked every `/api/stats/*` figure against the rows `P2-05b` wrote, and the four routes
+  the dashboard reads agree with the database.** A batch task on the real weights ran two desk frames
+  and two DUO test frames to `done` at progress 100 with `obj_count` 20; rejecting one box through the
+  review route moved the reviewed basis to 19 while raw stayed 20, `corrections.rejected` became 1,
+  and `quality` and `trend` equalled the frame counts. Each figure was compared with a direct SQL count
+  on the same database, and the page reads exactly these four routes (`stats.html` through `api.js`).
+  The numbers a person sees are the rows, not a fixture.
 - **`P2-02` closes the result loop: one automatic set per frame, and it comes back by `frame_id`.**
   Re-running detection replaces the previous automatic boxes instead of appending a second set — every
   statistic would count a duplicate twice — and keeps the boxes a reviewer drew, which the model
