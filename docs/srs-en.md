@@ -152,7 +152,7 @@ The overall objectives are:
 
 **Scenario 4 — experiment and deployment.** The algorithm engineer trains an improved model on DS-V3. The experiment page shows mAP@0.5 rising from 0.76 to 0.83 against the baseline and FPS falling from 42 to 39. The version is registered and activated; new jobs use it automatically and the job detail records the version.
 
-**Scenario 5 — statistics and report.** The analyst generates a monthly inspection report: species composition, site distribution, quality rejection rate and alert summary, with the model version and statistical basis in the footer. The report downloads as Word or PDF and earlier versions stay retrievable.
+**Scenario 5 — statistics and report.** The analyst generates a monthly inspection report: species composition, site distribution, quality rejection rate and alert summary, with the model version and statistical basis in the footer. The report is delivered as Markdown and earlier versions stay retrievable.
 
 ### 2.4 Architecture and data flow
 
@@ -206,13 +206,15 @@ The system has three layers — capture, service and presentation — which exch
 | # | Item | Specification | Qty | Purpose |
 |---|---|---|---|---|
 | 1 | USB camera | 1080P, adjustable focus, manual exposure, driver-free UVC | 1 | Image capture |
-| 2 | Fill light | One desk lamp, a second as backup | 1-2 | 45° fill from above; tracing paper as a diffuser, white card reflector on the dark side |
-| 3 | Controller board | ESP32-S3, USB serial | 1 | Accepts the trigger, reads the turbidity sensor, reports over USB serial |
+| 2 | Fill light | Existing LED study lamp, 10 W, 4000 K, Ra90, no visible flicker, USB-powered | 1 | 45° fill from above; a DC supply carries no mains ripple and the honeycomb lens spreads the light evenly |
+| 3 | Controller board | ESP32-S3, USB serial | 1 | Accepts the trigger, reads the turbidity sensor, drives the status display and the status LEDs, reports over USB serial |
 | 4 | Turbidity sensor | ME2100A-IIC, I2C digital, reflective | 1 | Reads water turbidity, mounted against the outer wall |
 | 5 | Trigger button | Tactile switch | 1 | Triggers one capture by hand |
 | 6 | Demonstration tank | Ultra-clear glass tank 300×170×200 mm, 5 mm walls | 1 | Simulates an underwater scene; glass has no stress birefringence, which cross-polarisation needs |
 | 7 | Polarising sheet | Linear polariser 200×200 mm, cut into a lamp piece and a lens piece | 1 | Cross-polarisation removes reflections from the wall and the water |
 | 8 | Targets and scenery | Four to six real seafood items, dark stones and weed collected on site | 1 set | Objects to detect and distractors |
+| 9 | Status display | 0.96" OLED, 128×64 monochrome, I2C, address 0x3C | 1 | Shows link state, turbidity, quality score and verdict; no PC needed on site |
+| 10 | Status LEDs | One green and one yellow LED, 330 Ω series resistor | 2 | Green = stored, yellow = retake; flashes 300 ms in step with the screen |
 
 #### 2.5.2 Development and operation constraints
 
@@ -240,7 +242,7 @@ The system is divided into eight top-level modules along the business chain. Unl
 
 Position: sign-in, roles, account maintenance and audit; the entry point and security base of the system.
 
-- FR-M1-01 Sign-in and session — phone or email sign-in, CAPTCHA, lockout after failures, token issue and refresh.
+- FR-M1-01 Sign-in and session — phone or email sign-in, CAPTCHA, lockout after failures, token issue (8 h, no refresh).
 - FR-M1-02 Roles and permissions — boundaries between collector, analyst, algorithm engineer and administrator, enforced on the server.
 - FR-M1-03 Account management and reset — administrators create, disable and restore accounts, and reset passwords.
 - FR-M1-04 Operation log and audit — records sign-in, review, activation, parameter changes and other key actions for later tracing.
@@ -356,7 +358,7 @@ Each requirement states description, input, processing, output, business rules a
 | ID | FR-M1-01 |
 | Function | Sign-in and session |
 | Priority | P0 (origin: carried over) |
-| Description | Sign-in by phone or email, verifying a CAPTCHA and the password, issuing an access token and a refresh token. |
+| Description | Sign-in by phone or email, verifying a CAPTCHA and the password, issuing an access token (8 h, no refresh token). |
 | Input | Phone or email, password, CAPTCHA |
 | Processing | Verify CAPTCHA → look up the account → verify the password hash → check lockout → issue a JWT (8 h, no refresh token) |
 | Output | Access token, basic user details, role code; on failure the specific reason and remaining lockout time |
@@ -660,7 +662,7 @@ Each requirement states description, input, processing, output, business rules a
 | Priority | P1 (origin: rewritten) |
 | Description | Summarises detection over a period and site range and renders a downloadable report from a template. |
 | Input | Period, site range, template |
-| Processing | Gather job, species, site and quality data → render charts through the template → produce Word or PDF → record history |
+| Processing | Gather job, species, site and quality data → render charts through the template → produce a Markdown report → record history |
 | Output | Report file, generation record, download link |
 | Business rules | The footer must state the model version and statistical basis; repeated generation keeps history; a failure must not leave a half-written file |
 | Acceptance | Report figures match the dashboard; the footer carries version and basis; earlier versions stay downloadable |
@@ -1289,7 +1291,7 @@ Interaction rules: every list page offers keyword search, filters and paging; ev
 
 | ID | Aspect | Requirement | Verification |
 |---|---|---|---|
-| NFR-S-01 | Authentication | Every endpoint requires a valid JWT; tokens last 2 h and can be refreshed; passwords stored salted and hashed. | Security test and database check |
+| NFR-S-01 | Authentication | Every endpoint requires a valid JWT; tokens last 8 h and are not refreshed; passwords stored salted and hashed. | Security test and database check |
 | NFR-S-02 | Authorisation | Roles enforced on the server; algorithm and configuration endpoints restricted; unauthorised access returns 403 and is logged. | Privilege-escalation cases |
 | NFR-S-03 | File safety | Captured frames validated for format and size; filenames assigned by the server; storage not traversable over the web. | Malformed-frame injection |
 | NFR-S-04 | Audit | Key actions (delete, review, activation, parameter change) leave tamper-proof traces searchable by person, time and object. | Audit sampling |

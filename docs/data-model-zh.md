@@ -333,11 +333,13 @@ models/<version_name>/        交付物，纳入版本库（ADR 13）
   best.pt  labels.txt  metrics.json
 
 data/                         运行期数据，被 git 忽略，随 AV_DATA_DIR 移动
-  frames/<站点>/<年月日>/<session_id>/<frame_id>.jpg
-  thumbs/年/月/日/<frame_id>.jpg
-  results/<frame_id>.json
-  exports/
+  app.db                      SQLite 文件；`DB_DSN` 指向别的数据库时没有它
+  frames/<站点>/<年月日>/<会话>/<digest 前 16 位>.jpg
+  datasets/<快照名>/manifest.json
+  reports/<报告编号>.md
 ```
+
+帧文件名是去重时已经算出的内容哈希前缀（AC-05），不是 `frame_id`；后者存在 `media_asset` 行里。代码只在数据根目录下写 `frames/`、`datasets/`、`reports/` 这三个目录，外加 SQLite 文件；没有 `thumbs/`、`results/`、`exports/` 这些目录，因为没有任何代码生成它们。
 
 交付的模型放在仓库根目录而不是 `data/` 下，这是有意的：纳入版本管理的产物，不该放在位置由配置决定的目录里。
 

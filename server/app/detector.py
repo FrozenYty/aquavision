@@ -24,6 +24,7 @@ from typing import Any
 
 from sqlalchemy import select
 
+from app.db import PROJECT_ROOT
 from app.models import MediaAsset, ModelVersion, SpeciesDict
 
 log = logging.getLogger("aquavision.detector")
@@ -132,9 +133,7 @@ def load_online(session_factory, settings) -> tuple[Detector | None, str | None]
     row = online[0]
     if not row.weight_path:
         return None, f"在线模型 {row.version_name} 没有登记权重路径"
-    weights = Path(row.weight_path)
-    if not weights.is_absolute():
-        weights = Path.cwd() / weights
+    weights = resolve_weight_path(row.weight_path)
     if not weights.is_file():
         return None, f"在线模型 {row.version_name} 的权重文件不存在：{weights}"
 
@@ -155,6 +154,20 @@ def load_online(session_factory, settings) -> tuple[Detector | None, str | None]
     if problem:
         return None, problem
     return detector, None
+
+
+def resolve_weight_path(weight_path: str) -> Path:
+    """Resolve a registered weight path: a relative path means the repository root.
+
+    `model_version.weight_path` is written once, when a version is registered, and read on whichever
+    machine serves that database. Anchoring a relative path to the process working directory made the
+    same registration work from the repository root and fail from `server/` or from a service manager
+    with another directory. ADR 13 fixes the anchor as the repository root - the same anchor
+    `app.db.resolve_dsn` uses for a relative SQLite file. Absolute paths are kept as they are, so an
+    explicitly local registration still means what it says.
+    """
+    path = Path(weight_path)
+    return path if path.is_absolute() else PROJECT_ROOT / path
 
 
 def _class_order_problem(names: list[str], species_codes: list[str]) -> str | None:

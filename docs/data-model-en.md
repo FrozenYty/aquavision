@@ -342,11 +342,16 @@ models/<version_name>/        delivered, tracked in the repository (ADR 13)
   best.pt  labels.txt  metrics.json
 
 data/                         runtime, ignored by git, moves with AV_DATA_DIR
-  frames/<site>/<YYYYMMDD>/<session_id>/<frame_id>.jpg
-  thumbs/YYYY/MM/DD/<frame_id>.jpg
-  results/<frame_id>.json
-  exports/
+  app.db                      the SQLite file, unless DB_DSN names another database
+  frames/<site>/<YYYYMMDD>/<session>/<digest[:16]>.jpg
+  datasets/<snapshot_name>/manifest.json
+  reports/<report_code>.md
 ```
+
+The frame filename is the content-hash prefix deduplication already computed (AC-05), not `frame_id`;
+that id lives in the `media_asset` row. The code writes only `frames/`, `datasets/` and `reports/`
+under the data root, beside the SQLite file: there are no `thumbs/`, `results/` or `exports/`
+directories, because nothing generates them.
 
 The delivered model sits at the repository root rather than under `data/` on purpose: a tracked
 artefact must not live under a directory whose location is a configuration value.

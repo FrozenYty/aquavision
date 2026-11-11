@@ -95,15 +95,19 @@ One process, five concerns:
 
 | Concern | How it runs | Why |
 |---|---|---|
-| Capture | Background thread, 10 fps | Keeps the latest frame without blocking requests |
-| Detection | Inference every ~300 ms | Decoupled from display rate; see ADR 03 |
+| Capture | On demand: one frame per `POST /api/capture/sessions/{id}/frames` request, or a stream while a `/ws/capture` client asks for one | No background grabber runs when nobody is asking; the socket's feed captures in the thread pool, so it does not block the event loop |
+| Detection | On demand: one frame from `POST /api/detect/frames/{id}`, a batch through the worker pool, or the live socket at its `detect_interval_ms` | The live socket keeps capture and inference at their own rates; see ADR 03 |
 | Batch jobs | Fixed thread pool, 2 workers | No Celery, no Redis; task state lives in PostgreSQL |
-| API | Sync `def` handlers, run by FastAPI in its thread pool | Serves REST; one WebSocket endpoint is planned and not yet implemented, so the capture page polls |
+| API | Sync `def` handlers, run by FastAPI in its thread pool, plus one WebSocket route | Serves REST; `/ws/capture` streams the live feed as api-contract §7 defines it, and polling is only the fallback when the socket cannot be served |
 | Rig link | One reader thread plus one keepalive thread, started only when `AV_RIG_PORT` is set | The board is optional; a machine without one is not degraded. The link's states and the keepalive rule are in `docs/rig-state-machine-en.md` §9 |
 
-**Detection rate is not the display rate.** The camera pushes frames at 10 fps; detection runs
-every 300 ms and the newest boxes are reused for intermediate frames. On a GPU both run at full
-rate; on a CPU this keeps the preview smooth instead of degrading to 3 fps.
+**Detection rate is not the display rate on the live socket.** The page asks for a frame rate in its
+`start` message (10 fps in the client) and a detection interval (`detect_interval_ms`, 300 ms by
+default); capture keeps producing while inference runs in the thread pool, and every result carries the
+`frame_id` it belongs to, so a late result is dropped rather than drawn against a newer frame
+(api-contract §8). The REST and batch paths have no rate of their own: they run when a request or a
+queued task asks for them. On a GPU both live rates run at full speed; on a CPU the preview stays
+smooth instead of degrading to 3 fps.
 
 ## 6. Frame lifecycle
 
@@ -126,13 +130,16 @@ together the file on disk, the database row and the detection result.
 
 | What | Where | Why |
 |---|---|---|
-| Frames | `data/frames/<site>/<YYYYMMDD>/<session>/<frame_id>.jpg` | Thousands per day; a flat folder stalls the file browser |
-| Thumbnails | `data/thumbs/...` | List views never load full images |
-| Results | `data/results/<frame_id>.json` | Lets a result be re-read without the database |
-| Weights | `data/models/<version>/` | Versioned, never overwritten |
-| Records | PostgreSQL | Everything queryable |
+| Frames | `data/frames/<site>/<YYYYMMDD>/<session>/<digest[:16]>.jpg` | Thousands per day, so day and session are directories. The filename is the content-hash prefix deduplication already computed (AC-05), not `frame_id`; that id lives in the `media_asset` row |
+| Dataset manifests | `data/datasets/<snapshot_name>/manifest.json` | A human-readable copy beside the rows, which remain the record (FR-M4-04) |
+| Reports | `data/reports/<report_code>.md` | The document is the file; the history and its figures are the `report` row (FR-M5-04) |
+| Runtime database | `data/app.db` for the SQLite development default, or the server named by `DB_DSN` | Everything queryable |
+| Delivered weights | `models/<version_name>/` at the repository root, tracked: `best.pt`, `labels.txt`, `metrics.json` | ADR 13: a delivered artefact must not live under `data/`, whose location is a configuration value. `model_version.weight_path` is relative to the repository root |
 
-`data/` is git-ignored. The repository holds code and documents only.
+`data/` is the runtime root: git-ignored, located by `AV_DATA_DIR`, and not part of the deliverable.
+The repository holds code and documents **and each delivered model version** under `models/`. The code
+writes only `frames/`, `datasets/` and `reports/` under `data/` (plus the SQLite file); there are no
+`thumbs/`, `results/` or `exports/` directories, because nothing generates them.
 
 ## 8. Configuration
 

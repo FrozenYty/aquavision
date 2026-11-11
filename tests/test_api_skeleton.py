@@ -125,6 +125,14 @@ def test_every_contract_route_is_mounted(client):
     present = _mounted_operations(mounted)
     missing = sorted(contract - present)
     assert not missing, f"契约里有、服务端没挂载: {missing}"
+    # The reverse direction: a route the contract does not list is invisible to every client that reads
+    # the contract, so a newly mounted one must not slip in unannounced. `/api/health` is the one named
+    # exception: it is the deployer's liveness check (database, mounted-route count, default secret) and
+    # deliberately not part of the client contract. `/` is the page redirect and is
+    # `include_in_schema=False`, so it never reaches openapi(); naming it here would hide a real route.
+    documented_infrastructure = {("GET", "/api/health")}
+    extra = sorted(present - contract - documented_infrastructure)
+    assert not extra, f"服务端挂载了契约没有列出的接口: {extra}"
     assert len(contract) == 45
     # `/api/health` publishes the contract size as `contract_routes`. Tying it to the table here is the
     # point: it was hardcoded and stayed at 42 while the contract grew to 44, and nothing noticed.

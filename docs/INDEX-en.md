@@ -90,7 +90,6 @@ Planned, and deliberately absent until the phase that needs them:
 
 | Document | Appears at |
 |---|---|
-| database DDL note | P1-01 |
 | demo script and screenshots | P4-06 |
 | metric report | P4-04 |
 
@@ -98,8 +97,8 @@ Writing them early would mean writing them twice.
 
 ## 6. Keeping this index honest
 
-Pairs are written 
-name-en/zh.md above; both files exist and both are kept in step by CI.
+Pairs are written as two files, `name-en.md` and `name-zh.md`; the shorthand `name-en/zh.md` above means
+both files exist and both are kept in step by CI.
 
 A document that is not in the map above does not exist as far as the team is concerned. Adding,
 renaming or deleting a document means editing this page in the same commit; the pull request template

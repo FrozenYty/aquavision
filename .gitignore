@@ -11,14 +11,19 @@ runs/
 *.pt
 *.onnx
 *.engine
-# ... except the delivered artefacts. These negations must follow the patterns above to win.
-!models/
-!models/**
+# ... except a delivered version's three artefacts, in step with CONTRIBUTING §5: only
+# models/<version_name>/best.pt, labels.txt and metrics.json are tracked. A scratch weight or a note
+# under models/ stays out, so the negations below must follow the patterns above to win.
+models/*
+!models/*/
+models/*/*
+!models/*/best.pt
+!models/*/labels.txt
+!models/*/metrics.json
 
 # Secrets and local configuration.
 .env
 .env.*
-!.env.example
 
 # Office lock files and editor scratch.
 ~$*

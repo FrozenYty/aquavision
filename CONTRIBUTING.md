@@ -78,9 +78,11 @@ run `git fetch && git reset --hard origin/main` afterwards. That cost is why the
 
 ## 4. What CI checks
 
-Every job below blocks the merge. The list grows; the rule does not — if it is in this table, a red run stops the merge.
+Every check below blocks the merge. The authoritative list is the `check` job in
+`.github/workflows/ci.yml`; this table names the same checks and how to fix each. The commit-message
+check runs only on pull requests.
 
-| Job | Command | Fix |
+| Check | Command | Fix |
 |---|---|---|
 | Lint | `ruff check .` | `ruff check . --fix` |
 | Format | `ruff format --check .` | `ruff format .` |
@@ -88,6 +90,8 @@ Every job below blocks the merge. The list grows; the rule does not — if it is
 | Language | `python scripts/check-language.py` | move the Chinese into the `-zh` file |
 | Progress | `python scripts/check-progress.py` | one entry per day, date heading only |
 | Paths | `python scripts/check-paths.py` | write it relative to the repository root |
+| ADR index | `python scripts/check-adr-index.py` | list the record in the architecture ADR table |
+| Commit messages | `python scripts/check-commit-messages.py --range origin/<base>..HEAD` | remove the tool footer (§2) |
 | Tests | `pytest -q` | write the failing test first |
 
 Python style is whatever `ruff` accepts — the configured line length is 100, nothing else is

@@ -53,7 +53,7 @@ What exists and must not be rewritten:
 
 | Piece | Where | State |
 |---|---|---|
-| App factory, envelope, error codes, JWT, role guards | `server/app/main.py`, `envelope.py`, `security.py`, `deps.py` | 42 routes mounted |
+| App factory, envelope, error codes, JWT, role guards | `server/app/main.py`, `envelope.py`, `security.py`, `deps.py` | 45 routes mounted |
 | Capture ingest, quality scoring, dedup, clock guard | `routers/capture.py` | done |
 | Review, hard-example pool | `routers/review.py`, `routers/hard_samples.py` | done |
 | Datasets, reports, parameters | `routers/datasets.py`, `reports.py`, `system.py` | done |
@@ -80,7 +80,6 @@ That is a correction to the task, not a relaxation of it.
    run, progress queryable while it runs, and a restart that resumes instead of losing the task.
 2. **Per-class thresholds and `class_filter`** are `P3-15`. The worker ignores `class_filter` today, and
    detection uses the caller's `conf_thr`, not the per-class values in `species_dict`.
-3. **`/ws/capture` does not exist** (`P2-08`), so the live socket's `detect` message has no producer.
 
 | Claim | The check |
 |---|---|
@@ -153,7 +152,7 @@ Order matters: 3.1 and 3.2 are mechanical and unblock the rest.
 
 ### 3.1 `api.js` tells the truth (task `P2-10`)
 
-The contract went from 18 routes to 42; every route once called "provisional" is in it. The comments
+The contract went from 18 routes to 45; every route once called "provisional" is in it. The comments
 still say otherwise, which now misleads every reader.
 
 - Remove every `// provisional` marker.
@@ -180,9 +179,10 @@ Mock data never fails, so the pages have never rendered a failure. Real data wil
 
 ### 3.4 The capture page streams real frames (task `P2-08`)
 
-`capture.html` currently animates mock detections. `/ws/capture` is specified in the contract §7.
+`capture.html` streams real frames over `/ws/capture`, which api-contract §7 defines; polling is only
+the fallback when the socket cannot be served.
 
-- Live boxes from the socket; polling as the fallback when it cannot connect.
+- Live boxes from the socket; polling only as the fallback when it cannot connect.
 - The mock path stays reachable through `USE_MOCK` — the prototype must still open on a machine with no
   backend.
 - The quality ring, the frame strip and the latency figure take their values from the same messages,
@@ -255,9 +255,9 @@ What to do:
 
 - **Rename in the menu** (`web/static/js/layout.js`), **in both page titles** (the `<title>` and the
   `<h1>` of each template), and in anything that names a page to the user.
-- **Rename the two templates whose names differ by one letter.** `frames.html` is the image browser and
-  `frame.html` is the result detail; one letter apart is a wrong-file edit waiting to happen. Name them
-  for what they are.
+- **Keep the two templates named for what they are.** `image-browser.html` is the image browser and
+  `result-detail.html` is the result detail. The pair it replaced was one letter apart — a wrong-file
+  edit waiting to happen — and `tests/test_page_names.py` fails on any new pair that close.
 - **Add the test that keeps four lists equal**: the menu labels, each template's title, SRS §5.2 and the
   traceability matrix, for all thirteen pages. Four hand-maintained copies are exactly the drift this
   repository keeps rediscovering; the test is the part that makes the task stay done.

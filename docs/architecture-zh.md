@@ -95,14 +95,17 @@ tests/
 
 | 关注点 | 运行方式 | 原因 |
 |---|---|---|
-| 采集 | 后台线程，10 fps | 保证取到最新帧，且不阻塞请求 |
-| 识别 | 每约 300 ms 推理一次 | 与显示帧率解耦，见 ADR 03 |
+| 采集 | 按需：`POST /api/capture/sessions/{id}/frames` 每次抓一帧；`/ws/capture` 客户端在连接期间由 feed 协程持续抓帧 | 没有后台抓帧线程：没人请求时什么都不跑；socket 的抓帧在线程池里执行，不阻塞事件循环 |
+| 识别 | 按需：`POST /api/detect/frames/{id}` 单帧、批量任务由工作线程池执行、实时 socket 按 `detect_interval_ms` 推理 | 实时 socket 让抓帧与推理各按自己的节奏走；见 ADR 03 |
 | 批量任务 | 固定线程池，2 个工作线程 | 不引 Celery 与 Redis，任务状态存 PostgreSQL |
-| 接口 | 同步 `def` 处理函数，由 FastAPI 的线程池执行 | 提供 REST；一个 WebSocket 端点已规划但尚未实现，所以采集页改用轮询 |
+| 接口 | 同步 `def` 处理函数由 FastAPI 线程池执行，另有一个 WebSocket 路由 | 提供 REST；`/ws/capture` 按 api-contract 第七节推送实时画面，轮询只是 socket 无法提供时的兜底 |
 | 装置链路 | 一个读线程加一个保活线程，仅在设置了 `AV_RIG_PORT` 时启动 | 板子是可选的；没有板子的机器不是「降级状态」。链路的状态与保活规则见 `docs/rig-state-machine-zh.md` 第九节 |
 
-**识别频率不等于显示帧率。** 摄像头按 10 fps 推帧，识别每 300 ms 跑一次，中间帧复用
-最新的框。有独显时两者都跑满；在 CPU 上这样能保住画面流畅，而不是掉到 3 fps。
+**识别频率与显示帧率不同，这一点只在实时 socket 上成立。** 页面在 `start` 消息里给出帧率
+（客户端为 10 fps）与识别间隔（`detect_interval_ms`，默认 300 ms）；抓帧持续进行，推理在线程池里跑，
+每条结果都带着所属的 `frame_id`，迟到的结果会被丢弃，而不会画到更新的帧上（api-contract 第八节）。
+REST 与批量路径没有自己的固定节奏：请求或排队的任务来了才跑。有独显时实时链路的两个速率都能跑满；
+在 CPU 上画面仍保持流畅，而不是掉到 3 fps。
 
 ## 六、一帧的生命周期
 
@@ -125,13 +128,15 @@ flowchart TD
 
 | 内容 | 位置 | 原因 |
 |---|---|---|
-| 原始帧 | `data/frames/<站点>/<年月日>/<会话>/<frame_id>.jpg` | 一天几千帧，平铺目录会把文件浏览器卡死 |
-| 缩略图 | `data/thumbs/...` | 列表页永远不加载原图 |
-| 识别结果 | `data/results/<frame_id>.json` | 不查库也能直读某帧结果 |
-| 模型权重 | `data/models/<版本>/` | 按版本存放，永不覆盖 |
-| 业务记录 | PostgreSQL | 一切需要检索的东西 |
+| 原始帧 | `data/frames/<站点>/<年月日>/<会话>/<digest 前 16 位>.jpg` | 一天几千帧，按日与会话分目录。文件名是去重时算出的内容哈希前缀（AC-05），不是 `frame_id`；后者存在 `media_asset` 行里 |
+| 数据集清单 | `data/datasets/<快照名>/manifest.json` | 与数据库行并存的、给人看的副本；记录仍以行为准（FR-M4-04） |
+| 巡检报告 | `data/reports/<报告编号>.md` | 文档本身就是文件；历史与数字在 `report` 行里（FR-M5-04） |
+| 运行数据库 | SQLite 开发默认 `data/app.db`，或 `DB_DSN` 指定的服务器 | 一切需要检索的东西 |
+| 交付的模型权重 | 仓库根的 `models/<版本名>/`，纳入版本库：`best.pt`、`labels.txt`、`metrics.json` | ADR 13：交付物不能放在位置由配置决定的 `data/` 下；`model_version.weight_path` 相对仓库根解析 |
 
-`data/` 已被 git 忽略，仓库只放代码与文档。
+`data/` 是运行时根目录：被 git 忽略，由 `AV_DATA_DIR` 指定，不属于交付物。仓库里除了代码与文档，
+还有**每个交付版本的模型**（`models/`）。代码只会在 `data/` 下写 `frames/`、`datasets/`、`reports/`
+（以及 SQLite 文件）；没有 `thumbs/`、`results/`、`exports/` 这些目录，因为没有代码生成它们。
 
 ## 八、配置
 

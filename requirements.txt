@@ -14,8 +14,15 @@ python-jose[cryptography]==3.5.0
 bcrypt==4.3.0
 opencv-python-headless==5.0.0.93
 numpy==2.4.6
+# pyserial: the PC side of the ESP32 rig link (P2-17). Imported only when AV_RIG_PORT is set, but
+# required on any machine that drives the rig.
+pyserial==3.5
+# Not imported by this repository: ultralytics imports Pillow for image loading. Pinned here so the
+# full training environment is reproducible.
 pillow==13.0.0
 ultralytics==8.4.202
 # Development dependencies, pinned (P0-02). CI runs ruff and pytest.
 pytest==9.2.0
+# The FastAPI test client is starlette's, and it needs httpx. requirements-server.txt pins the same.
+httpx==0.28.1
 ruff==0.17.3
