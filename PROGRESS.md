@@ -1,5 +1,16 @@
 ## 2026-11-11
 
+- **`P2-08` is ticked, and its real shape is worth remembering.** The task said "the capture page streams
+  real frames"; the page had been finished for a week and the server had no WebSocket at all. Three of
+  the last four tasks I opened this session were filed against the wrong half - `P3-05`, `P3-15` and
+  `P2-08` all named a frontend deliverable while the missing work sat in the backend, or the reverse.
+  **Reading the task title is not reading the task**; grepping for the capability is.
+- **The fallback works, and its limit is now `P3-12`'s problem.** Closing the socket before `auth_ok` is
+  what makes the client fall back at all, and the close is placed there on purpose after reading
+  `live.js`: after `auth_ok` a close only reports "closed". The same reading shows the gap - a camera
+  unplugged mid-demo never falls back - and that needs the client, so it was moved to the failure-and-
+  recovery task instead of being noted in a PR description nobody reopens.
+
 - **`P2-08` was not a page task at all.** It was filed against lane C as "the capture page streams real
   frames", and lane C had already delivered: `live.js` implements contract §7 in full and
   `tests/test_live_socket.py` holds it to the contract as text. Grepping the server for `websocket`

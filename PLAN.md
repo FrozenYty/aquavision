@@ -182,26 +182,25 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 
       **Frontend and interface · @chemflowers**
 
-- [ ] **P2-08** The capture page streams real frames · **@Gtechson** · widened 11-11 when the task was
-      checked: the page and the client are **already built and guarded** - `web/static/js/live.js`
-      implements contract §7 in full (auth first, 4401/4408, the binary unit after its `frame`, `detect`
-      correlated by `frame_id`, stale results dropped) and `tests/test_live_socket.py` holds it to the
-      contract as text. **What is missing is the server: there is no WebSocket route at all.** The task
-      was filed against lane C, which had already delivered its half. Done when
+- [x] **P2-08** The capture page streams real frames · @Gtechson · delivered 11-11 (#154)
+      - **the task was on the wrong lane.** Lane C had already built the client: `live.js` implements
+        contract §7 in full and `tests/test_live_socket.py` holds it to the contract as text. The server
+        had no WebSocket route at all, and that was the whole gap
       - `/ws/capture` answers §7: auth first, `auth_ok`, `4401` on a bad token, `4408` when no auth
         arrives within five seconds, `start`/`stop`, one binary JPEG immediately after its `frame`
-        message, a `detect` carrying `latency_ms` and `model_version`, and `status`
-      - **the socket is the required path.** Polling is the fallback when the socket cannot be served,
-        not an alternative way to satisfy this task - the earlier wording said "or polling", which let a
-        polling-only page tick the box. A test must show the fallback happens rather than the page going
-        quiet
-      - **detection runs off the event loop** (`run_in_threadpool`). It is synchronous CPU work; awaited
-        inline it stalls the other twelve pages for every connected tab
-      - **no camera on this machine** (decided 11-11): the socket is served and then closed with `1011`
-        and a reason, and the page falls back to polling and says so. **No synthetic frames** - a
-        rehearsal with invented pictures is worse than one that admits it has none
-      - the mock path stays behind `USE_MOCK`, and §8's stale-result rule is exercised by a test:
-        correlating by arrival order instead of `frame_id` looks fine until two frames overlap
+        message, `detect` carrying `latency_ms` and `model_version`, `status` once a second. The
+        adjacency is held by a send lock, not by timing
+      - **inference runs in a threadpool**, one in flight at a time - awaited inline it would stall the
+        other twelve pages for every connected tab
+      - **no camera** (decided 11-11): the socket is served, the token validated, then closed with `1011`
+        and a reason before `auth_ok`, and the client's own three-second timeout drives the fallback to
+        REST polling. No synthetic frames. The close comes before `auth_ok` because after it the client
+        only reports "closed" and never falls back
+      - **known limit, moved to `P3-12`:** a socket that dies *after* `auth_ok` - a camera unplugged
+        mid-demo - does not fall back at all
+      - not decided here: live frames are not written to `media_asset` (`start` carries no site), there
+        is no per-connection exposure lock or post-auth idle timeout, and the real detector over a live
+        frame is not hardware-verified - no camera and no weights on this machine
 - [x] **P2-09** Dataset export page against the real API · @chemflowers · closes AC-18 · done when a snapshot can be
       exported, listed and refreshed with no mock data, and the split counts match the server
 - [x] **P2-10** `api.js` tells the truth · @chemflowers · done when no `provisional` marker remains, a
@@ -347,6 +346,10 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P3-12** Failure and recovery · @FrozenYty · covers the states between AC items · done when a
       killed worker, an unreachable database and a full disk each produce a message the operator can
       act on, instead of a blank page or a stuck spinner
+      - **inherited from `P2-08` (11-11):** the capture socket's fallback to REST polling is driven by
+        the client's three-second timeout, so a socket that dies **after** `auth_ok` - a camera unplugged
+        mid-demo - surfaces as "closed" and the page stops updating instead of polling. Fixing it needs
+        `live.js` (lane C), so it belongs here rather than in the websocket task
 - [ ] **P3-13** Scheduled capture · @Gtechson · closes AC-06 · there is no timer anywhere in the system
       yet: done when a schedule of N captures every M minutes produces exactly N batches, a run whose
       device is unavailable is marked failed with a reason, and the schedule survives a restart
