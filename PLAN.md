@@ -68,8 +68,11 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - delivered 11-11: the three checkpoints are in, so no route answers 501 by default any more —
         the two detection routes run the registered model, or say why it could not run
       - mounted by @FrozenYty on 11-06: envelope, guards, all 42 routes, 21 of them returning real data
-      - **two P0 routes still answer 501**: `POST /api/detect/frames/{id}` (FR-M3-01) and
-        `POST /api/detect/batches` (FR-M3-02) — they need weights, so they close with `P2-06c`
+      - **no route answers 501 by default any more** (11-11): `POST /api/detect/frames/{id}` runs the
+        online model, and `POST /api/detect/batches` queues a task the worker consumes. It answers 501
+        only when the database holds no frame yet, which is a state, not an unimplemented route. What
+        remains of batch detection is `P3-01`'s acceptance - a 100-frame run, queryable progress, and a
+        restart that resumes instead of losing the task - not the endpoint
       - **`POST /api/compare/frames/{id}` moved out of this task.** It needs *two registered model
         versions loaded at once*, which cannot exist before the improved models do; keeping it here
         would have made P1-02 unclosable until P4. It is now `P4-10`

@@ -1,5 +1,20 @@
 ## 2026-11-11
 
+- **A day of merged work left the status statements behind, and one of them was mine.** `P1-02` said
+  "two P0 routes still answer 501" in the same task that said "no route answers 501 by default"; the
+  README told a reader detection was not built; the test plan declared the end-to-end chain impossible;
+  and the handover listed four things to do that had all been delivered the same morning. `P2-05b`,
+  `P2-05a`, `P2-05c` and the AC-10 guard closed them, and the documents that describe the project's
+  current ability were the last to find out.
+- **The batch route was misdescribed in three documents at once.** `/api/detect/batches` answers 501 only
+  when the database holds no frame; with a frame it queues a task the worker consumes, which its tests
+  assert with `code == 0`. What is actually missing is `P3-01`'s acceptance - a hundred frames, progress
+  while it runs, a restart that resumes - so the endpoint was blamed for a gap in its acceptance.
+- **A wrong conclusion was corrected where it was written, not where it was convenient.** A PR claimed
+  `requirements-server.txt` does not exist and asked for the plan line to be fixed. It exists at the root
+  since #123 (blob `bae8fd82`, one commit, no deletion). The correction is a comment on that PR with the
+  three pieces of evidence, so the review record no longer teaches the next reader something false.
+
 - **The traceability matrix was reviewed row by row before it goes to review, and it was behind the code.**
   Seventeen elements still read "in progress" though the server had gained their routes; each was checked on
   the real server today and moved to done: batch detection, cancel and retry; every review-canvas element at

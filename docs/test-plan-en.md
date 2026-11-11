@@ -17,8 +17,9 @@ Coverage is not a target. The rule is simpler: **any module with a branch that c
 produce a wrong number must have a test.** That means quality scoring, coordinate conversion,
 deduplication and statistics — not CRUD endpoints.
 
-An end-to-end run is not executable yet: single-frame detection answers 501 until the detection path
-is implemented, so the chain stops before review.
+An end-to-end run works for a single frame: capture, detect, review, report. What is not
+exercised is a batch run - `P3-01`'s hundred frames, live progress and resume - and the
+per-class thresholds `P3-15` owns, which the worker does not read yet.
 
 ## 2. Datasets and splitting
 
