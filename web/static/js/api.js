@@ -154,6 +154,12 @@ export const getObjects = (frameId) => request("GET", `/frames/${frameId}/object
 // The full corrected box list, not a diff (api-contract §6, review submission).
 export const submitReview = (frameId, objects) =>
   request("POST", `/review/frames/${frameId}`, { body: { objects } });
+// The version timeline, newest first, and the rollback that restores one entry as a new version
+// (api-contract §6, review versions and rollback).
+export const listReviewVersions = (frameId) =>
+  request("GET", `/review/frames/${frameId}/versions`);
+export const rollbackReview = (frameId, logId) =>
+  request("POST", `/review/frames/${frameId}/rollback`, { body: { log_id: logId } });
 
 // ---- Stats (screen 6) ----
 export const statsSpecies = (query) => request("GET", "/stats/species", { query });

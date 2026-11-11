@@ -1,5 +1,23 @@
 ## 2026-11-11
 
+- **`P3-05` closes with a panel, and its decisions are tested rather than inspected.** The review page
+  can now list a frame's versions and restore one; the panel's choices - how an entry reads, whether the
+  restore button may act, and what a finished rollback means for the canvas - live in
+  `web/static/js/versions.js` as pure functions and run under Node, the same way `canvas.js` is tested.
+  Asserting a page's wiring by grepping for a string proves it contains a word, not that it behaves.
+- **A refused rollback is a normal outcome and the page treats it as one.** The server answers `409` for
+  a no-op or for another frame's entry; the reviewer gets a warning saying the canvas was not touched,
+  the selection is kept so another version can be picked, and the code returns **before** the two lines
+  that write to the canvas. That ordering is itself asserted, because "the UI must not appear to
+  succeed" is a statement about sequence, not about text.
+- **The panel got its own state-by-event matrix** - idle, open, selected, confirming, restoring against
+  open, select, confirm, cancel, Esc and a second click while restoring. This panel deletes nothing but
+  overwrites the reviewer's canvas, which is exactly the kind of action whose unstated interactions fail
+  on the day.
+- **Known gap, recorded not hidden:** `web/static/mock/index.js` has no versions or rollback route, so
+  with `?mock=1` the panel shows its load-failure state rather than an invented timeline. That is the
+  correct behaviour under the no-fabricated-data rule, but the mock needs the two routes for demo parity.
+
 - **`P3-16` is ticked and `P3-05` is down to one thing.** The rollback API is merged, so the canvas is
   no longer waiting on the server for anything; what is left there is the version panel, and the task now
   says so instead of naming a blocker that has been cleared. The delivered box carries the evidence -

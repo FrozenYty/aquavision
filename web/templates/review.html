@@ -47,6 +47,19 @@
           <div class="av-mono small text-secondary mb-2" id="frame-id"></div>
           <ul class="list-unstyled mb-0 d-grid gap-1" id="objects"></ul>
         </section>
+        <section class="av-card mt-3">
+          <h2 class="av-card-title">版本历史
+            <button class="btn btn-sm btn-outline-secondary ms-auto text-nowrap" id="btn-versions"
+              type="button" aria-expanded="false" aria-controls="versions">展开</button></h2>
+          <div id="versions" hidden>
+            <p class="small text-secondary mb-2">恢复到某一版会用该版的目标覆盖当前画面；画面上尚未提交的改动会被舍弃。</p>
+            <div id="version-list" class="d-grid gap-1"></div>
+            <div class="d-flex align-items-center gap-2 mt-2">
+              <button class="btn btn-sm btn-danger text-nowrap" id="btn-rollback" type="button" disabled>恢复这一版</button>
+              <span class="small text-secondary" id="version-hint">没有可回滚的版本</span>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   </main>
@@ -54,10 +67,13 @@
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
     import * as api from "../static/js/api.js";
-    import { confirmAction, loadInto, toast } from "../static/js/ui.js";
+    import { confirmAction, esc, fmtTime, loadInto, showEmpty, showError, showLoading, toast }
+      from "../static/js/ui.js";
     import { CLASSES, boxHtml, pictureHtml, statusBadge } from "../static/js/boxes.js";
     import { MIN_BOX, ZOOM_STEPS, anchorScroll, drawBox, moveBox, nextZoom, resizeBox, toImageCoords }
       from "../static/js/canvas.js";
+    import { actionLabel, actionTone, authorText, restoreState, restoreText, rollbackPlan, versionText }
+      from "../static/js/versions.js";
 
     renderShell();
 
@@ -76,6 +92,11 @@
     let zoom = 1;
     // The gesture in progress: { id, kind: "draw" | "move" | a corner, start, from, undoBefore, moved }.
     let drag = null;
+    // The version panel: the frame's timeline, what the reviewer picked, and the restore in flight.
+    let versions = [];
+    let versionsOpen = false;
+    let selectedLogId = null;
+    let restoring = false;
 
     $("class-select").innerHTML = Object.entries(CLASSES)
       .map(([code, name]) => `<option value="${code}">${name}</option>`).join("");
@@ -285,8 +306,10 @@
     document.addEventListener("keydown", (event) => {
       if (event.target instanceof Element && event.target.closest("select, input")) return;
       if (event.key === "Escape") {
-        // Esc takes back the gesture in progress; otherwise it leaves the draw tool, then the selection.
+        // Esc takes back the gesture in progress, then the version panel, then the draw tool and selection.
         if (drag) return cancelDrag();
+        if (restoring) return; // a rollback already sent is not cancelled by Esc
+        if (versionsOpen) return escapeVersions();
         if (mode === "draw") return setMode("select");
         return select(null);
       }
@@ -310,6 +333,126 @@
       $("tool-undo").disabled = true;
     }
 
+    // ---- Version panel: the frame's review timeline, newest first ----
+    // Restoring writes a new version on the server and overwrites this canvas, so a refusal (409: the
+    // target set is already current, or the entry belongs to another frame) must leave the canvas alone.
+    function versionRowHtml(item) {
+      const current = item.log_id === selectedLogId ? " is-selected" : "";
+      return `<button class="av-version-row${current}" type="button" data-log-id="${item.log_id}"
+        ${restoring ? "disabled" : ""}>
+        <span class="badge text-bg-${actionTone(item.action)}">${actionLabel(item.action)}</span>
+        <span class="av-mono small">${item.before_count} → ${item.after_count}</span>
+        <span class="small text-secondary ms-auto">${esc(authorText(item))} · ${fmtTime(item.created_at)}</span>
+      </button>`;
+    }
+
+    function syncRestoreControls() {
+      const state = restoreState({ selectedLogId, restoring, versionCount: versions.length });
+      $("btn-rollback").disabled = !state.enabled;
+      $("version-hint").textContent = state.hint;
+      $("btn-versions").disabled = restoring;
+    }
+
+    function renderVersions() {
+      if (!versions.length) showEmpty($("version-list"), "这一帧还没有复核记录。");
+      else $("version-list").innerHTML = versions.map(versionRowHtml).join("");
+      syncRestoreControls();
+    }
+
+    async function refreshVersions({ quiet = false } = {}) {
+      const list = $("version-list");
+      if (!frameId) {
+        showEmpty(list, "还没有载入帧，暂时没有版本。");
+        return;
+      }
+      if (!quiet) showLoading(list);
+      try {
+        versions = (await api.listReviewVersions(frameId)).items;
+        renderVersions();
+      } catch (err) {
+        versions = [];
+        selectedLogId = null;
+        syncRestoreControls();
+        showError(list, err, () => refreshVersions());
+      }
+    }
+
+    function openVersions() {
+      versionsOpen = true;
+      $("versions").hidden = false;
+      $("btn-versions").textContent = "收起";
+      $("btn-versions").setAttribute("aria-expanded", "true");
+      refreshVersions();
+    }
+
+    function closeVersions() {
+      versionsOpen = false;
+      $("versions").hidden = true;
+      $("btn-versions").textContent = "展开";
+      $("btn-versions").setAttribute("aria-expanded", "false");
+      selectedLogId = null;
+    }
+
+    // Esc dismisses one layer at a time: the picked entry, then the panel itself.
+    function escapeVersions() {
+      if (selectedLogId != null) {
+        selectedLogId = null;
+        renderVersions();
+        return;
+      }
+      closeVersions();
+    }
+
+    async function rollbackTo(item) {
+      restoring = true;
+      renderVersions();
+      let result = null;
+      let error = null;
+      try {
+        result = await api.rollbackReview(frameId, item.log_id);
+      } catch (err) {
+        error = err;
+      }
+      try {
+        const plan = rollbackPlan(error);
+        if (!plan.reload) {
+          // A refusal is a normal outcome: the canvas stays exactly as it was, only the reason is shown.
+          toast(plan.notice.text, plan.notice.kind);
+          return;
+        }
+        selectedLogId = null;
+        await reloadBoxes();
+        initialCount = result.object_count;
+        render();
+        toast(restoreText(result), "success");
+      } catch (err) {
+        toast(`回滚已生效，但重新载入目标失败：${err.message}`, "danger");
+      } finally {
+        restoring = false;
+        renderVersions();
+      }
+      await refreshVersions({ quiet: true });
+    }
+
+    $("btn-versions").onclick = () => (versionsOpen ? closeVersions() : openVersions());
+
+    $("version-list").addEventListener("click", (event) => {
+      if (!versionsOpen || restoring) return;
+      const row = event.target.closest("[data-log-id]");
+      if (!row) return;
+      selectedLogId = Number(row.dataset.logId);
+      renderVersions();
+    });
+
+    $("btn-rollback").onclick = async () => {
+      const state = restoreState({ selectedLogId, restoring, versionCount: versions.length });
+      if (!state.enabled) return;
+      const item = versions.find((version) => version.log_id === selectedLogId);
+      if (!item) return;
+      if (!confirmAction(`恢复到「${versionText(item)}」这一版？画面上尚未提交的改动会被舍弃。`)) return;
+      await rollbackTo(item);
+    };
+
     $("btn-submit").onclick = async () => {
       if (drag) return;
       const button = $("btn-submit");
@@ -322,6 +465,7 @@
         initialCount = result.object_count;
         toast(`复核已提交（第 ${result.version_no} 版），计数 ${before} → ${initialCount}`, "success");
         render();
+        if (versionsOpen) await refreshVersions({ quiet: true });
       } catch (err) {
         toast(err.message, "danger");
       } finally {
@@ -358,6 +502,10 @@
         $("frame-id").textContent = frame.frame_id;
         $("btn-back").href = `result-detail.html?id=${encodeURIComponent(frame.frame_id)}`;
         setZoom(1);
+        // A frame has one timeline: a new frame drops the previous frame's version selection.
+        versions = [];
+        selectedLogId = null;
+        if (versionsOpen) refreshVersions({ quiet: true });
         // Open on the box most likely to be wrong: the lowest confidence.
         const doubtful = [...boxes].sort((a, b) => a.confidence - b.confidence)[0];
         select(doubtful?.object_id ?? null);
