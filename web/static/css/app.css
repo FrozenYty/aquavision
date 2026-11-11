@@ -965,6 +965,37 @@ body {
   background: var(--av-accent-soft);
 }
 
+/* Version panel: timeline rows use the object list's row vocabulary, so the right column reads as
+   one surface. A row is a whole button; while a restore is in flight every row is disabled. */
+.av-version-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--av-space-2);
+  width: 100%;
+  padding: var(--av-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--av-radius);
+  background: transparent;
+  color: var(--av-text);
+  font: inherit;
+  text-align: left;
+}
+
+.av-version-row:hover:not(:disabled) {
+  background: var(--av-surface-muted);
+}
+
+.av-version-row.is-selected {
+  border-color: var(--av-accent);
+  background: var(--av-accent-soft);
+}
+
+.av-version-row:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
 /* ---- Class swatches, one per class_code ---- */
 
 .av-class {
