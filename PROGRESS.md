@@ -1,5 +1,25 @@
 ## 2026-11-11
 
+- **`GATE P1` is passed, on four criteria that were run rather than argued.** A real `uvicorn` process
+  answered `/api/health` with `{"status": "ok", "database": "ok", "routes": 47, "contract_routes": 45}`;
+  `scripts/init_db.py` exited 0 against an empty database; the file held the fourteen tables by name;
+  all thirteen templates answered 200. The gate had been open since the first phase while everything
+  after it was built ahead of it.
+- **What held it open was a workbench, not the software.** `P1-06` was "hardware arrival check **and rig
+  assembly**", and the assembly needs resistors, a button and a level shifter that are not here. The task
+  was narrowed to the arrival check - which is genuinely done, camera and panel and serial all verified
+  on 11-10 - and the assembly became `P3-17`, keeping its parts list and its three optical numbers
+  intact. Nothing was dropped to make a gate pass; a gate stopped measuring the wrong thing.
+- **The 5 V dead end is gone.** The board has no 5 V output, so the turbidity sensor had nowhere to draw
+  power; a 12 V adapter with a buck module was bought on 11-11 and is recorded in `P3-17` as procured but
+  **untested**. The wiring is written down there too, including the common ground, because a sensor
+  without one looks exactly like a dead sensor.
+- **Tomorrow is a bench session, so today's deliverable is a runbook.** It orders the work by what
+  unblocks what - camera first, because `GATE P2` waits on it and the capture page has its own start and
+  stop controls so the slice needs no button; power next, because a wrong voltage kills parts quietly;
+  then the sensor's reading direction, which has to be measured before any firmware is written about it;
+  then the LEDs, the button and the optics.
+
 - **`P2-08` is ticked, and its real shape is worth remembering.** The task said "the capture page streams
   real frames"; the page had been finished for a week and the server had no WebSocket at all. Three of
   the last four tasks I opened this session were filed against the wrong half - `P3-05`, `P3-15` and

@@ -86,18 +86,22 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [x] **P1-05** Test case draft against the 36 acceptance items · @IkeaFyj · done when each item has
       at least one case, marked not-yet-implemented — 49 cases in `docs/test-cases-en.md`, all 36
       items covered, every case marked not implemented
-- [ ] **P1-06** Hardware arrival check and rig assembly · @FrozenYty · **camera half done 11-10** —
-      `scripts/test_exposure.py --index 1` exits 0 (1080p, exposure lockable, 5 fps, 0.5 % spread);
-      `scripts/test_rig.py` exists and measures the three numbers below, but they still need the
-      assembled rig · **electrical half partly done 11-10**: OLED at `0x3C` draws and answers, the
-      serial command path works, and the five screens were driven without a button; LEDs wait for the
-      resistors, the button has not arrived, the turbidity sensor needs the level shifter · done when
-      `python scripts/test_exposure.py` exits 0 — the device opens, the picture answers the exposure
-      property, and 20 pinned frames stay inside a 10 % spread — and the rig meets its numbers:
-      left/right brightness ratio ≥ 0.7, a 5 cm target ≥ 45 px at 640 input, no flicker
+- [x] **P1-06** Hardware arrival check · @FrozenYty · **narrowed 11-11**: the assembly half moved to
+      `P3-17`, because `GATE P1` measures software (uvicorn, health, the tables, the pages) and a
+      workbench task was holding it open. Nothing was dropped - the assembly is `P3-17` with the parts
+      list intact
+      - **camera.** `scripts/test_exposure.py --index 1` exits 0 on the arrival camera: 1080p, exposure
+        lockable, 5 fps, 20 pinned frames inside a 0.5 % spread (11-10)
+      - **panel and link.** The OLED at `0x3C` draws and answers, the serial command path works, and the
+        five screens were driven over it without a button (11-10)
+      - not verified here, and not claimed: the two LEDs, the button, the turbidity sensor, and the
+        optical numbers - all of them are `P3-17`
 
-- [ ] **GATE P1** — `uvicorn app.main:app` starts on a clean machine, `/api/health` answers, 14 tables
-      exist, 13 pages render
+- [x] **GATE P1** — `uvicorn app.main:app` starts on a clean machine, `/api/health` answers, 14 tables
+      exist, 13 pages render · **passed 11-11**, all four criteria run rather than argued:
+      `scripts/init_db.py` exits 0 on an empty database, a real `uvicorn` process answers
+      `{"status": "ok", "database": "ok", "routes": 47, "contract_routes": 45}`, the database holds the
+      fourteen tables by name, and all thirteen templates answer 200
 
 ### P2 — vertical slice
 
@@ -382,6 +386,18 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - nine tests in `tests/test_review_versions.py`, asserting the restored **classes and coordinates**
         rather than a count; the contract table, both contract documents and `/api/health`'s
         `contract_routes` moved together, 42 to 44, and that field is now tied to the table by a test
+- [ ] **P3-17** Rig assembly and its optical numbers · @FrozenYty · split out of `P1-06` on 11-11 ·
+      the parts still owed: resistors for the two LEDs, the button (not arrived), the turbidity sensor's
+      level shifter, and **5 V for the sensor**. A 12 V adapter with a buck module was procured 11-11
+      and replaces the earlier dead end - the board has no 5 V output - but it is untested until the
+      bench session
+      - wiring as agreed: 12 V adapter -> 5 V module -> sensor VCC, **common ground with the board**;
+        the BSS138 level shifter runs VCCA 3V3, VCCB 5 V, A0 to B0 on GPIO8/SDA, A1 to B1 on GPIO9/SCL
+      - done when `python scripts/test_rig.py` reports the three numbers the design fixed - left/right
+        brightness ratio >= 0.7, a 5 cm target >= 45 px at 640 input, no flicker - and `CMD SCAN` shows
+        `EVT I2C 49` with the sensor powered
+      - **`P4-07`'s rehearsals cannot start before this is done**, and neither can the optical half of
+        `P1-06`'s original acceptance
 - [ ] **GATE P3** — all 36 acceptance items demonstrated live, one after another, no manual database
       edits in between, and every item traceable to the task that closed it
 
