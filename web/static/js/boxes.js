@@ -58,7 +58,7 @@ export function stageHtml(imageUrl, boxes) {
 }
 
 // review_status values from the data model; low confidence is called out while still pending.
-const REVIEW = ["待复核", "已确认", "已修改", "已驳回"];
+export const REVIEW_STATUS = ["待复核", "已确认", "已修改", "已驳回"];
 const REVIEW_KIND = ["secondary", "success", "info", "danger"];
 
 export function statusBadge(box) {
@@ -67,7 +67,7 @@ export function statusBadge(box) {
   }
   return (
     `<span class="badge text-bg-${REVIEW_KIND[box.review_status]}">` +
-    `${REVIEW[box.review_status]}</span>`
+    `${REVIEW_STATUS[box.review_status]}</span>`
   );
 }
 
