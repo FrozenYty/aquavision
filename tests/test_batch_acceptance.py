@@ -8,9 +8,9 @@ things that are not the same statement:
    database directly or looked only at the final state, so a route that stopped returning progress
    mid-flight would have passed every test in the suite;
 3. a restart mid-task **resumes it rather than losing it** — covered at unit level by
-   `test_worker.py::test_restart_requeues_a_running_task_and_reprocesses`, which sets the row by hand.
-   Here the interruption is produced by stopping a real run, and the restart is the real
-   `Worker.start()`, which is what the application calls on boot.
+   `test_worker.py::test_restart_resumes_and_keeps_the_frames_already_finished`, which stops a run
+   after forty frames. Here the interruption is produced by stopping a real run, and the restart is
+   the real `Worker.start()`, which is what the application calls on boot.
 
 The detector is a slow stub on purpose: the point is to poll the API while the task is genuinely in
 flight, and a detector that returns instantly would finish before the first poll.
@@ -211,5 +211,6 @@ def test_a_restart_mid_task_resumes_it_instead_of_losing_it(rig):
         f"the task was not resumed after the restart: {task_now(client, headers, task_id)}"
     )
     assert resumed["progress"] == 100
-    # Every frame was processed exactly once: the partial results were dropped, not duplicated.
+    # Every frame was processed exactly once: the finished items kept their boxes and only the
+    # pending ones ran after the restart.
     assert resumed["obj_count"] == FRAMES, f"expected one box per frame, got {resumed['obj_count']}"

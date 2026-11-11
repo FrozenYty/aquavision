@@ -33,7 +33,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 | Phase | Goal | Gate |
 |---|---|---|
 | P0 | Decisions made and external dependencies committed | dataset ≥ 3000 images and split; three environments identical; purchase list final; rig design final |
-| P1 | Every layer has a minimal implementation | `uvicorn` starts, `/api/health` returns the envelope, 13 tables created, 13 pages open |
+| P1 | Every layer has a minimal implementation | `uvicorn` starts, `/api/health` returns the envelope, 14 tables created, 13 pages open |
 | P2 | One real end-to-end slice | press capture → boxes and counts on screen within 3 s; edit one box → count changes |
 | P3 | All 29 requirements implemented | the 36 acceptance items can each be demonstrated live |
 | P4 | Metrics, tests, defence | nine metrics recorded; blocker defects at zero; three rehearsals |
@@ -96,7 +96,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       property, and 20 pinned frames stay inside a 10 % spread — and the rig meets its numbers:
       left/right brightness ratio ≥ 0.7, a 5 cm target ≥ 45 px at 640 input, no flicker
 
-- [ ] **GATE P1** — `uvicorn app.main:app` starts on a clean machine, `/api/health` answers, 13 tables
+- [ ] **GATE P1** — `uvicorn app.main:app` starts on a clean machine, `/api/health` answers, 14 tables
       exist, 13 pages render
 
 ### P2 — vertical slice
@@ -260,8 +260,16 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         tasks, `workers=2` and `asset_count=10` each: both tasks finished with `obj_count=10` and the
         **same ten `asset_id`s**. `_frames_for` selects the frames that have no `detect_object` row, and
         two workers read that list before either writes, so the second claims what the first is already
-        running. The cost is doubled inference and two task rows claiming the same assets. Closing it
-        needs a claim marker - a task id on the frame, or a join table - which is a data-model decision
+        running. A frame the model finds nothing in was also never finished, because zero boxes leaves no
+        row to find. **ADR 12 decides both**: a task is assigned its frames at creation and claims them by
+        compare-and-swap, in a new table `detect_task_item` (fourteen tables). Done when
+        - `create_batch` writes one item per frame it assigns, so a task's work list is fixed at creation
+          and identical for every worker
+        - the measurement above reports `OVERLAP: 0` - two workers on two tasks never share a frame
+        - a frame with no detectable object finishes the task with `box_count=0` and is **not** picked up
+          again by the next task
+        - a restart resumes from the items still pending, leaving finished ones finished
+        - `tests/test_init_db.py` counts fourteen tables and its `EXPECTED_COLUMNS` has the new entry
 - [ ] **P3-02** Statistics dashboard · @chemflowers · closes AC-19, AC-20, AC-21 · done when the four
       charts render from `/api/stats/*`, the basis switch changes both the figures and the caption,
       and the empty site shows an empty state rather than a blank chart

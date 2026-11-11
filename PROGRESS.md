@@ -1,5 +1,33 @@
 ## 2026-11-11
 
+- **The pool defect is fixed by a decision, not a patch.** ADR 12 makes a task own its frames: a new
+  table `detect_task_item` (fourteen tables), the frames assigned when the task is created, a
+  compare-and-swap claim that holds no lock across inference, and a frame the model finds nothing in
+  recorded as done with `box_count=0` instead of staying available forever. The measurement that opened
+  this - two tasks, `workers=2`, `asset_count=10` - now reports `OVERLAP: 0`.
+- **The test that proves it was made deterministic before it was trusted.** `tests/test_batch_pool.py`
+  holds both workers at their first frame with a barrier until the second has chosen its work, so the
+  race is reproduced every run rather than when the scheduler feels like it. It failed on the old code
+  with `OVERLAP: 10 frame(s) were claimed by both tasks`, and passes five runs in a row after.
+- **A restart no longer throws away finished frames.** `requeue_stale` returns only the interrupted
+  items to pending and keeps the finished ones, so a resumed task continues where it stopped. That
+  inverted the old restart test's expectations on purpose - it asserted `progress == 0` and
+  `count_objects == 0`, which encoded "start over". Retry keeps the old meaning: the operator asking for
+  the run again resets every item and drops the boxes. The two paths are different on purpose and the
+  difference is now a comment on each.
+- **A five-day-old bilingual defect was found by the sweep and fixed.** `srs-zh.md` Table 4-1 listed nine
+  entities against the English table's thirteen - it never got the four V1.5 rows. The pair passed every
+  check, because `check-bilingual.py` compares headings and never table rows. The four rows were restored
+  while the table was open; the check gap itself is recorded, not papered over.
+- **The selection rule is written down, with its consequences.** `create_batch` skips frames already
+  detected or already owned, which is what makes the duplicate claim impossible before a worker starts.
+  Two consequences are deliberate and are in ADR 12 rather than left to be discovered: a cancelled task's
+  items keep holding their frames, and a path needing already-detected frames names them instead of
+  asking for the next batch - which is exactly what the same-frame comparison of `P4-10` does.
+- **Known cost, no migration mechanism exists:** `create_all` adds the empty table to an existing
+  development database, but tasks already queued before the upgrade own no items and finish immediately
+  as zero-frame tasks.
+
 - **The new lead's first act was to check the handover, and two of its briefs were wrong.** It said the
   review canvas still lacked zoom and told lane C to build it; zoom was delivered and tested on 11-11 by
   #137 - `canvas.js` resizes the stage's real width and never uses a CSS transform, `ZOOM_STEPS` reaches
