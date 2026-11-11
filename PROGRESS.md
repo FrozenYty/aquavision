@@ -1,5 +1,28 @@
 ## 2026-11-11
 
+- **The new lead's first act was to check the handover, and two of its briefs were wrong.** It said the
+  review canvas still lacked zoom and told lane C to build it; zoom was delivered and tested on 11-11 by
+  #137 - `canvas.js` resizes the stage's real width and never uses a CSS transform, `ZOOM_STEPS` reaches
+  400%, and `test_review_canvas.py` runs the real module under Node. Sending that brief would have cost a
+  day. It also assigned `P3-15` to lane B; `PLAN.md` assigns it to lane C, and the task spans both - the
+  page is C's, the threshold enforcement is in `server/`.
+- **`P3-01`'s three acceptance points now have automated evidence through the API, and the task stays
+  open because a fourth thing is broken.** `tests/test_batch_acceptance.py` runs a 100-frame task to done,
+  polls `GET /api/tasks/{id}` mid-flight, and cuts a run short before restarting it through
+  `Worker.start()`. The mid-flight test was shown red first: with the worker's progress write frozen, the
+  readings sit at `('running', 0)` and the assertion prints that series.
+- **The pool duplicates work, and this was measured rather than reasoned.** Two queued tasks,
+  `workers=2`, `asset_count=10` each: both finished with `obj_count=10` and **the same ten `asset_id`s**.
+  `_frames_for` selects frames with no `detect_object` row, and two workers read that list before either
+  writes. The cost is doubled inference and two task rows claiming the same assets. It needs a claim
+  marker - a data-model decision, recorded in `P3-01` rather than patched from outside the lane.
+- **`P3-05`'s other half has no task, so one was created.** The rollback needs an API that returns a
+  frame's review versions and restores one of them; the review router has only the submit endpoint. The
+  material is already stored - `review` writes the full before/after box list into `sys_log`, and
+  `detect_object.version_no` marks a hand-drawn box - so `P3-16` is endpoints and tests, not new storage.
+- **Housekeeping:** the seven remote branches that had been merged but not deleted are gone; `main` is the
+  only branch on the remote.
+
 - **A day of merged work left the status statements behind, and one of them was mine.** `P1-02` said
   "two P0 routes still answer 501" in the same task that said "no route answers 501 by default"; the
   README told a reader detection was not built; the test plan declared the end-to-end chain impossible;
