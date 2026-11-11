@@ -126,39 +126,23 @@ Report in three parts:
 
 ## 7. Delegation
 
-Work is split along **two axes, and both are required**: the lane says *where an agent may write*, the
-task type says *how the work is done and what counts as finished*. One axis alone has already failed here.
+When assistants are used, work is split along **two axes, and both are required**: the lane says *where
+an agent may write*, the task type says *how the work is done and what finished means*. Type alone lets
+one agent be asked to touch `server/`, `web/` and `firmware/` in a single turn, which is how two
+assistants end up in one file (§3).
 
-- **Type alone** lets "the code writer" be asked to touch `server/`, `web/` and `firmware/` in one turn.
-  Two assistants in one file is the most expensive accident this repository can have (§3).
-- **A fresh agent per task** burns the eight-member limit (it was hit mid-afternoon), loses the context
-  that made the first agent useful, and produces names that say nothing — `doc-fixer`,
-  `datasheet-doc-fixer` and `readme-translator` were all one role.
+**Finding and fixing are different jobs, and separating them is what makes either trustworthy.** An agent
+that both audits and repairs has no reason to report the findings it would rather not touch - and one
+that repairs inside a named file list cannot quietly rewrite a decision record or an old `PROGRESS.md`
+entry to match the present.
 
-So: a small standing roster, reused by message rather than respawned, plus the lane constraint in every
-brief.
+**Every brief carries five things**: the repository and the lane, the exact files or modules in scope,
+the acceptance as a command that can fail, the checks to run, and the report format. A brief that says
+"review the docs" produces a summary of intentions; a brief that says which files may change and which
+command must pass produces a diff.
 
-| Role | Type | Writes | Definition of done |
-|---|---|---|---|
-| `doc-auditor` | audit | **nothing** - read-only | a findings table: `file:line`, what the document claims, what the code has, the evidence |
-| `doc-writer` | authoring | only the files named in the brief | a diff plus the five document checks passing |
-| `code-implementer` | implementation | only the module set named in the brief | tests for the new behaviour **and** its failure paths, `ruff` and `pytest` green |
-| `test-runner` | verification | nothing; scratch files outside the repository | the commands it ran, their real output, and what it could not cover |
-| `reviewer` | review | nothing | defects with `file:line`, ranked, before the merge |
-
-Two flex slots stay open for one-off work (a large translation, a hardware investigation). The Lead keeps
-the final run of every check and the merge.
-
-**Audit and repair are different roles, and that separation is what makes them work.** On 2026-11-10 a
-read-only auditor found thirty-five false claims in three document families; the writers fixed them inside
-explicitly listed files and could not quietly rewrite a decision record or an old `PROGRESS.md` entry to
-match the present. An agent allowed to both find and "fix" its own findings has no reason to report the
-ones it would rather not touch.
-
-**Every brief carries the same five things**, whether it goes to a standing role or a flex slot: the
-repository and the lane, the exact files or modules in scope, the acceptance criteria as a command that
-can fail, the checks to run, and the report format. A brief that says "review the docs" produces a summary
-of intentions; a brief that says which files may change and which command must pass produces a diff.
+Who the standing helpers are, and what each is currently called, is a working detail of whoever is running
+the session - it changes, and it does not belong in a shared repository.
 
 ## 8. Language
 

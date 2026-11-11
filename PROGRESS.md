@@ -11,14 +11,13 @@
   boxes together through one tested coordinate function rather than a CSS transform that leaves clicks
   wrong. Export gains the three things that break CSV - comma, quote and newline escaping, an empty result
   that says so instead of downloading an empty file, and a filename that distinguishes two exports.
-- **Delegation is now a rule in `AGENTS.md` §7 rather than a habit.** Splitting by task type alone invites
-  one agent to write in three lanes; spawning one agent per task burns the eight-member limit and loses
-  the context that made it useful. The rule is two axes: the lane says where an agent may write, the type
-  says how the work is done and what finished means - audit, authoring, implementation, verification and
-  review as five standing roles, reused by message, with the audit role forbidden to write at all. The
-  separation is not ceremony: yesterday a read-only auditor found thirty-five false claims and a writer
-  fixed them inside a named file list, where an agent marking its own homework would have had no reason to
-  report what it preferred not to touch.
+- **Delegation has a rule in `AGENTS.md` §7, and deliberately no roster.** The rule is the part that holds
+  for anyone: split along two axes - the lane says where an agent may write, the task type says how the
+  work is done and what finished means - and keep finding separate from fixing, because an agent that
+  both audits and repairs has no reason to report what it would rather not touch. **Who the helpers are
+  and what they are called is a working detail of one session's setup, not a rule of this repository**, so
+  the roster stays out of the file the other members' assistants read. It was written in and then cut
+  back out the same morning on the owner's instruction.
 
 ## 2026-11-10
 
