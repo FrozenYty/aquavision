@@ -264,6 +264,43 @@ def test_run_once_takes_one_queued_task_at_a_time(session_factory):
     assert run_once(session_factory, detector=one_box) is False
 
 
+def test_a_task_runs_with_its_own_inference_parameters(session_factory):
+    """The batch row carries conf/iou/max_det; the worker must hand them to the model."""
+    add_frames(session_factory, 1)
+    task_id = add_task(session_factory, asset_count=1)
+    with session_factory() as session:
+        task = session.get(DetectTask, task_id)
+        task.conf_thr = 0.7
+        task.iou_thr = 0.5
+        task.max_det = 42
+        session.commit()
+
+    seen: dict = {}
+
+    class RecordingDetector:
+        def predict(self, asset, conf_thr=0.5, iou_thr=0.45, max_det=100):
+            seen.update(conf_thr=conf_thr, iou_thr=iou_thr, max_det=max_det)
+            return one_box(asset)
+
+    process_task(session_factory, task_id, detector=RecordingDetector())
+
+    assert seen == {"conf_thr": 0.7, "iou_thr": 0.5, "max_det": 42}
+    assert task_state(session_factory, task_id)["status"] == 2
+
+
+def test_a_missing_model_uses_the_loaders_reason(session_factory):
+    """No detector: the task fails with the sentence the loader produced, not with a guess."""
+    add_frames(session_factory, 2)
+    task_id = add_task(session_factory, asset_count=2)
+
+    process_task(session_factory, task_id, detector=None, reason="运行环境缺少推理依赖 torch")
+
+    state = task_state(session_factory, task_id)
+    assert state["status"] == 3
+    assert "torch" in (state["error_msg"] or "")
+    assert state["obj_count"] == 0
+
+
 def test_app_lifespan_starts_and_stops_the_worker(tmp_path, monkeypatch):
     monkeypatch.setenv("DB_DSN", f"sqlite:///{(tmp_path / 'app.db').as_posix()}")
     monkeypatch.setenv("AV_DATA_DIR", str(tmp_path / "data"))

@@ -43,6 +43,29 @@
   and what they are called is a working detail of one session's setup, not a rule of this repository**, so
   the roster stays out of the file the other members' assistants read. It was written in and then cut
   back out the same morning on the owner's instruction.
+- **`P2-05b` runs the online weights for real, and the single-frame route no longer answers 501.**
+  The model comes from the `model_version` row with `is_online = 1` and is loaded once at start-up; no
+  weight path appears in the code. A frame posted through the capture route went through
+  `POST /api/detect/frames` end to end: 20 boxes, `model_version` `v8n-E0-exploratory`, a measured
+  `latency_ms` of 2816 ms (CPU runtime, a 3840×2160 test image), the rows in `detect_object`, and the
+  task row `done` with `obj_count` 20 and the model version that produced it. The boxes equal a
+  direct ultralytics run of the same weights on the same image, compared at the precision the columns
+  keep — that comparison is now `tests/test_detect_real.py`, which skips with a written reason when
+  the database, the weights or torch are absent.
+- **The latency is measured, not estimated.** The timer covers what the route does with the image:
+  handing it to the model, pre-processing, inference and NMS. Contract §8's capture-to-result
+  definition describes the live socket, where the capture is part of the same call; here the frame is
+  already on disk, and the difference is written where the call is made.
+- **Every way the model can fail to run is a stated refusal.** No online row, two online rows, a
+  missing weight file, an unreadable file, torch absent and a class order that disagrees with
+  `species_dict`: each produces a sentence the operator can act on, and the route answers 501 with it.
+  A frame that never came through capture is 404 in the handler (AC-10), and a runtime failure is 500
+  with a `failed` task row carrying the reason. Nothing invents a box — including ultralytics' own
+  habit of answering a missing image with an empty result, which the detector refuses instead.
+- **The server still starts without torch.** The import lives inside the loading function, so a
+  machine without the training stack serves every other route and only detection answers with the
+  reason. The class order is verified against `species_dict` at load time (data model §3.6), and a
+  mismatch refuses to run rather than mislabelling every box.
 
 ## 2026-11-10
 

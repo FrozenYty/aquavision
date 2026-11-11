@@ -113,12 +113,17 @@ def retry_task(task_id: int, db: SessionDep, user: UserDep) -> dict[str, object]
     return ok(serializers.task(row))
 
 
+def next_task_code(db) -> str:
+    """`DTyyMMdd-serial` (data model §3.4), shared by the live and the batch entry points."""
+    serial = db.scalar(select(func.count(DetectTask.task_id))) or 0
+    return f"DT{datetime.now(UTC):%y%m%d}-{serial + 1:03d}"
+
+
 def create_batch(db, body: BatchBody) -> DetectTask:
     """Insert a queued batch task. Shared with `/api/detect/batches`."""
     online = db.scalar(select(ModelVersion).where(ModelVersion.is_online == 1))
-    serial = db.scalar(select(func.count(DetectTask.task_id))) or 0
     row = DetectTask(
-        task_code=f"DT{datetime.now(UTC):%y%m%d}-{serial + 1:03d}",
+        task_code=next_task_code(db),
         task_type=2,
         model_version_id=online.model_id if online else None,
         asset_count=body.asset_count,

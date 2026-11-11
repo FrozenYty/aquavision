@@ -96,8 +96,11 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 
 ### P2 — vertical slice
 
-- [ ] **P2-01** Capture → detection, single frame · @FrozenYty @Gtechson · done when one call returns
+- [x] **P2-01** Capture → detection, single frame · @FrozenYty @Gtechson · done when one call returns
       boxes with `model_version` and `latency_ms`
+      - delivered 11-11: a frame posted through the capture route went through
+        `POST /api/detect/frames` on the online baseline, and the response carried 20 boxes,
+        `model_version` and a measured `latency_ms`
 - [ ] **P2-02** Result persistence and query API · @Gtechson · done when boxes land in
       `detect_object` and querying by `frame_id` returns them
 - [x] **P2-03** Capture and review pages on real data · @chemflowers · closes AC-08, AC-13 · done when no mock data is left
@@ -128,6 +131,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
             `requirements-server.txt` alone, and only the detection route reports the missing dependency
           - tests: a stubbed detector for the response shape and every failure code, plus one real-inference
             smoke test that skips **with a written reason** when no weights are present
+          - delivered 11-11: the route runs the online weights loaded at start-up, writes `detect_object`
+            and the task statistics, and answers boxes with `model_version` and a measured `latency_ms`;
+            the queue consumer was given the same detector and the task's own inference parameters
       - **P2-05c** `/api/stats/*` verified against rows written by 05b, figures equal to the dashboard
 - [x] **P2-06** DUO dataset preparation and a first baseline run · @Gtechson · three checkpoints
       - the dataset is on the **training machine**, not on the lead's: `data/raw/DUO/DUO` (6671 + 1111)

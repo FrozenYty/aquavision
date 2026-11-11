@@ -27,6 +27,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app import envelope
 from app.config import get_settings
 from app.db import PROJECT_ROOT, engine_from_dsn, resolve_dsn
+from app.detector import load_online
 from app.envelope import (
     BAD_PARAM,
     INTERNAL,
@@ -96,13 +97,31 @@ async def request_context(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Start the detection pool and the rig link with the app; stop both before the process exits."""
+    """Load the online model, start the detection pool and the rig link; stop both before exit.
+
+    A model that cannot be loaded must not stop the API: the detector is absent, the reason is kept
+    on `app.state.detector_error`, and only the detection routes answer it.
+    """
+    detector = None
+    detector_error = None
+    try:
+        detector, detector_error = load_online(app.state.session_factory, get_settings())
+    except Exception as exc:  # noqa: BLE001 - e.g. the database is unreachable at start-up
+        detector_error = f"在线模型加载失败：{type(exc).__name__}: {exc}"
+        log.exception("could not load the online detector")
+    if detector_error:
+        log.warning("detection unavailable: %s", detector_error)
+    app.state.detector = detector
+    app.state.detector_error = detector_error
+
     worker = None
     if getattr(app.state, "worker_enabled", False):
         worker = Worker(
             app.state.session_factory,
             workers=getattr(app.state, "max_concurrency", 1),
             poll_seconds=getattr(app.state, "worker_poll_seconds", 1.0),
+            detector=detector,
+            unavailable_reason=detector_error,
         )
         worker.start()
         app.state.worker = worker
