@@ -1,3 +1,25 @@
+## 2026-11-11
+
+- **The task board and the briefs now say the same thing.** `P2-05b` still carried "blocked until the
+  weights arrive" a day after the weights were registered and activated, which is exactly how a team loses
+  a day waiting for a door that is open. The blocker is cleared in writing, and the checkpoint now has its
+  own acceptance: real boxes for the online version, a measured `latency_ms`, the version read from the
+  database rather than a path in the code, lazy `torch` imports so the server still serves without the
+  training stack, and an error code with a message instead of an empty box list dressed up as a result.
+- **`P3-05` and `P3-14` were stated as outcomes nobody could check.** Both now name the work that is
+  actually missing: zoom is the one canvas gesture that does not exist, and scaling must move picture and
+  boxes together through one tested coordinate function rather than a CSS transform that leaves clicks
+  wrong. Export gains the three things that break CSV - comma, quote and newline escaping, an empty result
+  that says so instead of downloading an empty file, and a filename that distinguishes two exports.
+- **Delegation is now a rule in `AGENTS.md` §7 rather than a habit.** Splitting by task type alone invites
+  one agent to write in three lanes; spawning one agent per task burns the eight-member limit and loses
+  the context that made it useful. The rule is two axes: the lane says where an agent may write, the type
+  says how the work is done and what finished means - audit, authoring, implementation, verification and
+  review as five standing roles, reused by message, with the audit role forbidden to write at all. The
+  separation is not ceremony: yesterday a read-only auditor found thirty-five false claims and a writer
+  fixed them inside a named file list, where an agent marking its own homework would have had no reason to
+  report what it preferred not to touch.
+
 ## 2026-11-10
 
 - **Three documents were audited against the code and thirty-odd claims were false.** The rig documents

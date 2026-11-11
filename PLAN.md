@@ -114,8 +114,20 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         - delivered 11-10: `server/app/worker.py` claims queued tasks, advances `progress`, honours
           cancel, records a failure reason, and requeues stale rows on restart; the detector is
           injected, so this checkpoint never invents boxes
-      - **P2-05b** the detection path — **blocked until `P2-06c` produces weights**, and it is the only
-        part of this task that is
+        - **P2-05b** the detection path — **unblocked 11-10**: `P2-06c` registered and activated
+          the baseline weights, so the blocker that stood here is gone. It is the only part of this task
+          that needs a trained model; the other two checkpoints run without one. Done when
+          - `/api/detect/frames/{frame_id}` returns real boxes for whichever version is online, each with
+            class, confidence and a normalised box, and the response carries `model_version` and a
+            **measured** `latency_ms` - not an estimate, and the measurement's scope stated in a comment
+          - the version is read from the `model_version` row, never from a path in the code, and no weights
+            file is committed to a public repository
+          - a missing model, a missing torch or a corrupt weight answers a stated error code with a message
+            an operator can act on - **never an empty box list dressed up as a result**
+          - `torch` and `ultralytics` are imported lazily: the server starts and serves on
+            `requirements-server.txt` alone, and only the detection route reports the missing dependency
+          - tests: a stubbed detector for the response shape and every failure code, plus one real-inference
+            smoke test that skips **with a written reason** when no weights are present
       - **P2-05c** `/api/stats/*` verified against rows written by 05b, figures equal to the dashboard
 - [x] **P2-06** DUO dataset preparation and a first baseline run · @Gtechson · three checkpoints
       - the dataset is on the **training machine**, not on the lead's: `data/raw/DUO/DUO` (6671 + 1111)
@@ -230,9 +242,18 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       that produced it
 - [ ] **P3-04** Account management · @Gtechson · closes AC-03, AC-04 · done when an account can be created,
       disabled and restored, a disabled account cannot sign in, and its history stays queryable
-- [ ] **P3-05** Review canvas: drag, zoom, add, delete · @chemflowers · closes AC-15, AC-16 · done when
+- [ ] **P3-05** Review canvas: drag, zoom, add, delete · @chemflowers · closes AC-15, AC-16 · drag and
+      delete work already; **zoom is the missing gesture**, so this is an increment, not a rewrite · done when
       all four gestures work on one frame without a reload, and two reviews produce two versions that
-      can be rolled back between
+      can be rolled back between (if the review API cannot return two versions, that half is
+      **Blocked on lane B** and reported, not faked)
+      - scaling must move the picture and the boxes together: **not** a CSS transform on the container,
+        which leaves the click coordinates wrong and makes a drawn box drift
+      - screen to normalised-image coordinates goes through one pure function, and that function is tested
+        on its own at two zoom levels
+      - the PR description carries the canvas's state-by-event matrix (idle / selected / drawing /
+        dragging / resizing against mousedown / mousemove / mouseup / wheel / Esc / Delete), every cell
+        filled or marked ignored - the edges are where an unstated interaction breaks
 - [ ] **P3-06** Demo mode · @FrozenYty · closes AC-36 · done when one action resets the data, hides
       debug output, and leaves the system in the state a rehearsal starts from
 - [ ] **P3-07** Report generation and history · @chemflowers · closes AC-22 · done when a report is
@@ -259,6 +280,10 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P3-14** Result export · @chemflowers · closes AC-14 · done when a result set exports as CSV with
       one row per box, the row count equals the page's count, and Chinese class names open correctly in
       Excel — the encoding is the part that usually breaks
+      - escaping is tested as a pure function: a class name or note containing a comma, a double quote and
+        a newline each survive a round trip
+      - an empty result says so **instead of downloading an empty file**
+      - the filename carries the frame id and a timestamp, so two exports are distinguishable
 - [ ] **P3-15** Species dictionary and per-class thresholds · @chemflowers · closes AC-26 · done when the
       four classes and their thresholds can be viewed and edited on P-12, a threshold change applies to
       new jobs and not to finished ones, and a class code that disagrees with `labels.txt` is refused
