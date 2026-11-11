@@ -273,18 +273,21 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       that produced it
 - [ ] **P3-04** Account management · @Gtechson · closes AC-03, AC-04 · done when an account can be created,
       disabled and restored, a disabled account cannot sign in, and its history stays queryable
-- [ ] **P3-05** Review canvas: drag, zoom, add, delete · @chemflowers · closes AC-15, AC-16 · drag and
-      delete work already; **zoom is the missing gesture**, so this is an increment, not a rewrite · done when
-      all four gestures work on one frame without a reload, and two reviews produce two versions that
-      can be rolled back between (if the review API cannot return two versions, that half is
-      **Blocked on lane B** and reported, not faked)
-      - scaling must move the picture and the boxes together: **not** a CSS transform on the container,
-        which leaves the click coordinates wrong and makes a drawn box drift
-      - screen to normalised-image coordinates goes through one pure function, and that function is tested
-        on its own at two zoom levels
-      - the PR description carries the canvas's state-by-event matrix (idle / selected / drawing /
-        dragging / resizing against mousedown / mousemove / mouseup / wheel / Esc / Delete), every cell
-        filled or marked ignored - the edges are where an unstated interaction breaks
+- [ ] **P3-05** Review canvas: drag, zoom, add, delete · @chemflowers · closes AC-15, AC-16 ·
+      **the canvas half is done; what remains is the version panel.** Drag, select, draw and delete worked
+      already, and zoom was delivered by #137 - it changes the stage's real width inside a scrolling
+      viewport, **never a CSS transform**, and `tests/test_review_canvas.py` runs the real module under
+      Node, checking the coordinate conversion at two zoom levels
+      - **the blocker is gone:** `P3-16` delivered `GET /api/review/frames/{id}/versions` and
+        `POST /api/review/frames/{id}/rollback` on 11-11, so two versions and a rollback between them can
+        be shown. Nothing on the server side is waiting
+      - remaining work is the page: list the frame's versions, let a reviewer pick one, and restore it
+        without a reload. The panel needs a **state-by-event matrix** of its own (idle / versions open /
+        confirming / restoring, against open / select / confirm / cancel / Esc), every cell filled or
+        marked ignored - the edges are where an unstated interaction breaks, and this one deletes nothing
+        but does overwrite the reviewer's canvas
+      - a refused rollback (`409`, no-op or another frame's entry) must leave the canvas untouched and say
+        why, rather than appearing to succeed
 - [ ] **P3-06** Demo mode · @FrozenYty · closes AC-36 · done when one action resets the data, hides
       debug output, and leaves the system in the state a rehearsal starts from
 - [ ] **P3-07** Report generation and history · @chemflowers · closes AC-22 · done when a report is
@@ -324,16 +327,19 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - the data already supports it: `species_dict.conf_thr` exists and **nothing reads it** -
         `detect.py` passes the caller's `conf_thr` straight to the model
 
-- [ ] **P3-16** Review versions and rollback · @Gtechson · **unblocks `P3-05`**, which names this work only
-      inside its own text and cannot close without it · the material is already stored: `review` writes the
-      full before/after box list into `sys_log`, and `detect_object.version_no` marks a hand-drawn box ·
-      done when
-      - `GET /api/review/frames/{frame_id}/versions` lists each submission with its time, its author and
-        the box count before and after - read from `sys_log`, not recomputed from the current boxes
-      - a rollback restores a chosen submission's box set as a **new** version rather than deleting
-        history: the record of the mistake is the training signal, so it is kept
-      - the frame's counts follow the rollback, and a reviewer without the role is refused - each path
-        has a test
+- [x] **P3-16** Review versions and rollback · @Gtechson · **unblocks `P3-05`** · delivered 11-11 (#148)
+      - `GET /api/review/frames/{frame_id}/versions` lists each entry newest first with its action, time,
+        author, and the box count before and after, read from the JSON `sys_log` recorded rather than
+        recomputed from the boxes that survive now. No storage was added
+      - `POST /api/review/frames/{frame_id}/rollback` restores a chosen entry's `after_value` as a **new**
+        version and writes its own history row, so the rollback is in the record. Boxes leaving the set
+        are marked `review_status = 3`, never deleted (AC-15). A rollback to the current set is refused
+        as a no-op so the timeline is not filled with empty entries
+      - the rule that turns a box list into rows was **extracted from `submit` into one shared helper**
+        rather than copied, so the two paths cannot drift
+      - nine tests in `tests/test_review_versions.py`, asserting the restored **classes and coordinates**
+        rather than a count; the contract table, both contract documents and `/api/health`'s
+        `contract_routes` moved together, 42 to 44, and that field is now tied to the table by a test
 - [ ] **GATE P3** — all 36 acceptance items demonstrated live, one after another, no manual database
       edits in between, and every item traceable to the task that closed it
 
