@@ -248,28 +248,23 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 
 ### P3 — breadth
 
-- [ ] **P3-01** Batch detection, the pool and progress · @Gtechson · closes AC-11 · done when a
+- [x] **P3-01** Batch detection, the pool and progress · @Gtechson · closes AC-11 · done when a
       100-frame task completes, progress is queryable while it runs, and a restart mid-task resumes
       it rather than losing it
-      - **verified through the API on 11-11** - `tests/test_batch_acceptance.py` runs a 100-frame task to
+      - **delivered 11-11** (#145, #146). `tests/test_batch_acceptance.py` runs a 100-frame task to
         done, polls `GET /api/tasks/{id}` while it is in flight, and cuts a run short before restarting
         it through `Worker.start()`, after which the task resumes and finishes with one box per frame.
-        The mid-flight test **was shown to fail** when the worker stopped advancing progress: the
-        readings then sit at `('running', 0)` and the assertion prints that series
-      - **still open: the pool.** Two workers claim the same frames. Measured 11-11 with two queued
-        tasks, `workers=2` and `asset_count=10` each: both tasks finished with `obj_count=10` and the
-        **same ten `asset_id`s**. `_frames_for` selects the frames that have no `detect_object` row, and
-        two workers read that list before either writes, so the second claims what the first is already
-        running. A frame the model finds nothing in was also never finished, because zero boxes leaves no
-        row to find. **ADR 12 decides both**: a task is assigned its frames at creation and claims them by
-        compare-and-swap, in a new table `detect_task_item` (fourteen tables). Done when
-        - `create_batch` writes one item per frame it assigns, so a task's work list is fixed at creation
-          and identical for every worker
-        - the measurement above reports `OVERLAP: 0` - two workers on two tasks never share a frame
-        - a frame with no detectable object finishes the task with `box_count=0` and is **not** picked up
-          again by the next task
-        - a restart resumes from the items still pending, leaving finished ones finished
-        - `tests/test_init_db.py` counts fourteen tables and its `EXPECTED_COLUMNS` has the new entry
+        The mid-flight assertion **was shown red** before it was trusted: with the worker's progress
+        write frozen the readings sit at `('running', 0)` and the failure prints that series
+      - **the pool defect found while verifying it is closed by ADR 12** (#146). A task is assigned its
+        frames at creation and claims them by compare-and-swap, in the new `detect_task_item` table, so
+        the work list is fixed rather than re-discovered. The measurement that exposed it - two tasks,
+        `workers=2`, `asset_count=10` each - now reports `OVERLAP: 0` in `tests/test_batch_pool.py`,
+        where a barrier makes the race deterministic instead of occasional. A frame the model finds
+        nothing in finishes with `box_count=0` and is not picked up again by the next task
+      - **not covered here:** the 100-frame run uses an injected stub detector, so it proves the queue
+        and not the weights. The real-inference path is `tests/test_detect_real.py`, which skips without
+        `ultralytics` on this workstation
 - [ ] **P3-02** Statistics dashboard · @chemflowers · closes AC-19, AC-20, AC-21 · done when the four
       charts render from `/api/stats/*`, the basis switch changes both the figures and the caption,
       and the empty site shows an empty state rather than a blank chart
