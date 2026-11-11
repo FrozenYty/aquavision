@@ -1,5 +1,15 @@
 ## 2026-11-11
 
+- **`P3-16` is ticked and `P3-05` is down to one thing.** The rollback API is merged, so the canvas is
+  no longer waiting on the server for anything; what is left there is the version panel, and the task now
+  says so instead of naming a blocker that has been cleared. The delivered box carries the evidence -
+  both routes, the shared conversion helper, the nine tests - and the remaining box carries what the new
+  panel itself must prove, including a state-by-event matrix of its own and the requirement that a
+  refused rollback leaves the canvas untouched.
+- **Two notes were rewritten in place rather than left to be discovered.** A task whose blocker is gone
+  but whose text still says "blocked" costs the next reader the same investigation that found it, and the
+  plan is the one document everybody reads first.
+
 - **`P3-05` is unblocked.** Its rollback half needed an API that returns a frame's review versions and
   restores one of them, and `P3-16` delivered both. The material was already there and no storage was
   added: `review` has always written the complete before/after box list into `sys_log`, so the timeline
