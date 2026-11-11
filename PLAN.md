@@ -277,7 +277,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P3-13** Scheduled capture · @Gtechson · closes AC-06 · there is no timer anywhere in the system
       yet: done when a schedule of N captures every M minutes produces exactly N batches, a run whose
       device is unavailable is marked failed with a reason, and the schedule survives a restart
-- [ ] **P3-14** Result export · @chemflowers · closes AC-14 · done when a result set exports as CSV with
+- [x] **P3-14** Result export · @chemflowers · closes AC-14 · done when a result set exports as CSV with
       one row per box, the row count equals the page's count, and Chinese class names open correctly in
       Excel — the encoding is the part that usually breaks
       - escaping is tested as a pure function: a class name or note containing a comma, a double quote and

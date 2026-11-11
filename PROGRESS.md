@@ -1,12 +1,13 @@
 ## 2026-11-11
 
-- **`P3-14` in part: the result detail page exports its boxes as CSV.** One row per box listed on the page,
+- **`P3-14` done: the result detail page exports its boxes as CSV.** One row per box listed on the page,
   the server's field names as the header plus a Chinese class name and review status, UTF-8 with a byte-order
   mark and CRLF so Excel reads the Chinese. Escaping is a pure function in `web/static/js/csv.js`, and
   `tests/test_result_csv.py` writes with it under Node and reads back with Python's `csv` module: a comma, a
   quote, a newline and Chinese all survive. An empty result says so and makes no file; the filename carries the
   frame id and a UTC time, and a demo export is marked `-mock`. Checked on the real server: 4 rows, 4 objects
-  from the API, ids in the same order. Not ticked: nobody has opened the file in Excel yet.
+  from the API, ids in the same order. The last criterion, Chinese class names opening correctly in Excel,
+  was checked by opening a real-data export in Excel, so `P3-14` is ticked.
 - **`P3-05` in part: the review canvas zooms, and every gesture has a defined answer to every event.** Zoom
   (50% to 400%, buttons, keys, Ctrl + wheel at the pointer) changes the stage's real width inside a scrolling
   viewport, never a CSS transform, so one tested function, `toImageCoords`, converts pointer positions at any
