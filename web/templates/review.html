@@ -29,11 +29,15 @@
               <button class="btn btn-outline-primary" id="tool-undo" type="button" title="撤销上一步" disabled>撤销</button>
             </div>
             <select class="form-select form-select-sm w-auto" id="class-select" aria-label="类别"></select>
-            <span class="av-mono small text-secondary" title="原型不做缩放">100%</span>
+            <div class="btn-group btn-group-sm" role="group" aria-label="缩放">
+              <button class="btn btn-outline-secondary" id="zoom-out" type="button" title="缩小（-）" aria-label="缩小">−</button>
+              <button class="btn btn-outline-secondary av-mono" id="zoom-reset" type="button" title="回到适应宽度（0）">100%</button>
+              <button class="btn btn-outline-secondary" id="zoom-in" type="button" title="放大（+）" aria-label="放大">+</button>
+            </div>
             <span class="ms-auto small">计数 <strong class="av-mono" id="count-change">—</strong></span>
           </div>
-          <div id="canvas" class="av-empty">正在载入…</div>
-          <div class="small text-secondary mt-2">选中框后拖动可移动，拖四角手柄可调整大小；改类别用上方下拉框。</div>
+          <div id="viewport" class="av-empty">正在载入…</div>
+          <div class="small text-secondary mt-2">选中框后拖动可移动，拖四角手柄可调整大小；改类别用上方下拉框。按住 Ctrl 滚动滚轮缩放；拖动中按 Esc 撤回这一次拖动。</div>
         </section>
       </div>
       <div class="col-xl-4">
@@ -52,6 +56,8 @@
     import * as api from "../static/js/api.js";
     import { confirmAction, loadInto, toast } from "../static/js/ui.js";
     import { CLASSES, boxHtml, pictureHtml, statusBadge } from "../static/js/boxes.js";
+    import { MIN_BOX, ZOOM_STEPS, anchorScroll, drawBox, moveBox, nextZoom, resizeBox, toImageCoords }
+      from "../static/js/canvas.js";
 
     renderShell();
 
@@ -59,7 +65,6 @@
     const MODIFIED = 2;
     const CONFIRMED = 1;
     const HANDLES = ["nw", "ne", "sw", "se"];
-    const clamp = (v) => Math.min(1, Math.max(0, v));
 
     let frameId = null;
     let imageUrl = "";
@@ -68,21 +73,28 @@
     let selected = null;
     let mode = "select";
     let previous = null; // one step of undo, not a stack (prototype §3)
+    let zoom = 1;
+    // The gesture in progress: { id, kind: "draw" | "move" | a corner, start, from, undoBefore, moved }.
+    let drag = null;
 
     $("class-select").innerHTML = Object.entries(CLASSES)
       .map(([code, name]) => `<option value="${code}">${name}</option>`).join("");
 
     const find = (id) => objects.find((o) => o.object_id === id);
+    const stage = () => $("canvas");
 
     function remember() {
       previous = structuredClone(objects);
       $("tool-undo").disabled = false;
     }
 
+    // Only the box layer is redrawn; the picture stays put, so it never reloads mid-drag and never has
+    // a zero height at the moment a pointer position is read.
     function render() {
-      $("canvas").className = `av-stage is-editing${mode === "draw" ? " is-drawing" : ""}`;
-      $("canvas").innerHTML = pictureHtml(imageUrl) + objects.map(boxHtml).join("");
-      const box = selected && $("canvas").querySelector(`.av-box[data-id="${selected}"]`);
+      if (!$("box-layer")) return;
+      stage().classList.toggle("is-drawing", mode === "draw");
+      $("box-layer").innerHTML = objects.map(boxHtml).join("");
+      const box = selected && $("box-layer").querySelector(`.av-box[data-id="${selected}"]`);
       if (box) {
         box.classList.add("is-selected");
         box.insertAdjacentHTML("beforeend", HANDLES.map((h) => `<span class="av-handle" data-h="${h}"></span>`).join(""));
@@ -114,7 +126,7 @@
     }
 
     function removeSelected() {
-      if (!selected) return;
+      if (!selected || drag) return; // not while a box is being dragged
       // Deleting is destructive for the reviewer's session, so it asks first (SRS §5.1).
       if (!confirmAction("删除选中的框？提交复核后，这一框会被标为已驳回。")) return;
       remember();
@@ -123,23 +135,76 @@
       render();
     }
 
-    // Pointer position in normalised image coordinates.
-    function point(event) {
-      const r = $("canvas").getBoundingClientRect();
-      return { x: clamp((event.clientX - r.left) / r.width), y: clamp((event.clientY - r.top) / r.height) };
+    // The picture counts as there only once it has decoded: before that the stage may still have a
+    // height (a broken-image strip, say) but it is not the frame, so a box drawn on it would be wrong.
+    // Without an image the placeholder has its own 16:9 size and is ready at once.
+    function pictureReady() {
+      const img = stage()?.querySelector("img");
+      return Boolean(stage()) && (!img || (img.complete && img.naturalWidth > 0));
     }
 
-    let drag = null;
+    // Pointer position in normalised image coordinates, or null while the picture is not ready.
+    function point(event) {
+      if (!pictureReady()) return null;
+      return toImageCoords(event.clientX, event.clientY, stage().getBoundingClientRect());
+    }
 
-    $("canvas").addEventListener("pointerdown", (event) => {
-      if (!frameId) return;
+    // ---- Zoom: the stage's width changes inside the scrolling viewport ----
+    function setZoom(next, anchor) {
+      if (!stage() || drag) return; // a zoom mid-gesture would move the picture under the pointer
+      const level = Math.min(ZOOM_STEPS.at(-1), Math.max(ZOOM_STEPS[0], next));
+      const view = $("viewport").getBoundingClientRect();
+      const at = anchor ?? { x: view.left + view.width / 2, y: view.top + view.height / 2 };
+      const before = stage().getBoundingClientRect();
+      zoom = level;
+      stage().style.width = `${zoom * 100}%`;
+      const { dx, dy } = anchorScroll(at.x, at.y, before, stage().getBoundingClientRect());
+      $("viewport").scrollLeft += dx;
+      $("viewport").scrollTop += dy;
+      $("zoom-reset").textContent = `${Math.round(zoom * 100)}%`;
+      $("zoom-in").disabled = zoom >= ZOOM_STEPS.at(-1);
+      $("zoom-out").disabled = zoom <= ZOOM_STEPS[0];
+    }
+
+    $("zoom-in").onclick = () => setZoom(nextZoom(zoom, 1));
+    $("zoom-out").onclick = () => setZoom(nextZoom(zoom, -1));
+    $("zoom-reset").onclick = () => setZoom(1);
+
+    // Ctrl + wheel (a trackpad pinch arrives as one) zooms at the pointer; a plain wheel scrolls.
+    $("viewport").addEventListener("wheel", (event) => {
+      if (!event.ctrlKey || !stage()) return;
+      event.preventDefault();
+      setZoom(nextZoom(zoom, event.deltaY < 0 ? 1 : -1), { x: event.clientX, y: event.clientY });
+    }, { passive: false });
+
+    // ---- Gestures ----
+    // Puts the boxes back as they were when the gesture began, and the undo step with them.
+    function cancelDrag() {
+      if (!drag) return;
+      const kind = drag.kind;
+      objects = previous;
+      previous = drag.undoBefore;
+      $("tool-undo").disabled = !previous;
+      drag = null;
+      if (kind === "draw") {
+        selected = null;
+        return setMode("select");
+      }
+      render();
+    }
+
+    $("viewport").addEventListener("pointerdown", (event) => {
+      if (drag || event.button !== 0) return; // one gesture at a time
       const p = point(event);
+      if (!frameId || !p) return; // nothing loaded yet: ignore rather than guess
+      const undoBefore = previous;
       if (mode === "draw") {
+        if (!event.target.closest("#canvas")) return; // a new box starts on the picture, not beside it
         remember();
         const id = Math.max(0, ...objects.map((o) => o.object_id)) + 1;
         objects.push({ object_id: id, class_code: $("class-select").value, confidence: 1, is_manual: 1,
           review_status: MODIFIED, x: p.x, y: p.y, w: 0, h: 0 });
-        drag = { id, kind: "draw", start: p };
+        drag = { id, kind: "draw", start: p, undoBefore, moved: false };
         selected = id;
       } else {
         const boxEl = event.target.closest(".av-box");
@@ -147,50 +212,47 @@
         const id = Number(boxEl.dataset.id);
         if (id !== selected) select(id);
         remember();
-        drag = { id, kind: event.target.dataset.h ?? "move", start: p, from: { ...find(id) } };
+        drag = { id, kind: event.target.dataset.h ?? "move", start: p, from: { ...find(id) }, undoBefore, moved: false };
       }
-      $("canvas").setPointerCapture(event.pointerId);
+      $("viewport").setPointerCapture(event.pointerId);
     });
 
-    $("canvas").addEventListener("pointermove", (event) => {
+    $("viewport").addEventListener("pointermove", (event) => {
       if (!drag) return;
       const p = point(event);
+      if (!p) return;
       const o = find(drag.id);
-      const f = drag.from;
       const dx = p.x - drag.start.x;
       const dy = p.y - drag.start.y;
-      if (drag.kind === "draw") {
-        Object.assign(o, { x: Math.min(p.x, drag.start.x), y: Math.min(p.y, drag.start.y),
-          w: Math.abs(dx), h: Math.abs(dy) });
-      } else if (drag.kind === "move") {
-        o.x = clamp(Math.min(f.x + dx, 1 - f.w));
-        o.y = clamp(Math.min(f.y + dy, 1 - f.h));
-      } else {
-        // Resize from a corner: the opposite corner stays put.
-        const left = drag.kind.endsWith("w") ? f.x + dx : f.x;
-        const right = drag.kind.endsWith("e") ? f.x + f.w + dx : f.x + f.w;
-        const top = drag.kind.startsWith("n") ? f.y + dy : f.y;
-        const bottom = drag.kind.startsWith("s") ? f.y + f.h + dy : f.y + f.h;
-        Object.assign(o, { x: clamp(Math.min(left, right)), y: clamp(Math.min(top, bottom)),
-          w: Math.abs(right - left), h: Math.abs(bottom - top) });
-      }
+      if (drag.kind === "draw") Object.assign(o, drawBox(drag.start, p));
+      else if (drag.kind === "move") Object.assign(o, moveBox(drag.from, dx, dy));
+      else Object.assign(o, resizeBox(drag.from, drag.kind, dx, dy)); // a corner handle
       o.review_status = MODIFIED;
+      drag.moved = true;
       render();
     });
 
-    $("canvas").addEventListener("pointerup", () => {
-      if (drag?.kind === "draw") {
+    $("viewport").addEventListener("pointerup", () => {
+      if (!drag) return;
+      if (drag.kind === "draw") {
         const o = find(drag.id);
-        if (o.w < 0.01 || o.h < 0.01) {
-          objects = objects.filter((b) => b !== o); // a click, not a drag: no box
-          selected = null;
-        }
-        setMode("select");
+        if (o.w < MIN_BOX || o.h < MIN_BOX) return cancelDrag(); // a click, not a drag: no box
+        drag = null;
+        return setMode("select");
+      }
+      // A click on a box selects it; that is not an edit, so it does not spend the undo step.
+      if (!drag.moved) {
+        objects = previous;
+        previous = drag.undoBefore;
+        $("tool-undo").disabled = !previous;
       }
       drag = null;
+      render();
     });
+    $("viewport").addEventListener("pointercancel", cancelDrag);
 
     $("objects").addEventListener("click", (event) => {
+      if (drag) return;
       const row = event.target.closest(".av-object-row");
       if (!row) return;
       const id = Number(row.dataset.id);
@@ -201,7 +263,7 @@
     });
 
     $("class-select").addEventListener("change", () => {
-      if (!selected) return;
+      if (!selected || drag) return;
       remember();
       Object.assign(find(selected), { class_code: $("class-select").value, review_status: MODIFIED });
       render();
@@ -212,6 +274,7 @@
     $("btn-add").onclick = $("tool-draw").onclick;
     $("tool-delete").onclick = removeSelected;
     $("tool-undo").onclick = () => {
+      if (drag || !previous) return;
       objects = previous;
       previous = null;
       selected = null;
@@ -220,10 +283,20 @@
     };
 
     document.addEventListener("keydown", (event) => {
-      if (event.target.closest("select, input")) return;
+      if (event.target instanceof Element && event.target.closest("select, input")) return;
+      if (event.key === "Escape") {
+        // Esc takes back the gesture in progress; otherwise it leaves the draw tool, then the selection.
+        if (drag) return cancelDrag();
+        if (mode === "draw") return setMode("select");
+        return select(null);
+      }
+      if (drag) return; // every other key waits until the gesture ends
       if (event.key === "Delete" || event.key === "Backspace") removeSelected();
-      if (event.key === "v" || event.key === "Escape") setMode("select");
+      if (event.key === "v") setMode("select");
       if (event.key === "b") { selected = null; setMode("draw"); }
+      if (event.key === "+" || event.key === "=") setZoom(nextZoom(zoom, 1));
+      if (event.key === "-") setZoom(nextZoom(zoom, -1));
+      if (event.key === "0") setZoom(1);
     });
 
     // The box list is what the server stored after the submit, not what the page last held: the server
@@ -238,6 +311,7 @@
     }
 
     $("btn-submit").onclick = async () => {
+      if (drag) return;
       const button = $("btn-submit");
       button.disabled = true;
       try {
@@ -264,17 +338,26 @@
       return { frame, boxes: data.items };
     }
 
-    loadInto($("canvas"), fetchFrame, {
+    loadInto($("viewport"), fetchFrame, {
       isEmpty: (data) => data === null,
       empty: '还没有任何帧可以复核。先去 <a href="capture.html">采集控制</a> 采一帧。',
       render: ({ frame, boxes: all }) => {
         frameId = frame.frame_id;
         imageUrl = frame.image_url ?? "";
+        $("viewport").className = "av-viewport";
+        $("viewport").innerHTML = `<div id="canvas" class="av-stage is-editing">${pictureHtml(imageUrl)}` +
+          '<div id="box-layer" class="av-box-layer"></div></div>';
+        // A picture that fails to load gives way to the placeholder, so the boxes can still be reviewed.
+        stage().querySelector("img")?.addEventListener("error", (event) => {
+          event.target.outerHTML = pictureHtml("");
+          toast("帧画面加载失败，检测框按坐标画在占位区域上", "warning");
+        }, { once: true });
         const boxes = all.filter((box) => box.review_status !== 3); // rejected boxes are kept, not shown
         objects = boxes;
         initialCount = boxes.length;
         $("frame-id").textContent = frame.frame_id;
         $("btn-back").href = `result-detail.html?id=${encodeURIComponent(frame.frame_id)}`;
+        setZoom(1);
         // Open on the box most likely to be wrong: the lowest confidence.
         const doubtful = [...boxes].sort((a, b) => a.confidence - b.confidence)[0];
         select(doubtful?.object_id ?? null);

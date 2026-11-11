@@ -888,6 +888,26 @@ body {
   gap: var(--av-space-3);
 }
 
+/* Review canvas: the viewport scrolls, and zoom changes the stage's real width inside it (never a
+   transform), so the stage's bounding box is always the picture as drawn. */
+.av-viewport {
+  overflow: auto;
+  max-height: 70vh;
+  border-radius: var(--av-radius);
+  background: var(--av-abyss);
+  overscroll-behavior: contain;
+}
+
+.av-viewport > .av-stage {
+  margin: 0 auto;
+  border-radius: 0;
+}
+
+.av-box-layer {
+  position: absolute;
+  inset: 0;
+}
+
 .av-stage.is-editing {
   touch-action: none;
 }
