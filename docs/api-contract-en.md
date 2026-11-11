@@ -109,6 +109,7 @@ the number of routes is a consequence, not a target.
 | PATCH | `/api/species/{class_code}` | Update a species threshold | FR-M6-04 | P0 |
 | GET | `/api/params` | System parameters | FR-M7-01 | P1 |
 | PATCH | `/api/params` | Update system parameters | FR-M7-01 | P1 |
+| POST | `/api/demo/reset` | Reset business data for a rehearsal | FR-M7-01 | P1 |
 | GET | `/api/monitor` | Runtime monitoring | FR-M8-01 | P1 |
 | GET | `/api/messages` | In-app messages | FR-M8-02 | P2 |
 | POST | `/api/messages/{id}/read` | Mark a message read | FR-M8-02 | P2 |
@@ -266,6 +267,34 @@ also carry `splits` with the per-split frame counts; the export response adds `g
 `PATCH` takes any subset of these keys and returns `{ "params": { ... }, "changed": { ... } }`:
 `params` is the full set, and `changed` names each key that changed with its before and after value.
 Every change is also written to the audit log (AC-27).
+
+### Demo reset
+
+```
+POST /api/demo/reset        (administrator only; the deployment must set AV_DEMO_ENABLED=1)
+
+→ {
+  "deleted": {
+    "detect_object": 34, "detect_task_item": 20, "detect_task": 2, "report": 1,
+    "dataset_item": 12, "dataset": 1, "train_experiment": 3, "sys_message": 4,
+    "sys_log": 57, "media_asset": 12
+  },
+  "frame_files_removed": 12,
+  "model_online": "v8n-E0-exploratory"
+}
+```
+
+One call returns the system to the state a rehearsal starts from. The business rows are deleted in
+foreign-key-safe order and the files under `<AV_DATA_DIR>/frames/` are removed with them; every table
+touched reports its count, so an operator can see the reset instead of trusting a boolean. Two things
+are deliberately kept: `model_version` (a rehearsal with no online model would answer "model weights
+not registered" on its first capture) and `species_dict` (detection checks the model's class order
+against it). `sys_user` and `sys_param` stay as well - deleting the caller's account mid-request would
+be a lockout, not a reset.
+
+The route is administrator-only. When `AV_DEMO_ENABLED` is off it answers `40401` with the message
+"demo mode is not enabled", not `403`: a data-destroying endpoint does not need to be discoverable.
+`model_online` is the version name left online, or `null` when no model is registered.
 
 ## 7. WebSocket protocol
 

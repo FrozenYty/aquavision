@@ -144,6 +144,8 @@ export const resetPassword = (id, password) =>
 export const getParams = () => request("GET", "/params");
 export const updateParams = (body) => request("PATCH", "/params", { body });
 export const getMonitor = () => request("GET", "/monitor");
+// Demo mode: delete the business data in one action (administrator only; 40401 when demo mode is off).
+export const demoReset = () => request("POST", "/demo/reset");
 export const listLogs = (query) => request("GET", "/logs", { query });
 export const listMessages = () => request("GET", "/messages");
 export const markRead = (id) => request("POST", `/messages/${id}/read`);

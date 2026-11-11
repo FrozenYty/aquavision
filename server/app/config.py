@@ -53,6 +53,10 @@ class Settings(BaseSettings):
         default=1.0, ge=0.05, validation_alias="AV_WORKER_POLL_SECONDS"
     )
 
+    # Demo mode (P3-06). Off by default because its one action deletes the business data: turning it
+    # on is a deployment decision, not something a fresh clone gets by accident.
+    demo_enabled: bool = Field(default=False, validation_alias="AV_DEMO_ENABLED")
+
     @property
     def jwt_secret_is_default(self) -> bool:
         """True when nobody has set a real secret — surfaced by /api/health, never silently."""

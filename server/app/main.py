@@ -46,6 +46,7 @@ from app.routers import (
     auth,
     capture,
     datasets,
+    demo,
     detect,
     experiments,
     hard_samples,
@@ -77,6 +78,7 @@ ROUTERS = (
     models.router,
     species.router,
     system.router,
+    demo.router,
 )
 
 
@@ -214,7 +216,7 @@ def create_app() -> FastAPI:
                 "database": database,
                 # Included routers are nested, so counting `app.routes` counts wrappers.
                 "routes": sum(len(router.routes) for router in ROUTERS) + 1,
-                "contract_routes": 44,
+                "contract_routes": 45,
                 "jwt_secret_is_default": settings.jwt_secret_is_default,
             }
         )

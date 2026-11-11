@@ -1,5 +1,28 @@
 ## 2026-11-11
 
+- **Demo mode exists, and the destructive endpoint is hard to fire by accident.** `POST /api/demo/reset`
+  is admin-only and gated on `AV_DEMO_ENABLED`, which defaults to off; when it is off the route answers
+  **404, not 403** - a data-wiping endpoint should not tell a prober it exists. The gate runs before the
+  role check, so a non-admin on a disabled deployment also gets the 404 rather than learning there is
+  something behind the door.
+- **The reset reports what it deleted instead of a boolean.** Per-table counts, the number of image files
+  actually unlinked, and the model still online. The keep-list is deliberate and commented: `model_version`
+  (a rehearsal whose first capture answers the "no model weights registered" reason is the
+  opposite of rehearsal-ready),
+  `species_dict` (detection validates the model's class order against it), `sys_user` and `sys_param`
+  (deleting the caller's account mid-request is a lockout, not a reset).
+- **A file another process still holds cannot fail a reset that has already committed** - the unlink
+  count only counts what was really removed, so nothing is reported as deleted that is still on disk.
+- **Prototype mode is whole again.** `?mock=1` answered neither review-version route, so the version
+  panel showed a load failure there. The mock now keeps a per-tab timeline of the reviews the tab itself
+  submitted and answers both routes from it - an empty list for a tab that reviewed nothing, not fixture
+  entries dressed up as history. A reset makes lists empty for the first time, which exposed three id
+  generators that assumed a non-empty list; they no longer produce negative ids.
+- **Known boundary, recorded rather than hidden:** the reset does not stop the running worker, so it
+  assumes a rehearsal starts from a still system. Resetting mid-batch can leave the worker writing rows
+  it just deleted. That is outside this change; `P3-12` failure and recovery is where it belongs if it
+  ever bites.
+
 - **`P3-05` is ticked. The three tasks I opened this session around the review flow are now all closed** -
   the acceptance that exposed the pool defect, the decision that fixed it, the versions and rollback API
   it needed, and the panel that uses them.

@@ -125,7 +125,7 @@ def test_every_contract_route_is_mounted(client):
     present = _mounted_operations(mounted)
     missing = sorted(contract - present)
     assert not missing, f"契约里有、服务端没挂载: {missing}"
-    assert len(contract) == 44
+    assert len(contract) == 45
     # `/api/health` publishes the contract size as `contract_routes`. Tying it to the table here is the
     # point: it was hardcoded and stayed at 42 while the contract grew to 44, and nothing noticed.
     health = client.get("/api/health").json()["data"]
@@ -140,7 +140,7 @@ def test_health_answers_in_the_envelope(client):
     body = response.json()
     assert body["code"] == 0
     assert body["data"]["database"] == "ok"
-    assert body["data"]["routes"] >= 44
+    assert body["data"]["routes"] >= 45
     assert body["request_id"].startswith("req-")
 
 

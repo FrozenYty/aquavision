@@ -45,14 +45,30 @@ const saved = (() => {
     return {};
   }
 })();
-const captured = saved.frames ?? [];
-const REVIEWS = saved.reviews ?? {};
-const VERSIONS = saved.versions ?? {};
+// A demo reset is a state of its own: the tab has deleted its business data and must not restore it
+// - or the seeded demo rows - on the next page load. Accounts, species, model versions and parameters
+// stay, exactly as the contract's reset promises.
+let demoResetApplied = saved.demo_reset === true;
+const captured = demoResetApplied ? [] : (saved.frames ?? []);
+const REVIEWS = demoResetApplied ? {} : (saved.reviews ?? {});
+const VERSIONS = demoResetApplied ? {} : (saved.versions ?? {});
+// One entry per submit or rollback this tab made, per frame; the version panel reads it (api-contract §6).
+const TIMELINE = demoResetApplied ? {} : (saved.timeline ?? {});
 FRAMES.unshift(...captured);
-if (saved.tasks) TASKS.splice(0, TASKS.length, ...saved.tasks);
-const removedHard = new Set(saved.removed_hard ?? []);
-if (saved.datasets) DATASETS.splice(0, DATASETS.length, ...saved.datasets);
-if (saved.reports) REPORTS.splice(0, REPORTS.length, ...saved.reports);
+if (demoResetApplied) {
+  FRAMES.length = 0;
+  TASKS.length = 0;
+  REPORTS.length = 0;
+  DATASETS.length = 0;
+  EXPERIMENTS.length = 0;
+  MESSAGES.length = 0;
+  LOGS.length = 0;
+} else {
+  if (saved.tasks) TASKS.splice(0, TASKS.length, ...saved.tasks);
+  if (saved.datasets) DATASETS.splice(0, DATASETS.length, ...saved.datasets);
+  if (saved.reports) REPORTS.splice(0, REPORTS.length, ...saved.reports);
+}
+const removedHard = new Set(demoResetApplied ? [] : (saved.removed_hard ?? []));
 if (saved.models) MODELS.splice(0, MODELS.length, ...saved.models);
 if (saved.species) SPECIES.splice(0, SPECIES.length, ...saved.species);
 
@@ -62,6 +78,8 @@ function persist() {
         frames: captured,
         reviews: REVIEWS,
         versions: VERSIONS,
+        timeline: TIMELINE,
+        demo_reset: demoResetApplied,
         tasks: TASKS,
         removed_hard: [...removedHard],
         datasets: DATASETS,
@@ -157,6 +175,67 @@ function findSession(id) {
   return session;
 }
 
+// ---- Review timeline and demo reset: the tab's own record, never a fixture -----------------------
+
+let logSequence = Math.max(
+  0,
+  ...LOGS.map((row) => row.log_id),
+  ...Object.values(TIMELINE).flat().map((entry) => entry.log_id),
+);
+
+// One recorded review, with the box lists it was recorded from. Nothing is invented: the GET route
+// lists only what a review or rollback on this tab actually wrote, so an untouched tab stays empty.
+function recordReview(frameId, action, before, after) {
+  logSequence += 1;
+  (TIMELINE[frameId] ??= []).push({
+    log_id: logSequence,
+    frame_id: frameId,
+    action,
+    created_at: new Date().toISOString(),
+    author: "演示账号",
+    before: structuredClone(before),
+    after: structuredClone(after),
+  });
+}
+
+// The same set of boxes, order and object ids aside, at the precision the columns store - the rule
+// the server applies when it refuses a rollback to the set the frame already has.
+const boxSignature = (box) =>
+  [box.class_code, box.confidence, box.x, box.y, box.w, box.h]
+    .map((value, i) => (i === 0 ? String(value) : Number(value).toFixed(5)))
+    .join("|");
+
+function sameBoxes(a, b) {
+  const keys = (boxes) => boxes.map(boxSignature).sort();
+  return JSON.stringify(keys(a)) === JSON.stringify(keys(b));
+}
+
+// Every box the tab currently stores: reviewed sets, plus the detected boxes of frames not reviewed yet.
+function objectCount() {
+  return FRAMES.reduce(
+    (sum, frame) => sum + (REVIEWS[frame.frame_id] ?? detectedObjects(frame)).length,
+    0,
+  );
+}
+
+// Wipe the tab's business data and remember that it is wiped, so a reload does not restore it.
+function resetDemo() {
+  for (const key of Object.keys(REVIEWS)) delete REVIEWS[key];
+  for (const key of Object.keys(VERSIONS)) delete VERSIONS[key];
+  for (const key of Object.keys(TIMELINE)) delete TIMELINE[key];
+  captured.length = 0;
+  FRAMES.length = 0;
+  TASKS.length = 0;
+  REPORTS.length = 0;
+  DATASETS.length = 0;
+  EXPERIMENTS.length = 0;
+  MESSAGES.length = 0;
+  LOGS.length = 0;
+  removedHard.clear();
+  demoResetApplied = true;
+  persist();
+}
+
 const ROUTES = {
   // Demo mode accepts any non-empty account; the real lockout and audit live on the server.
   "POST /auth/login": ({ body }) => {
@@ -237,28 +316,80 @@ const ROUTES = {
   },
 
   // Body { objects, note }: the full box list after review (api-contract §6); the reply is the contract's.
+  // The submission also records the timeline entry the review page's version panel reads.
   "POST /review/frames/{id}": ({ id, body }) => {
     if (!Array.isArray(body?.objects)) throw new Fail(40001, "缺少复核结果");
     const before = REVIEWS[id] ?? detectedObjects(findFrame(id));
     const kept = new Set(body.objects.map((b) => b.object_id));
-    REVIEWS[id] = body.objects;
+    const after = structuredClone(body.objects);
+    REVIEWS[id] = after;
     VERSIONS[id] = (VERSIONS[id] ?? 1) + 1;
+    recordReview(id, "submit", before, after);
     persist();
     return {
       frame_id: id,
       version_no: VERSIONS[id],
-      object_count: body.objects.length,
+      object_count: after.length,
       hard_sample: true,
       rejected: before.filter((b) => !kept.has(b.object_id)).length,
-      added: body.objects.filter((b) => b.is_manual).length,
+      added: after.filter((b) => b.is_manual).length,
       note: body.note ?? null,
+    };
+  },
+
+  // The frame's review timeline from this tab's own recorded reviews, newest first. A frame with no
+  // review answers an empty list; the counts come from the stored lists, not from today's boxes.
+  "GET /review/frames/{id}/versions": ({ id }) => {
+    findFrame(id);
+    const items = [...(TIMELINE[id] ?? [])]
+      .sort((a, b) => b.log_id - a.log_id)
+      .map((entry) => ({
+        log_id: entry.log_id,
+        action: entry.action,
+        created_at: entry.created_at,
+        author: entry.author,
+        before_count: entry.before.length,
+        after_count: entry.after.length,
+      }));
+    return { frame_id: id, items };
+  },
+
+  // Restore one recorded set as a new version; the timeline is appended to, never rewritten. A target
+  // equal to the current set is refused as a no-op, and another frame's entry is refused, like the server.
+  "POST /review/frames/{id}/rollback": ({ id, body }) => {
+    const frame = findFrame(id);
+    const logId = Number(body?.log_id);
+    const entry = Object.values(TIMELINE).flat().find((row) => row.log_id === logId);
+    if (!entry) throw new Fail(40401, "复核记录不存在");
+    if (entry.frame_id !== id) throw new Fail(40901, "该复核记录属于另一帧，不能用于回滚");
+    const current = REVIEWS[id] ?? detectedObjects(frame);
+    if (sameBoxes(entry.after, current)) throw new Fail(40901, "该版本与当前结果相同，无需回滚");
+    const rejected = current.filter(
+      (box) => !entry.after.some((target) => target.object_id === box.object_id),
+    ).length;
+    const added = entry.after.filter(
+      (box) => !current.some((now) => now.object_id === box.object_id),
+    ).length;
+    const restored = structuredClone(entry.after);
+    REVIEWS[id] = restored;
+    VERSIONS[id] = (VERSIONS[id] ?? 1) + 1;
+    recordReview(id, "rollback", current, restored);
+    persist();
+    return {
+      log_id: logId,
+      frame_id: id,
+      version_no: VERSIONS[id],
+      object_count: restored.length,
+      hard_sample: true,
+      rejected,
+      added,
     };
   },
 
   // The server takes { asset_count, conf_thr, ... }; frame_ids is sent too and ignored there.
   "POST /detect/batches": ({ body }) => {
     if (!(body?.asset_count >= 1)) throw new Fail(40001, "请至少选择一帧");
-    const id = Math.max(...TASKS.map((t) => t.task_id)) + 1;
+    const id = Math.max(0, ...TASKS.map((t) => t.task_id)) + 1;
     const task = {
       task_id: id,
       task_code: `DT${new Date().toISOString().slice(2, 10).replaceAll("-", "")}-${String(id).padStart(4, "0")}`,
@@ -306,6 +437,26 @@ const ROUTES = {
     );
     Object.assign(PARAMS, body);
     return { params: PARAMS, changed };
+  },
+
+  // Demo reset for the prototype tab: the business rows and the seeded demo rows go, while accounts,
+  // species, model versions and parameters stay. The counts are what was actually removed; the online
+  // model's name is read before the wipe.
+  "POST /demo/reset": () => {
+    const deleted = {
+      media_asset: FRAMES.length,
+      detect_object: objectCount(),
+      detect_task: TASKS.length,
+      report: REPORTS.length,
+      dataset: DATASETS.length,
+      train_experiment: EXPERIMENTS.length,
+      sys_message: MESSAGES.length,
+      sys_log: LOGS.length,
+    };
+    const frameFilesRemoved = FRAMES.length;
+    const modelOnline = MODELS.find((model) => model.is_online)?.version_name ?? null;
+    resetDemo();
+    return { deleted, frame_files_removed: frameFilesRemoved, model_online: modelOnline };
   },
 
   // Monitoring: queue counts from the task list, the rest fixed (the server measures the disk).
@@ -376,7 +527,7 @@ const ROUTES = {
   "POST /reports": ({ body }) => {
     if (!body?.period_start || !body?.period_end) throw new Fail(40001, "请选择统计周期");
     if (body.period_end < body.period_start) throw new Fail(40002, "结束日期不能早于开始日期");
-    const id = Math.max(...REPORTS.map((r) => r.report_id)) + 1;
+    const id = Math.max(0, ...REPORTS.map((r) => r.report_id)) + 1;
     const code = `RP${new Date().toISOString().slice(2, 10).replaceAll("-", "")}-${String(id).padStart(3, "0")}`;
     const report = {
       report_id: id,
@@ -409,7 +560,7 @@ const ROUTES = {
     const val = Math.round((frames * ratios[1]) / 10);
     const test = Math.round((frames * ratios[2]) / 10);
     const ds = {
-      dataset_id: Math.max(...DATASETS.map((d) => d.dataset_id)) + 1,
+      dataset_id: Math.max(0, ...DATASETS.map((d) => d.dataset_id)) + 1,
       snapshot_name: body.snapshot_name,
       split_ratio: body.split_ratio,
       seed: body.seed,

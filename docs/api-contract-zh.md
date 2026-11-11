@@ -109,6 +109,7 @@ GET /api/frames?page=1&size=24&site=A3&start=2026-11-01&end=2026-11-03
 | PATCH | `/api/species/{class_code}` | 修改分类别阈值 | FR-M6-04 | P0 |
 | GET | `/api/params` | 系统参数 | FR-M7-01 | P1 |
 | PATCH | `/api/params` | 修改系统参数 | FR-M7-01 | P1 |
+| POST | `/api/demo/reset` | 为演练重置业务数据 | FR-M7-01 | P1 |
 | GET | `/api/monitor` | 运行监控 | FR-M8-01 | P1 |
 | GET | `/api/messages` | 站内消息 | FR-M8-02 | P2 |
 | POST | `/api/messages/{id}/read` | 标记消息已读 | FR-M8-02 | P2 |
@@ -245,6 +246,31 @@ POST /api/review/frames/{frame_id}/rollback
 
 `PATCH` 接受其中任意子集，返回 `{ "params": { ... }, "changed": { ... } }`：`params` 是完整的一组，
 `changed` 列出每个发生变化的键及其前后值。每次改动同样写入审计日志（AC-27）。
+
+### 演示模式重置
+
+```
+POST /api/demo/reset        （仅管理员；部署须设置 AV_DEMO_ENABLED=1）
+
+→ {
+  "deleted": {
+    "detect_object": 34, "detect_task_item": 20, "detect_task": 2, "report": 1,
+    "dataset_item": 12, "dataset": 1, "train_experiment": 3, "sys_message": 4,
+    "sys_log": 57, "media_asset": 12
+  },
+  "frame_files_removed": 12,
+  "model_online": "v8n-E0-exploratory"
+}
+```
+
+一次调用把系统恢复到演练的起点。业务行按外键安全顺序删除，`<AV_DATA_DIR>/frames/` 下的文件一并移除；
+每张被清空的表都报告条数，操作员看到的是实际发生的事，而不是一个布尔值。有两类数据刻意保留：
+`model_version`——演练若没有在线模型，第一次采集就会得到「模型权重未注册」，这与演练就绪正好相反；
+`species_dict`——识别会用模型类别顺序与它校验。`sys_user` 与 `sys_param` 同样保留：在请求中途删掉调用者
+自己的账号不是重置，而是把人锁在门外。
+
+路由仅管理员可用。`AV_DEMO_ENABLED` 关闭时返回 `40401` 与「演示模式未开启」，而不是 `403`：会删数据的
+接口不需要可被发现。`model_online` 是保持在线模型的名字，没有登记模型时为 `null`。
 
 ## 七、WebSocket 协议
 
