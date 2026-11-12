@@ -65,7 +65,9 @@ def _app_client(tmp_path, monkeypatch, timezone: str):
         )
         session.commit()
 
-    with TestClient(app) as test_client:
+    # The capture routes accept only the local machine (FR-M1-02, P3-20), so this client says
+    # where it is instead of relying on the test runner's default address.
+    with TestClient(app, client=("127.0.0.1", 50000)) as test_client:
         yield test_client
     get_settings.cache_clear()
 

@@ -73,6 +73,8 @@ def reset_password(user_id: int, body: ResetBody, db: SessionDep) -> dict[str, o
     row.salt = salt
     row.fail_count = 0
     row.locked_until = None
+    # NFR-S-05: every token issued under the old password stops working now, not in eight hours.
+    row.token_epoch = int(row.token_epoch or 0) + 1
     # The password itself never reaches the log — the action is what gets recorded.
     db.add(
         SysLog(
