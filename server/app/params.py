@@ -55,7 +55,18 @@ PARAMETERS: dict[str, Bounds] = {
 }
 
 _lock = threading.Lock()
-_cache: dict[str, tuple[float, int]] = {}
+#: (database, parameter) -> (monotonic read time, value). The database is part of the key because one
+#: process can talk to more than one: the test suite does, and so does a developer running it beside the
+#: application. Keyed by the parameter alone, one database's limit would be handed to another for the
+#: length of the TTL - a wrong answer with no error to notice.
+_cache: dict[tuple[str, str], tuple[float, int]] = {}
+
+
+def _scope(session_factory: sessionmaker) -> str:
+    """Which database this factory talks to, as a cache key."""
+    bind = getattr(session_factory, "kw", {}).get("bind")
+    url = getattr(bind, "url", None)
+    return str(url) if url is not None else repr(bind)
 
 
 def effective(session_factory: sessionmaker, key: str, settings: Settings | None = None) -> int:
@@ -66,9 +77,10 @@ def effective(session_factory: sessionmaker, key: str, settings: Settings | None
     stop the queue, which is the failure the range exists to prevent.
     """
     bounds = PARAMETERS[key]  # KeyError for a key that is not editable: a code mistake, not input
+    scope = _scope(session_factory)
     now = time.monotonic()
     with _lock:
-        cached = _cache.get(key)
+        cached = _cache.get((scope, key))
         if cached is not None and now - cached[0] < CACHE_TTL_SECONDS:
             return cached[1]
 
@@ -94,7 +106,7 @@ def effective(session_factory: sessionmaker, key: str, settings: Settings | None
                 )
 
     with _lock:
-        _cache[key] = (time.monotonic(), value)
+        _cache[(scope, key)] = (time.monotonic(), value)
     return value
 
 
