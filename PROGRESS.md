@@ -119,6 +119,23 @@
   before green: with the claim check removed the acceptance test reports "2 tasks ran at once under a
   limit of 1", and every other test in the file fails against the old behaviour - the capture verdict
   taken from the start-up setting, the range accepted silently, the cache never expiring.
+- **The permission matrix is now a table in a test, and the first thing it caught was a missing guard.**
+  `tests/test_permission_matrix.py` derives (method, path, allowed roles) from SRS Table 2-1's four
+  role profiles, FR-M1-02's "algorithm and configuration endpoints are restricted to the engineer and
+  administrator", and the three restrictions the contract states in words; then it points that table at
+  the running application for all four roles. Both directions are asserted - a refused pair must answer
+  403 with `40301`, an allowed one must answer anything but 401 or 403 - because a guard that refuses
+  everything would pass the negative half alone. `DELETE /api/hard-samples/{frame_id}` had no guard at
+  all: an observer could take a frame out of the sample library, which Table 2-1 gives to the analyst
+  and the engineer. It now carries `SAMPLE_ROLES`, and the matrix reports that as
+  `observer was not refused DELETE /api/hard-samples/missing: 404` when the guard is removed again.
+- **The expectations were written before the guards were read, and that is the whole method.** A table
+  generated from `require(...)` would only prove the code equals itself; this one was written from the
+  documents and then collided with the code. Two drift alarms come with it: every route the application
+  mounts must have a row in the table (a new endpoint without one fails the test), and every refusal
+  must leave exactly one `forbidden` row in `sys_log`, which is FR-M1-02's processing step and not a
+  substitute for the permission assertion. The reverse direction was shown too - guarding
+  `GET /api/frames` to admin-only makes the matrix name the three roles it refuses.
 
 ## 2026-11-11
 

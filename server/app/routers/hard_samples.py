@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 
 from app import serializers
-from app.deps import SessionDep, UserDep, get_current_user
+from app.deps import SessionDep, UserDep, get_current_user, require
 from app.envelope import NOT_FOUND, ApiError, ok
 from app.models import DetectObject, MediaAsset, SysLog
 
@@ -21,6 +21,12 @@ router = APIRouter(
 
 #: Why a frame is in the pool, in the order the interface shows them.
 REASONS = ("low_conf", "modified", "inconsistent")
+
+#: Who may take a frame out of the pool. Reading it is open to every signed-in user, like the review
+#: timeline; removing an example writes to the sample library, which SRS Table 2-1 gives the analyst
+#: and the engineer, and FR-M4-03 gathers "for the algorithm staff to handle first". The collector's
+#: profile names capture, jobs and results, not the library - so this route needed a guard.
+SAMPLE_ROLES = ("analyst", "algo", "admin")
 
 
 @router.get("")
@@ -55,7 +61,7 @@ def list_samples(
     return ok({"items": items, "total": total, "page": page, "size": size})
 
 
-@router.delete("/{frame_id}")
+@router.delete("/{frame_id}", dependencies=[Depends(require(*SAMPLE_ROLES))])
 def remove_sample(frame_id: str, db: SessionDep, user: UserDep) -> dict[str, object]:
     rows = db.scalars(
         select(DetectObject).where(DetectObject.frame_id == frame_id, DetectObject.hard_flag == 1)
