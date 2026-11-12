@@ -280,6 +280,16 @@
   to lane A: it is the file lifecycle of the data root, which is lane A's, and not database logic. Load
   is level again: A 12, B 12, C 10, D 10.
 
+- **The runbook exists, and it is a record of what actually went wrong rather than a tidy sequence.**
+  `docs/runbook-{en,zh}.md`, indexed in both languages: deploy from a clone, build the inference
+  environment, back up and restore both halves of the state, rotate the JWT secret, survive a schema
+  change, read the log, and recover a queue. Each section carries the trap rather than the happy path -
+  `VACUUM INTO` instead of copying a live database, the temporary-directory permission failure that made
+  `venv` fail, `YOLO_CONFIG_DIR` writing a settings directory into the repository root, and the column
+  that `create_all` will not add, together with the misleading message it produces.
+- **It says what it cannot cover, on purpose.** No migration mechanism, no second application process,
+  no hardware, no training - each named with where that knowledge lives instead. A runbook that implies
+  more than it knows is worse than a short one.
 ## 2026-11-11
 
 - **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint
