@@ -147,9 +147,29 @@ def monitor(request: Request, db: SessionDep, settings: SettingsDep) -> dict[str
             "请查看服务日志并重启服务。"
         )
 
+    finished = (
+        db.scalar(
+            select(func.count(DetectTask.task_id)).where(
+                DetectTask.status.in_((2, 3, 4))  # done, failed, cancelled
+            )
+        )
+        or 0
+    )
+    failed = db.scalar(select(func.count(DetectTask.task_id)).where(DetectTask.status == 3)) or 0
+    # FR-M8-01 names the job failure rate; it is a percentage of the tasks that have finished, because
+    # a queue of new work would otherwise read as a healthy rate simply by being large.
+    failure_rate = round(failed / finished * 100, 1) if finished else 0.0
+
     data_dir = Path(settings.data_dir)
     usage = shutil.disk_usage(data_dir if data_dir.exists() else Path("."))
     percent = round(usage.used / usage.total * 100, 1)
+    level = "crit" if percent >= 90 else "warn" if percent >= 75 else "ok"
+    note = (
+        None
+        if level == "ok"
+        else f"磁盘占用 {percent}%，请清理过期帧或扩容；低于 90% 前该告警不会消失"
+    )
+
     return ok(
         {
             "queue": {"queued": queued, "running": running},
@@ -158,8 +178,10 @@ def monitor(request: Request, db: SessionDep, settings: SettingsDep) -> dict[str
                 "used_gb": round(usage.used / 1024**3, 2),
                 "total_gb": round(usage.total / 1024**3, 2),
                 "percent": percent,
-                "level": "crit" if percent >= 90 else "warn" if percent >= 75 else "ok",
+                "level": level,
+                "note": note,
             },
+            "failure_rate": failure_rate,
             "worker": worker,
             # The limit in force, not the one the process started with: the page reads this figure
             # back and must not be told a number the queue is not honouring (ADR 15).

@@ -23,6 +23,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.models import DetectObject, DetectTask, DetectTaskItem, MediaAsset
+from app.notify import LEVEL_WARN, notify
 
 log = logging.getLogger("aquavision.worker")
 
@@ -106,11 +107,11 @@ def process_task(
         if task is None or task.status not in (QUEUED, RUNNING):
             return
         if detector is None:
-            _finish(session, task, FAILED, reason)
+            _finish(session, task, FAILED, reason, session_factory)
             return
 
         if _item_count(session, task_id) == 0:
-            _finish(session, task, DONE, None)
+            _finish(session, task, DONE, None, session_factory)
             return
 
         run = _runner(detector, task)
@@ -171,7 +172,7 @@ def process_task(
                 _fail_item(session, item_id)
                 task = session.get(DetectTask, task_id)
                 if task is not None and task.status != CANCELLED:
-                    _finish(session, task, FAILED, str(exc) or type(exc).__name__)
+                    _finish(session, task, FAILED, str(exc) or type(exc).__name__, session_factory)
                 return
 
             if on_progress is not None:
@@ -179,7 +180,7 @@ def process_task(
 
         session.refresh(task)
         if task.status != CANCELLED:
-            _finish(session, task, DONE, None)
+            _finish(session, task, DONE, None, session_factory)
 
 
 def _running_count(session_factory: sessionmaker) -> int:
@@ -392,10 +393,28 @@ def _sync_progress(session: Session, task: DetectTask) -> None:
     task.obj_count = int(boxes)
 
 
-def _finish(session: Session, task: DetectTask, status: int, reason: str | None) -> None:
+def _finish(
+    session: Session,
+    task: DetectTask,
+    status: int,
+    reason: str | None,
+    session_factory: sessionmaker | None = None,
+) -> None:
     task.status = status
     task.error_msg = reason[:512] if reason else None
     task.finished_at = datetime.now(UTC).replace(tzinfo=None)
     if status == DONE:
         task.progress = 100
     session.commit()
+    if status == FAILED and session_factory is not None:
+        # FR-M8-02's job-failure event. One message per task, and a retry that fails for the same
+        # reason inside the hour adds nothing - the operator already has it.
+        notify(
+            session_factory,
+            msg_type="task_failed",
+            level=LEVEL_WARN,
+            title=f"识别任务 {task.task_code} 失败",
+            content=reason,
+            ref_type="detect_task",
+            ref_id=str(task.task_id),
+        )

@@ -28,6 +28,7 @@ from app import serializers, timebase
 from app.deps import SessionDep, SettingsDep, UserDep, get_current_user, only_local
 from app.envelope import BAD_PARAM, INTERNAL, NOT_FOUND, ApiError, ok
 from app.models import MediaAsset, SysLog
+from app.notify import LEVEL_WARN, notify
 from app.params import effective
 from app.vision.quality import score_frame
 
@@ -155,7 +156,17 @@ def grab_frame(
         relative = _write(stored, digest, Path(settings.data_dir), body.point_code, session_id)
     except OSError as err:
         # The frame is not in the database yet, so nothing is left half-stored; the caller is told
-        # which resource refused the write and what to do about it.
+        # which resource refused the write and what to do about it. The operator also gets a message
+        # (FR-M8-02): a disk that fills during a run otherwise shows up only as red frames.
+        notify(
+            request.app.state.session_factory,
+            msg_type="capture_failed",
+            level=LEVEL_WARN,
+            title="采集失败：帧未能写入磁盘",
+            content=str(err),
+            ref_type="capture_session",
+            ref_id=session_id,
+        )
         raise _storage_error(err) from err
     # The threshold in force, read here rather than at start-up: an operator who lowers it expects the
     # next frame to be judged by the new one (ADR 15).
