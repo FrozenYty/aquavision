@@ -73,6 +73,13 @@ weights load and produce the boxes the API reports. If they pass, detection work
   just created. Python gives a temporary directory owner-only permissions, and a sandboxed or restricted
   process is not that owner, so pointing `TMP` elsewhere does not help. Run the install with the access
   it asks for instead of working around it.
+- **A camera that opens from one interpreter and not another.** On the machine this was written on, the
+  device opens from the Anaconda environment and fails from any virtual environment built on top of it,
+  with **byte-identical OpenCV files** loaded from the same directory - so the difference is the process,
+  not the wheel, and swapping the OpenCV build does not fix it. The practical consequence for a live
+  demonstration: check that the interpreter which will serve the socket is one that can open the camera,
+  because a live capture with no detection and a detection with no live capture are both half a
+  demonstration.
 - `ultralytics` writing its settings directory into the **current** directory when the user config
   directory is not writable, which puts `Ultralytics/` at the repository root. Set `YOLO_CONFIG_DIR` to a
   writable path outside the repository before running it; the directory is also git-ignored, so a stray

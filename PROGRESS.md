@@ -374,6 +374,24 @@
   script exits 1 with `mismatch: sys_user has 13 columns, the dictionary says 14`, so the existing
   acceptance check had been noticing the stale schema all along; what was missing was the fix.
 
+- **I was wrong about the camera, and the correction is more useful than the mistake.** I recorded that
+  this machine has no usable camera; it does. `MF200 Camera` is present and `scripts/test_exposure.py
+  --index 1` passes on it: 1920x1080 over DirectShow, exposure controllable, 0.1% frame-to-frame spread,
+  5.0 fps. My error was testing index 0 - the configured default, which is the laptop camera - and
+  generalising from one index.
+- **Chasing it turned up a reproducible trap worth more than the original claim.** A camera that opens
+  from the Anaconda environment fails from **any** virtual environment built on it, back to back in the
+  same process with the same environment variables, and **with the same OpenCV files loaded from the
+  conda directory**. So it is the process and not the wheel: swapping `opencv-python` for
+  `opencv-python-headless` changed nothing, adding the conda DLL directories to `PATH` changed nothing,
+  and a brand-new environment behaved like the old one. The two OpenCV builds do conflict when both are
+  installed - one uninstall broke `cv2` entirely, because both write the same directory - but that is a
+  separate defect from this one.
+- **The consequence is a real constraint on the demonstration, not a footnote.** The camera works in the
+  environment that has no `ultralytics`, and detection works in the environment that has no camera, so
+  **no single interpreter here can both capture live and draw boxes**. `P2-13` and `GATE P2` need one, and
+  the two ways to get it are a decision rather than a discovery: install the inference stack into the
+  environment that can see the camera, or find the venv cause.
 ## 2026-11-11
 
 - **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint
