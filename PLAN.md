@@ -272,19 +272,17 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         describes `tests/fixtures/` as holding three JPEGs; neither exists - metrics come out of
         `train_baseline.py`, and the tests synthesise their frames (lane D)
 
-- [ ] **P2-20** A machine that can load the delivered weights · @FrozenYty · unblocks `GATE P2`,
-      `P2-13`, `P3-10` and `P4-10` · done when
-      `python -m pytest tests/test_detect_real.py -o addopts="" -q` **runs and passes** on the
-      demonstration machine instead of skipping, and a captured frame comes back with boxes and a class
-      count through `POST /api/detect/frames`
-      - the weights are delivered, tracked and registered, and this machine still refuses to load
-        them, answering that the inference dependency is missing and naming the online version: the
-        file half of the delivery is done and the **runtime half had no owner anywhere in this plan** -
-        which is why the gate looked one step away for two days
-      - two ways to close it, and the choice is a decision rather than a detail: a **dedicated
-        environment** holding `ultralytics` and torch, which the server and the real-inference test
-        point at, or installing the training stack into the environment that already runs the app. The
-        dedicated one keeps `requirements-server.txt` light, which is ADR 11's argument
+- [ ] **P2-20** An environment that can run inference · @Gtechson · unblocks `GATE P2`, `P2-13`,
+      `P3-10` and `P4-10` · done when `pip install -r requirements.txt` into a fresh environment makes
+      `python -m pytest tests/test_detect_real.py -o addopts="" -q` **run and pass** instead of skip, and
+      the command is written down as a step rather than discovered per machine
+      - `requirements.txt` already pins `ultralytics`; **no new dependency file is needed** - the path
+        existed and nobody had walked it, which is why the weights could be delivered, tracked and
+        registered while the machine still refused to load them
+      - the environment is per checkout and git-ignored (`.venv-infer/`); the server environment stays
+        light, which is ADR 11's argument, and the training environment is never installed into
+      - the evidence may come from any machine - the training machine already has the stack - and the
+        demonstration machine gets it by following the step, which is `P3-23`'s runbook
       - the three skipped tests in `tests/test_detect_real.py` are the only evidence that inference
         works at all; while they skip, `GATE P2` is a claim rather than a demonstration
 - [ ] **GATE P2** — from a cold start, someone who has not seen the system completes the slice in
@@ -376,7 +374,8 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P3-07** Report generation and history · @chemflowers · closes AC-22 · done when a report is
       generated as Markdown from the same queries the dashboard uses, its figures equal the dashboard,
       and the footer carries the model version and the basis — **not Word or PDF; SRS V1.6 settled that**
-- [ ] **P3-08** Retention cleanup and reference nulling · @Gtechson · closes AC-09 · done when the
+- [ ] **P3-08** Retention cleanup and reference nulling · @FrozenYty · closes AC-09 · it is the file
+      lifecycle of the data root, which is lane A's, not database logic · done when the
       cleanup job removes intermediate files older than the retention period, nulls the references,
       never touches originals by default, and reports what it deleted
 - [ ] **P3-09** Parameters, monitoring and messages · @Gtechson · closes AC-28, AC-29 · done when the

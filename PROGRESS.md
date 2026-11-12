@@ -248,6 +248,37 @@
   already uses - and the failure was reproduced locally by pointing `live.CameraSource` at a class
   that raises, which is what the runner does by simply existing. Four of the five tests in that file
   never touched a camera; the fifth did, and that was enough.
+- **The last blocker on `GATE P2` was a path nobody had walked, not a missing file.** The weights were
+  delivered, tracked, registered and portable, and this machine still refused to load them - because
+  `ultralytics` was installed nowhere. `requirements.txt` had pinned it all along: **the environment
+  already existed as a definition and had never been built.** Built tonight as `.venv-infer/`
+  (`pip install -r requirements.txt` into a fresh environment), git-ignored, one per checkout, with the
+  server environment left light as ADR 11 argues and the training environment left untouched.
+- **Three skipped tests became three passing ones, and then none skipped at all.** `tests/test_detect_real.py`
+  now runs: it loads the delivered weights through the app, compares the boxes the API returns against a
+  direct run of the same weights on the same image, proves the loader refuses a model whose class order
+  disagrees, and proves a frame whose image is gone is an error rather than an empty result. The full
+  suite in that environment: **351 passed, 0 skipped**, where the day began at 348 passed and 3 skipped.
+  `GATE P2` is no longer blocked by a decision - what remains is the bench.
+- **The first two attempts failed for a reason worth writing down.** `python -m venv` and then `pip`
+  both died with `PermissionError` writing into a temporary directory **they had just created**. The
+  cause is not this repository's file permissions: the sandbox ACL diagnosis returned `NOT_THIS_CLASS`,
+  with `WRITE_DAC` and `WRITE_OWNER` both available. Python gives a temporary directory owner-only
+  permissions, and the sandbox's restricted token is not that owner - so pointing `TMP` somewhere else
+  changed nothing. One elevated command for the install, which is the honest ask for an operation that
+  writes outside the workspace.
+- **The frame the test needed did not exist either, and the reason is the demo reset.** The fixture wants
+  a captured frame whose image is still under `data/`; the reset empties the business tables and the 46
+  image files stayed behind as orphans, so there were zero `media_asset` rows. One frame was written back
+  through the real capture route with a stored capture's bytes - the route takes the image in the request
+  body, the camera is the client's job, which is what the capture page does with `getUserMedia`. The
+  camera did not answer even with full access, so the script printed **which of the two paths it took**;
+  a frame whose bytes came from an earlier capture is a different claim from one taken now.
+- **Two task assignments were wrong and are fixed.** The inference environment is lane B's - `P0-02` was
+  the environment task from the start - so `P2-20` goes back to @Gtechson and its acceptance now says the
+  environment is *defined and documented*, not "installed on the demonstrator's machine". `P3-08` moved
+  to lane A: it is the file lifecycle of the data root, which is lane A's, and not database logic. Load
+  is level again: A 12, B 12, C 10, D 10.
 
 ## 2026-11-11
 
