@@ -312,6 +312,18 @@
   frame enters a detection batch because `create_batch` never filters `quality_flag`, so AC-07's "stays out
   of the queue" half is false; a batch cannot be built from a selected set of frames, so AC-08's drill-down
   does not exist; and `species_dict.conf_thr` is still read by nothing.
+- **A rehearsal became a command.** `scripts/demo.py` runs the slice against a fresh scratch database and
+  prints a table with the numbers `P4-07` needs - frames captured, boxes, per-class counts, the statistics
+  total and the elapsed time of each step - plus one machine-readable summary line the test asserts on. It
+  creates the database by running the real `init_db.py` as a subprocess rather than copying its logic, so
+  the driver breaks when seeding breaks.
+- **It refuses to flatter the data.** Every recorded frame on this machine scores between 15 and 51 against
+  a threshold of 60, so the run it was delivered with reports **zero boxes**. The driver prints which frame
+  it used and why the count is what it is instead of picking a frame that looks good; a rehearsal that only
+  works on chosen images is not a rehearsal.
+- **What it does not cover is written down, not implied**: the thirteen pages in a browser, the batch
+  worker, review submission and the demo reset stay with `P4-07`. A driver that claimed the whole
+  demonstration would be the kind of claim this repository has spent the day removing.
 ## 2026-11-11
 
 - **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint
