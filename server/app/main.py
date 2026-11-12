@@ -20,7 +20,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import InterfaceError, OperationalError, SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -180,6 +180,27 @@ def create_app() -> FastAPI:
     @app.exception_handler(ApiError)
     async def on_api_error(_: Request, exc: ApiError) -> JSONResponse:
         return JSONResponse(status_code=exc.status, content=build(exc.code, exc.message))
+
+    @app.exception_handler(OperationalError)
+    @app.exception_handler(InterfaceError)
+    async def on_database_unavailable(_: Request, exc: Exception) -> JSONResponse:
+        """A database that cannot be reached is not an unknown bug: say so, and name what to fix.
+
+        `OperationalError` is what sqlite and PostgreSQL raise when the database cannot be opened or a
+        connection drops mid-request; `InterfaceError` is the driver's "connection is closed". Before
+        this handler they fell through to the generic 500 and the caller read "服务器内部错误", which
+        tells an operator nothing about the database. The traceback still goes to the log; the caller
+        gets the contract's server-error code and the setting to check.
+        """
+        log.exception("database unavailable", exc_info=exc)
+        return JSONResponse(
+            status_code=STATUS[INTERNAL],
+            content=build(
+                INTERNAL,
+                "数据库无法连接，本次请求没有完成。请确认数据库已启动、DB_DSN 指向正确的地址，"
+                "然后重试。",
+            ),
+        )
 
     @app.exception_handler(RequestValidationError)
     async def on_validation(_: Request, exc: RequestValidationError) -> JSONResponse:

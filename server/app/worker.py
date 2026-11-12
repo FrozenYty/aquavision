@@ -232,6 +232,16 @@ class Worker:
         for thread in self._threads:
             thread.join(timeout=5)
 
+    @property
+    def alive(self) -> bool:
+        """Whether any pool thread is still running; a stopped or killed pool answers False.
+
+        This is the process-side fact `/api/monitor` reports: when no thread is alive, a task row that
+        still says running has nothing behind it, and the operator is told so instead of watching a
+        progress bar that will never move.
+        """
+        return any(thread.is_alive() for thread in self._threads)
+
     def _loop(self) -> None:
         while not self._stop.is_set():
             try:

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import errno
 import hashlib
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -25,7 +26,7 @@ from sqlalchemy import func, select
 
 from app import serializers
 from app.deps import SessionDep, SettingsDep, UserDep, get_current_user
-from app.envelope import BAD_PARAM, NOT_FOUND, ApiError, ok
+from app.envelope import BAD_PARAM, INTERNAL, NOT_FOUND, ApiError, ok
 from app.models import MediaAsset, SysLog
 from app.vision.quality import score_frame
 
@@ -147,7 +148,12 @@ def grab_frame(
         # Idempotent by content: the second post returns the first row instead of duplicating it.
         return ok(serializers.frame(existing), message="同一帧已存在")
 
-    relative = _write(stored, digest, Path(settings.data_dir), body.point_code, session_id)
+    try:
+        relative = _write(stored, digest, Path(settings.data_dir), body.point_code, session_id)
+    except OSError as err:
+        # The frame is not in the database yet, so nothing is left half-stored; the caller is told
+        # which resource refused the write and what to do about it.
+        raise _storage_error(err) from err
     verdict_ok = quality.score >= settings.quality_threshold
     asset = MediaAsset(
         frame_id=_frame_id(captured_at, digest),
@@ -281,6 +287,27 @@ def _reencode(raw: bytes) -> np.ndarray:
     return cv2.imdecode(buffer, cv2.IMREAD_COLOR)
 
 
+def _storage_error(err: OSError) -> ApiError:
+    """The operator's sentence for a frame that could not be written, and the action that fixes it.
+
+    The reason is kept rather than flattened into the generic 500: "disk full" and "the data directory
+    is not writable" are different chores, and neither is fixed by retrying the same click.
+    """
+    if err.errno == errno.ENOSPC:
+        problem = "磁盘空间不足"
+        action = "请清理磁盘空间，或把 AV_DATA_DIR 换到有空间的目录"
+    elif err.errno in (errno.EACCES, errno.EPERM, errno.EROFS):
+        problem = "数据目录不可写"
+        action = "请检查 AV_DATA_DIR 指向的目录权限"
+    else:
+        problem = "数据目录写入失败"
+        action = "请检查 AV_DATA_DIR 是否存在、磁盘是否已满"
+    return ApiError(
+        INTERNAL,
+        f"帧图像未能保存（{problem}），这一帧没有入库。{action}，然后重新采集这一帧。",
+    )
+
+
 def _write(stored: np.ndarray, digest: str, root: Path, site: str, session: str) -> str:
     """Write one frame where the data model says frames live.
 
@@ -288,12 +315,17 @@ def _write(stored: np.ndarray, digest: str, root: Path, site: str, session: str)
     function used to drop the site and the session and file everything under the day, which made the stored
     path disagree with `docs/data-model-en.md` §5 and put thousands of frames from different sessions in one
     folder.
+
+    OpenCV reports a write it could not finish by returning ``False``, not by raising. That must fail
+    here too: a row pointing at a file that was never written is worse than a refused capture.
     """
     day = datetime.now(UTC).strftime("%Y%m%d")
     folder = root / "frames" / site / day / session
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / f"{digest[:16]}.jpg"
-    cv2.imwrite(str(path), stored)
+    if not cv2.imwrite(str(path), stored):
+        path.unlink(missing_ok=True)
+        raise OSError(errno.EIO, "OpenCV could not write the frame image")
     return str(path.relative_to(root)).replace("\\", "/")
 
 
