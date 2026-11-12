@@ -32,7 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "server"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import register_model  # noqa: E402
-from app.db import Base, dsn_from_env, engine_from_dsn  # noqa: E402
+from app.db import Base, add_missing_columns, dsn_from_env, engine_from_dsn  # noqa: E402
 from app.models import EXPECTED_COLUMNS, ModelVersion, SpeciesDict, SysUser  # noqa: E402
 from app.security import hash_password  # noqa: E402
 from app.seed import SPECIES_SEED, seed_species  # noqa: E402
@@ -106,8 +106,11 @@ def init_db(dsn: str, admin_password: str | None = None) -> None:
     engine = engine_from_dsn(dsn)
 
     # The model is the DDL: create_all issues CREATE TABLE IF NOT EXISTS for
-    # each of the fourteen tables, so an existing schema is left alone.
+    # each of the fourteen tables. A *table* that is missing appears here; a **column** the models
+    # gained does not, and every query selecting it would fail with "no such column" (P3-25), so the
+    # missing columns are added next, in place, without touching a row.
     Base.metadata.create_all(engine)
+    added, refused = add_missing_columns(engine)
 
     with Session(engine) as session:
         inserted = seed_species(session)
@@ -123,6 +126,11 @@ def init_db(dsn: str, admin_password: str | None = None) -> None:
     print(f"database: {engine.url.render_as_string(hide_password=True)}")
     print(f"tables ({len(tables)}): {', '.join(tables)}")
     print(f"species seeded: {inserted} new, {len(codes)} total")
+    if added:
+        print(f"schema upgraded: {', '.join(added)} (existing rows kept)")
+    if refused:
+        for problem in refused:
+            print(f"  not upgraded: {problem}", file=sys.stderr)
     model_versions = register_delivered_versions(dsn)
     for name, path, online in model_versions:
         print(f"model version: {name} -> {path} ({'online' if online else 'candidate'})")
@@ -146,6 +154,7 @@ def init_db(dsn: str, admin_password: str | None = None) -> None:
         actual = len(inspector.get_columns(table))
         if actual != count:
             problems.append(f"{table} has {actual} columns, the dictionary says {count}")
+    problems.extend(refused)
     if problems:
         for problem in problems:
             print(f"  mismatch: {problem}", file=sys.stderr)
