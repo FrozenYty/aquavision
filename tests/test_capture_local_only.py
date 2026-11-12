@@ -12,6 +12,7 @@ endpoint receives 401, and a locality guard must not swallow that into a 403.
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 from app.config import get_settings
 from app.db import Base, engine_from_dsn
@@ -33,6 +34,24 @@ CAPTURE_CALLS = (
     ("POST", "/api/capture/sessions/s-1/frames"),
     ("POST", "/api/capture/sessions/s-1/close"),
 )
+
+
+class FakeSource:
+    """A camera that is always attached: the socket test must not depend on the runner's hardware.
+
+    CI has no camera, and the first CI run of this file failed exactly there - the server closed the
+    socket with capture-unavailable before `auth_ok`, and `receive_json` raised. Injecting the source
+    is the same seam `tests/test_ws_capture.py` uses.
+    """
+
+    def open(self) -> None:
+        pass
+
+    def read(self) -> np.ndarray:
+        return np.full((48, 64, 3), 120, dtype=np.uint8)
+
+    def close(self) -> None:
+        pass
 
 
 @pytest.fixture
@@ -131,7 +150,8 @@ def test_the_live_socket_is_refused_at_the_handshake_from_another_machine(app):
 
 
 def test_the_live_socket_still_serves_the_machine_it_runs_on(app):
-    """A local socket gets past the handshake and answers the auth message (or says why not)."""
+    """A local socket gets past the handshake and answers the auth message."""
+    app.state.frame_source = FakeSource()
     with TestClient(app, client=LOCAL) as client:
         headers = sign_in(client)
         with client.websocket_connect("/ws/capture") as socket:

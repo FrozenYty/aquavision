@@ -241,6 +241,14 @@
 - **Load is now level across the four lanes**: A 12, B 12, C 10, D 10. It was A 10, B 10, C 4, D 1, which
   meant two people carried three quarters of the remaining work and the frontend and verification lanes
   looked finished when they were not.
+- **A test that needs hardware the runner does not have fails only where nobody is looking.** The
+  first CI run of the capture-locality file failed in `Tests`: the socket test let the connection reach
+  the real camera, CI has none, so the server closed with capture-unavailable before `auth_ok` and
+  `receive_json` raised. The test now injects a frame source - the seam `tests/test_ws_capture.py`
+  already uses - and the failure was reproduced locally by pointing `live.CameraSource` at a class
+  that raises, which is what the runner does by simply existing. Four of the five tests in that file
+  never touched a camera; the fifth did, and that was enough.
+
 ## 2026-11-11
 
 - **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint
