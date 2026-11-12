@@ -116,6 +116,7 @@ y 55..62  TURB 12400                                  FRAMES 12
 | PC → | `CMD RESULT <score> <PASS\|RETAKE> <REASON>` | 要显示什么，仅在 CAPTURING 时有效；分数会被夹到 0–100 |
 | PC → | `CMD READY` | 回到空闲屏幕 |
 | PC → | `CMD PING` | 存活检查 |
+| PC → | `CMD SCAN` | 重新扫描 I2C 总线，报出每个应答的地址 |
 
 `REASON` 是一个 token：`LOW_LIGHT`、`BLUR`、`COLOR_CAST`、`NONE`、`UNKNOWN` 或 `NO_REPLY`。
 `NO_REPLY` 由装置自己生成，永远不会发给装置；`UNKNOWN` 是服务端在没有任何子分数能指出原因时发的
