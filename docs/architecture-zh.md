@@ -130,6 +130,7 @@ flowchart TD
 |---|---|---|
 | 原始帧 | `data/frames/<站点>/<年月日>/<会话>/<digest 前 16 位>.jpg` | 一天几千帧，按日与会话分目录。文件名是去重时算出的内容哈希前缀（AC-05），不是 `frame_id`；后者存在 `media_asset` 行里 |
 | 数据集清单 | `data/datasets/<快照名>/manifest.json` | 与数据库行并存的、给人看的副本；记录仍以行为准（FR-M4-04） |
+| 运行时参数 | `sys_param` | 操作员通过 `PATCH /api/params` 修改，并记录修改前后的审计值；消费方**在使用的那一刻**读，没有对应行时用 `Settings` 的默认值（ADR 15） |
 | 巡检报告 | `data/reports/<报告编号>.md` | 文档本身就是文件；历史与数字在 `report` 行里（FR-M5-04） |
 | 运行数据库 | SQLite 开发默认 `data/app.db`，或 `DB_DSN` 指定的服务器 | 一切需要检索的东西 |
 | 交付的模型权重 | 仓库根的 `models/<版本名>/`，纳入版本库：`best.pt`、`labels.txt`、`metrics.json` | ADR 13：交付物不能放在位置由配置决定的 `data/` 下；`model_version.weight_path` 相对仓库根解析 |

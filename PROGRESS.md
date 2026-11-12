@@ -168,6 +168,41 @@
   (no local database there means skip). It now skips with the command to run when the database serves
   no model, and still fails hard when two versions are online, because that one is the defect.
 
+- **The plan was audited against itself and did not pass its own rules.** `P4-05` named its owner as
+  "all", while §5 of the same file says one task has one owner - a rule the file had broken in the task
+  that closes defects. `P2-13` and `P4-04` carried two owners each, for the same reason. And `P3-21` and
+  `P3-22`, added this morning, had been inserted under the **P4** heading: I anchored the insert on
+  `P4-01` and dropped two P3 tasks into the closing phase, where nobody looking for breadth work would
+  find them.
+- **The most expensive gap was not a task with a wrong owner; it was work with no owner at all.** The
+  weights are delivered, tracked, registered and referenced by a portable path - and this machine still
+  refuses to load them, because the inference dependency is missing. `GATE P2`, the rehearsal, the
+  performance measurement and the same-frame comparison all wait on that one thing, and no line in the
+  plan named it. It is now `P2-20`, with the two ways to close it stated and the reason the dedicated
+  environment is the better one - it keeps `requirements-server.txt` light, which is ADR 11's argument.
+- **`GATE P2` now states its own prerequisites**, so it cannot read as closer than it is: the weights
+  tracked and registered, a machine that can load them, and real targets in front of the camera. Two of
+  those three were invisible when the line was written.
+- **The load was rebalanced without pretending a person can be in two places.** `P3-13` (scheduled
+  capture) moved to lane A, because a capture schedule belongs with the capture module and needs no model.
+  `P4-02` may be delivered one experiment per pull request rather than as a batch, `P4-04` can start as
+  soon as E0 is recorded, and `P4-08` is one repeat of E0's configuration rather than a new experiment.
+  The six training tasks stay with lane B: they are P4 work, and P4 does not run alongside P3.
+- **Two claims the audit had already disproved were still standing.** `P3-06` was recorded as closing
+  AC-36, though its tests cover the reset endpoint and prototype mode and not the live chain that AC-36
+  describes - it now says it *supports* AC-36, which `P2-13` and the gate close. `P3-09` still listed the
+  parameter behaviour in its own acceptance after `P3-19` delivered it.
+- **`P4-01` now separates the two E0s.** An exploratory baseline on a DUO subset is the version tracked in
+  the repository and it unblocked the slice; the official E0 is the frozen-dataset run whose numbers the
+  metrics table reports. Both are real, and leaving the distinction unstated would have made the metrics
+  table look like it describes the file in `models/`.
+- **And the architecture document did not mention `sys_param` at all**, in either language, while
+  parameters now take effect at runtime: the storage table gained the row that says where they live and
+  when they are read (ADR 15).
+- **The document check caught me doing the thing it was written to prevent.** The new `P2-20` text quoted
+  the Chinese error message verbatim inside an English document; `check-language.py` failed on it, and the
+  line now describes the message instead of copying it.
+
 ## 2026-11-11
 
 - **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint
