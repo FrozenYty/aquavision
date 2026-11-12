@@ -353,9 +353,20 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P3-10** Performance budget, measured · @FrozenYty · closes AC-34 · done when a committed script
       measures single-frame latency and the list endpoints' P90 against a database at design capacity,
       and the numbers are pasted into the pull request — a claim is not a measurement
-- [ ] **P3-11** The permission matrix, negatively tested · @Gtechson · closes AC-02 · done when a test
-      asserts 403 for every (role, guarded route) pair where access must be refused, and the list of
-      pairs lives in the test file rather than in someone's head
+- [x] **P3-11** The permission matrix, negatively tested · @Gtechson · closes AC-02 · **delivered
+      11-12**: `tests/test_permission_matrix.py` holds a (method, path, allowed roles) table derived
+      from SRS Table 2-1, FR-M1-02 and the contract's own sentences, and exercises all four roles
+      against every mounted route in both directions - a refused pair answers 403 with `40301`, an
+      allowed one never answers 401 or 403, so an implementation that refuses everything fails. Every
+      refusal must write exactly one `forbidden` row, and a route mounted without a row in the table
+      fails the test rather than escaping to the next audit
+      - the table collided with the code once: `DELETE /api/hard-samples/{frame_id}` had no guard, so
+        an observer could take a frame out of the sample library. Table 2-1 gives the library to the
+        analyst and the engineer and FR-M4-03 gathers it "for the algorithm staff", so the route now
+        carries `SAMPLE_ROLES`; without it the matrix reports `observer was not refused DELETE
+        /api/hard-samples/missing: 404`
+      - the other direction was shown as well: making `GET /api/frames` admin-only makes the same
+        test report `observer/analyst/algo was refused GET /api/frames`
 - [ ] **P3-12** Failure and recovery · @FrozenYty · covers the states between AC items · done when a
       killed worker, an unreachable database and a full disk each produce a message the operator can
       act on, instead of a blank page or a stuck spinner
