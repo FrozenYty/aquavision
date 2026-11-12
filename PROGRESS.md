@@ -136,6 +136,25 @@
   must leave exactly one `forbidden` row in `sys_log`, which is FR-M1-02's processing step and not a
   substitute for the permission assertion. The reverse direction was shown too - guarding
   `GET /api/frames` to admin-only makes the matrix name the three roles it refuses.
+- **The activation route got its first test, and it was an implementation nobody had called.**
+  `POST /api/models/{id}/activate` has carried the `404`/`409`/exclusivity rules since 11-10 and no
+  test ever touched it - `test_register_model.py` covers the script that writes rows, not the route
+  that changes which row is live. `tests/test_model_activation.py` now activates through the API and
+  holds the three sentences `PLAN.md` asks for: exactly one online row across two activations and a
+  rollback, a version missing `map50` or `map50_95` refused with `40901` and no audit row, and every
+  task carrying the version that was online when it was created - the last one asserted without torch,
+  because a batch task reads the online row at creation. Shown red first: with the route's exclusivity
+  and metrics rules switched off, the file reports two online rows (`assert ['v8n-E0-candidate',
+  'v8n-E1-candidate'] == ['v8n-E1-candidate']`) and a metrics-less version answering `200` where `409`
+  was expected.
+- **AC-23 asked for something the system never did, and the user decided which half to change.** The
+  SRS said "duplicate names refused"; `scripts/register_model.py` has updated in place since P2-06c,
+  its test asserts exactly that idempotency, and `scripts/init_db.py` registers the delivered version on
+  every run - so a refused duplicate would make a fresh install non-repeatable. **Decided: keep the
+  idempotent registration** and make AC-23 state the outcome it actually cares about: a version name
+  always has exactly one row, and registering an existing name updates it. The SRS moves to V1.13 in
+  both languages with a change-record row, the traceability pair follows the document number, and
+  `test_register_model.py` asserts the one-row claim rather than leaving it implied.
 
 ## 2026-11-11
 
