@@ -203,6 +203,27 @@
   the Chinese error message verbatim inside an English document; `check-language.py` failed on it, and the
   line now describes the message instead of copying it.
 
+- **The plan was topped up with work the system is actually missing, and each addition names the
+  evidence that makes it necessary.** Sixteen tasks, chosen for completeness and reliability rather than
+  volume, and every one carries a failable acceptance: a schema change that does not need a wipe
+  (`create_all` adds a missing *table* - the 13-to-14 change worked by that accident, and the next change
+  is a column, which it will not add); upload and input limits, because the capture route writes whatever
+  bytes arrive into a path built partly from request values and no maximum is stated; undo and keyboard
+  control on the review canvas, whose core interaction is mouse-only and whose mistaken drag is
+  unrecoverable until after submit; a page-by-page failure matrix, because the states `P2-12` added were
+  asserted per page and the pages have been rebuilt since; an operations runbook, a reconnecting rig link,
+  a frontend weight budget, a report preview, and a canvas that keeps its place across a reload.
+- **The verification lane gained the work it was always implicitly holding.** The four additions there
+  are the ones the 11-11 audit proved missing: a check that fails when any of the 36 acceptance items has
+  no ticked task or no test (14 of 36 were traced), the test-case document that still calls 21 already
+  ticked cases unimplemented, a defect log whose entries each name the test that fails if the defect
+  returns, and the thirteen traceability screenshots regenerated against the current build.
+- **The three gates now name who checks them.** §5.3 says a gate is checked by someone other than the
+  lane owner, and until now the gates had no owner at all - so the rule had nobody to hold. They belong
+  to the verification lane as the independent reader, which is also what makes the load even.
+- **Load is now level across the four lanes**: A 12, B 12, C 10, D 10. It was A 10, B 10, C 4, D 1, which
+  meant two people carried three quarters of the remaining work and the frontend and verification lanes
+  looked finished when they were not.
 ## 2026-11-11
 
 - **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint
