@@ -71,6 +71,7 @@ the number of routes is a consequence, not a target.
 | POST | `/api/auth/login` | Obtain a token | FR-M1-01 | P0 |
 | GET | `/api/auth/me` | Current user and role | FR-M1-01 | P0 |
 | GET | `/api/users` | Accounts | FR-M1-03 | P1 |
+| POST | `/api/users` | Create an account | FR-M1-03 | P1 |
 | POST | `/api/users/{id}/status` | Disable or restore an account | FR-M1-03 | P1 |
 | POST | `/api/users/{id}/reset-password` | Reset a password | FR-M1-03 | P1 |
 | GET | `/api/logs` | Operation log | FR-M1-04 | P1 |

@@ -135,7 +135,7 @@ def test_every_contract_route_is_mounted(client):
     documented_infrastructure = {("GET", "/api/health")}
     extra = sorted(present - contract - documented_infrastructure)
     assert not extra, f"服务端挂载了契约没有列出的接口: {extra}"
-    assert len(contract) == 45
+    assert len(contract) == 46
     # `/api/health` publishes the contract size as `contract_routes`. Tying it to the table here is the
     # point: it was hardcoded and stayed at 42 while the contract grew to 44, and nothing noticed.
     health = client.get("/api/health").json()["data"]
