@@ -102,6 +102,23 @@
   layout and clean-database tests failed, and the development-database test failed on that absolute
   path. `tests/test_detect_real.py`, which had been three skips on this workstation, now runs the
   delivered weights for real: **3 passed, none skipped**.
+- **A parameter nobody read now has an effect, and the value in force is the operator's.** `sys_param`
+  was written, audited and consulted by nobody: every consumer used `Settings`, fixed at process start,
+  so the parameters page edited a copy nothing read and `AC-27` was false while the whole suite passed.
+  `server/app/params.py` is now the one accessor - the stored value, the configured default when the row
+  is absent, a stated two-second TTL, and a range per parameter - and the consumers call it where the
+  decision is made: the worker at each claim, the capture route when it judges a frame, the camera when
+  it is opened, the live feed when a session starts. The limit is a claim gate rather than a pool size,
+  so lowering it stops new work at once and raising it starts more threads without a restart. The pool
+  never shrinks: an idle thread costs nothing, and shrinking would have to interrupt work in progress.
+- **The range is part of the decision, not a later refinement.** A concurrency of zero does not slow
+  detection down, it stops it, so one declaration is read by the page - refused with the project
+  envelope `40001`, and no row written - and by the accessor, which logs a stored value outside its
+  range and uses the configured default instead of obeying it. `retention_days` keeps no consumer until
+  `P3-08` reads it, and the pull request says so rather than calling the parameter live. Shown red
+  before green: with the claim check removed the acceptance test reports "2 tasks ran at once under a
+  limit of 1", and every other test in the file fails against the old behaviour - the capture verdict
+  taken from the start-up setting, the range accepted silently, the cache never expiring.
 
 ## 2026-11-11
 

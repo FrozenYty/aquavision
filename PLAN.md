@@ -418,13 +418,21 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         nothing in the process knew a zone
       - the work is the module ADR 14 names, not a patch at the filter: the statistics buckets, the
         report periods and the retention cutoff all use it, or they will disagree within the month
-- [ ] **P3-19** Parameters take effect at the next decision point · @Gtechson · with **ADR 15** · closes
-      AC-27 · done when a limit changed through the API binds a job created after the change and not one
-      created before, and an out-of-range value is refused at the page
-      - `sys_param` is written, audited and read by nobody; the consumers read `Settings` cached at
-        process start, so the page edits a copy nobody consults
-      - a concurrency of zero now genuinely stops detection, which is why the range check belongs in this
-        task and not in a later one
+- [x] **P3-19** Parameters take effect at the next decision point · @Gtechson · with **ADR 15** · closes
+      AC-27 · **delivered 11-12**: `server/app/params.py` is the one accessor - the stored value, the
+      configured default when the row is absent, a stated TTL, and a declared range per parameter, which
+      the page and the accessor both read. The worker decides at each claim how many tasks may run: with
+      the check removed `tests/test_params_live.py` reports
+      `AssertionError: 2 tasks ran at once under a limit of 1`, and with it in place the same test sees
+      one at a time while the tasks created before the change finish untouched. `quality_threshold` is
+      read when a frame is judged, `camera_index` when a device is opened, `detect_interval_ms` when the
+      live feed starts, and `/api/monitor` reports the limit in force rather than the start-up one. An
+      out-of-range value is refused with the project envelope (`40001`) and no row is written
+      - `sys_param` was written, audited and read by nobody; the consumers read `Settings` cached at
+        process start, so the page edited a copy nobody consults. The page's own toast already promised
+        that a change binds new jobs - until this delivery that sentence was false
+      - a concurrency of zero genuinely stops detection, so the range is enforced on write **and**
+        ignored on read, and `retention_days` has no consumer until `P3-08` reads it
 - [ ] **P3-20** Two gaps from the audit with no other home · @Gtechson
       - **capture endpoints are not restricted to the local process**, though FR-M1-02 says they "accept
         only the local process and are never exposed"; they are ordinary routes behind a JWT, so any

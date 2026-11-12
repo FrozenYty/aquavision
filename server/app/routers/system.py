@@ -24,30 +24,19 @@ from app.config import Settings
 from app.deps import SessionDep, SettingsDep, UserDep, get_current_user, require
 from app.envelope import CONFLICT, NOT_FOUND, ApiError, ok
 from app.models import DetectTask, MediaAsset, SysLog, SysMessage, SysParam
+from app.params import PARAMETERS, effective
 
 router = APIRouter(prefix="/api", tags=["system"], dependencies=[Depends(get_current_user)])
 
 
-#: The parameters that may be changed at runtime, and how their stored text is cast back.
-#: Anything not listed here is deployment configuration and stays in the environment.
-PARAMS: dict[str, type] = {
-    "retention_days": int,
-    "max_concurrency": int,
-    "detect_interval_ms": int,
-    "quality_threshold": int,
-    "camera_index": int,
-}
-
-
 def _current(db: Session, settings: Settings) -> dict[str, object]:
     """Defaults from the environment, overridden by rows. A row that vanished falls back again."""
-    values = {key: getattr(settings, key) for key in PARAMS}
+    values = {key: getattr(settings, key) for key in PARAMETERS}
     for row in db.scalars(select(SysParam)).all():
-        if row.param_key not in PARAMS:
+        if row.param_key not in PARAMETERS:
             continue
-        caster = PARAMS[row.param_key]
         try:
-            values[row.param_key] = caster(row.param_value)
+            values[row.param_key] = int(row.param_value)
         except (TypeError, ValueError):
             # A corrupt row must not take the settings page down with it.
             continue
@@ -60,11 +49,31 @@ def get_params(db: SessionDep, settings: SettingsDep) -> dict[str, object]:
 
 
 class ParamUpdate(BaseModel):
-    retention_days: int | None = Field(default=None, ge=1, le=3650)
-    max_concurrency: int | None = Field(default=None, ge=1, le=32)
-    detect_interval_ms: int | None = Field(default=None, ge=50, le=10000)
-    quality_threshold: int | None = Field(default=None, ge=0, le=100)
-    camera_index: int | None = Field(default=None, ge=0, le=9)
+    """The accepted range comes from `app.params`, where the accessor reads the same declaration.
+
+    A value outside it is refused here, with the project envelope, rather than stored and obeyed: a
+    concurrency of zero does not slow detection down, it stops it.
+    """
+
+    retention_days: int | None = Field(
+        default=None, ge=PARAMETERS["retention_days"].low, le=PARAMETERS["retention_days"].high
+    )
+    max_concurrency: int | None = Field(
+        default=None, ge=PARAMETERS["max_concurrency"].low, le=PARAMETERS["max_concurrency"].high
+    )
+    detect_interval_ms: int | None = Field(
+        default=None,
+        ge=PARAMETERS["detect_interval_ms"].low,
+        le=PARAMETERS["detect_interval_ms"].high,
+    )
+    quality_threshold: int | None = Field(
+        default=None,
+        ge=PARAMETERS["quality_threshold"].low,
+        le=PARAMETERS["quality_threshold"].high,
+    )
+    camera_index: int | None = Field(
+        default=None, ge=PARAMETERS["camera_index"].low, le=PARAMETERS["camera_index"].high
+    )
 
 
 @router.patch("/params", dependencies=[Depends(require("algo", "admin"))])
@@ -152,7 +161,11 @@ def monitor(request: Request, db: SessionDep, settings: SettingsDep) -> dict[str
                 "level": "crit" if percent >= 90 else "warn" if percent >= 75 else "ok",
             },
             "worker": worker,
-            "max_concurrency": settings.max_concurrency,
+            # The limit in force, not the one the process started with: the page reads this figure
+            # back and must not be told a number the queue is not honouring (ADR 15).
+            "max_concurrency": effective(
+                request.app.state.session_factory, "max_concurrency", settings
+            ),
             "at": serializers.iso(datetime.now(UTC)),
         }
     )

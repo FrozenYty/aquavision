@@ -7,8 +7,12 @@ so the tests can build a service over a fake transport without touching the app 
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+
+from sqlalchemy.orm import sessionmaker
 
 from app.config import Settings
+from app.params import effective
 from app.rig.link import RigLink
 from app.rig.service import RigService
 from app.vision.quality import Quality
@@ -16,7 +20,7 @@ from app.vision.quality import Quality
 log = logging.getLogger(__name__)
 
 
-def build_link(settings: Settings) -> RigLink | None:
+def build_link(settings: Settings, session_factory: sessionmaker | None = None) -> RigLink | None:
     """The link when a port is configured, otherwise None.
 
     None is the normal answer: a developer's machine, CI, and every machine that is not at the rig run
@@ -40,7 +44,17 @@ def build_link(settings: Settings) -> RigLink | None:
         on_event=lambda event: service.handle(event) if service is not None else None,
         keepalive_seconds=settings.rig_keepalive_seconds,
     )
-    service = RigService(link, capture=_camera_capture, threshold=settings.quality_threshold)
+    # The panel's verdict follows the same threshold as the capture route, read when the trigger
+    # arrives; without a database the link still works, at the configured value (ADR 15).
+    threshold: int | Callable[[], int] = settings.quality_threshold
+    if session_factory is not None:
+
+        def live_threshold() -> int:
+            """The threshold in force when a trigger arrives, not the one from start-up (ADR 15)."""
+            return effective(session_factory, "quality_threshold", settings)
+
+        threshold = live_threshold
+    service = RigService(link, capture=_camera_capture, threshold=threshold)
     log.info("rig: link configured on %s", settings.rig_port)
     return link
 
