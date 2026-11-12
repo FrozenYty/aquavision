@@ -98,6 +98,7 @@ python scripts/check-language.py       # no Chinese in English documents
 python scripts/check-progress.py       # PROGRESS.md well formed
 python scripts/check-paths.py          # no machine-specific paths
 python scripts/check-adr-index.py      # every decision record is listed in the architecture table
+python scripts/check-ac-coverage.py    # every acceptance item is owned, and a closed one names a test
 python scripts/check-commit-messages.py --range origin/main..HEAD   # no tool credited as co-author
 python -m ruff check .                 # lint
 python -m ruff format --check .        # format
@@ -113,7 +114,7 @@ If `ruff` is missing, install it rather than skipping the check. On Windows a sa
 unpack directory; run the install outside the sandbox or with elevated permission. CI is the final
 authority, but "CI will catch it" is not a reason to push without looking.
 
-**A passing local run proves less than it looks.** The five document checks never look at Python
+**A passing local run proves less than it looks.** The six document checks never look at Python
 code, and a script can execute correctly while still failing static analysis: a name read before the
 branch that assigns it is an `F821` that no runtime test will hit. Run `ruff` on every change to
 Python — that is what catches it.

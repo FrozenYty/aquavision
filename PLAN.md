@@ -572,10 +572,18 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P3-32** The canvas keeps its place across a reload · @chemflowers · done when the selection,
       zoom and page survive a refresh, asserted as a pure function that serialises and restores them
       - a reviewer interrupted mid-set currently starts again from the first frame
-- [ ] **P3-33** The acceptance matrix cannot go quiet · @IkeaFyj · done when a script fails if any of
-      the 36 acceptance items has no ticked task or no test, and the matrix names both for every item
+- [x] **P3-33** The acceptance matrix cannot go quiet · @IkeaFyj · **delivered 11-12**:
+      `scripts/check-ac-coverage.py`, wired into CI and into both gate inventories, fails when an item has
+      no owning task, when a ticked claim names no test that exists, when a claim names a file that has
+      moved, and when a claim points at an item the SRS does not define. All 36 items are owned and every
+      closed one names a test that exists; `tests/test_ac_coverage.py` proves each failure path on
+      synthetic input, and `tests/test_datasets.py` supplies the evidence AC-18 had been missing
       - the 11-11 audit found 14 of 36 traced; an item with neither is the one that fails in the review
-- [ ] **P3-34** The test case document says what is true · @IkeaFyj · done when
+- [x] **P3-34** The test case document says what is true · @IkeaFyj · **delivered 11-12**: every one of
+      the 49 cases carries a verdict - 20 automated, 21 manual, 8 uncovered - with the test named as
+      `file::function`, and anything the test does not assert written on the line as `Not asserted:` or
+      `Not implemented:` rather than promoted into a claim. The unasserted clauses it found are in
+      `P4-05`. · done when
       `docs/test-cases-{en,zh}.md` stops calling every case "not implemented" and records, for each
       case, whether it is automated or manual and where it lives
       - 21 cases covering already-ticked acceptance items still read as unimplemented
@@ -618,6 +626,18 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         the owner reads it
 - [ ] **P4-05** Defect closure · @FrozenYty · done when every defect has a recorded severity, a fix and
       a regression check, and blocker and major counts are zero — "no defects" is not a number
+      - **major: a needs-retake frame enters a detection batch.** `create_batch` selects every frame that
+        has not been detected yet and never filters `quality_flag`, so AC-07's "stays out of the queue"
+        half is false today: the queue accepts what the quality gate refused. Found by `P3-34`'s verdict
+        pass, in `server/app/routers/detect.py`
+      - **major: a batch cannot be built from a selection.** AC-08's drill-down does not exist — a batch is
+        created from an `asset_count`, not from frames someone ticked
+      - **major: `species_dict.conf_thr` is read by no detection path**, so AC-26's "a new threshold
+        applies to new jobs" cannot hold; `P3-15` owns it
+      - **minor, documentation: the fifth failed sign-in.** The case text promises the remaining seconds;
+        the lock message reports fifteen minutes, and the seconds sentence arrives on a later attempt
+      - **minor, documentation: log deletion.** A case says no endpoint deletes a `sys_log` row;
+        `POST /api/demo/reset` clears them by design, because a rehearsal must start clean
       - **the owner is one person**, because §5.1 says so and "all" is not an owner. Each lane reports
         its own defects into the table; this task keeps the counts and the regression checks
 - [ ] **P4-06** Acceptance checklist, demo script, slides · @IkeaFyj · done when every acceptance item

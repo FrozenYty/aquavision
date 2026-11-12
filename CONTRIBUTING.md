@@ -91,6 +91,7 @@ check runs only on pull requests.
 | Progress | `python scripts/check-progress.py` | one entry per day, date heading only |
 | Paths | `python scripts/check-paths.py` | write it relative to the repository root |
 | ADR index | `python scripts/check-adr-index.py` | list the record in the architecture ADR table |
+| Acceptance coverage | `python scripts/check-ac-coverage.py` | give the item a task, or give the claim a test |
 | Commit messages | `python scripts/check-commit-messages.py --range origin/<base>..HEAD` | remove the tool footer (§2) |
 | Tests | `pytest -q` | write the failing test first |
 

@@ -53,6 +53,9 @@ jobs:
       - name: Every decision record is listed
         run: python scripts/check-adr-index.py
 
+      - name: Acceptance coverage
+        run: python scripts/check-ac-coverage.py
+
       - name: No tool is credited as a co-author
         if: github.event_name == 'pull_request'
         run: python scripts/check-commit-messages.py --range "origin/${{ github.base_ref }}..HEAD"
