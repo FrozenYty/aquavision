@@ -44,6 +44,8 @@ __pycache__/
 # ultralytics writes a settings directory into the working directory when the user config
 # directory is not writable, which puts it in the repository root.
 Ultralytics/
+# torch writes its compile cache beside the working directory when a model runs here.
+torchinductor_*/
 venv/
 .pytest_cache/
 .ruff_cache/
