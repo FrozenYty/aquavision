@@ -248,6 +248,37 @@
   already uses - and the failure was reproduced locally by pointing `live.CameraSource` at a class
   that raises, which is what the runner does by simply existing. Four of the five tests in that file
   never touched a camera; the fifth did, and that was enough.
+- **The last blocker on `GATE P2` was a path nobody had walked, not a missing file.** The weights were
+  delivered, tracked, registered and portable, and this machine still refused to load them - because
+  `ultralytics` was installed nowhere. `requirements.txt` had pinned it all along: **the environment
+  already existed as a definition and had never been built.** Built tonight as `.venv-infer/`
+  (`pip install -r requirements.txt` into a fresh environment), git-ignored, one per checkout, with the
+  server environment left light as ADR 11 argues and the training environment left untouched.
+- **Three skipped tests became three passing ones, and then none skipped at all.** `tests/test_detect_real.py`
+  now runs: it loads the delivered weights through the app, compares the boxes the API returns against a
+  direct run of the same weights on the same image, proves the loader refuses a model whose class order
+  disagrees, and proves a frame whose image is gone is an error rather than an empty result. The full
+  suite in that environment: **351 passed, 0 skipped**, where the day began at 348 passed and 3 skipped.
+  `GATE P2` is no longer blocked by a decision - what remains is the bench.
+- **The first two attempts failed for a reason worth writing down.** `python -m venv` and then `pip`
+  both died with `PermissionError` writing into a temporary directory **they had just created**. The
+  cause is not this repository's file permissions: the sandbox ACL diagnosis returned `NOT_THIS_CLASS`,
+  with `WRITE_DAC` and `WRITE_OWNER` both available. Python gives a temporary directory owner-only
+  permissions, and the sandbox's restricted token is not that owner - so pointing `TMP` somewhere else
+  changed nothing. One elevated command for the install, which is the honest ask for an operation that
+  writes outside the workspace.
+- **The frame the test needed did not exist either, and the reason is the demo reset.** The fixture wants
+  a captured frame whose image is still under `data/`; the reset empties the business tables and the 46
+  image files stayed behind as orphans, so there were zero `media_asset` rows. One frame was written back
+  through the real capture route with a stored capture's bytes - the route takes the image in the request
+  body, the camera is the client's job, which is what the capture page does with `getUserMedia`. The
+  camera did not answer even with full access, so the script printed **which of the two paths it took**;
+  a frame whose bytes came from an earlier capture is a different claim from one taken now.
+- **Two task assignments were wrong and are fixed.** The inference environment is lane B's - `P0-02` was
+  the environment task from the start - so `P2-20` goes back to @Gtechson and its acceptance now says the
+  environment is *defined and documented*, not "installed on the demonstrator's machine". `P3-08` moved
+  to lane A: it is the file lifecycle of the data root, which is lane A's, and not database logic. Load
+  is level again: A 12, B 12, C 10, D 10.
 - **The message store had a table, a list route and a mark-read route, and nothing that ever wrote
   a row.** `sys_message` was decorative: the unread count was permanently zero because no code path
   produced a message, while FR-M8-02 names three events (a capture failure, a job failure, a finished
@@ -267,6 +298,50 @@
   exactly when the level is not `ok`. Messages are kept 30 days by the same business rule, and that
   cleanup is `P3-08`'s.
 
+- **The runbook exists, and it is a record of what actually went wrong rather than a tidy sequence.**
+  `docs/runbook-{en,zh}.md`, indexed in both languages: deploy from a clone, build the inference
+  environment, back up and restore both halves of the state, rotate the JWT secret, survive a schema
+  change, read the log, and recover a queue. Each section carries the trap rather than the happy path -
+  `VACUUM INTO` instead of copying a live database, the temporary-directory permission failure that made
+  `venv` fail, `YOLO_CONFIG_DIR` writing a settings directory into the repository root, and the column
+  that `create_all` will not add, together with the misleading message it produces.
+- **It says what it cannot cover, on purpose.** No migration mechanism, no second application process,
+  no hardware, no training - each named with where that knowledge lives instead. A runbook that implies
+  more than it knows is worse than a short one.
+- **The acceptance record became a check instead of a promise.** `scripts/check-ac-coverage.py` fails when
+  an acceptance item has no owning task, when a ticked claim names no test that exists, when a claim names
+  a file that has moved, and when a claim points at an item the SRS does not define. It runs in CI and is
+  named in both gate inventories. **All 36 items are now owned and every closed one names a test that
+  exists** - the 11-11 audit had 14 of 36 traced. Where a claim had no evidence beside it, the evidence was
+  added to the claim rather than to a separate table, because that is where a reviewer looks.
+- **AC-18 had no test at all, and the check forced the issue.** `P2-09` closed it with a *page*; the export
+  itself was unasserted. `tests/test_datasets.py` now asserts the grouping rule that AC-18 exists for - a
+  burst of frames must not straddle two splits - the counts, the manifest, and the three refusals.
+- **Two defects fell out of writing that test.** `GROUP_SECONDS = 10` is defined in `datasets.py` and used
+  nowhere: `_group_of` groups by the exact second, so a burst spanning two seconds still leaks across
+  splits, which is the one thing AC-18 is about. And the list view omits splits with no frames while the
+  export answers all three, so a page rendering a train/val/test table cannot show a zero row. Both are
+  recorded in `P4-05`.
+- **The test-case document now says what is true.** Every one of its 49 cases carries a verdict - 20
+  automated, 21 manual, 8 uncovered - with the test named as `file::function`, and anything the named test
+  does not assert written on the line rather than promoted into a claim. The eight uncovered cases are the
+  open tasks, which is what "uncovered" should mean: no test and no feature.
+- **Three more defects came out of that pass**, all recorded in `P4-05` with a severity: a needs-retake
+  frame enters a detection batch because `create_batch` never filters `quality_flag`, so AC-07's "stays out
+  of the queue" half is false; a batch cannot be built from a selected set of frames, so AC-08's drill-down
+  does not exist; and `species_dict.conf_thr` is still read by nothing.
+- **A rehearsal became a command.** `scripts/demo.py` runs the slice against a fresh scratch database and
+  prints a table with the numbers `P4-07` needs - frames captured, boxes, per-class counts, the statistics
+  total and the elapsed time of each step - plus one machine-readable summary line the test asserts on. It
+  creates the database by running the real `init_db.py` as a subprocess rather than copying its logic, so
+  the driver breaks when seeding breaks.
+- **It refuses to flatter the data.** Every recorded frame on this machine scores between 15 and 51 against
+  a threshold of 60, so the run it was delivered with reports **zero boxes**. The driver prints which frame
+  it used and why the count is what it is instead of picking a frame that looks good; a rehearsal that only
+  works on chosen images is not a rehearsal.
+- **What it does not cover is written down, not implied**: the thirteen pages in a browser, the batch
+  worker, review submission and the demo reset stay with `P4-07`. A driver that claimed the whole
+  demonstration would be the kind of claim this repository has spent the day removing.
 ## 2026-11-11
 
 - **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint

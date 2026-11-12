@@ -117,11 +117,12 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         `docs/data-model-*.md` §3.5)
 - [x] **P2-03** Capture and review pages on real data · @chemflowers · closes AC-08, AC-13 · done when no mock data is left
       on those two pages
+      - **evidence:** `tests/test_frames_filters.py` asserts the filtered totals and their intersection, which is AC-08; the class filter's effect on a count is asserted in `tests/test_api_skeleton.py` (AC-13).
 - [x] **P2-04** Minimal review loop: delete, add, relabel · @chemflowers @Gtechson · closes AC-17 · done when the
       edit persists and the count updates without a page reload
 
       **Backend and model · @Gtechson**
-
+      - **evidence:** `tests/test_hard_samples.py` drives a real review correction into the pool and back out again (AC-17).
 - [x] **P2-05** Finish P1-02: detection, the queue consumer, reviewed statistics · @Gtechson · closes
       AC-05, AC-07, AC-10, AC-12 · three checkpoints, each its own pull request
       - delivered 11-11: 05a merged 11-10, 05b runs the online weights and writes the results, and
@@ -151,6 +152,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
             and the task statistics, and answers boxes with `model_version` and a measured `latency_ms`;
             the queue consumer was given the same detector and the task's own inference parameters
       - **P2-05c** `/api/stats/*` verified against rows written by 05b, figures equal to the dashboard
+      - **evidence:** `tests/test_api_skeleton.py` covers single-frame registration and its idempotency (AC-05); `tests/test_capture.py` covers quality scoring (AC-07); `tests/test_detect_real.py` measures the detection latency AC-10 bounds - it asserts the measurement is positive, and the three-second bound itself is `P3-10`'s (AC-10); `tests/test_params_live.py` proves a changed threshold binds new work (AC-12).
 - [x] **P2-06** DUO dataset preparation and a first baseline run · @Gtechson · four checkpoints
       - the dataset is on the **training machine**, not on the lead's: `data/raw/DUO/DUO` (6671 + 1111)
         and `data/dataset` (5671 / 1000 / 1111). Nothing here is blocked by its absence elsewhere
@@ -216,11 +218,13 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         frame is not hardware-verified - no camera and no weights on this machine
 - [x] **P2-09** Dataset export page against the real API · @chemflowers · closes AC-18 · done when a snapshot can be
       exported, listed and refreshed with no mock data, and the split counts match the server
+      - **evidence:** `tests/test_datasets.py` asserts the grouping rule, the counts and the manifest (AC-18). **Two defects found while writing it, both in `server/`:** `GROUP_SECONDS = 10` is defined and never used - `_group_of` groups by the exact second, so a burst spanning two seconds still leaks across splits - and the list view omits splits with no frames while the export answers all three, so a page cannot render a zero row.
 - [x] **P2-10** `api.js` tells the truth · @chemflowers · done when no `provisional` marker remains, a
       test fails if the word returns, and every exported function maps to a route in the contract
 - [x] **P2-11** Sign-in against the real endpoint · @chemflowers · closes AC-01 · done when the login page calls
       `POST /api/auth/login`, stores the token, shows the server's own lockout message, and a 401 from
       any page returns the user to the form
+      - **evidence:** `tests/test_api_skeleton.py` signs in against the real endpoint, counts a wrong password down and locks the account (AC-01); `tests/test_token_epoch.py` covers what a password change does to an issued token.
 - [x] **P2-12** Loading, empty and failure states · @chemflowers · done when every page that calls the
       API renders all three states, and a killed server produces a message rather than a blank screen
 
@@ -272,19 +276,17 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         describes `tests/fixtures/` as holding three JPEGs; neither exists - metrics come out of
         `train_baseline.py`, and the tests synthesise their frames (lane D)
 
-- [ ] **P2-20** A machine that can load the delivered weights · @FrozenYty · unblocks `GATE P2`,
-      `P2-13`, `P3-10` and `P4-10` · done when
-      `python -m pytest tests/test_detect_real.py -o addopts="" -q` **runs and passes** on the
-      demonstration machine instead of skipping, and a captured frame comes back with boxes and a class
-      count through `POST /api/detect/frames`
-      - the weights are delivered, tracked and registered, and this machine still refuses to load
-        them, answering that the inference dependency is missing and naming the online version: the
-        file half of the delivery is done and the **runtime half had no owner anywhere in this plan** -
-        which is why the gate looked one step away for two days
-      - two ways to close it, and the choice is a decision rather than a detail: a **dedicated
-        environment** holding `ultralytics` and torch, which the server and the real-inference test
-        point at, or installing the training stack into the environment that already runs the app. The
-        dedicated one keeps `requirements-server.txt` light, which is ADR 11's argument
+- [ ] **P2-20** An environment that can run inference · @Gtechson · unblocks `GATE P2`, `P2-13`,
+      `P3-10` and `P4-10` · done when `pip install -r requirements.txt` into a fresh environment makes
+      `python -m pytest tests/test_detect_real.py -o addopts="" -q` **run and pass** instead of skip, and
+      the command is written down as a step rather than discovered per machine
+      - `requirements.txt` already pins `ultralytics`; **no new dependency file is needed** - the path
+        existed and nobody had walked it, which is why the weights could be delivered, tracked and
+        registered while the machine still refused to load them
+      - the environment is per checkout and git-ignored (`.venv-infer/`); the server environment stays
+        light, which is ADR 11's argument, and the training environment is never installed into
+      - the evidence may come from any machine - the training machine already has the stack - and the
+        demonstration machine gets it by following the step, which is `P3-23`'s runbook
       - the three skipped tests in `tests/test_detect_real.py` are the only evidence that inference
         works at all; while they skip, `GATE P2` is a claim rather than a demonstration
 - [ ] **GATE P2** — from a cold start, someone who has not seen the system completes the slice in
@@ -373,10 +375,12 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - **not covered:** the reset does not stop a running worker, so it assumes a rehearsal starts from a
         still system. Resetting mid-batch can leave the worker writing rows just deleted; `P3-12` is where
         that belongs if it ever bites
+      - **evidence:** `tests/test_demo_reset.py` and `tests/test_mock_demo.py` cover the reset's refusals and its kept state; AC-36's live chain is `P2-13`'s.
 - [ ] **P3-07** Report generation and history · @chemflowers · closes AC-22 · done when a report is
       generated as Markdown from the same queries the dashboard uses, its figures equal the dashboard,
       and the footer carries the model version and the basis — **not Word or PDF; SRS V1.6 settled that**
-- [ ] **P3-08** Retention cleanup and reference nulling · @Gtechson · closes AC-09 · done when the
+- [ ] **P3-08** Retention cleanup and reference nulling · @FrozenYty · closes AC-09 · it is the file
+      lifecycle of the data root, which is lane A's, not database logic · done when the
       cleanup job removes intermediate files older than the retention period, nulls the references,
       never touches originals by default, and reports what it deleted
 - [x] **P3-09** Parameters, monitoring and messages · @Gtechson · closes AC-28, AC-29 · **delivered
@@ -429,6 +433,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         a newline each survive a round trip
       - an empty result says so **instead of downloading an empty file**
       - the filename carries the frame id and a timestamp, so two exports are distinguishable
+      - **evidence:** `tests/test_result_csv.py` covers the escaping round trip, the row count and the empty result (AC-14).
 - [ ] **P3-15** Species dictionary and per-class thresholds · @chemflowers · closes AC-26 · done when the
       four classes and their thresholds can be viewed and edited on P-12, a threshold change applies to
       new jobs and not to finished ones, and a class code that disagrees with `labels.txt` is refused
@@ -523,7 +528,10 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - ADR 14 deliberately left storage and the layout alone, so this is its own change: either derive
         them in the operating zone (and let existing ids keep their basis) or write the basis into the id
         so the two can never be confused
-- [ ] **P3-23** An operations runbook · @FrozenYty · done when someone who has never run the system
+- [x] **P3-23** An operations runbook · @FrozenYty · **delivered 11-12**: `docs/runbook-{en,zh}.md`, one
+      page for what happens after the clone - deploy, the inference environment, backup and restore,
+      secret rotation, a schema change, the log, a stopped queue - indexed in both languages; the
+      three traps it records were hit on this project before they were written down · done when someone who has never run the system
       follows it on a clean machine and needs nothing improvised: deploy from a clone, back up and
       restore both the database and the frames, rotate the JWT secret without locking everyone out,
       upgrade a schema that gained a column, read the log for a refused request, and recover a queue
@@ -575,10 +583,18 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P3-32** The canvas keeps its place across a reload · @chemflowers · done when the selection,
       zoom and page survive a refresh, asserted as a pure function that serialises and restores them
       - a reviewer interrupted mid-set currently starts again from the first frame
-- [ ] **P3-33** The acceptance matrix cannot go quiet · @IkeaFyj · done when a script fails if any of
-      the 36 acceptance items has no ticked task or no test, and the matrix names both for every item
+- [x] **P3-33** The acceptance matrix cannot go quiet · @IkeaFyj · **delivered 11-12**:
+      `scripts/check-ac-coverage.py`, wired into CI and into both gate inventories, fails when an item has
+      no owning task, when a ticked claim names no test that exists, when a claim names a file that has
+      moved, and when a claim points at an item the SRS does not define. All 36 items are owned and every
+      closed one names a test that exists; `tests/test_ac_coverage.py` proves each failure path on
+      synthetic input, and `tests/test_datasets.py` supplies the evidence AC-18 had been missing
       - the 11-11 audit found 14 of 36 traced; an item with neither is the one that fails in the review
-- [ ] **P3-34** The test case document says what is true · @IkeaFyj · done when
+- [x] **P3-34** The test case document says what is true · @IkeaFyj · **delivered 11-12**: every one of
+      the 49 cases carries a verdict - 20 automated, 21 manual, 8 uncovered - with the test named as
+      `file::function`, and anything the test does not assert written on the line as `Not asserted:` or
+      `Not implemented:` rather than promoted into a claim. The unasserted clauses it found are in
+      `P4-05`. · done when
       `docs/test-cases-{en,zh}.md` stops calling every case "not implemented" and records, for each
       case, whether it is automated or manual and where it lives
       - 21 cases covering already-ticked acceptance items still read as unimplemented
@@ -621,6 +637,18 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         the owner reads it
 - [ ] **P4-05** Defect closure · @FrozenYty · done when every defect has a recorded severity, a fix and
       a regression check, and blocker and major counts are zero — "no defects" is not a number
+      - **major: a needs-retake frame enters a detection batch.** `create_batch` selects every frame that
+        has not been detected yet and never filters `quality_flag`, so AC-07's "stays out of the queue"
+        half is false today: the queue accepts what the quality gate refused. Found by `P3-34`'s verdict
+        pass, in `server/app/routers/detect.py`
+      - **major: a batch cannot be built from a selection.** AC-08's drill-down does not exist — a batch is
+        created from an `asset_count`, not from frames someone ticked
+      - **major: `species_dict.conf_thr` is read by no detection path**, so AC-26's "a new threshold
+        applies to new jobs" cannot hold; `P3-15` owns it
+      - **minor, documentation: the fifth failed sign-in.** The case text promises the remaining seconds;
+        the lock message reports fifteen minutes, and the seconds sentence arrives on a later attempt
+      - **minor, documentation: log deletion.** A case says no endpoint deletes a `sys_log` row;
+        `POST /api/demo/reset` clears them by design, because a rehearsal must start clean
       - **the owner is one person**, because §5.1 says so and "all" is not an owner. Each lane reports
         its own defects into the table; this task keeps the counts and the regression checks
 - [ ] **P4-06** Acceptance checklist, demo script, slides · @IkeaFyj · done when every acceptance item
@@ -644,7 +672,15 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P4-11** The test report · @IkeaFyj · done when it states the plan, what was executed, what
       passed, what was skipped and why, and the defects found with their severity - a reader can
       reproduce the number rather than trust it
-- [ ] **P4-12** A demo driver, not a memory · @IkeaFyj · done when one command runs the slice end to
+- [x] **P4-12** A demo driver, not a memory · @IkeaFyj · **delivered 11-12**: `scripts/demo.py` runs the
+      slice against a fresh scratch database and prints a table plus a machine-readable summary -
+      frames captured, boxes, per-class counts, per-step elapsed time, and the statistics total, which
+      it fails on if it disagrees with the box count. It calls the real `init_db.py` as a subprocess
+      rather than copying its logic, and says where its frame came from (a live grab, a recorded file,
+      or one generated in memory). **It does not pick a flattering frame**: every recorded frame on
+      this machine scores 15-51 against a threshold of 60, so the run it was delivered with reports
+      zero boxes, which is what those images deserve. **Not covered:** the thirteen pages in a
+      browser, the batch worker, review submission and the demo reset - those stay `P4-07`'s. · done when one command runs the slice end to
       end against a fresh database and prints the numbers a rehearsal needs - frames captured, boxes
       drawn, per-class counts, elapsed time - so `P4-07` is a run rather than a walkthrough
 - [ ] **GATE P4** — four tables full: metrics, ablation, reproducibility, acceptance checklist · **checked by @IkeaFyj**, not

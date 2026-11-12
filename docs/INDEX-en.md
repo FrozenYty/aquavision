@@ -27,6 +27,7 @@ only single-language files above the line. Within `docs/`, the fastest route is 
 | pick up a task | `PLAN.md` for the contract, `PROGRESS.md` for why it moved |
 | understand how the system is shaped | `architecture-en.md`, then the ADR that touches it |
 | call or serve an API | `api-contract-en.md` |
+| run it, back it up, or recover it | `runbook-en.md` |
 | add a table or a column | `data-model-en.md` |
 | buy or wire hardware | `procurement-en.md` |
 | know what the prototype shows | `prototype-en.md` |
@@ -48,7 +49,8 @@ only single-language files above the line. Within `docs/`, the fastest route is 
 | `procurement-en/zh.md` | what to buy, why these parts, how to accept them | hardware changes | @FrozenYty |
 | `copy-review-en/zh.md` | findings on the interface copy, by page | the copy is rewritten or the page set changes | @FrozenYty |
 | `handover-en/zh.md` | work that changed hands, and the bar it must clear | an item is accepted or a new one opens | @FrozenYty |
-| `rig-state-machine-en/zh.md` | every screen and every event, with the resulting state | a state or an event is added | @FrozenYty |
+| `rig-state-machine-en/zh.md` | every screen and every event, with the resulting state | a state or an event is added |
+| `runbook-en/zh.md` | start it, back it up, restore it, rotate the secret, upgrade the schema, read the log | a deployment step changes, or the migration mechanism arrives | @FrozenYty | @FrozenYty |
 | `test-cases-en/zh.md` | one case per acceptance item, and how to run it | an acceptance item changes, or a case is executed | @IkeaFyj |
 | `glossary-en-zh.md` | the one word for each concept | a new concept appears | @FrozenYty |
 | `adr/01-15` | why a decision was taken and when to revisit it | never edited; superseded instead | the author of that ADR |

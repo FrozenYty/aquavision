@@ -38,6 +38,12 @@ desktop.ini
 __pycache__/
 *.py[cod]
 .venv/
+# The dedicated inference environment (P2-20): `pip install -r requirements.txt` into a fresh
+# environment is the documented way to get one, and every checkout builds its own.
+.venv-infer/
+# ultralytics writes a settings directory into the working directory when the user config
+# directory is not writable, which puts it in the repository root.
+Ultralytics/
 venv/
 .pytest_cache/
 .ruff_cache/
