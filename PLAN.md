@@ -288,7 +288,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - the three skipped tests in `tests/test_detect_real.py` are the only evidence that inference
         works at all; while they skip, `GATE P2` is a claim rather than a demonstration
 - [ ] **GATE P2** — from a cold start, someone who has not seen the system completes the slice in
-      three minutes, no restart, no manual database edit
+      three minutes, no restart, no manual database edit · **checked by @IkeaFyj**, not the lane owner (§5.3)
       - **its prerequisites are part of the gate, because they are what makes it passable:** the
         delivered weights are tracked and registered (`P2-06d`, done), a machine that can load them
         (`P2-20`), and real targets in front of the camera. Two of those three were invisible when this
@@ -507,8 +507,74 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - ADR 14 deliberately left storage and the layout alone, so this is its own change: either derive
         them in the operating zone (and let existing ids keep their basis) or write the basis into the id
         so the two can never be confused
+- [ ] **P3-23** An operations runbook · @FrozenYty · done when someone who has never run the system
+      follows it on a clean machine and needs nothing improvised: deploy from a clone, back up and
+      restore both the database and the frames, rotate the JWT secret without locking everyone out,
+      upgrade a schema that gained a column, read the log for a refused request, and recover a queue
+      that stopped
+      - the pieces exist across `README`, `handover` and `CONTRIBUTING` and none of them is the page
+        someone reaches for at 2 a.m.
+- [ ] **P3-24** The rig link survives the device disappearing · @FrozenYty · done when unplugging and
+      replugging the board needs no server restart: the link reports the gap, reconnects when the port
+      returns, and the capture page says which of the two states it is in
+      - `rig/link.py` opens the port once; a `SerialException` mid-run is the case the state machine
+        already calls `Gone`, and nothing currently tries to leave it
+      - testable without the bench: a test double that raises on the first read and reopens on the next
+        attempt, with the reconnect interval asserted rather than slept
+- [ ] **P3-25** A schema change without a wipe · @Gtechson · done when a column added to `models.py`
+      reaches an **existing populated database** without losing a row, and the route is written down
+      - `create_all` adds a missing *table*, and there is no migration mechanism: the 13-to-14 table
+        change worked by that accident, and the next change is a **column**, which `create_all` will
+        not add to an existing table
+      - done when a test builds a database from the previous schema, upgrades it, and asserts the old
+        rows survive and the new column exists with its documented default
+- [ ] **P3-26** Upload and input limits · @Gtechson · done when a frame above a stated size, an image
+      whose dimensions exceed the model's input, a request body above the declared maximum, and a
+      name carrying `..` or a path separator are each refused with the project envelope - not accepted,
+      and not a 500
+      - the capture route writes whatever bytes arrive into a path built partly from request values,
+        and no maximum is stated anywhere
+- [ ] **P3-27** Undo on the review canvas · @chemflowers · done when a mistaken drag, draw or delete
+      can be undone before submit, and the undo stack is asserted as a pure function under Node
+      - today a wrong drag is unrecoverable until the version panel is used *after* submitting, which
+        is too late for a reviewer working through forty frames
+- [ ] **P3-28** The canvas from the keyboard · @chemflowers · done when a box can be selected, nudged,
+      resized and deleted without a mouse, the focus order is visible, and the keys are printed on the
+      page
+      - the core interaction of the product is mouse-only, and a nudge of one pixel is the correction a
+        reviewer needs most often
+- [ ] **P3-29** Every page survives a failed request · @chemflowers · done when each of the thirteen
+      pages, given a 500, a timeout and a 401, shows a sentence the operator can act on and leaves no
+      spinner running - asserted as a table of (page, failure, expected state)
+      - `P2-12` brought those states to the pages that existed then; the assertion was per page and the
+        pages have been rebuilt since
+- [ ] **P3-30** A weight budget for the frontend · @chemflowers · done when a script measures the JS and
+      CSS each page loads, prints the table, and CI fails above a stated ceiling
+      - no framework and no build tool is a deliberate choice; its cost is that nobody notices a page
+        quietly growing
+- [ ] **P3-31** The report page previews its own figures · @chemflowers · done when the period chooser
+      shows the numbers the report will carry before it is generated, and the preview and the file
+      agree in a test
+      - generating a report to discover it covers the wrong week is this page's ordinary failure
+- [ ] **P3-32** The canvas keeps its place across a reload · @chemflowers · done when the selection,
+      zoom and page survive a refresh, asserted as a pure function that serialises and restores them
+      - a reviewer interrupted mid-set currently starts again from the first frame
+- [ ] **P3-33** The acceptance matrix cannot go quiet · @IkeaFyj · done when a script fails if any of
+      the 36 acceptance items has no ticked task or no test, and the matrix names both for every item
+      - the 11-11 audit found 14 of 36 traced; an item with neither is the one that fails in the review
+- [ ] **P3-34** The test case document says what is true · @IkeaFyj · done when
+      `docs/test-cases-{en,zh}.md` stops calling every case "not implemented" and records, for each
+      case, whether it is automated or manual and where it lives
+      - 21 cases covering already-ticked acceptance items still read as unimplemented
+- [ ] **P3-35** Every closed defect has a regression test · @IkeaFyj · done when the defect log names
+      the test that fails if the defect returns, and a check fails when a defect has none
+- [ ] **P3-36** The traceability figures match the pages · @IkeaFyj · done when the thirteen
+      screenshots are regenerated from the current build and each is referenced by the matrix row it
+      illustrates
+      - the pages were renamed and restyled since the figures were taken
 - [ ] **GATE P3** — all 36 acceptance items demonstrated live, one after another, no manual database
-      edits in between, and every item traceable to the task that closed it
+      edits in between, and every item traceable to the task that closed it · **checked by @IkeaFyj**, not the
+      lane owner (§5.3)
 
 ### P4 — close
 
@@ -559,7 +625,14 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       response carries both sets of boxes and both version names, and the page can show them side by
       side — it could not be built earlier because it needs two registered versions
 
-- [ ] **GATE P4** — four tables full: metrics, ablation, reproducibility, acceptance checklist
+- [ ] **P4-11** The test report · @IkeaFyj · done when it states the plan, what was executed, what
+      passed, what was skipped and why, and the defects found with their severity - a reader can
+      reproduce the number rather than trust it
+- [ ] **P4-12** A demo driver, not a memory · @IkeaFyj · done when one command runs the slice end to
+      end against a fresh database and prints the numbers a rehearsal needs - frames captured, boxes
+      drawn, per-class counts, elapsed time - so `P4-07` is a run rather than a walkthrough
+- [ ] **GATE P4** — four tables full: metrics, ablation, reproducibility, acceptance checklist · **checked by @IkeaFyj**, not
+      the lane owner (§5.3)
 
 ## 5. Text constraints
 
