@@ -191,19 +191,19 @@ If you are an AI assistant, read [AGENTS.md](AGENTS.md) first — it tells you w
 
 `models/<version_name>/` is where the model this project delivers goes - `best.pt`, `labels.txt` and
 `metrics.json` - tracked here rather than published elsewhere, so that a clean clone can register a
-version and run detection once the files are there. **The directory is empty in this revision: no weight
-file has been delivered yet.** The delivered copy is still owed by training, and until it lands a clean
-clone has nothing to register and the detection route answers 501 because no model weights are
-registered. The decision, and what it costs, is in [ADR 13](docs/adr/13-weights-in-the-repository.md).
+version and run detection. **`models/v8n-E0-exploratory/` holds the delivered version.** `python
+scripts/init_db.py` registers it on a fresh database and makes it the online version, so an install
+that has nothing but this repository and `requirements-server.txt` can capture a frame and see boxes.
+The decision, and what it costs, is in [ADR 13](docs/adr/13-weights-in-the-repository.md).
 
 - **What goes here first.** The exploratory baseline (YOLOv8n), whose purpose is to give the dashboard
   and the demonstration real numbers. It is **not** the official E0 baseline, which is trained on the
   frozen dataset at `P4-01`. Do not quote its metrics as this project's result.
 - **Where it came from.** Trained by this team on the DUO dataset. **No DUO image is redistributed
   here** - `datasets/` is ignored - only the weights learned from it.
-- **How to use it.** `python scripts/register_model.py --weights models/<version_name>/best.pt`, then
-  activate the version as an administrator. The layout is in [data model](docs/data-model-en.md)
-  section 5.
+- **How to use another version.** `python scripts/register_model.py models/<version_name>` registers a
+  delivered directory; `--no-activate` leaves it a candidate for an administrator to activate. The
+  layout is in [data model](docs/data-model-en.md) section 5.
 - **Licence and citation.** The code is MIT. These weights are offered under the same terms by this
   team. The DUO dataset belongs to its authors and declares no licence of its own, so cite
   [the DUO paper](https://arxiv.org/abs/2106.05681) whenever you use these weights.

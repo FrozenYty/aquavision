@@ -20,7 +20,7 @@
 这一节原先排顺序的后端任务——`P2-06a/b/c`、`P2-05a/b/c`、`P2-07`、`P2-15`——都已交付并有测试；
 每项交付要证明什么，记在 `PLAN.md`。本线剩下的任务：`P3-03`（模型版本与上线）、`P3-04`（账号管理）、
 `P3-08`（保留期清理）、`P3-09`（参数、监控与消息）、`P3-11`（权限矩阵）、`P3-13`（定时巡拍）与
-`P3-15`（物种阈值，与界面线共担）——外加 §2.2 里的权重文件。
+`P3-15`（物种阈值，与界面线共担）。
 
 **数据集在训练机上，不在当前工作区：**`data/raw/DUO/DUO`（6671 + 1111）与
 `data/dataset`（5671 / 1000 / 1111）。它的缺席不阻塞这里任何工作。
@@ -80,10 +80,14 @@
 mAP@0.5 0.770、mAP@0.5:0.95 0.561、平均召回 0.692；其版本已登记并在线，名为 `v8n-E0-exploratory`。
 `tests/test_prepare_dataset.py` 约束确定性与清单两项主张。
 
+**权重已经在仓库里。** `models/v8n-E0-exploratory/` 放着 `best.pt`、`labels.txt` 与 `metrics.json`，
+按 ADR 13 纳入版本库。`scripts/init_db.py` 会在空库上注册该版本并置为在线，所以只拿到这个仓库与
+`requirements-server.txt` 的克隆就能跑识别；`tests/test_delivered_weights.py` 约束三个文件的布局、
+类别顺序与 `species_dict` 的一致性以及相对仓库根的路径，`tests/test_detect_real.py` 则在装有
+ultralytics 的机器上真跑一遍权重。`P2-13` 与 `GATE P2` 由此解除阻塞。
+
 **还缺的：**
 
-- **权重文件本身。** 交付的 `best.pt` 还没进仓库，所以 `P2-13` 与 `GATE P2` 仍卡在它上面；ADR 13 定了
-  它的位置——`models/<version_name>/best.pt`、`labels.txt` 与 `metrics.json`。
 - **正式实验。** E0–E4 仍留在冻结数据集上的 `P4-01..03`；`PLAN.md` 把探索性一跑与正式实验分开写。
 
 ### 2.3 每条路由的契约测试（任务 `P2-07`）

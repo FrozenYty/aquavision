@@ -83,6 +83,25 @@
   takes effect at the next decision point, through one accessor with a short TTL and a declared range.
   `sys_param` is written, audited and read by nobody today, so `AC-27` is currently false - and that is now
   a task (`P3-19`) with a decision behind it rather than a bug report.
+- **The delivered weights are in the repository, and a clean clone registers them by itself.** The
+  exploratory baseline's three artefacts now live in `models/v8n-E0-exploratory/` - `best.pt`,
+  `labels.txt`, `metrics.json`, tracked - which is the gap ADR 13 was written to close: `models/` was
+  empty, so whoever cloned the repository got the code and no model, and `P2-13` and `GATE P2` were
+  waiting on a file. `scripts/init_db.py` now registers every delivered version it finds and puts the
+  only one online on a database that has none, so an install carrying nothing but this repository and
+  `requirements-server.txt` reaches detection without a manual step. The restraint that keeps a script
+  from doing damage: a re-run never overrides an operator's activation, and a second delivered version
+  stays a candidate.
+- **A registration that names this machine is not a registration.** `model_version.weight_path` is
+  written relative to the repository root whenever the file sits inside it; the online row on this
+  machine had carried a drive-letter path since 11-10 and would have meant nothing on anyone else's
+  clone.
+  `tests/test_delivered_weights.py` checks the three-file layout, the class order against
+  `species_dict`, and that the stored path resolves to a tracked file - without torch, so it runs on
+  every machine and in CI. It was shown red before it was trusted: with `models/` still empty the
+  layout and clean-database tests failed, and the development-database test failed on that absolute
+  path. `tests/test_detect_real.py`, which had been three skips on this workstation, now runs the
+  delivered weights for real: **3 passed, none skipped**.
 
 ## 2026-11-11
 

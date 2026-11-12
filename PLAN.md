@@ -138,8 +138,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
           - `/api/detect/frames/{frame_id}` returns real boxes for whichever version is online, each with
             class, confidence and a normalised box, and the response carries `model_version` and a
             **measured** `latency_ms` - not an estimate, and the measurement's scope stated in a comment
-          - the version is read from the `model_version` row, never from a path in the code, and no weights
-            file is committed to a public repository
+          - the version is read from the `model_version` row, never from a path in the code; the
+            delivered weight set is tracked under `models/`, which ADR 13 decided on 11-11 and
+            **P2-06d** delivered on 11-12
           - a missing model, a missing torch or a corrupt weight answers a stated error code with a message
             an operator can act on - **never an empty box list dressed up as a result**
           - `torch` and `ultralytics` are imported lazily: the server starts and serves on
@@ -150,7 +151,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
             and the task statistics, and answers boxes with `model_version` and a measured `latency_ms`;
             the queue consumer was given the same detector and the task's own inference parameters
       - **P2-05c** `/api/stats/*` verified against rows written by 05b, figures equal to the dashboard
-- [x] **P2-06** DUO dataset preparation and a first baseline run · @Gtechson · three checkpoints
+- [x] **P2-06** DUO dataset preparation and a first baseline run · @Gtechson · four checkpoints
       - the dataset is on the **training machine**, not on the lead's: `data/raw/DUO/DUO` (6671 + 1111)
         and `data/dataset` (5671 / 1000 / 1111). Nothing here is blocked by its absence elsewhere
       - **P2-06a** the split, and the script that produces it
@@ -178,6 +179,14 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         - delivered 11-10: `model_version` row 1 `v8n-E0-exploratory` is online; `scripts/register_model.py`
           turns `metrics.json` into that row; a captured frame went through `POST /api/detect/frames`
           with the P2-05b branch and matched a manual run of the same weights
+      - **P2-06d** the delivered weight set, in the repository as ADR 13 decides, so that a clone can
+        register it and run it
+        - delivered 11-12: `models/v8n-E0-exploratory/` holds `best.pt`, `labels.txt` and
+          `metrics.json`, all three tracked; `scripts/init_db.py` registers the delivered version on a
+          fresh database and puts it online, and `scripts/register_model.py` stores the weight path
+          relative to the repository root. `tests/test_delivered_weights.py` holds the layout and the
+          class order without needing torch; `tests/test_detect_real.py` runs the delivered weights for
+          real on this machine (3 passed, not skipped)
       - this is the **exploratory** run that gives the dashboard real numbers; the official E0–E4 stay
         at `P4-01..03` on the frozen dataset, and the difference is stated in the pull request
 - [x] **P2-07** API contract tests for every route · @Gtechson · done when each P0 route has at least
