@@ -30,6 +30,17 @@
   side gained the thirteen-name table it had been missing. What is genuinely open stays open: `P2-13`,
   `P3-17`, the weight file, and the client-side socket fallback recorded under `P3-12`.
 
+- **`P3-12` closed by making three failures say what the operator should do**, and the first thing it
+  found was a lie in the *success* path: when OpenCV's `imwrite` returns `False` - it does not raise -
+  the request answered `code: 0` and wrote a `media_asset` row pointing at an image that was never
+  stored. A phantom record, not a lost frame. It is now a refusal that names the data root, and the
+  partial file is removed. An unreachable database answers the project envelope naming `DB_DSN`
+  instead of a bare 500 that looked like a code bug; a full or unwritable disk keeps its cause
+  instead of collapsing into a generic error; and `/api/monitor` reports whether the detection worker
+  is alive, so a stopped worker no longer looks like a task that is merely slow. All three reproduced
+  without hardware: an engine aimed at a database path sitting inside a regular file, `ENOSPC` and
+  `EACCES` injected at the write, and a `Worker` stopped with tasks left queued.
+
 ## 2026-11-11
 
 - **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint

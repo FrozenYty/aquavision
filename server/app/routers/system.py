@@ -14,7 +14,7 @@ import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -110,11 +110,33 @@ def update_params(
     return ok({"params": _current(db, settings), "changed": changed})
 
 
+def _worker_state(app_state) -> dict[str, object]:
+    """Whether a detection worker is running here, and why the queue is frozen when it is not.
+
+    There is no worker heartbeat in the database, so the cheapest honest surface is the process that
+    would do the work: the pool's threads. A task row says running because no worker is behind it, and
+    the operator must read that instead of watching progress that will never change.
+    """
+    enabled = bool(getattr(app_state, "worker_enabled", False))
+    pool = getattr(app_state, "worker", None)
+    alive = bool(pool is not None and getattr(pool, "alive", False))
+    return {"enabled": enabled, "alive": alive, "problem": None}
+
+
 @router.get("/monitor")
-def monitor(db: SessionDep, settings: SettingsDep) -> dict[str, object]:
+def monitor(request: Request, db: SessionDep, settings: SettingsDep) -> dict[str, object]:
     queued = db.scalar(select(func.count(DetectTask.task_id)).where(DetectTask.status == 0)) or 0
     running = db.scalar(select(func.count(DetectTask.task_id)).where(DetectTask.status == 1)) or 0
     frames = db.scalar(select(func.count(MediaAsset.asset_id))) or 0
+    worker = _worker_state(request.app.state)
+    if (queued or running) and not worker["alive"]:
+        cause = (
+            "检测线程已关闭（AV_WORKER_ENABLED=0）" if not worker["enabled"] else "检测线程已停止"
+        )
+        worker["problem"] = (
+            f"{cause}：{queued} 个任务排队、{running} 个任务停在运行中，进度不会推进。"
+            "请查看服务日志并重启服务。"
+        )
 
     data_dir = Path(settings.data_dir)
     usage = shutil.disk_usage(data_dir if data_dir.exists() else Path("."))
@@ -129,6 +151,7 @@ def monitor(db: SessionDep, settings: SettingsDep) -> dict[str, object]:
                 "percent": percent,
                 "level": "crit" if percent >= 90 else "warn" if percent >= 75 else "ok",
             },
+            "worker": worker,
             "max_concurrency": settings.max_concurrency,
             "at": serializers.iso(datetime.now(UTC)),
         }
