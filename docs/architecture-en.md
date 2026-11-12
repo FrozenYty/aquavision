@@ -132,6 +132,7 @@ together the file on disk, the database row and the detection result.
 |---|---|---|
 | Frames | `data/frames/<site>/<YYYYMMDD>/<session>/<digest[:16]>.jpg` | Thousands per day, so day and session are directories. The filename is the content-hash prefix deduplication already computed (AC-05), not `frame_id`; that id lives in the `media_asset` row |
 | Dataset manifests | `data/datasets/<snapshot_name>/manifest.json` | A human-readable copy beside the rows, which remain the record (FR-M4-04) |
+| Runtime parameters | `sys_param` | The operator changes them through `PATCH /api/params`, audited with the before and after values; a consumer reads the value **when it needs it**, and `Settings` supplies the default when no row exists (ADR 15) |
 | Reports | `data/reports/<report_code>.md` | The document is the file; the history and its figures are the `report` row (FR-M5-04) |
 | Runtime database | `data/app.db` for the SQLite development default, or the server named by `DB_DSN` | Everything queryable |
 | Delivered weights | `models/<version_name>/` at the repository root, tracked: `best.pt`, `labels.txt`, `metrics.json` | ADR 13: a delivered artefact must not live under `data/`, whose location is a configuration value. `model_version.weight_path` is relative to the repository root |
