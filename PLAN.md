@@ -117,11 +117,12 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         `docs/data-model-*.md` §3.5)
 - [x] **P2-03** Capture and review pages on real data · @chemflowers · closes AC-08, AC-13 · done when no mock data is left
       on those two pages
+      - **evidence:** `tests/test_frames_filters.py` asserts the filtered totals and their intersection, which is AC-08; the class filter's effect on a count is asserted in `tests/test_api_skeleton.py` (AC-13).
 - [x] **P2-04** Minimal review loop: delete, add, relabel · @chemflowers @Gtechson · closes AC-17 · done when the
       edit persists and the count updates without a page reload
 
       **Backend and model · @Gtechson**
-
+      - **evidence:** `tests/test_hard_samples.py` drives a real review correction into the pool and back out again (AC-17).
 - [x] **P2-05** Finish P1-02: detection, the queue consumer, reviewed statistics · @Gtechson · closes
       AC-05, AC-07, AC-10, AC-12 · three checkpoints, each its own pull request
       - delivered 11-11: 05a merged 11-10, 05b runs the online weights and writes the results, and
@@ -151,6 +152,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
             and the task statistics, and answers boxes with `model_version` and a measured `latency_ms`;
             the queue consumer was given the same detector and the task's own inference parameters
       - **P2-05c** `/api/stats/*` verified against rows written by 05b, figures equal to the dashboard
+      - **evidence:** `tests/test_api_skeleton.py` covers single-frame registration and its idempotency (AC-05); `tests/test_capture.py` covers quality scoring (AC-07); `tests/test_detect_real.py` measures the detection latency AC-10 bounds - it asserts the measurement is positive, and the three-second bound itself is `P3-10`'s (AC-10); `tests/test_params_live.py` proves a changed threshold binds new work (AC-12).
 - [x] **P2-06** DUO dataset preparation and a first baseline run · @Gtechson · four checkpoints
       - the dataset is on the **training machine**, not on the lead's: `data/raw/DUO/DUO` (6671 + 1111)
         and `data/dataset` (5671 / 1000 / 1111). Nothing here is blocked by its absence elsewhere
@@ -216,11 +218,13 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         frame is not hardware-verified - no camera and no weights on this machine
 - [x] **P2-09** Dataset export page against the real API · @chemflowers · closes AC-18 · done when a snapshot can be
       exported, listed and refreshed with no mock data, and the split counts match the server
+      - **evidence:** `tests/test_datasets.py` asserts the grouping rule, the counts and the manifest (AC-18). **Two defects found while writing it, both in `server/`:** `GROUP_SECONDS = 10` is defined and never used - `_group_of` groups by the exact second, so a burst spanning two seconds still leaks across splits - and the list view omits splits with no frames while the export answers all three, so a page cannot render a zero row.
 - [x] **P2-10** `api.js` tells the truth · @chemflowers · done when no `provisional` marker remains, a
       test fails if the word returns, and every exported function maps to a route in the contract
 - [x] **P2-11** Sign-in against the real endpoint · @chemflowers · closes AC-01 · done when the login page calls
       `POST /api/auth/login`, stores the token, shows the server's own lockout message, and a 401 from
       any page returns the user to the form
+      - **evidence:** `tests/test_api_skeleton.py` signs in against the real endpoint, counts a wrong password down and locks the account (AC-01); `tests/test_token_epoch.py` covers what a password change does to an issued token.
 - [x] **P2-12** Loading, empty and failure states · @chemflowers · done when every page that calls the
       API renders all three states, and a killed server produces a message rather than a blank screen
 
@@ -371,6 +375,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - **not covered:** the reset does not stop a running worker, so it assumes a rehearsal starts from a
         still system. Resetting mid-batch can leave the worker writing rows just deleted; `P3-12` is where
         that belongs if it ever bites
+      - **evidence:** `tests/test_demo_reset.py` and `tests/test_mock_demo.py` cover the reset's refusals and its kept state; AC-36's live chain is `P2-13`'s.
 - [ ] **P3-07** Report generation and history · @chemflowers · closes AC-22 · done when a report is
       generated as Markdown from the same queries the dashboard uses, its figures equal the dashboard,
       and the footer carries the model version and the basis — **not Word or PDF; SRS V1.6 settled that**
@@ -417,6 +422,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         a newline each survive a round trip
       - an empty result says so **instead of downloading an empty file**
       - the filename carries the frame id and a timestamp, so two exports are distinguishable
+      - **evidence:** `tests/test_result_csv.py` covers the escaping round trip, the row count and the empty result (AC-14).
 - [ ] **P3-15** Species dictionary and per-class thresholds · @chemflowers · closes AC-26 · done when the
       four classes and their thresholds can be viewed and edited on P-12, a threshold change applies to
       new jobs and not to finished ones, and a class code that disagrees with `labels.txt` is refused
@@ -511,7 +517,10 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - ADR 14 deliberately left storage and the layout alone, so this is its own change: either derive
         them in the operating zone (and let existing ids keep their basis) or write the basis into the id
         so the two can never be confused
-- [ ] **P3-23** An operations runbook · @FrozenYty · done when someone who has never run the system
+- [x] **P3-23** An operations runbook · @FrozenYty · **delivered 11-12**: `docs/runbook-{en,zh}.md`, one
+      page for what happens after the clone - deploy, the inference environment, backup and restore,
+      secret rotation, a schema change, the log, a stopped queue - indexed in both languages; the
+      three traps it records were hit on this project before they were written down · done when someone who has never run the system
       follows it on a clean machine and needs nothing improvised: deploy from a clone, back up and
       restore both the database and the frames, rotate the JWT secret without locking everyone out,
       upgrade a schema that gained a column, read the log for a refused request, and recover a queue

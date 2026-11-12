@@ -26,6 +26,7 @@
 | 领一个任务 | `PLAN.md` 是契约，`PROGRESS.md` 说明它为什么动 |
 | 理解系统怎么分层 | `architecture-zh.md`，再看相关那篇 ADR |
 | 调接口或写接口 | `api-contract-zh.md` |
+| 把它跑起来、备份或恢复 | `runbook-zh.md` |
 | 加表加字段 | `data-model-zh.md` |
 | 买硬件、接线 | `procurement-zh.md` |
 | 知道原型展示什么 | `prototype-zh.md` |
@@ -47,7 +48,8 @@
 | `procurement-en/zh.md` | 买什么、为什么买这些、怎么验收 | 换硬件 | @FrozenYty |
 | `copy-review-en/zh.md` | 界面文案的审阅结论，按页面 | 文案重写或页面集合变化 | @FrozenYty |
 | `handover-en/zh.md` | 交接出去的工作，以及它必须达到的标准 | 有事项关闭或新增 | @FrozenYty |
-| `rig-state-machine-en/zh.md` | 每一个状态与事件组合的结果 | 新增状态或事件时 | @FrozenYty |
+| `rig-state-machine-en/zh.md` | 每一个状态与事件组合的结果 | 新增状态或事件时 |
+| `runbook-en/zh.md` | 启动、备份、恢复、轮换密钥、升级 schema、读日志 | 部署步骤变化，或迁移机制到位时 | @FrozenYty | @FrozenYty |
 | `test-cases-en/zh.md` | 每条验收项一条用例，以及怎么跑 | 验收项变化，或某条用例被执行 | @IkeaFyj |
 | `glossary-en-zh.md` | 每个概念的唯一叫法 | 出现新概念 | @FrozenYty |
 | `adr/01-15` | 为什么这样定、什么时候该重审 | 不改写，只被新 ADR 取代 | 该篇作者 |
