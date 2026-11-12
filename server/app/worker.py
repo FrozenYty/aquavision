@@ -182,18 +182,41 @@ def process_task(
             _finish(session, task, DONE, None)
 
 
+def _running_count(session_factory: sessionmaker) -> int:
+    with session_factory() as session:
+        return (
+            session.scalar(
+                select(func.count()).select_from(DetectTask).where(DetectTask.status == RUNNING)
+            )
+            or 0
+        )
+
+
+def _claim(session_factory: sessionmaker, limit: Callable[[], int] | None) -> int | None:
+    """Take one queued task, unless the limit in force forbids it right now (ADR 15, AC-27).
+
+    The count and the claim happen under the same lock, so two threads cannot both see an empty slot
+    and fill it. `limit` is a callable rather than a number because its value is the parameter's
+    current one, read here and not at start-up.
+    """
+    if limit is not None and _running_count(session_factory) >= limit():
+        return None
+    return claim_one(session_factory)
+
+
 def run_once(
     session_factory: sessionmaker,
     detector: Detector | None = None,
     claim_lock: threading.Lock | None = None,
     reason: str = NO_DETECTOR,
+    limit: Callable[[], int] | None = None,
 ) -> bool:
     """Claim and process one task. Returns True when a task was taken."""
     if claim_lock is None:
-        task_id = claim_one(session_factory)
+        task_id = _claim(session_factory, limit)
     else:
         with claim_lock:
-            task_id = claim_one(session_factory)
+            task_id = _claim(session_factory, limit)
     if task_id is None:
         return False
     process_task(session_factory, task_id, detector, reason=reason)
@@ -201,7 +224,13 @@ def run_once(
 
 
 class Worker:
-    """A small fixed pool, matching architecture §5: task state is in the database, not in Redis."""
+    """A small pool, matching architecture §5: task state is in the database, not in Redis.
+
+    How many tasks may run at once is the operator's `max_concurrency` (ADR 15): the pool grows to the
+    value in force and every claim checks it, so lowering the limit stops new work immediately and
+    raising it starts more threads without a restart. Threads are never removed when the limit drops -
+    an idle thread costs nothing, and shrinking would have to interrupt work in progress.
+    """
 
     def __init__(
         self,
@@ -210,26 +239,27 @@ class Worker:
         poll_seconds: float = 1.0,
         detector: Detector | None = None,
         unavailable_reason: str | None = None,
+        limit: Callable[[], int] | None = None,
     ):
         self._session_factory = session_factory
         self._workers = max(1, workers)
         self._poll_seconds = max(0.05, poll_seconds)
         self._detector = detector
         self._unavailable_reason = unavailable_reason or NO_DETECTOR
+        self._limit = limit
         self._stop = threading.Event()
         self._claim_lock = threading.Lock()
+        self._threads_lock = threading.Lock()
         self._threads: list[threading.Thread] = []
 
     def start(self) -> None:
         requeue_stale(self._session_factory)
-        for index in range(self._workers):
-            thread = threading.Thread(target=self._loop, name=f"detect-worker-{index}", daemon=True)
-            thread.start()
-            self._threads.append(thread)
+        self._grow()
+        threading.Thread(target=self._supervise, name="detect-worker-pool", daemon=True).start()
 
     def stop(self) -> None:
         self._stop.set()
-        for thread in self._threads:
+        for thread in list(self._threads):
             thread.join(timeout=5)
 
     @property
@@ -240,7 +270,28 @@ class Worker:
         still says running has nothing behind it, and the operator is told so instead of watching a
         progress bar that will never move.
         """
-        return any(thread.is_alive() for thread in self._threads)
+        return any(thread.is_alive() for thread in list(self._threads))
+
+    def _target(self) -> int:
+        return max(1, self._limit()) if self._limit is not None else self._workers
+
+    def _grow(self) -> None:
+        """Start claim threads until the pool matches the limit in force."""
+        with self._threads_lock:
+            for index in range(len(self._threads), self._target()):
+                thread = threading.Thread(
+                    target=self._loop, name=f"detect-worker-{index}", daemon=True
+                )
+                thread.start()
+                self._threads.append(thread)
+
+    def _supervise(self) -> None:
+        while not self._stop.is_set():
+            try:
+                self._grow()
+            except Exception:  # noqa: BLE001 - a failed parameter read must not end the pool
+                log.exception("detect worker pool could not grow")
+            self._stop.wait(self._poll_seconds)
 
     def _loop(self) -> None:
         while not self._stop.is_set():
@@ -250,6 +301,7 @@ class Worker:
                     detector=self._detector,
                     claim_lock=self._claim_lock,
                     reason=self._unavailable_reason,
+                    limit=self._limit,
                 )
             except Exception:  # noqa: BLE001 - one bad task must not kill the pool
                 log.exception("detect worker iteration failed")

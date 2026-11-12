@@ -20,7 +20,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
@@ -28,6 +28,7 @@ from app import serializers, timebase
 from app.deps import SessionDep, SettingsDep, UserDep, get_current_user
 from app.envelope import BAD_PARAM, INTERNAL, NOT_FOUND, ApiError, ok
 from app.models import MediaAsset, SysLog
+from app.params import effective
 from app.vision.quality import score_frame
 
 router = APIRouter(prefix="/api", tags=["capture"], dependencies=[Depends(get_current_user)])
@@ -44,7 +45,7 @@ class FrameBody(BaseModel):
 
 
 @router.get("/cameras")
-def list_cameras(settings: SettingsDep) -> dict[str, object]:
+def list_cameras(request: Request, settings: SettingsDep) -> dict[str, object]:
     """Report the local device without claiming one exists.
 
     The server is assumed to run on the capture machine (architecture §2). When no device opens the
@@ -52,8 +53,9 @@ def list_cameras(settings: SettingsDep) -> dict[str, object]:
     """
     from app.vision.capture import CameraSource, CaptureError
 
+    index = effective(request.app.state.session_factory, "camera_index", settings)
     try:
-        source = CameraSource(index=settings.camera_index)
+        source = CameraSource(index=index)
         source.open()
         width, height = source.size
         source.close()
@@ -61,8 +63,8 @@ def list_cameras(settings: SettingsDep) -> dict[str, object]:
             {
                 "items": [
                     {
-                        "index": settings.camera_index,
-                        "name": f"本地摄像头 {settings.camera_index}",
+                        "index": index,
+                        "name": f"本地摄像头 {index}",
                         "width": width,
                         "height": height,
                         "available": True,
@@ -124,6 +126,7 @@ def list_sessions(
 def grab_frame(
     session_id: str,
     body: FrameBody,
+    request: Request,
     db: SessionDep,
     user: UserDep,
     settings: SettingsDep,
@@ -154,7 +157,11 @@ def grab_frame(
         # The frame is not in the database yet, so nothing is left half-stored; the caller is told
         # which resource refused the write and what to do about it.
         raise _storage_error(err) from err
-    verdict_ok = quality.score >= settings.quality_threshold
+    # The threshold in force, read here rather than at start-up: an operator who lowers it expects the
+    # next frame to be judged by the new one (ADR 15).
+    verdict_ok = quality.score >= effective(
+        request.app.state.session_factory, "quality_threshold", settings
+    )
     asset = MediaAsset(
         frame_id=_frame_id(captured_at, digest),
         session_id=session_id,

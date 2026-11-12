@@ -24,7 +24,7 @@ from sqlalchemy.exc import InterfaceError, OperationalError, SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app import envelope
+from app import envelope, params
 from app.config import get_settings
 from app.db import PROJECT_ROOT, engine_from_dsn, resolve_dsn
 from app.detector import load_online
@@ -126,6 +126,8 @@ async def lifespan(app: FastAPI):
             poll_seconds=getattr(app.state, "worker_poll_seconds", 1.0),
             detector=detector,
             unavailable_reason=detector_error,
+            # The operator's limit, read at each claim rather than fixed at start-up (ADR 15).
+            limit=lambda: params.effective(app.state.session_factory, "max_concurrency"),
         )
         worker.start()
         app.state.worker = worker
@@ -133,7 +135,7 @@ async def lifespan(app: FastAPI):
     if getattr(app.state, "rig_port", ""):
         # The rig link is started last and stopped first: a panel that asks for a frame while the
         # database is gone would produce a verdict nobody can store.
-        link = build_link(get_settings())
+        link = build_link(get_settings(), app.state.session_factory)
         if link is not None:
             link.start()
 

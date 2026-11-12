@@ -37,11 +37,13 @@ class RigService:
         link: RigLink,
         capture: Callable[[], Quality],
         *,
-        threshold: int = 60,
+        threshold: int | Callable[[], int] = 60,
     ) -> None:
         self._link = link
         self._capture = capture
-        self._threshold = threshold
+        # An int for a test or a fixed deployment; a callable when the operator can change it, so
+        # the verdict uses the value in force rather than the one the process started with (ADR 15).
+        self._threshold = threshold if callable(threshold) else (lambda value=threshold: value)
 
     def handle(self, event: protocol.RigEvent) -> None:
         if event.name == "TRIGGER":
@@ -77,6 +79,6 @@ class RigService:
             log.warning("rig: verdict dropped, the port closed before it was sent")
 
     def _verdict(self, quality: Quality) -> tuple[str, str]:
-        if quality.score >= self._threshold:
+        if quality.score >= self._threshold():
             return VERDICT_PASS, protocol.REASON_NONE
         return VERDICT_RETAKE, protocol.reason_for(quality)

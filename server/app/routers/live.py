@@ -39,6 +39,7 @@ from app.config import Settings, get_settings
 from app.detector import CONF_THRESHOLD
 from app.envelope import ApiError
 from app.models import MediaAsset, SysUser
+from app.params import effective
 from app.security import load_user
 from app.vision.capture import CameraSource, CaptureError, make_frame_id
 from app.vision.quality import Quality, score_frame
@@ -107,15 +108,22 @@ class _StartConfig:
     detect_interval_ms: int
 
     @classmethod
-    def from_message(cls, message: dict[str, Any]) -> _StartConfig:
+    def from_message(
+        cls, message: dict[str, Any], default_interval: int = DEFAULT_DETECT_INTERVAL_MS
+    ) -> _StartConfig:
+        """The client's own interval when it sends one, otherwise the value in force (ADR 15).
+
+        The client sends the interval it wants on every start message, so this default is what an
+        operator's change to `detect_interval_ms` governs.
+        """
         try:
             fps = float(message.get("fps", DEFAULT_FPS))
         except (TypeError, ValueError):
             fps = DEFAULT_FPS
         try:
-            interval = int(message.get("detect_interval_ms", DEFAULT_DETECT_INTERVAL_MS))
+            interval = int(message.get("detect_interval_ms", default_interval))
         except (TypeError, ValueError):
-            interval = DEFAULT_DETECT_INTERVAL_MS
+            interval = default_interval
         return cls(
             fps=min(max(fps, MIN_FPS), MAX_FPS),
             detect_interval_ms=max(0, interval),
@@ -195,7 +203,14 @@ async def _serve(
                         source,
                         detector,
                         settings,
-                        _StartConfig.from_message(message),
+                        _StartConfig.from_message(
+                            message,
+                            effective(
+                                websocket.app.state.session_factory,
+                                "detect_interval_ms",
+                                settings,
+                            ),
+                        ),
                     )
                 )
             elif kind == "stop":
@@ -387,7 +402,9 @@ def _frame_source(websocket: WebSocket, settings: Settings) -> FrameSource:
     injected = getattr(websocket.app.state, "frame_source", None)
     if injected is not None:
         return injected
-    return CameraSource(index=settings.camera_index)
+    return CameraSource(
+        index=effective(websocket.app.state.session_factory, "camera_index", settings)
+    )
 
 
 def _token_from(raw: str) -> str:
