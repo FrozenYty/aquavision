@@ -290,6 +290,28 @@
 - **It says what it cannot cover, on purpose.** No migration mechanism, no second application process,
   no hardware, no training - each named with where that knowledge lives instead. A runbook that implies
   more than it knows is worse than a short one.
+- **The acceptance record became a check instead of a promise.** `scripts/check-ac-coverage.py` fails when
+  an acceptance item has no owning task, when a ticked claim names no test that exists, when a claim names
+  a file that has moved, and when a claim points at an item the SRS does not define. It runs in CI and is
+  named in both gate inventories. **All 36 items are now owned and every closed one names a test that
+  exists** - the 11-11 audit had 14 of 36 traced. Where a claim had no evidence beside it, the evidence was
+  added to the claim rather than to a separate table, because that is where a reviewer looks.
+- **AC-18 had no test at all, and the check forced the issue.** `P2-09` closed it with a *page*; the export
+  itself was unasserted. `tests/test_datasets.py` now asserts the grouping rule that AC-18 exists for - a
+  burst of frames must not straddle two splits - the counts, the manifest, and the three refusals.
+- **Two defects fell out of writing that test.** `GROUP_SECONDS = 10` is defined in `datasets.py` and used
+  nowhere: `_group_of` groups by the exact second, so a burst spanning two seconds still leaks across
+  splits, which is the one thing AC-18 is about. And the list view omits splits with no frames while the
+  export answers all three, so a page rendering a train/val/test table cannot show a zero row. Both are
+  recorded in `P4-05`.
+- **The test-case document now says what is true.** Every one of its 49 cases carries a verdict - 20
+  automated, 21 manual, 8 uncovered - with the test named as `file::function`, and anything the named test
+  does not assert written on the line rather than promoted into a claim. The eight uncovered cases are the
+  open tasks, which is what "uncovered" should mean: no test and no feature.
+- **Three more defects came out of that pass**, all recorded in `P4-05` with a severity: a needs-retake
+  frame enters a detection batch because `create_batch` never filters `quality_flag`, so AC-07's "stays out
+  of the queue" half is false; a batch cannot be built from a selected set of frames, so AC-08's drill-down
+  does not exist; and `species_dict.conf_thr` is still read by nothing.
 ## 2026-11-11
 
 - **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint
