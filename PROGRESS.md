@@ -1,3 +1,35 @@
+## 2026-11-12
+
+- **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict
+  itself.** The audit had reported several "SRS says X, code does Y" items, and most of them are not
+  defects - an SRS states requirements, and a requirement whose implementation is still open is what an
+  open task looks like. What is a defect is the pair of places where **the SRS contradicts another
+  document or the code about a decision already taken**: FR-M4-02 said only analysts and algorithm
+  engineers may review while the contract and the code both allow administrators, so the SRS was
+  corrected to the decision. The rest were moved into a task rather than edited away.
+- **`P3-18` now carries the four gaps that had no home**, each with the evidence and the choice it needs:
+  the date filters are a UTC day while the contract says the server's day; `PATCH /api/params` writes
+  rows nothing reads, so AC-27's "a new concurrency limit constrains new jobs" does not hold; the capture
+  endpoints are not restricted to the local process as FR-M1-02 claims; and a password change does not
+  invalidate tokens as NFR-S-05 requires. **None of the four was quietly weakened to match the code** -
+  a security requirement is not mine to downgrade.
+- **A refusal now leaves a record.** FR-M1-02 and AC-02 require the attempt to be logged and the guard
+  logged nothing; there were fourteen `SysLog` sites in the server and not one on a refusal. The guard
+  writes the row and **commits before raising**, because `get_db` closes the session without committing
+  and the row would vanish with the exception. The test reads the row through a fresh session after the
+  response, so only a real commit satisfies it - reading it in the request's own session would have
+  passed against the broken shape.
+- **Failed authentication is deliberately still not logged**, and that is a decision rather than an
+  omission: an unauthenticated request never reaches the role matrix, it has no `user_id` to record, and
+  logging every malformed `Authorization` header would turn `sys_log` into an unbounded write sink
+  reachable without credentials. If the team wants that audited it needs its own rule, not a fold-in.
+- **The handover stopped describing finished work as homework.** Nine sections still instructed the
+  reader to add a test, rename a page or answer a socket question for tasks that were ticked and tested -
+  the document's own rule is that accepted items are deleted, but its headings had stayed. Each was
+  turned into a statement of what exists, with the `PLAN.md` line or test that proves it, and the English
+  side gained the thirteen-name table it had been missing. What is genuinely open stays open: `P2-13`,
+  `P3-17`, the weight file, and the client-side socket fallback recorded under `P3-12`.
+
 ## 2026-11-11
 
 - **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint

@@ -398,6 +398,26 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         `EVT I2C 49` with the sensor powered
       - **`P4-07`'s rehearsals cannot start before this is done**, and neither can the optical half of
         `P1-06`'s original acceptance
+- [ ] **P3-18** The gap list from the 11-11 audit · @Gtechson · four places where a document states a
+      behaviour the system does not have. Each needs a decision - implement it, or change the document -
+      not a silent edit. Closing means all four are either done or written down as not required
+      - **date filters are a UTC day, not the server's day.** `docs/api-contract-en.md:61` says the range
+        is "interpreted in the server time zone"; `_parse_date` builds a naive datetime and compares it to
+        a naive-UTC `captured_at`, so an operator's 03:00 local capture on 2 November falls into the
+        1 November filter and is **silently absent from its own day**. Either convert in the filter or
+        correct the contract; `tests/test_frames_filters.py` pins the present behaviour so it cannot move
+        by accident
+      - **`PATCH /api/params` is write-only.** It persists `sys_param` rows the response renders, and no
+        other module reads them - the real consumers read `Settings` cached at startup. AC-27's "a new
+        concurrency limit constrains new jobs" therefore does not hold. Either make each consumer read the
+        parameter at use time or state that a restart is required, and record it in FR-M7-01
+      - **capture endpoints are not restricted to the local process.** SRS FR-M1-02 says they "accept only
+        the local process and are never exposed"; they are ordinary routes behind a JWT, so any signed-in
+        remote client may post frames
+      - **a password change does not invalidate issued tokens.** NFR-S-05 says it does; the tokens are
+        stateless and `sys_user` has no column to revoke them, so revocation needs a `token_epoch` or
+        `pwd_changed_at` checked by `get_current_user` - a schema change - or the requirement is reduced
+        to what the design does
 - [ ] **GATE P3** — all 36 acceptance items demonstrated live, one after another, no manual database
       edits in between, and every item traceable to the task that closed it
 
