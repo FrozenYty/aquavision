@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app import timebase
 from app.models import DetectObject, DetectTask, MediaAsset, ModelVersion, SpeciesDict, SysUser
 
 #: Task status codes, from the data model §3.4 comment.
@@ -18,10 +19,11 @@ REVIEW_STATUS = {0: "pending", 1: "confirmed", 2: "modified", 3: "rejected"}
 
 
 def iso(value: Any) -> str | None:
-    """A naive UTC datetime as ISO 8601 with an explicit offset, as the contract requires."""
-    if value is None:
-        return None
-    return value.replace(tzinfo=None).isoformat(timespec="seconds") + "+00:00"
+    """A stored naive-UTC (or aware) datetime as the contract's outbound timestamp.
+
+    ADR 14: the offset is the configured zone's, and this is the one converter every payload uses.
+    """
+    return timebase.iso(value)
 
 
 def frame(asset: MediaAsset) -> dict[str, object]:

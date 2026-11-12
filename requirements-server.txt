@@ -20,6 +20,9 @@ opencv-python-headless==5.0.0.93
 numpy==2.4.6
 # pyserial: the PC side of the ESP32 rig link (P2-17).
 pyserial==3.5
+# tzdata: Windows ships no IANA database, so ZoneInfo("Asia/Shanghai") raises there without it.
+# app/timebase.py resolves AV_TIMEZONE on every deployment (ADR 14), not only where the OS has zones.
+tzdata==2026.6
 # Development: the test client is starlette's, and it needs httpx; requirements.txt pins the same one.
 pytest==9.2.0
 httpx==0.28.1

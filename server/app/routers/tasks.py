@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select, update
 
-from app import serializers
+from app import serializers, timebase
 from app.deps import SessionDep, UserDep, get_current_user
 from app.envelope import CONFLICT, NOT_FOUND, ApiError, ok
 from app.models import DetectObject, DetectTask, DetectTaskItem, MediaAsset, ModelVersion, SysLog
@@ -126,9 +126,12 @@ def retry_task(task_id: int, db: SessionDep, user: UserDep) -> dict[str, object]
 
 
 def next_task_code(db) -> str:
-    """`DTyyMMdd-serial` (data model §3.4), shared by the live and the batch entry points."""
+    """`DTyyMMdd-serial` (data model §3.4), shared by the live and the batch entry points.
+
+    The date is the operator's local day (ADR 14), not the UTC day the timestamps are stored under.
+    """
     serial = db.scalar(select(func.count(DetectTask.task_id))) or 0
-    return f"DT{datetime.now(UTC):%y%m%d}-{serial + 1:03d}"
+    return f"DT{timebase.now().strftime('%y%m%d')}-{serial + 1:03d}"
 
 
 def create_batch(db, body: BatchBody) -> DetectTask:

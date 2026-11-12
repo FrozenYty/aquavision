@@ -5,11 +5,10 @@ answers 200: they seed frames that differ in exactly one attribute each and asse
 alone keeps the right rows, that the four together intersect instead of piling up, and that the
 returned total describes the filtered set rather than the page.
 
-One finding is pinned here and reported rather than fixed: the contract says the date filters are
-interpreted in the server's time zone (api-contract §5), but `_parse_date` builds a naive datetime and
-compares it to `captured_at`, which the capture route stores as naive UTC. The date range is therefore
-a UTC day. `test_the_date_range_is_a_utc_day_not_the_servers_local_day` states that boundary explicitly
-so a future fix to local-time filtering has to change this test on purpose.
+One boundary is pinned here deliberately: ADR 14 decides that the date filters mean the operator's
+local day in `AV_TIMEZONE`, not the UTC day `captured_at` is stored under.
+`test_the_date_range_is_the_operators_local_day` states that boundary, including the frames just
+outside it, so a regression to UTC-day filtering fails on purpose.
 """
 
 from __future__ import annotations
@@ -117,7 +116,7 @@ def frame_ids(page: dict) -> list[str]:
 
 
 def seed_four_frames(client: TestClient) -> None:
-    """A 2x2: two capture sessions, two sites, ok-retake, and four different UTC days.
+    """A 2x2: two capture sessions, two sites, ok-retake, and four different local days.
 
     A = s-1 / A3 / ok       / 2026-11-01
     B = s-1 / B1 / retake   / 2026-11-02
@@ -183,7 +182,7 @@ def test_the_quality_filter_splits_retakes_from_accepted_frames(client):
 def test_the_date_range_is_inclusive_on_both_ends(client):
     seed_four_frames(client)
     token = sign_in(client)
-    # A single day as both ends: the frame captured that UTC day is included by both bounds.
+    # A single day as both ends: the frame captured on that local day is included by both bounds.
     assert frame_ids(list_frames(client, token, start="2026-11-02", end="2026-11-02")) == [
         "20261102T100000-0002"
     ]
@@ -240,31 +239,41 @@ def test_the_total_counts_the_filtered_set_not_the_page(client):
     assert page["total"] == 2, "total must describe all matching frames, not the returned page"
 
 
-def test_the_date_range_is_a_utc_day_not_the_servers_local_day(client):
-    """The finding reported to the lead: contract §5 says "server time zone", the code says UTC.
+def test_the_date_range_is_the_operators_local_day(client):
+    """ADR 14: a day runs 00:00:00-23:59:59.999999 in the configured zone, not the stored UTC day.
 
-    2026-11-02 00:00-08:00 on a UTC+8 server is 2026-11-01 16:00Z; a frame captured at local
-    2026-11-02 03:00 is stored as 2026-11-01T19:00Z. A filter for start=2026-11-02 therefore silently
-    drops it, although it is a 2 November frame where the operator sits. The assertions below pin the
-    stored-UTC boundary: they pass today and must be changed deliberately if the route is fixed.
+    `captured_at` is naive UTC, so a capture at local 2026-11-02 03:00 on a UTC+8 machine is stored as
+    2026-11-01T19:00Z. It must still count as 2 November; the frames either side - one at local
+    1 November 23:00 and one at local 3 November 00:00 - are the day next door.
     """
+    seed_frame(
+        client,
+        "20261101T150000-0004",
+        session_id="s-3",
+        site="A3",
+        captured_at=datetime(2026, 11, 1, 15, 0),  # local 2026-11-01 23:00
+    )
     seed_frame(
         client,
         "20261101T190000-0005",
         session_id="s-3",
         site="A3",
-        captured_at=datetime(2026, 11, 1, 19, 0),
+        captured_at=datetime(2026, 11, 1, 19, 0),  # local 2026-11-02 03:00
     )
     seed_frame(
         client,
         "20261102T100000-0006",
         session_id="s-3",
         site="A3",
-        captured_at=datetime(2026, 11, 2, 10, 0),
+        captured_at=datetime(2026, 11, 2, 10, 0),  # local 2026-11-02 18:00
+    )
+    seed_frame(
+        client,
+        "20261102T160000-0007",
+        session_id="s-3",
+        site="A3",
+        captured_at=datetime(2026, 11, 2, 16, 0),  # local 2026-11-03 00:00
     )
     token = sign_in(client)
     on_the_second = frame_ids(list_frames(client, token, start="2026-11-02", end="2026-11-02"))
-    assert on_the_second == ["20261102T100000-0006"], (
-        "the 2026-11-01T19:00Z frame is dropped from the 2 November filter; under the contract's "
-        "server-time-zone reading it is 2026-11-02 03:00 and should be included"
-    )
+    assert set(on_the_second) == {"20261101T190000-0005", "20261102T100000-0006"}

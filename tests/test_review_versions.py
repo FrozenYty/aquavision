@@ -221,7 +221,8 @@ def test_two_submissions_appear_newest_first_with_their_counts_and_authors(clien
     assert oldest["before_count"] == 2 and oldest["after_count"] == 3
     for item in items:
         assert isinstance(item["created_at"], str)
-        assert item["created_at"].endswith("+00:00")
+        # ADR 14: emitted timestamps carry the configured zone's offset (Asia/Shanghai by default).
+        assert item["created_at"].endswith("+08:00")
 
     # The counts come from the stored JSON, not from the current boxes: the frame has two accepted
     # boxes now, while the first submission's entry says three.

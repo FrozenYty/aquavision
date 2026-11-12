@@ -17,6 +17,9 @@ numpy==2.4.6
 # pyserial: the PC side of the ESP32 rig link (P2-17). Imported only when AV_RIG_PORT is set, but
 # required on any machine that drives the rig.
 pyserial==3.5
+# tzdata: Windows ships no IANA database, so ZoneInfo("Asia/Shanghai") raises there without it.
+# app/timebase.py resolves AV_TIMEZONE on every deployment (ADR 14), not only where the OS has zones.
+tzdata==2026.6
 # Not imported by this repository: ultralytics imports Pillow for image loading. Pinned here so the
 # full training environment is reproducible.
 pillow==13.0.0

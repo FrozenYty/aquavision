@@ -10,14 +10,14 @@ The row is what makes the history queryable by period, template and basis; the f
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
-from app import serializers
+from app import serializers, timebase
 from app.deps import SessionDep, SettingsDep, UserDep, get_current_user, require
 from app.envelope import BAD_PARAM, CONFLICT, INTERNAL, ApiError, ok
 from app.models import (
@@ -62,13 +62,14 @@ def list_reports(
 def create_report(
     body: ReportBody, db: SessionDep, user: UserDep, settings: SettingsDep
 ) -> dict[str, object]:
-    start = body.period_start.replace(tzinfo=None)
-    end = body.period_end.replace(tzinfo=None)
+    # ADR 14: the period arrives with its offset; storage keeps the instant as naive UTC.
+    start = timebase.as_utc(body.period_start)
+    end = timebase.as_utc(body.period_end)
     if end <= start:
         raise ApiError(BAD_PARAM, "结束日期不能早于开始日期")
 
     serial = (db.scalar(select(func.count(Report.report_id))) or 0) + 1
-    code = f"RP{datetime.now(UTC):%y%m%d}-{serial:03d}"
+    code = f"RP{timebase.now().strftime('%y%m%d')}-{serial:03d}"
     if db.scalar(select(Report).where(Report.report_code == code)):
         raise ApiError(CONFLICT, "报告编号冲突，请重试")
 
@@ -179,7 +180,8 @@ def _render(code: str, body: ReportBody, figures: dict[str, object], online) -> 
     lines = [
         f"# 巡检报告 {code}",
         "",
-        f"- 统计周期：{body.period_start:%Y-%m-%d} 至 {body.period_end:%Y-%m-%d}",
+        f"- 统计周期：{timebase.to_zone(body.period_start):%Y-%m-%d} 至 "
+        f"{timebase.to_zone(body.period_end):%Y-%m-%d}",
         f"- 模板：{body.template}",
         f"- 统计口径：{'复核后结果' if body.basis == 'reviewed' else '原始识别结果'}",
         f"- 模型版本：{online.version_name if online else '未上线'}",
@@ -204,7 +206,7 @@ def _render(code: str, body: ReportBody, figures: dict[str, object], online) -> 
         "",
         "---",
         "",
-        f"生成于 {datetime.now(UTC):%Y-%m-%dT%H:%M:%SZ} · 模型版本 "
+        f"生成于 {timebase.iso(timebase.now())} · 模型版本 "
         f"{online.version_name if online else '未上线'} · 口径 "
         f"{'复核后' if body.basis == 'reviewed' else '原始'}",
         "",
