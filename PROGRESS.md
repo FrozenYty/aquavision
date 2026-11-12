@@ -167,6 +167,23 @@
   whose `data/app.db` predates the delivery - a machine state, not a defect, and one CI cannot catch
   (no local database there means skip). It now skips with the command to run when the database serves
   no model, and still fails hard when two versions are online, because that one is the defect.
+- **The capture surface is local now, and it says so.** FR-M1-02 said the capture endpoints "accept
+  only the local process and are never exposed" and they were ordinary JWT routes: a signed-in client
+  on another machine could post frames, which is what AC-05 forbids - a frame that did not come from the
+  camera in front of the tank. The guard is the loopback address, on the four capture routes and the
+  live socket (refused at the handshake, not with a new close code, so the client's protocol is
+  unchanged); a refusal is logged like a role refusal, and authentication still runs first, so
+  FR-M1-02's own 401 example still answers 401. **The guard has no test-runner bypass**: `testclient` is
+  not a loopback address, so six fixtures now declare that their client is on the machine - the suite
+  was made honest rather than the guard relaxed. Shown red first: with the address check neutralised a
+  remote client reads `/api/cameras` with 200.
+- **A password change ends the sessions that password created.** NFR-S-05 promised it while tokens are
+  stateless and `sys_user` had nothing to revoke. One INT column, `token_epoch`, is issued into every
+  token as `epoch`; the guard refuses a token carrying an older number; `reset-password` bumps it; and a
+  token without the claim reads as epoch 0, which is where every existing account starts, so the
+  sessions issued before the column existed survive only until the next reset. Disabling an account was
+  already immediate - this was the missing half. Shown red first: without the bump, the analyst's
+  pre-reset token still answers `/api/auth/me` with 200.
 
 - **The plan was audited against itself and did not pass its own rules.** `P4-05` named its owner as
   "all", while §5 of the same file says one task has one owner - a rule the file had broken in the task
@@ -224,6 +241,14 @@
 - **Load is now level across the four lanes**: A 12, B 12, C 10, D 10. It was A 10, B 10, C 4, D 1, which
   meant two people carried three quarters of the remaining work and the frontend and verification lanes
   looked finished when they were not.
+- **A test that needs hardware the runner does not have fails only where nobody is looking.** The
+  first CI run of the capture-locality file failed in `Tests`: the socket test let the connection reach
+  the real camera, CI has none, so the server closed with capture-unavailable before `auth_ok` and
+  `receive_json` raised. The test now injects a frame source - the seam `tests/test_ws_capture.py`
+  already uses - and the failure was reproduced locally by pointing `live.CameraSource` at a class
+  that raises, which is what the runner does by simply existing. Four of the five tests in that file
+  never touched a camera; the fifth did, and that was enough.
+
 ## 2026-11-11
 
 - **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint

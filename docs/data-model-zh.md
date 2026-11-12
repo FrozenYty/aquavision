@@ -13,7 +13,7 @@
 
 | 表 | 作用 | 字段数 |
 |---|---|---|
-| `sys_user` | 账号、角色、登录状态 | 13 |
+| `sys_user` | 账号、角色、登录状态 | 14 |
 | `sys_log` | 关键操作的审计记录 | 10 |
 | `media_asset` | 一帧影像及其元数据 | 18 |
 | `detect_task` | 一次识别的模型、参数与进度 | 16 |
@@ -62,6 +62,7 @@
 | `fail_count` | SMALLINT | DEFAULT 0 | 连续登录失败次数 |
 | `locked_until` | TIMESTAMP | NULL | 锁定截止时间 |
 | `last_login_at` | TIMESTAMP | NULL | 最近登录时间 |
+| `token_epoch` | INT | DEFAULT 0 | 改密码时自增；令牌带着签发时的值，旧值一律拒绝（NFR-S-05） |
 | `created_at` | TIMESTAMP | DEFAULT now() | 创建时间 |
 
 ### 3.2 sys_log 操作日志表

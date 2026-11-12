@@ -14,7 +14,7 @@ frame list moved from a query every worker re-ran to a set the task owns (ADR 12
 
 | Table | Purpose | Columns |
 |---|---|---|
-| `sys_user` | Accounts, roles, login state | 13 |
+| `sys_user` | Accounts, roles, login state | 14 |
 | `sys_log` | Audit trail of key actions | 10 |
 | `media_asset` | One captured frame and its metadata | 18 |
 | `detect_task` | One detection run: model, parameters, progress | 16 |
@@ -67,6 +67,7 @@ storage, rendered as Chinese text in the UI.
 | `fail_count` | SMALLINT | DEFAULT 0 | Consecutive login failures |
 | `locked_until` | TIMESTAMP | NULL | Lock expiry |
 | `last_login_at` | TIMESTAMP | NULL | Last login time |
+| `token_epoch` | INT | DEFAULT 0 | Bumped on a password change; a token carries the value it was issued under and an older one is refused (NFR-S-05) |
 | `created_at` | TIMESTAMP | DEFAULT now() | Creation time |
 
 ### 3.2 sys_log

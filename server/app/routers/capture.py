@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
 from app import serializers, timebase
-from app.deps import SessionDep, SettingsDep, UserDep, get_current_user
+from app.deps import SessionDep, SettingsDep, UserDep, get_current_user, only_local
 from app.envelope import BAD_PARAM, INTERNAL, NOT_FOUND, ApiError, ok
 from app.models import MediaAsset, SysLog
 from app.params import effective
@@ -44,7 +44,7 @@ class FrameBody(BaseModel):
     turbidity_rel: int | None = Field(default=None, ge=0, le=100)
 
 
-@router.get("/cameras")
+@router.get("/cameras", dependencies=[Depends(only_local)])
 def list_cameras(request: Request, settings: SettingsDep) -> dict[str, object]:
     """Report the local device without claiming one exists.
 
@@ -76,7 +76,7 @@ def list_cameras(request: Request, settings: SettingsDep) -> dict[str, object]:
         return ok({"items": []})
 
 
-@router.post("/capture/sessions")
+@router.post("/capture/sessions", dependencies=[Depends(only_local)])
 def open_session(user: UserDep) -> dict[str, object]:
     """A session identifier. Nothing is persisted until a frame arrives, so an abandoned session
     leaves no trace — the alternative is a row per click of a button."""
@@ -84,7 +84,7 @@ def open_session(user: UserDep) -> dict[str, object]:
     return ok({"session_id": session_id, "opened_at": serializers.iso(datetime.now(UTC))})
 
 
-@router.get("/capture/sessions")
+@router.get("/capture/sessions", dependencies=[Depends(only_local)])
 def list_sessions(
     db: SessionDep,
     page: int = Query(default=1, ge=1),
@@ -122,7 +122,7 @@ def list_sessions(
     )
 
 
-@router.post("/capture/sessions/{session_id}/frames")
+@router.post("/capture/sessions/{session_id}/frames", dependencies=[Depends(only_local)])
 def grab_frame(
     session_id: str,
     body: FrameBody,
@@ -202,7 +202,7 @@ def grab_frame(
     return ok(payload)
 
 
-@router.post("/capture/sessions/{session_id}/close")
+@router.post("/capture/sessions/{session_id}/close", dependencies=[Depends(only_local)])
 def close_session(session_id: str, db: SessionDep) -> dict[str, object]:
     frames = db.scalar(
         select(func.count(MediaAsset.asset_id)).where(MediaAsset.session_id == session_id)

@@ -9,9 +9,9 @@
 | Item | Content |
 |---|---|
 | Document title | Underwater Species Detection and Monitoring for Marine Ranching Based on an Improved YOLOv8 — Software Project Requirements Specification |
-| Document number | SRS-PRJ14-V1.13-2026 |
+| Document number | SRS-PRJ14-V1.14-2026 |
 | Project number | PRJ-14 |
-| Document version | V1.13 |
+| Document version | V1.14 |
 | Phase | Phase 1: requirements analysis |
 | Prepared by | Training Group 14 |
 | Project lead | Yao Tianyu (group lead); supervisor: Wu Jianguang |
@@ -1002,7 +1002,7 @@ than picked up again; the decision is recorded in ADR 12.
 
 | Entity (table) | Name | Purpose | Fields |
 |---|---|---|---|
-| sys_user | User | Account, role and sign-in state; underpins authentication and permissions. | 13 |
+| sys_user | User | Account, role and sign-in state; underpins authentication and permissions. | 14 |
 | sys_log | Operation log | Audit record of key actions; append-only. | 10 |
 | media_asset | Image asset | Captured frame with path, timestamp, exposure and quality score. | 18 |
 | detect_task | Detection job | Model, parameters, progress and statistics for one job. | 16 |
@@ -1039,6 +1039,7 @@ Field level, one field per row, with types and constraints usable directly for s
 | fail_count | SMALLINT | DEFAULT 0 | Consecutive sign-in failures |
 | locked_until | TIMESTAMP | NULL | Lockout end |
 | last_login_at | TIMESTAMP | NULL | Last sign-in |
+| token_epoch | INT | DEFAULT 0 | Bumped when the password changes; a token carries the value it was issued under, and an older one is refused (NFR-S-05) |
 | created_at | TIMESTAMP | DEFAULT now() | Created |
 
 #### 4.2.2 sys_log
@@ -1534,6 +1535,7 @@ Defects found in acceptance testing are handled by severity. Critical (system un
 | V1.3 | 2026-11-04 | Yao Tianyu | Marine-debris class removed and four classes restored; dataset wording unified to DUO; AL-08 and AL-09 deleted from the metric table and AL-03 limited to per-class recall; scenery list in Table 2-3 and class palette in 5.1 adjusted. | No public labels exist for that class and in-house data cannot support an independent accuracy metric; focus on four commercial and predator species to keep the metric basis consistent. | Internal group review |
 | V1.12 | 2026-11-11 | Yao Tianyu | The table count moves from thirteen to fourteen. §4.1 gains `detect_task_item`, which records the frames assigned to each detection task when it is created: one row per frame, with its own state and box count. | A task's work list was a query re-evaluated by every worker, so two workers could claim the same frames and a frame with no objects never finished; the decision is recorded in ADR 12. | Internal group review |
 | V1.13 | 2026-11-12 | Gao Tianxiang | AC-23 states what version registration does instead of a refusal it never implemented: a version name always has exactly one row, and registering an existing name updates that row. | The registration script has been idempotent since P2-06c and `scripts/init_db.py` registers the delivered version on every run, so a refused duplicate would make a fresh install non-repeatable - the outcome AC-23 wants, one row per name, was already held. | Internal group review |
+| V1.14 | 2026-11-12 | Gao Tianxiang | §4.2.1 gains `token_epoch`, the column that lets a password change invalidate tokens already issued. | NFR-S-05 promised it and the tokens are stateless, so the requirement needed one revocation number on the account rather than a session table; a token carries the value it was issued under and the guard refuses an older one. | Internal group review |
 | V1.11 | 2026-11-10 | Yao Tianyu | The thirteen page names in §5.2 are one scheme now: object plus action, four characters where the language allows, no `page` suffix, no conjunction. The old set mixed grammars (`capture control` beside `image browsing`), reused `workbench` as both a page and a modifier, and disagreed with `docs/traceability-en.md` on nine of thirteen names in English. | A menu is scanned, not read: parallel entries are quicker to find, and three spellings of one page is three chances to edit the wrong file. | Internal group review |
 | V1.10 | 2026-11-07 | Yao Tianyu | The technology table no longer claims Celery and Redis: batch jobs run in a fixed thread pool inside the one FastAPI process, as ADR 03 decided. SQLAlchemy 2.0 corrected to 2.1, the version pinned in requirements. | The SRS still advertised a message broker the architecture had already rejected, and a reader comparing the two documents would have believed the system had a component it does not. | Internal group review |
 | V1.9 | 2026-11-07 | Yao Tianyu | Table 2-3 gains a status display and two status LEDs; the MCU row adds driving the display. Everything shown on the screen is English or numeric. | The screen and LEDs come from the STM32 kit already on hand, so they cost nothing; V1.4 removed the display on minimum-cost grounds and that premise no longer holds. The screen shows device state only — business data stays on the web side. | Internal group review |

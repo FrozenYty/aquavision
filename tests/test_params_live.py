@@ -97,7 +97,9 @@ def _app_rig(tmp_path, monkeypatch, *, worker_enabled: str):
 @pytest.fixture
 def rig(tmp_path, monkeypatch):
     app, factory = _app_rig(tmp_path, monkeypatch, worker_enabled="0")
-    with TestClient(app) as client:
+    # The capture routes accept only the local machine (FR-M1-02, P3-20), so this client says
+    # where it is instead of relying on the test runner's default address.
+    with TestClient(app, client=("127.0.0.1", 50000)) as client:
         yield client, factory
     get_settings.cache_clear()
     params.forget()

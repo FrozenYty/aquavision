@@ -54,6 +54,11 @@ class SysUser(Base):
     fail_count: Mapped[int] = mapped_column(SmallInteger, server_default="0")
     locked_until: Mapped[datetime | None] = mapped_column(DateTime)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime)
+    #: Bumped when the password changes. A token carries the value it was issued under, and the guard
+    #: refuses a token whose value is older - which is NFR-S-05's "a password change invalidates
+    #: issued tokens", without a session table. Disabling an account is already immediate: the guard
+    #: reads `status` on every request.
+    token_epoch: Mapped[int] = mapped_column(Integer, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
@@ -418,7 +423,7 @@ TABLES = (
 # map is what fails a test the moment a column is added or dropped on one side
 # only. Update both together, in the same commit.
 EXPECTED_COLUMNS = {
-    "sys_user": 13,
+    "sys_user": 14,
     "sys_log": 10,
     "media_asset": 18,
     "detect_task": 16,
