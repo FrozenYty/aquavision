@@ -358,6 +358,21 @@
   Two business rules of FR-M1-03 are deliberately not implemented and said so in `PLAN.md`: the forced
   change after a reset, and "the built-in administrator cannot be deleted" - there is no delete route,
   and disabling the last administrator is the open question nobody has decided.
+- **`create_all` adds a table and not a column, and every existing database felt it.** Adding
+  `sys_user.token_epoch` in `P3-20` reached fresh databases and broke every populated one with
+  `no such column` - which the application then reported as "the database is unreachable", the wrong
+  diagnosis - and the fix was a hand-written `ALTER TABLE` per machine that the runbook could only
+  describe as something to remember. `add_missing_columns` in `server/app/db.py` now adds what
+  `create_all` cannot, called from `scripts/init_db.py`: the one command the README already tells a
+  machine to run also upgrades an existing database. The rule is add, never rewrite - a column that
+  cannot be added to a table with rows is refused by name and the script exits 1, because a
+  half-upgraded schema fails on the first query that selects it.
+- **The test builds the previous release, not a helper's idea of it.** Dropping the newest column
+  reconstructs the schema the last release had, and the fixture seeds it with raw SQL because the
+  ORM's `INSERT` lists the very column the database does not have yet - the test fails before the
+  upgrade for the same reason the product did. Shown red first: with the catch-up switched off the
+  script exits 1 with `mismatch: sys_user has 13 columns, the dictionary says 14`, so the existing
+  acceptance check had been noticing the stale schema all along; what was missing was the fix.
 
 ## 2026-11-11
 
