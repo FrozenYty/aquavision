@@ -41,6 +41,23 @@
   without hardware: an engine aimed at a database path sitting inside a regular file, `ENOSPC` and
   `EACCES` injected at the write, and a `Worker` stopped with tasks left queued.
 
+- **The audit's most expensive lesson became a check.** `check-bilingual.py` compared heading levels and
+  nothing else - its own docstring said so - which is why every real defect of the 11-11 audit survived:
+  a table that lost four entities, a version of Table 2-3 missing two rows, six NFR tables whose header
+  row was lost in translation. They all had matching headings. The script now also compares the **shape of
+  every section**: each table's row and column counts, and how many fenced code blocks it holds. Words are
+  still not compared, because a translation differs by design and a check that quarrelled with prose would
+  be switched off within a week.
+- **It found a live defect on its first run**, and one nobody had fixed: the Chinese firmware README's
+  protocol table was missing the `CMD SCAN` row the English has, and the firmware implements it. Heading
+  parity had hidden it for as long as the row had been missing.
+- **Proven against the past, not just the present.** Replayed against the tree as it stood before the
+  audit fixes, the new comparison reports seven differences: the SRS equipment table (nine rows against
+  eleven) and all six NFR tables, each one line short on the Chinese side - exactly the defects the
+  auditors had found. A check is only worth its runtime if it fails on the defect it was written for.
+- **The false positive is guarded too**: a pair with the same structure and completely different wording
+  must report nothing, and there is a test for that, because the failure mode of a structural check is
+  not missing a defect - it is crying wolf until someone turns it off.
 ## 2026-11-11
 
 - **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint
