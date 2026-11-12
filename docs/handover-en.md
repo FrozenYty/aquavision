@@ -19,10 +19,10 @@ true next lives here.
 ### 2.0 Where the dataset is, and what is left
 
 The backend tasks this section used to sequence — `P2-06a/b/c`, `P2-05a/b/c`, `P2-07` and `P2-15` —
-are delivered and tested; `PLAN.md` records what each delivery had to prove. What is left in this lane:
-`P3-03` (model versions and activation), `P3-04` (account management), `P3-08` (retention cleanup),
-`P3-09` (monitoring and messages - the parameter half moved to `P3-19` and is delivered), `P3-13`
-(scheduled capture) and `P3-15` (species thresholds, shared with the interface lane).
+are delivered and tested, as are `P3-03` (model versions and activation) and `P3-04` (account
+management) since; `PLAN.md` records what each delivery had to prove. What is left in this lane:
+`P3-13` (scheduled capture) and `P3-15` (species thresholds, shared with the interface lane). `P3-08`
+(retention cleanup) moved to lane A, because it is the file lifecycle of the data root.
 
 **The dataset is on the training machine, not in this checkout:** `data/raw/DUO/DUO` (6671 + 1111) and
 `data/dataset` (5671 / 1000 / 1111). Nothing here is blocked by its absence.

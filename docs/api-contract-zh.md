@@ -71,6 +71,7 @@ GET /api/frames?page=1&size=24&site=A3&start=2026-11-01&end=2026-11-03
 | POST | `/api/auth/login` | 获取令牌 | FR-M1-01 | P0 |
 | GET | `/api/auth/me` | 当前用户与角色 | FR-M1-01 | P0 |
 | GET | `/api/users` | 账号列表 | FR-M1-03 | P1 |
+| POST | `/api/users` | 新建账号 | FR-M1-03 | P1 |
 | POST | `/api/users/{id}/status` | 停用或恢复账号 | FR-M1-03 | P1 |
 | POST | `/api/users/{id}/reset-password` | 重置密码 | FR-M1-03 | P1 |
 | GET | `/api/logs` | 操作日志 | FR-M1-04 | P1 |

@@ -279,6 +279,24 @@
   environment is *defined and documented*, not "installed on the demonstrator's machine". `P3-08` moved
   to lane A: it is the file lifecycle of the data root, which is lane A's, and not database logic. Load
   is level again: A 12, B 12, C 10, D 10.
+- **The message store had a table, a list route and a mark-read route, and nothing that ever wrote
+  a row.** `sys_message` was decorative: the unread count was permanently zero because no code path
+  produced a message, while FR-M8-02 names three events (a capture failure, a job failure, a finished
+  report) and states the rule that makes them bearable - the same type and object collapse into one
+  message within an hour. `server/app/notify.py` is the one writer: it opens its own session, keeps
+  its errors out of the caller's transaction so a message can never block the capture or the task it
+  reports on, and collapses by type and object inside a named window. All three events are wired,
+  and the tests read the unread count back through the API: three failing frames in one session are
+  one message, another session is a second, and the same task failing twice inside the hour adds
+  nothing.
+- **AC-28's two sentences now have a test each.** The monitor route already reported the queue and
+  the disk; nothing asserted that a batch moves the queue figure or that a disk past its threshold
+  turns red, and the requirement's own acceptance also names the job failure rate, which was not
+  reported at all. The route now carries `failure_rate` (of the tasks that finished, so a large
+  queue cannot read as a healthy rate) and a `note` explaining a disk past its threshold;
+  `tests/test_monitoring.py` shows 10 %/80 %/95 % reading `ok`/`warn`/`crit` with the note present
+  exactly when the level is not `ok`. Messages are kept 30 days by the same business rule, and that
+  cleanup is `P3-08`'s.
 
 - **The runbook exists, and it is a record of what actually went wrong rather than a tidy sequence.**
   `docs/runbook-{en,zh}.md`, indexed in both languages: deploy from a clone, build the inference
@@ -324,6 +342,23 @@
 - **What it does not cover is written down, not implied**: the thirteen pages in a browser, the batch
   worker, review submission and the demo reset stay with `P4-07`. A driver that claimed the whole
   demonstration would be the kind of claim this repository has spent the day removing.
+- **An administrator could disable, restore and reset accounts, and not create one.** The only
+  account a fresh database ever had was the one `scripts/init_db.py` writes, so FR-M1-03's first verb
+  - create - had no route at all. `POST /api/users` now takes name, phone, role and either an initial
+  password or none; without one the server generates it and returns it exactly once, which is the
+  requirement's "one-time initial password" without inventing a column to store it. A duplicate
+  username, phone or email is refused with the "already exists" message AC-03 names rather than the
+  500 a unique index would have produced, and the creation is logged with the operator.
+- **The contract's route count is a tripwire that works.** Adding one route moved three numbers that
+  exist to disagree: the contract's table, `/api/health`'s `contract_routes`, and the assertion in
+  `test_api_skeleton.py` that pins the table's size - a check written because the count once stayed
+  at 42 while the contract grew to 44. AC-03's own sentences are end-to-end in `tests/test_accounts.py`:
+  the new account signs in, disabling ends the session it already held and leaves its history readable
+  through the log route, restoring lets it in again, and the log carries before and after for both.
+  Two business rules of FR-M1-03 are deliberately not implemented and said so in `PLAN.md`: the forced
+  change after a reset, and "the built-in administrator cannot be deleted" - there is no delete route,
+  and disabling the last administrator is the open question nobody has decided.
+
 - **I was wrong about the camera, and the correction is more useful than the mistake.** I recorded that
   this machine has no usable camera; it does. `MF200 Camera` is present and `scripts/test_exposure.py
   --index 1` passes on it: 1920x1080 over DirectShow, exposure controllable, 0.1% frame-to-frame spread,

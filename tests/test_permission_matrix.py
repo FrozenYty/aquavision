@@ -107,6 +107,7 @@ MATRIX: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("POST", "/api/reports", REPORTS),
     # --- Table 2-1 and FR-M1-03: the administrator alone ------------------------------------------
     ("GET", "/api/users", ADMINISTRATOR),
+    ("POST", "/api/users", ADMINISTRATOR),
     ("POST", "/api/users/{user_id}/status", ADMINISTRATOR),
     ("POST", "/api/users/{user_id}/reset-password", ADMINISTRATOR),
     ("GET", "/api/logs", ADMINISTRATOR),

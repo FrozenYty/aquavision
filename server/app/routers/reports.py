@@ -13,7 +13,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
@@ -28,6 +28,7 @@ from app.models import (
     SpeciesDict,
     SysLog,
 )
+from app.notify import LEVEL_INFO, notify
 
 router = APIRouter(
     prefix="/api/reports", tags=["reports"], dependencies=[Depends(get_current_user)]
@@ -60,7 +61,7 @@ def list_reports(
 
 @router.post("", dependencies=[Depends(require("analyst", "admin"))])
 def create_report(
-    body: ReportBody, db: SessionDep, user: UserDep, settings: SettingsDep
+    body: ReportBody, request: Request, db: SessionDep, user: UserDep, settings: SettingsDep
 ) -> dict[str, object]:
     # ADR 14: the period arrives with its offset; storage keeps the instant as naive UTC.
     start = timebase.as_utc(body.period_start)
@@ -113,6 +114,17 @@ def create_report(
     )
     db.commit()
     db.refresh(row)
+    # The third event FR-M8-02 names, after the report is really stored: the file and the row exist,
+    # so the message cannot point at something that failed to generate.
+    notify(
+        request.app.state.session_factory,
+        msg_type="report_done",
+        level=LEVEL_INFO,
+        title=f"报告 {row.report_code} 已生成",
+        content=f"{serializers.iso(row.period_start)} 至 {serializers.iso(row.period_end)}",
+        ref_type="report",
+        ref_id=str(row.report_id),
+    )
     return ok(_report(row))
 
 
