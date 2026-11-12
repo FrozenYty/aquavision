@@ -25,7 +25,6 @@ import json
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
 from uuid import uuid4
@@ -35,12 +34,13 @@ import numpy as np
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.concurrency import run_in_threadpool
 
+from app import timebase
 from app.config import Settings, get_settings
 from app.detector import CONF_THRESHOLD
 from app.envelope import ApiError
 from app.models import MediaAsset, SysUser
 from app.security import load_user
-from app.vision.capture import LOCAL_TZ, CameraSource, CaptureError, make_frame_id
+from app.vision.capture import CameraSource, CaptureError, make_frame_id
 from app.vision.quality import Quality, score_frame
 
 log = logging.getLogger("aquavision.live")
@@ -339,10 +339,10 @@ def _grab(source: FrameSource, index: int) -> _CapturedFrame:
     stored = cv2.imdecode(buffer, cv2.IMREAD_COLOR)
     if stored is None:
         raise CaptureError("编码后的帧无法解码")
-    captured_at = datetime.now(LOCAL_TZ)
+    captured_at = timebase.now()
     return _CapturedFrame(
         frame_id=make_frame_id(captured_at, index),
-        captured_at=captured_at.isoformat(timespec="milliseconds"),
+        captured_at=timebase.iso(captured_at, timespec="milliseconds"),
         quality=score_frame(stored),
         jpeg=buffer.tobytes(),
         captured_monotonic=captured_monotonic,

@@ -338,7 +338,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P3-08** Retention cleanup and reference nulling · @Gtechson · closes AC-09 · done when the
       cleanup job removes intermediate files older than the retention period, nulls the references,
       never touches originals by default, and reports what it deleted
-- [ ] **P3-09** Parameters, monitoring and messages · @Gtechson · closes AC-27, AC-28, AC-29 · done
+- [ ] **P3-09** Parameters, monitoring and messages · @Gtechson · closes AC-28, AC-29 (the parameter half is P3-19) · done
       when a parameter change persists and is audited with before and after values, the queue and disk
       levels are visible, and a repeated failure message is not duplicated
 - [ ] **P3-10** Performance budget, measured · @FrozenYty · closes AC-34 · done when a committed script
@@ -398,31 +398,54 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         `EVT I2C 49` with the sensor powered
       - **`P4-07`'s rehearsals cannot start before this is done**, and neither can the optical half of
         `P1-06`'s original acceptance
-- [ ] **P3-18** The gap list from the 11-11 audit · @Gtechson · four places where a document states a
-      behaviour the system does not have. Each needs a decision - implement it, or change the document -
-      not a silent edit. Closing means all four are either done or written down as not required
-      - **date filters are a UTC day, not the server's day.** `docs/api-contract-en.md:61` says the range
-        is "interpreted in the server time zone"; `_parse_date` builds a naive datetime and compares it to
-        a naive-UTC `captured_at`, so an operator's 03:00 local capture on 2 November falls into the
-        1 November filter and is **silently absent from its own day**. Either convert in the filter or
-        correct the contract; `tests/test_frames_filters.py` pins the present behaviour so it cannot move
-        by accident
-      - **`PATCH /api/params` is write-only.** It persists `sys_param` rows the response renders, and no
-        other module reads them - the real consumers read `Settings` cached at startup. AC-27's "a new
-        concurrency limit constrains new jobs" therefore does not hold. Either make each consumer read the
-        parameter at use time or state that a restart is required, and record it in FR-M7-01
-      - **capture endpoints are not restricted to the local process.** SRS FR-M1-02 says they "accept only
-        the local process and are never exposed"; they are ordinary routes behind a JWT, so any signed-in
-        remote client may post frames
-      - **a password change does not invalidate issued tokens.** NFR-S-05 says it does; the tokens are
-        stateless and `sys_user` has no column to revoke them, so revocation needs a `token_epoch` or
-        `pwd_changed_at` checked by `get_current_user` - a schema change - or the requirement is reduced
-        to what the design does
+- [x] **P3-18** The time basis: one zone decides every calendar question · @Gtechson · with **ADR 14** ·
+      closes the date half of AC-08 · **delivered 11-12**: `server/app/timebase.py` owns the arithmetic,
+      `AV_TIMEZONE` defaults to Asia/Shanghai, and `tests/test_time_basis.py` pins a local 00:00:00 and
+      23:59:59 inside their own day, the next day's 00:00 outside it, the exact offset on every emitted
+      timestamp, and the same frames landing differently under `AV_TIMEZONE=UTC` - proving the setting is
+      read rather than `+8` baked in
+      - today the filter builds a naive date and compares it to a naive-UTC column, so an operator's
+        03:00 capture on 2 November is absent from its own day. The contract said "the server time zone";
+        nothing in the process knew a zone
+      - the work is the module ADR 14 names, not a patch at the filter: the statistics buckets, the
+        report periods and the retention cutoff all use it, or they will disagree within the month
+- [ ] **P3-19** Parameters take effect at the next decision point · @Gtechson · with **ADR 15** · closes
+      AC-27 · done when a limit changed through the API binds a job created after the change and not one
+      created before, and an out-of-range value is refused at the page
+      - `sys_param` is written, audited and read by nobody; the consumers read `Settings` cached at
+        process start, so the page edits a copy nobody consults
+      - a concurrency of zero now genuinely stops detection, which is why the range check belongs in this
+        task and not in a later one
+- [ ] **P3-20** Two gaps from the audit with no other home · @Gtechson
+      - **capture endpoints are not restricted to the local process**, though FR-M1-02 says they "accept
+        only the local process and are never exposed"; they are ordinary routes behind a JWT, so any
+        signed-in remote client may post frames
+      - **a password change does not invalidate issued tokens**, though NFR-S-05 says it does; the tokens
+        are stateless and `sys_user` has no column to revoke them, so it needs a `token_epoch` or
+        `pwd_changed_at` checked by `get_current_user` - a schema change - or the requirement is reduced to
+        what the design does
 - [ ] **GATE P3** — all 36 acceptance items demonstrated live, one after another, no manual database
       edits in between, and every item traceable to the task that closed it
 
 ### P4 — close
 
+- [ ] **P3-21** The interface reads time the way ADR 14 says · @chemflowers · follows **ADR 14** · done
+      when no page re-derives a date from the browser's zone, and a report period is not a hardcoded offset
+      - `web/static/js/ui.js`'s formatter rebuilds every timestamp in the **browser's** zone, so a reviewer
+        outside UTC+8 reads one date on the dashboard and another in a filtered list, each correct by its
+        own rule. Eleven pages use it
+      - `home.html` builds its trend axis from the browser's `new Date()` instead of the `date` the
+        statistics route already returns in the operating zone, so the chart can be a day off across a
+        boundary
+      - `reports.html` hardcodes `T00:00:00+08:00` and `T23:59:59+08:00`; a deployment that changes
+        `AV_TIMEZONE` then asks for a period the server interprets in a different zone
+- [ ] **P3-22** A frame's identity keeps a different day from the operator's · @FrozenYty
+      - `_frame_id` and the `frames/<site>/<day>/` directory are derived from UTC, so under the default
+        zone a capture between 00:00 and 08:00 local carries **yesterday** in its id and its folder: the
+        filter says 2 November, the frame id says 1 November
+      - ADR 14 deliberately left storage and the layout alone, so this is its own change: either derive
+        them in the operating zone (and let existing ids keep their basis) or write the basis into the id
+        so the two can never be confused
 - [ ] **P4-01** Dataset freeze, then baseline E0 · @Gtechson · closes AC-30 · done when the snapshot is
       frozen **before** the first official run — name, split, seed and manifest written down — and E0
       is recorded with every metric column filled

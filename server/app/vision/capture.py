@@ -79,7 +79,12 @@ class FrameRecord:
 
 
 def make_frame_id(moment: datetime, index: int) -> str:
-    return f"{moment.astimezone(LOCAL_TZ).strftime('%Y%m%dT%H%M%S')}-{index:04d}"
+    """`YYYYMMDDTHHMMSS-####` in the zone `moment` carries, so the caller decides the calendar.
+
+    The live socket passes a configured-zone moment (ADR 14); the CLI passes a local one. Converting
+    to a fixed zone here would make a deployment outside UTC+8 disagree with its own setting.
+    """
+    return f"{moment.strftime('%Y%m%dT%H%M%S')}-{index:04d}"
 
 
 def default_session_id(site: str, moment: datetime) -> str:

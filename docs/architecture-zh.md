@@ -149,6 +149,7 @@ DB_DSN=postgresql://...            # 不带 AV_ 前缀：scripts/init_db.py 读�
 AV_JWT_SECRET=<足够长的随机串>      # 默认值公开；/api/health 会报告它是否仍是默认值
 AV_JWT_HOURS=8
 AV_DATA_DIR=data
+AV_TIMEZONE=Asia/Shanghai          # 所有日历问题按这个时区回答（ADR 14）
 AV_RETENTION_DAYS=30
 AV_MAX_CONCURRENCY=2
 AV_DETECT_INTERVAL_MS=300
@@ -191,4 +192,6 @@ AV_WORKER_POLL_SECONDS=1.0
 | [10](adr/10-desk-lamp-fill-light.md) | 补光用现有台灯：USB 直流供电、无频闪，不必另买光源 |
 | [11](adr/11-pytest-runs-locally.md) | 测试在每个工作站本地跑：只在 CI 跑的测试，人推的时候会绕过去 |
 | [12](adr/12-detect-task-items.md) | 任务的帧在创建时分配，不再由查询临时发现；`detect_task_item` 使表增至十四张 |
+| [14](adr/14-the-time-basis.md) | 存储仍是 UTC，所有日历问题由一个配置的时区回答：`AV_TIMEZONE`，默认北京，一天为该时区的 00:00 至 23:59，且所有发出的时间戳都带偏移 |
+| [15](adr/15-parameters-take-effect-live.md) | 操作员可改的参数在下一次做决定的时刻生效——单一读取入口、短 TTL、声明取值范围——而不是等下次重启 |
 | [13](adr/13-weights-in-the-repository.md) | 交付的模型权重进仓库；数据集、采集帧与训练产物仍在外 |

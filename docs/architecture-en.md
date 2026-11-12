@@ -153,6 +153,7 @@ DB_DSN=postgresql://...            # no AV_ prefix: scripts/init_db.py reads the
 AV_JWT_SECRET=<long random string> # default is public; /api/health reports whether it is still default
 AV_JWT_HOURS=8
 AV_DATA_DIR=data
+AV_TIMEZONE=Asia/Shanghai          # the zone every calendar question is answered in (ADR 14)
 AV_RETENTION_DAYS=30
 AV_MAX_CONCURRENCY=2
 AV_DETECT_INTERVAL_MS=300
@@ -197,4 +198,6 @@ per working directory.
 | [10](adr/10-desk-lamp-fill-light.md) | Fill light is the existing lamp: USB-powered DC, no visible flicker, nothing to buy |
 | [11](adr/11-pytest-runs-locally.md) | Tests run on every workstation: a suite that only runs in CI is a suite people push past |
 | [12](adr/12-detect-task-items.md) | A task is assigned its frames when it is created, not discovered by a query; `detect_task_item` makes fourteen tables |
+| [14](adr/14-the-time-basis.md) | Storage stays UTC and one configured zone answers every calendar question: `AV_TIMEZONE`, Beijing by default, a day from 00:00 to 23:59 in that zone, and every emitted timestamp carrying its offset |
+| [15](adr/15-parameters-take-effect-live.md) | A parameter the operator can change takes effect at the next decision point - one accessor, a short TTL, a declared range - not at the next restart |
 | [13](adr/13-weights-in-the-repository.md) | The delivered model is tracked in the repository; datasets, frames and training runs stay out |

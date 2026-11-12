@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     jwt_hours: int = Field(default=8, validation_alias="AV_JWT_HOURS")
 
     data_dir: str = Field(default="data", validation_alias="AV_DATA_DIR")
+    # The zone every calendar question is answered in (ADR 14): a date filter's day, a statistics
+    # bucket, a report period, and the offset on every timestamp the API emits. Storage stays naive
+    # UTC; this setting only decides how that instant reads.
+    timezone: str = Field(default="Asia/Shanghai", validation_alias="AV_TIMEZONE")
     # Intermediate frames older than this are cleanup candidates (FR-M2-05).
     retention_days: int = Field(default=30, validation_alias="AV_RETENTION_DAYS")
     max_concurrency: int = Field(default=2, validation_alias="AV_MAX_CONCURRENCY")

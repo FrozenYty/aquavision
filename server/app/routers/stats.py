@@ -7,11 +7,12 @@ taken on different bases will conclude the wrong thing — so the basis is retur
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 
+from app import timebase
 from app.deps import SessionDep, get_current_user
 from app.envelope import ok
 from app.models import DetectObject, MediaAsset, SpeciesDict
@@ -25,7 +26,7 @@ def species_composition(
     basis: str = Query(default="reviewed", pattern="^(reviewed|raw)$"),
     days: int = Query(default=7, ge=1, le=90),
 ) -> dict[str, object]:
-    since = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days)
+    since = timebase.now_utc() - timedelta(days=days)
     stmt = (
         select(DetectObject.class_code, func.count(DetectObject.object_id))
         .join(MediaAsset, MediaAsset.frame_id == DetectObject.frame_id)
@@ -54,7 +55,7 @@ def species_composition(
 def quality_rejection(
     db: SessionDep, days: int = Query(default=7, ge=1, le=90)
 ) -> dict[str, object]:
-    since = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days)
+    since = timebase.now_utc() - timedelta(days=days)
     total = (
         db.scalar(select(func.count(MediaAsset.asset_id)).where(MediaAsset.captured_at >= since))
         or 0
@@ -79,30 +80,28 @@ def quality_rejection(
 
 @router.get("/trend")
 def capture_trend(db: SessionDep, days: int = Query(default=7, ge=1, le=90)) -> dict[str, object]:
-    """Frames per day. Days with no capture are present with a zero, so the line has no gaps that
-    read as missing data rather than as a quiet day."""
-    today = datetime.now(UTC).replace(tzinfo=None).date()
-    start = today - timedelta(days=days - 1)
-    rows = db.execute(
-        select(func.date(MediaAsset.captured_at), func.count(MediaAsset.asset_id))
-        .where(MediaAsset.captured_at >= datetime.combine(start, datetime.min.time()))
-        .group_by(func.date(MediaAsset.captured_at))
-    ).all()
-    seen = {str(day): count for day, count in rows}
-    items = [
-        {
-            "date": str(start + timedelta(days=offset)),
-            "frames": seen.get(str(start + timedelta(days=offset)), 0),
-        }
-        for offset in range(days)
-    ]
+    """Frames per local day (ADR 14). Days with no capture are present with a zero, so the line has
+    no gaps that read as missing data rather than as a quiet day."""
+    items = []
+    for day in timebase.recent_days(days):
+        lower, upper = timebase.day_bounds(day.isoformat(), day.isoformat())
+        frames = (
+            db.scalar(
+                select(func.count(MediaAsset.asset_id)).where(
+                    MediaAsset.captured_at >= lower,
+                    MediaAsset.captured_at < upper,
+                )
+            )
+            or 0
+        )
+        items.append({"date": str(day), "frames": frames})
     return ok({"days": days, "items": items})
 
 
 @router.get("/corrections")
 def corrections(db: SessionDep, days: int = Query(default=7, ge=1, le=90)) -> dict[str, object]:
     """How reviewers changed the automatic result: rejected, relabelled, and drawn by hand."""
-    since = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days)
+    since = timebase.now_utc() - timedelta(days=days)
     rejected = (
         db.scalar(
             select(func.count(DetectObject.object_id)).where(

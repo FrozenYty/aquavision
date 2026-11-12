@@ -12,6 +12,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 from sqlalchemy import or_, select
 
+from app import timebase
 from app.deps import SessionDep, SettingsDep, UserDep
 from app.envelope import CONFLICT, UNAUTHENTICATED, ApiError, ok
 from app.models import SysLog, SysUser
@@ -89,7 +90,13 @@ def login(body: LoginBody, db: SessionDep, settings: SettingsDep) -> dict[str, o
         )
     )
     db.commit()
-    return ok({"token": token, "expires_at": expires_at.isoformat(), "user": public_user(user)})
+    return ok(
+        {
+            "token": token,
+            "expires_at": timebase.iso(expires_at),
+            "user": public_user(user),
+        }
+    )
 
 
 @router.get("/me")

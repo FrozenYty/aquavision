@@ -58,6 +58,32 @@
 - **The false positive is guarded too**: a pair with the same structure and completely different wording
   must report nothing, and there is a test for that, because the failure mode of a structural check is
   not missing a defect - it is crying wolf until someone turns it off.
+- **"Which day is it" now has one answer, and it is a decision rather than an arithmetic patch.** The
+  frame filter compared a naive date to a naive-UTC column, so an operator's 03:00 capture on 2 November
+  was absent from its own day and appeared under 1 November. The tempting fix - add eight hours where the
+  filter is - would have left statistics, reports, retention and the interface each computing a calendar
+  boundary their own way, which is how the defect arose. **ADR 14** fixes the shape instead: storage stays
+  naive UTC, one configured zone (`AV_TIMEZONE`, Asia/Shanghai by default) answers every calendar question,
+  every emitted timestamp carries its offset, and `server/app/timebase.py` is the only place the conversion
+  happens. It rejected the process's local zone for the reason this repository already treats
+  machine-dependence as a defect.
+- **The boundary is now a test, not an intention.** A capture at local 00:00:00 and one at 23:59:59 are
+  inside `start=end=<that date>`; local 00:00:00 the next day is not; and the same three frames land in
+  different days under `AV_TIMEZONE=UTC`, which is what proves the setting is read rather than `+8` coded
+  into a module. Against the old code the test failed on exactly the reported frames.
+- **ADR 14 says the emitted timestamps match the contract's example, and the first implementation did
+  not** - it truncated to whole seconds while that example carries `.418`. At five frames a second,
+  same-second frames then render as the same moment and the operator cannot tell which came first. Caught
+  on review, fixed to milliseconds, and the three exact-string assertions moved with it.
+- **What the change deliberately did not do, so it is tracked instead of forgotten.** The frame id and the
+  `frames/<site>/<day>/` folder still derive their day from UTC, so a small-hours capture is filed under
+  yesterday (`P3-22`); and the interface still reformats timestamps in the browser's zone while
+  `reports.html` hardcodes `+08:00` (`P3-21`). Both are recorded with their evidence rather than folded in.
+- **ADR 15 records the second decision but implements nothing yet**: a parameter the operator can change
+  takes effect at the next decision point, through one accessor with a short TTL and a declared range.
+  `sys_param` is written, audited and read by nobody today, so `AC-27` is currently false - and that is now
+  a task (`P3-19`) with a decision behind it rather than a bug report.
+
 ## 2026-11-11
 
 - **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint

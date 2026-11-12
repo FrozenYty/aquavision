@@ -24,7 +24,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
-from app import serializers
+from app import serializers, timebase
 from app.deps import SessionDep, SettingsDep, UserDep, get_current_user
 from app.envelope import BAD_PARAM, INTERNAL, NOT_FOUND, ApiError, ok
 from app.models import MediaAsset, SysLog
@@ -223,10 +223,15 @@ def list_frames(
         stmt = stmt.where(MediaAsset.point_code == site)
     if quality:
         stmt = stmt.where(MediaAsset.quality_flag == (0 if quality == "ok" else 1))
-    if start:
-        stmt = stmt.where(MediaAsset.captured_at >= _parse_date(start))
-    if end:
-        stmt = stmt.where(MediaAsset.captured_at < _parse_date(end) + timedelta(days=1))
+    # ADR 14: a day means the operator's day in the configured zone, not the UTC day the column holds.
+    try:
+        start_at, end_at = timebase.day_bounds(start, end)
+    except ValueError as err:
+        raise ApiError(BAD_PARAM, f"日期格式应为 YYYY-MM-DD：{err}") from err
+    if start_at is not None:
+        stmt = stmt.where(MediaAsset.captured_at >= start_at)
+    if end_at is not None:
+        stmt = stmt.where(MediaAsset.captured_at < end_at)
 
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     rows = db.scalars(
@@ -331,10 +336,3 @@ def _write(stored: np.ndarray, digest: str, root: Path, site: str, session: str)
 
 def _frame_id(captured_at: datetime, digest: str) -> str:
     return captured_at.strftime("%Y%m%dT%H%M%S") + f"-{digest[:4]}"
-
-
-def _parse_date(value: str) -> datetime:
-    try:
-        return datetime.strptime(value, "%Y-%m-%d")
-    except ValueError as err:
-        raise ApiError(BAD_PARAM, f"日期格式应为 YYYY-MM-DD：{value}") from err
