@@ -1,0 +1,18 @@
+{
+  "version_name": "v8n-E0-exploratory",
+  "dataset_ref": "DUO-85:15-subset-1800",
+  "weights": "models/v8n-E0-exploratory/best.pt",
+  "map50": 0.7703018497184373,
+  "map50_95": 0.5614066797678423,
+  "recall_avg": 0.6918749229289116,
+  "fps": 498.94608305977204,
+  "params_m": 3.138732,
+  "inference_ms": 2.004224572457869,
+  "imgsz": 640,
+  "train_images": 1800,
+  "val_images": 200,
+  "test_images": 1111,
+  "epochs": 30,
+  "batch_size": 16,
+  "seed": 42
+}

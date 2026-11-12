@@ -178,11 +178,11 @@ tests/       测试
 
 ## 模型权重
 
-`models/<version_name>/` 是本项目交付的模型要放的地方——`best.pt`、`labels.txt` 与 `metrics.json`——纳入版本库而不是另行发布，这样文件到位之后，一份干净的克隆也能注册版本并跑起识别。**这一版里该目录是空的：还没有任何权重文件被交付。** 这份副本仍欠在训练那一侧；在它落地之前，干净的克隆没有东西可注册，识别路由会返回 501，因为没有任何模型权重被注册。这项决定及其代价见 [ADR 13](docs/adr/13-weights-in-the-repository.md)。
+`models/<version_name>/` 是本项目交付的模型要放的地方——`best.pt`、`labels.txt` 与 `metrics.json`——纳入版本库而不是另行发布，这样一份干净的克隆也能注册版本并跑起识别。**`models/v8n-E0-exploratory/` 就是已交付的那一版。** `python scripts/init_db.py` 会在空库上注册它并置为在线版本，因此一份只装了 `requirements-server.txt` 的干净克隆可以直接采集一帧并看到检测框。这项决定及其代价见 [ADR 13](docs/adr/13-weights-in-the-repository.md)。
 
 - **首先要放进来的是什么。** 探索性基线（YOLOv8n），它的用途是让仪表盘和演示有真实数字。它**不是**官方 E0 基线——E0 在 `P4-01` 用冻结数据集训练。不要把它的指标当作本项目的结果引用。
 - **它从哪来。** 本项目团队在 DUO 数据集上训练得到。**本仓库不再分发任何 DUO 图像**——`datasets/` 在忽略列表里——只分发从中学到的权重。
-- **怎么用。** `python scripts/register_model.py --weights models/<version_name>/best.pt`，然后以管理员身份激活该版本。目录布局见[数据模型](docs/data-model-zh.md)第五节。
+- **怎么用别的版本。** `python scripts/register_model.py models/<version_name>` 注册一个交付目录；加 `--no-activate` 时只登记为候选，由管理员再激活。目录布局见[数据模型](docs/data-model-zh.md)第五节。
 - **许可与引用。** 代码为 MIT。权重由本项目团队以同样条款提供。DUO 数据集归其作者所有且未声明自身许可，因此使用这些权重时请引用 [DUO 论文](https://arxiv.org/abs/2106.05681)。
 
 ## 许可证

@@ -22,8 +22,7 @@ The backend tasks this section used to sequence — `P2-06a/b/c`, `P2-05a/b/c`, 
 are delivered and tested; `PLAN.md` records what each delivery had to prove. What is left in this lane:
 `P3-03` (model versions and activation), `P3-04` (account management), `P3-08` (retention cleanup),
 `P3-09` (parameters, monitoring and messages), `P3-11` (the permission matrix), `P3-13` (scheduled
-capture) and `P3-15` (species thresholds, shared with the interface lane) — plus the weight file, in
-§2.2.
+capture) and `P3-15` (species thresholds, shared with the interface lane).
 
 **The dataset is on the training machine, not in this checkout:** `data/raw/DUO/DUO` (6671 + 1111) and
 `data/dataset` (5671 / 1000 / 1111). Nothing here is blocked by its absence.
@@ -91,11 +90,15 @@ official 1111 frozen); `test-manifest.txt` is committed with 1111 `filename md5`
 mAP@0.5:0.95 0.561 and mean recall 0.692; and its version is registered and online as
 `v8n-E0-exploratory`. `tests/test_prepare_dataset.py` holds the determinism and manifest claims.
 
+**The weights are in the repository.** `models/v8n-E0-exploratory/` holds `best.pt`, `labels.txt` and
+`metrics.json`, tracked per ADR 13. `scripts/init_db.py` registers that version on a fresh database
+and puts it online, so the clone that has nothing but this repository and `requirements-server.txt`
+runs detection; `tests/test_delivered_weights.py` holds the three-file layout, the class order
+against `species_dict` and the repository-relative path, and `tests/test_detect_real.py` runs the
+weights for real where ultralytics is installed. `P2-13` and `GATE P2` are unblocked by this.
+
 **What is left:**
 
-- **The weight file.** The delivered `best.pt` is not in the repository yet, so `P2-13` and `GATE P2`
-  stay blocked on it; ADR 13 fixes where it goes — `models/<version_name>/best.pt`, `labels.txt` and
-  `metrics.json`.
 - **The official runs.** E0–E4 remain `P4-01..03` on the frozen dataset; `PLAN.md` keeps the
   exploratory run and the official runs apart.
 
