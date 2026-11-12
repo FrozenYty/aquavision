@@ -155,6 +155,18 @@
   always has exactly one row, and registering an existing name updates it. The SRS moves to V1.13 in
   both languages with a change-record row, the traceability pair follows the document number, and
   `test_register_model.py` asserts the one-row claim rather than leaving it implied.
+- **A cached parameter belonged to whichever database read it first (review finding).** The cache was
+  keyed by parameter name alone, and one process can talk to more than one database - the test suite
+  does, and so does a developer running it beside the application - so for up to a TTL one database's
+  limit was handed to another. No error, just a wrong number: the kind that surfaces months later as
+  "the limit sometimes does not apply". The key is now `(database, parameter)`, and
+  `tests/test_params_cache_scope.py` reads 1 from one database and 7 from another with no `forget()`
+  between them - red on the old key (`assert 1 == 7`), green on the new one.
+- **A test that fails on someone else's machine has to say what to do (review finding).** The
+  delivered-weights check of the local development database failed with "0 online versions" for anyone
+  whose `data/app.db` predates the delivery - a machine state, not a defect, and one CI cannot catch
+  (no local database there means skip). It now skips with the command to run when the database serves
+  no model, and still fails hard when two versions are online, because that one is the defect.
 
 ## 2026-11-11
 
