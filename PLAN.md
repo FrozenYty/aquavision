@@ -559,8 +559,23 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         already calls `Gone`, and nothing currently tries to leave it
       - testable without the bench: a test double that raises on the first read and reopens on the next
         attempt, with the reconnect interval asserted rather than slept
-- [ ] **P3-25** A schema change without a wipe · @Gtechson · done when a column added to `models.py`
-      reaches an **existing populated database** without losing a row, and the route is written down
+- [x] **P3-25** A schema change without a wipe · @Gtechson · **delivered 11-12**: `server/app/db.py`
+      gains `add_missing_columns`, and `scripts/init_db.py` calls it right after `create_all` - the one
+      command the README already tells a machine to run now also upgrades an existing database. The rule
+      is **add, never rewrite**: every column the models declare and the table lacks is added with the
+      model's default, in place, no row touched, nothing dropped or retyped; a column that cannot be
+      added (`NOT NULL` with no default) is refused by name and the script exits 1 rather than leaving a
+      half-upgraded schema. The runbook's section 7 states the route, what it cannot do, and keeps the
+      manual `ALTER` as the documented fallback
+      - `tests/test_schema_upgrade.py` builds the previous schema by dropping the newest column, seeds
+        it with raw SQL - the ORM's `INSERT` is the query that fails before the upgrade - runs the real
+        script, and asserts the old rows survive with their values and the new column arrives at its
+        documented default; a second run reports nothing to do
+      - shown red first: with the catch-up switched off the script exits 1 with `mismatch: sys_user has
+        13 columns, the dictionary says 14`. The existing acceptance check already noticed the stale
+        schema; what was missing was the fix
+      - **not handled on purpose:** a rename, a type change, and a column the models dropped. Those need
+        a migration tool and a decision, not a guess inside a catch-up routine
       - `create_all` adds a missing *table*, and there is no migration mechanism: the 13-to-14 table
         change worked by that accident, and the next change is a **column**, which `create_all` will
         not add to an existing table

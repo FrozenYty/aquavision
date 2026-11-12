@@ -130,30 +130,42 @@ mechanism, now carried by a per-user token epoch, and it needs no operator actio
 
 ## 7. Upgrade the schema
 
-**There is no migration mechanism.** `create_all` adds a missing *table*; it does not add a **column** to a
-table that already exists. So a schema change behaves differently on a fresh database and on an existing
-one, and only the existing one breaks:
+**`init_db.py` upgrades an existing database in place.** It used to be honest about the gap: `create_all`
+adds a missing *table*, not a **column** on a table that already exists, so a column added to
+`server/app/models.py` reached a fresh database and broke every existing one with
 
 ```text
 sqlite3.OperationalError: no such column: sys_user.token_epoch
 ```
 
-That happened on this project on 2026-11-12, and the application reported it as **"the database is
-unreachable, check that it is running"**, which is wrong: the database was reachable and one column was
-missing. Until the migration mechanism exists, choose one of these, in order of preference:
+which the application then reported as **"the database is unreachable, check that it is running"** - wrong,
+because the database was reachable and one column was missing. That happened here on 2026-11-12.
 
-1. **Back up, then rebuild.** Delete the database file, re-run `init_db.py`, and restore what matters from
-   the backup. Clean, and it loses history.
-2. **Add the column by hand** and record it. For the SQLite development default:
+Since `P3-25`, one command closes the gap:
 
 ```bash
-python -c "import sqlite3; c=sqlite3.connect('data/app.db'); c.execute('ALTER TABLE sys_user ADD COLUMN token_epoch INTEGER NOT NULL DEFAULT 0'); c.commit()"
+python scripts/init_db.py
 ```
 
-3. Nothing else. Do not assume `init_db.py` will fix it; it will not.
+It creates what is missing, then adds each column the models declare and the table lacks, with the
+default the model gives it, in place, keeping every row:
 
-Whichever you choose, write down what you did and when. A hand-altered schema that nobody recorded is how
-two machines end up disagreeing about what the database contains.
+```text
+schema upgraded: sys_user.token_epoch (existing rows kept)
+```
+
+The rule is **add, never rewrite**: nothing is dropped, nothing is retyped, and no row is touched. That is
+deliberate - an unused column costs a few bytes, a wrong `DROP` costs data. A column that **cannot** be
+added to a table that already has rows - `NOT NULL` with no default - is refused and the script exits 1
+naming it, because a half-upgraded schema fails on the first query that selects the column:
+
+```text
+not upgraded: sys_user.real_name: NOT NULL without a server default
+```
+
+For that case, and for anything beyond adding a column (a rename, a type change), the manual route still
+applies: back up, alter the table by hand, **and record what you did** - a hand-altered schema nobody wrote
+down is how two machines end up disagreeing about what the database contains.
 
 ## 8. Read the log
 
