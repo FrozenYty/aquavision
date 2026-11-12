@@ -67,6 +67,48 @@ def _module_of(path: str) -> str:
     return _MODULE_BY_SEGMENT.get(area, area)
 
 
+#: The addresses a browser on the capture machine reaches the server from. `testclient` is
+#: deliberately absent: a test that exercises a capture route has to state that its client is local,
+#: so the test runner gets no bypass the product does not have.
+LOCAL_HOSTS = frozenset({"127.0.0.1", "::1"})
+
+
+def is_local(host: str | None) -> bool:
+    return host in LOCAL_HOSTS
+
+
+def only_local(request: Request, db: SessionDep, user: UserDep) -> SysUser:
+    """Refuse a capture call that did not come from this machine (FR-M1-02, AC-05).
+
+    The pages are served by the same process that owns the camera, so the operator's browser is
+    loopback. A signed-in client on another machine has no business posting frames: the requirement
+    keeps the capture endpoints local, and a frame that did not come from the camera in front of the
+    tank is exactly what AC-05 forbids. The refusal is logged like a role refusal, and the message
+    says where the page has to be opened.
+
+    Authentication runs first, so an unauthenticated call still answers 401 - FR-M1-02's acceptance
+    names that case and this guard must not turn it into a 403.
+    """
+
+    host = request.client.host if request.client else None
+    if not is_local(host):
+        db.add(
+            SysLog(
+                user_id=user.user_id,
+                module=_module_of(request.url.path),
+                action="forbidden",
+                target_type="route",
+                target_id=f"{request.method} {request.url.path}"[:64],
+            )
+        )
+        db.commit()
+        raise ApiError(
+            FORBIDDEN,
+            f"采集端点只接受本机访问（来源 {host or '未知'}），请在本机浏览器打开采集页",
+        )
+    return user
+
+
 def require(*roles: str):
     """A dependency asserting the caller holds one of `roles`.
 

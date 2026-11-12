@@ -304,7 +304,8 @@ The route is administrator-only. When `AV_DEMO_ENABLED` is off it answers `40401
 `{"type": "auth", "token": "<JWT>"}`. The server answers `{"type": "auth_ok"}`. A missing, invalid or
 expired token closes the socket with `4401`; no `auth` message within five seconds closes it with
 `4408`. The token never travels in the query string — query strings leak into access logs and
-referrers.
+referrers. A connection from another machine is refused at the handshake, before any message is
+exchanged: FR-M1-02 keeps the capture surface local, and this socket streams the camera.
 
 | Direction | Type | Payload |
 |---|---|---|

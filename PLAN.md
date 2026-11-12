@@ -456,14 +456,19 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         that a change binds new jobs - until this delivery that sentence was false
       - a concurrency of zero genuinely stops detection, so the range is enforced on write **and**
         ignored on read, and `retention_days` has no consumer until `P3-08` reads it
-- [ ] **P3-20** Two gaps from the audit with no other home · @Gtechson
-      - **capture endpoints are not restricted to the local process**, though FR-M1-02 says they "accept
-        only the local process and are never exposed"; they are ordinary routes behind a JWT, so any
-        signed-in remote client may post frames
-      - **a password change does not invalidate issued tokens**, though NFR-S-05 says it does; the tokens
-        are stateless and `sys_user` has no column to revoke them, so it needs a `token_epoch` or
-        `pwd_changed_at` checked by `get_current_user` - a schema change - or the requirement is reduced to
-        what the design does
+- [x] **P3-20** Two gaps from the audit with no other home · @Gtechson · **delivered 11-12**: both were
+      put to the user rather than decided here, and both were implemented rather than reduced
+      - **the capture surface is local now.** `GET /api/cameras`, the three `/api/capture/sessions*`
+        routes and `/ws/capture` refuse a peer that is not `127.0.0.1`/`::1`: the HTTP routes answer
+        `40301` and write the refusal to `sys_log`, authentication still runs first so an unauthenticated
+        call stays the 401 FR-M1-02's acceptance names, and the socket is refused at the handshake.
+        `tests/test_capture_local_only.py` holds it; six existing fixtures now state that their client is
+        on the machine, because the guard has no test-runner bypass (`testclient` is not loopback)
+      - **a password change retires issued tokens.** `sys_user.token_epoch` (fourteen columns now) is
+        carried as an `epoch` claim in every token, `load_user` refuses a token carrying an older value,
+        and `POST /api/users/{id}/reset-password` bumps it. `tests/test_token_epoch.py` shows the old
+        token answering `40101` after the reset while the administrator's own session keeps working. The
+        SRS records the column at V1.14 and the data-model tables follow in both languages
 - [ ] **GATE P3** — all 36 acceptance items demonstrated live, one after another, no manual database
       edits in between, and every item traceable to the task that closed it
 

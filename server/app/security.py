@@ -43,12 +43,17 @@ def verify_password(password: str, hashed: str) -> bool:
 
 
 def issue_token(user: SysUser, settings: Settings) -> tuple[str, datetime]:
-    """A signed token and its expiry — eight hours by default, no refresh (contract §4)."""
+    """A signed token and its expiry — eight hours by default, no refresh (contract §4).
+
+    The token carries the account's `token_epoch`; a password change bumps that column and every token
+    holding the older number stops being accepted (NFR-S-05).
+    """
     expires_at = datetime.now(UTC) + timedelta(hours=settings.jwt_hours)
     payload = {
         "sub": str(user.user_id),
         "role": user.role_code,
         "name": user.real_name,
+        "epoch": int(user.token_epoch or 0),
         "exp": int(expires_at.timestamp()),
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm=ALGORITHM), expires_at
@@ -74,4 +79,8 @@ def load_user(db: Session, token: str, settings: Settings) -> SysUser:
         raise ApiError(UNAUTHENTICATED, "账号不存在")
     if user.status != 1:
         raise ApiError(FORBIDDEN, "账号已停用")
+    # A token without the claim was issued before the column existed; it is treated as epoch 0, which
+    # is the value every existing account starts at. The first password change retires it (NFR-S-05).
+    if int(claims.get("epoch", 0)) != int(user.token_epoch or 0):
+        raise ApiError(TOKEN_EXPIRED, "登录状态已失效，请重新登录")
     return user

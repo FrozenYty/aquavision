@@ -36,6 +36,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from app import timebase
 from app.config import Settings, get_settings
+from app.deps import is_local
 from app.detector import CONF_THRESHOLD
 from app.envelope import ApiError
 from app.models import MediaAsset, SysUser
@@ -136,6 +137,12 @@ async def capture_socket(websocket: WebSocket) -> None:
     settings = get_settings()
     source: FrameSource | None = None
     try:
+        # FR-M1-02 keeps the capture endpoints local, and this socket is the one that streams the
+        # camera. A peer on another machine is refused at the handshake, before the upgrade is
+        # answered: the feed is not exposed at all, which is what the requirement says.
+        if not is_local(websocket.client.host if websocket.client else None):
+            await websocket.close()
+            return
         await websocket.accept()
         if await _authenticate(websocket, settings) is None:
             return
