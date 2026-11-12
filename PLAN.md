@@ -661,7 +661,15 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P4-11** The test report · @IkeaFyj · done when it states the plan, what was executed, what
       passed, what was skipped and why, and the defects found with their severity - a reader can
       reproduce the number rather than trust it
-- [ ] **P4-12** A demo driver, not a memory · @IkeaFyj · done when one command runs the slice end to
+- [x] **P4-12** A demo driver, not a memory · @IkeaFyj · **delivered 11-12**: `scripts/demo.py` runs the
+      slice against a fresh scratch database and prints a table plus a machine-readable summary -
+      frames captured, boxes, per-class counts, per-step elapsed time, and the statistics total, which
+      it fails on if it disagrees with the box count. It calls the real `init_db.py` as a subprocess
+      rather than copying its logic, and says where its frame came from (a live grab, a recorded file,
+      or one generated in memory). **It does not pick a flattering frame**: every recorded frame on
+      this machine scores 15-51 against a threshold of 60, so the run it was delivered with reports
+      zero boxes, which is what those images deserve. **Not covered:** the thirteen pages in a
+      browser, the batch worker, review submission and the demo reset - those stay `P4-07`'s. · done when one command runs the slice end to
       end against a fresh database and prints the numbers a rehearsal needs - frames captured, boxes
       drawn, per-class counts, elapsed time - so `P4-07` is a run rather than a walkthrough
 - [ ] **GATE P4** — four tables full: metrics, ablation, reproducibility, acceptance checklist · **checked by @IkeaFyj**, not
