@@ -297,9 +297,21 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P3-02** Statistics dashboard · @chemflowers · closes AC-19, AC-20, AC-21 · done when the four
       charts render from `/api/stats/*`, the basis switch changes both the figures and the caption,
       and the empty site shows an empty state rather than a blank chart
-- [ ] **P3-03** Model versions and activation · @Gtechson · closes AC-23, AC-24 · done when exactly one
-      model is online, a version without metrics cannot go online, and each result records the version
-      that produced it
+- [x] **P3-03** Model versions and activation · @Gtechson · closes AC-23, AC-24 · **delivered 11-12**:
+      `tests/test_model_activation.py` calls `POST /api/models/{id}/activate` for the first time - two
+      activations leave exactly one online row and the previous one at status 2; a version missing
+      `map50` or `map50_95` is refused with `40901` and writes no audit row; an unknown id answers
+      `40401`; the already-online version answers `40901`; observer and analyst answer `40301` while
+      algo and admin pass. AC-24 is checked through the API: a task created after an activation records
+      that version, and activating the earlier one again (the rollback) switches new tasks back to it.
+      The single-frame route's response carries `model_version` and its task records
+      `model_version_id` (a stub detector; the real weights are `tests/test_detect_real.py`)
+      - with the route's exclusivity and metrics rules disabled the file reports
+        `assert ['v8n-E0-candidate', 'v8n-E1-candidate'] == ['v8n-E1-candidate']` and `200 == 409`
+      - the AC-23 conflict went to the user rather than being decided here: the SRS demanded a refused
+        duplicate while `scripts/register_model.py` updates in place and `scripts/init_db.py`
+        re-registers on every run. **Decided: keep idempotent registration**; AC-23 now states the
+        outcome - a version name always has exactly one row and re-registering updates it (SRS V1.13)
 - [ ] **P3-04** Account management · @Gtechson · closes AC-03, AC-04 · done when an account can be created,
       disabled and restored, a disabled account cannot sign in, and its history stays queryable
 - [x] **P3-05** Review canvas: drag, zoom, add, delete · @chemflowers · closes AC-15, AC-16 ·

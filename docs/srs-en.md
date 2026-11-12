@@ -9,9 +9,9 @@
 | Item | Content |
 |---|---|
 | Document title | Underwater Species Detection and Monitoring for Marine Ranching Based on an Improved YOLOv8 — Software Project Requirements Specification |
-| Document number | SRS-PRJ14-V1.12-2026 |
+| Document number | SRS-PRJ14-V1.13-2026 |
 | Project number | PRJ-14 |
-| Document version | V1.12 |
+| Document version | V1.13 |
 | Phase | Phase 1: requirements analysis |
 | Prepared by | Training Group 14 |
 | Project lead | Yao Tianyu (group lead); supervisor: Wu Jianguang |
@@ -1443,7 +1443,7 @@ supervisor; nothing is converted unless it is asked for, and the Markdown is the
 | AC-20 | Statistics | Site distribution | Heat map and ranking agree; an empty state appears with no data. | Functional test |
 | AC-21 | Statistics | Trend comparison | Rates reconcile by hand; a missing baseline shows a dash. | Functional test |
 | AC-22 | Statistics | Inspection report | Report figures match the dashboard; the footer carries version and basis. | Data check |
-| AC-23 | Model | Version registration | Missing metrics refused; duplicate names refused. | Functional test |
+| AC-23 | Model | Version registration | Missing metrics refused; a version name always has exactly one row - registering it again updates that row. | Functional test |
 | AC-24 | Model | Activation and rollback | New jobs use the new version after activation; the version number matches after rollback. | Functional test |
 | AC-25 | Model | Experiments | Baseline and improved runs compare in one table; two identical runs differ by less than 1 %. | Reproducibility test |
 | AC-26 | Model | Species dictionary | A class code that does not match labels is refused; a new threshold applies to new jobs. | Functional test |
@@ -1533,6 +1533,7 @@ Defects found in acceptance testing are handled by severity. Critical (system un
 | V1.2 | 2026-11-03 | Yao Tianyu | Marine-debris class and per-class metrics added; capture hardware list added (trigger board, temperature and turbidity sensors, status display); environment reporting added to the capture interface; streaming wording, team size and baseline-freeze week corrected; dataset size and acquisition risk added. | Implements the capture plan change and settles the requirements baseline. | Internal group review |
 | V1.3 | 2026-11-04 | Yao Tianyu | Marine-debris class removed and four classes restored; dataset wording unified to DUO; AL-08 and AL-09 deleted from the metric table and AL-03 limited to per-class recall; scenery list in Table 2-3 and class palette in 5.1 adjusted. | No public labels exist for that class and in-house data cannot support an independent accuracy metric; focus on four commercial and predator species to keep the metric basis consistent. | Internal group review |
 | V1.12 | 2026-11-11 | Yao Tianyu | The table count moves from thirteen to fourteen. §4.1 gains `detect_task_item`, which records the frames assigned to each detection task when it is created: one row per frame, with its own state and box count. | A task's work list was a query re-evaluated by every worker, so two workers could claim the same frames and a frame with no objects never finished; the decision is recorded in ADR 12. | Internal group review |
+| V1.13 | 2026-11-12 | Gao Tianxiang | AC-23 states what version registration does instead of a refusal it never implemented: a version name always has exactly one row, and registering an existing name updates that row. | The registration script has been idempotent since P2-06c and `scripts/init_db.py` registers the delivered version on every run, so a refused duplicate would make a fresh install non-repeatable - the outcome AC-23 wants, one row per name, was already held. | Internal group review |
 | V1.11 | 2026-11-10 | Yao Tianyu | The thirteen page names in §5.2 are one scheme now: object plus action, four characters where the language allows, no `page` suffix, no conjunction. The old set mixed grammars (`capture control` beside `image browsing`), reused `workbench` as both a page and a modifier, and disagreed with `docs/traceability-en.md` on nine of thirteen names in English. | A menu is scanned, not read: parallel entries are quicker to find, and three spellings of one page is three chances to edit the wrong file. | Internal group review |
 | V1.10 | 2026-11-07 | Yao Tianyu | The technology table no longer claims Celery and Redis: batch jobs run in a fixed thread pool inside the one FastAPI process, as ADR 03 decided. SQLAlchemy 2.0 corrected to 2.1, the version pinned in requirements. | The SRS still advertised a message broker the architecture had already rejected, and a reader comparing the two documents would have believed the system had a component it does not. | Internal group review |
 | V1.9 | 2026-11-07 | Yao Tianyu | Table 2-3 gains a status display and two status LEDs; the MCU row adds driving the display. Everything shown on the screen is English or numeric. | The screen and LEDs come from the STM32 kit already on hand, so they cost nothing; V1.4 removed the display on minimum-cost grounds and that premise no longer holds. The screen shows device state only — business data stays on the web side. | Internal group review |

@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from app.db import engine_from_dsn
 from app.models import ModelVersion
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
@@ -89,3 +89,6 @@ def test_registration_is_idempotent_and_can_stay_candidate(tmp_path: Path) -> No
         row = session.scalar(select(ModelVersion).where(ModelVersion.version_name == "v1"))
         assert row.is_online == 0
         assert row.status == 0
+        # AC-23's claim, as the SRS now words it: a version name always has exactly one row, and the
+        # second registration updated that row instead of adding a second one.
+        assert session.scalar(select(func.count()).select_from(ModelVersion)) == 1
