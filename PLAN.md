@@ -383,10 +383,21 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       lifecycle of the data root, which is lane A's, not database logic · done when the
       cleanup job removes intermediate files older than the retention period, nulls the references,
       never touches originals by default, and reports what it deleted
-- [ ] **P3-09** Parameters, monitoring and messages · @Gtechson · closes AC-28, AC-29 · done when the
-      queue and disk levels are visible, a repeated failure message is not duplicated, and a parameter
-      change is still audited with its before and after values - the *effect* of that change is
-      `P3-19`, delivered 11-12, so this task no longer owns it
+- [x] **P3-09** Parameters, monitoring and messages · @Gtechson · closes AC-28, AC-29 · **delivered
+      11-12**: `sys_message` finally has a writer. `server/app/notify.py` writes one message per event
+      and collapses the same type and object inside an hour - the requirement's own rule - in its own
+      session and with its errors kept out of the caller's way, so a message can never block the capture
+      or the task it reports on. The three events FR-M8-02 names are wired: a frame that could not be
+      stored, a task that failed, and a report that finished. `tests/test_messages.py` reads the unread
+      count back through the API: one message for three failing frames in one session, a second for
+      another session, nothing added when the same task fails twice inside the hour, and a read
+      message clearing the count. `GET /api/monitor` now reports the failure rate and carries a `note`
+      when the disk passes its threshold; `tests/test_monitoring.py` pins AC-28's two sentences - a
+      batch moves the queue figure, and 95 % reads `crit` with a note
+      - the parameter half of this task moved to `P3-19`; what was left here was monitoring and the
+        message store, and the store had a table, a list route and a mark-read route with **nothing
+        that ever wrote a row**, so the unread count was permanently zero
+      - "messages kept 30 days" is the same business rule's other half and belongs to `P3-08`'s cleanup
 - [ ] **P3-10** Performance budget, measured · @FrozenYty · closes AC-34 · done when a committed script
       measures single-frame latency and the list endpoints' P90 against a database at design capacity,
       and the numbers are pasted into the pull request — a claim is not a measurement
