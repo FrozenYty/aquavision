@@ -342,6 +342,23 @@
 - **What it does not cover is written down, not implied**: the thirteen pages in a browser, the batch
   worker, review submission and the demo reset stay with `P4-07`. A driver that claimed the whole
   demonstration would be the kind of claim this repository has spent the day removing.
+- **An administrator could disable, restore and reset accounts, and not create one.** The only
+  account a fresh database ever had was the one `scripts/init_db.py` writes, so FR-M1-03's first verb
+  - create - had no route at all. `POST /api/users` now takes name, phone, role and either an initial
+  password or none; without one the server generates it and returns it exactly once, which is the
+  requirement's "one-time initial password" without inventing a column to store it. A duplicate
+  username, phone or email is refused with the "already exists" message AC-03 names rather than the
+  500 a unique index would have produced, and the creation is logged with the operator.
+- **The contract's route count is a tripwire that works.** Adding one route moved three numbers that
+  exist to disagree: the contract's table, `/api/health`'s `contract_routes`, and the assertion in
+  `test_api_skeleton.py` that pins the table's size - a check written because the count once stayed
+  at 42 while the contract grew to 44. AC-03's own sentences are end-to-end in `tests/test_accounts.py`:
+  the new account signs in, disabling ends the session it already held and leaves its history readable
+  through the log route, restoring lets it in again, and the log carries before and after for both.
+  Two business rules of FR-M1-03 are deliberately not implemented and said so in `PLAN.md`: the forced
+  change after a reset, and "the built-in administrator cannot be deleted" - there is no delete route,
+  and disabling the last administrator is the open question nobody has decided.
+
 ## 2026-11-11
 
 - **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint
