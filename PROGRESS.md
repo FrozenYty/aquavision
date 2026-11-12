@@ -185,6 +185,62 @@
   already immediate - this was the missing half. Shown red first: without the bump, the analyst's
   pre-reset token still answers `/api/auth/me` with 200.
 
+- **The plan was audited against itself and did not pass its own rules.** `P4-05` named its owner as
+  "all", while §5 of the same file says one task has one owner - a rule the file had broken in the task
+  that closes defects. `P2-13` and `P4-04` carried two owners each, for the same reason. And `P3-21` and
+  `P3-22`, added this morning, had been inserted under the **P4** heading: I anchored the insert on
+  `P4-01` and dropped two P3 tasks into the closing phase, where nobody looking for breadth work would
+  find them.
+- **The most expensive gap was not a task with a wrong owner; it was work with no owner at all.** The
+  weights are delivered, tracked, registered and referenced by a portable path - and this machine still
+  refuses to load them, because the inference dependency is missing. `GATE P2`, the rehearsal, the
+  performance measurement and the same-frame comparison all wait on that one thing, and no line in the
+  plan named it. It is now `P2-20`, with the two ways to close it stated and the reason the dedicated
+  environment is the better one - it keeps `requirements-server.txt` light, which is ADR 11's argument.
+- **`GATE P2` now states its own prerequisites**, so it cannot read as closer than it is: the weights
+  tracked and registered, a machine that can load them, and real targets in front of the camera. Two of
+  those three were invisible when the line was written.
+- **The load was rebalanced without pretending a person can be in two places.** `P3-13` (scheduled
+  capture) moved to lane A, because a capture schedule belongs with the capture module and needs no model.
+  `P4-02` may be delivered one experiment per pull request rather than as a batch, `P4-04` can start as
+  soon as E0 is recorded, and `P4-08` is one repeat of E0's configuration rather than a new experiment.
+  The six training tasks stay with lane B: they are P4 work, and P4 does not run alongside P3.
+- **Two claims the audit had already disproved were still standing.** `P3-06` was recorded as closing
+  AC-36, though its tests cover the reset endpoint and prototype mode and not the live chain that AC-36
+  describes - it now says it *supports* AC-36, which `P2-13` and the gate close. `P3-09` still listed the
+  parameter behaviour in its own acceptance after `P3-19` delivered it.
+- **`P4-01` now separates the two E0s.** An exploratory baseline on a DUO subset is the version tracked in
+  the repository and it unblocked the slice; the official E0 is the frozen-dataset run whose numbers the
+  metrics table reports. Both are real, and leaving the distinction unstated would have made the metrics
+  table look like it describes the file in `models/`.
+- **And the architecture document did not mention `sys_param` at all**, in either language, while
+  parameters now take effect at runtime: the storage table gained the row that says where they live and
+  when they are read (ADR 15).
+- **The document check caught me doing the thing it was written to prevent.** The new `P2-20` text quoted
+  the Chinese error message verbatim inside an English document; `check-language.py` failed on it, and the
+  line now describes the message instead of copying it.
+
+- **The plan was topped up with work the system is actually missing, and each addition names the
+  evidence that makes it necessary.** Sixteen tasks, chosen for completeness and reliability rather than
+  volume, and every one carries a failable acceptance: a schema change that does not need a wipe
+  (`create_all` adds a missing *table* - the 13-to-14 change worked by that accident, and the next change
+  is a column, which it will not add); upload and input limits, because the capture route writes whatever
+  bytes arrive into a path built partly from request values and no maximum is stated; undo and keyboard
+  control on the review canvas, whose core interaction is mouse-only and whose mistaken drag is
+  unrecoverable until after submit; a page-by-page failure matrix, because the states `P2-12` added were
+  asserted per page and the pages have been rebuilt since; an operations runbook, a reconnecting rig link,
+  a frontend weight budget, a report preview, and a canvas that keeps its place across a reload.
+- **The verification lane gained the work it was always implicitly holding.** The four additions there
+  are the ones the 11-11 audit proved missing: a check that fails when any of the 36 acceptance items has
+  no ticked task or no test (14 of 36 were traced), the test-case document that still calls 21 already
+  ticked cases unimplemented, a defect log whose entries each name the test that fails if the defect
+  returns, and the thirteen traceability screenshots regenerated against the current build.
+- **The three gates now name who checks them.** §5.3 says a gate is checked by someone other than the
+  lane owner, and until now the gates had no owner at all - so the rule had nobody to hold. They belong
+  to the verification lane as the independent reader, which is also what makes the load even.
+- **Load is now level across the four lanes**: A 12, B 12, C 10, D 10. It was A 10, B 10, C 4, D 1, which
+  meant two people carried three quarters of the remaining work and the frontend and verification lanes
+  looked finished when they were not.
 ## 2026-11-11
 
 - **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint

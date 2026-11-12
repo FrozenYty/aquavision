@@ -226,7 +226,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 
       **Together**
 
-- [ ] **P2-13** Rehearse the P2 gate end to end · @Gtechson @chemflowers · done when someone who has
+- [ ] **P2-13** Rehearse the P2 gate end to end · @FrozenYty · done when someone who has
       not seen the system completes the slice from a cold start in under two minutes, twice in a row
 - [x] **P2-14** Requirements traceability matrix over every prototype screen · @chemflowers · done
       when each screen in `web/templates/` has rows in `docs/traceability-en/zh.md`, every referenced
@@ -272,8 +272,27 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         describes `tests/fixtures/` as holding three JPEGs; neither exists - metrics come out of
         `train_baseline.py`, and the tests synthesise their frames (lane D)
 
+- [ ] **P2-20** A machine that can load the delivered weights · @FrozenYty · unblocks `GATE P2`,
+      `P2-13`, `P3-10` and `P4-10` · done when
+      `python -m pytest tests/test_detect_real.py -o addopts="" -q` **runs and passes** on the
+      demonstration machine instead of skipping, and a captured frame comes back with boxes and a class
+      count through `POST /api/detect/frames`
+      - the weights are delivered, tracked and registered, and this machine still refuses to load
+        them, answering that the inference dependency is missing and naming the online version: the
+        file half of the delivery is done and the **runtime half had no owner anywhere in this plan** -
+        which is why the gate looked one step away for two days
+      - two ways to close it, and the choice is a decision rather than a detail: a **dedicated
+        environment** holding `ultralytics` and torch, which the server and the real-inference test
+        point at, or installing the training stack into the environment that already runs the app. The
+        dedicated one keeps `requirements-server.txt` light, which is ADR 11's argument
+      - the three skipped tests in `tests/test_detect_real.py` are the only evidence that inference
+        works at all; while they skip, `GATE P2` is a claim rather than a demonstration
 - [ ] **GATE P2** — from a cold start, someone who has not seen the system completes the slice in
-      three minutes, no restart, no manual database edit
+      three minutes, no restart, no manual database edit · **checked by @IkeaFyj**, not the lane owner (§5.3)
+      - **its prerequisites are part of the gate, because they are what makes it passable:** the
+        delivered weights are tracked and registered (`P2-06d`, done), a machine that can load them
+        (`P2-20`), and real targets in front of the camera. Two of those three were invisible when this
+        line was written, so the gate read closer than it was
 
 ### P3 — breadth
 
@@ -328,7 +347,8 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - the panel's state-by-event matrix (idle / open / selected / confirming / restoring against open /
         select / confirm / cancel / Esc / a second click while restoring) is complete, every cell filled
         or marked ignored - it is in the #150 description
-- [x] **P3-06** Demo mode · @FrozenYty · closes AC-36 · delivered 11-11 (#152)
+- [x] **P3-06** Demo mode · @FrozenYty · **supports** AC-36 - the live chain that AC-36 actually
+      describes is closed by `P2-13` and the gate, not by this task · delivered 11-11 (#152)
       - **one action resets the data.** `POST /api/demo/reset` empties the ten business tables and the
         stored frame files, and answers with a per-table count, the number of files actually unlinked and
         the model still online - a boolean would make the operator trust the reset instead of seeing it.
@@ -359,9 +379,10 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P3-08** Retention cleanup and reference nulling · @Gtechson · closes AC-09 · done when the
       cleanup job removes intermediate files older than the retention period, nulls the references,
       never touches originals by default, and reports what it deleted
-- [ ] **P3-09** Parameters, monitoring and messages · @Gtechson · closes AC-28, AC-29 (the parameter half is P3-19) · done
-      when a parameter change persists and is audited with before and after values, the queue and disk
-      levels are visible, and a repeated failure message is not duplicated
+- [ ] **P3-09** Parameters, monitoring and messages · @Gtechson · closes AC-28, AC-29 · done when the
+      queue and disk levels are visible, a repeated failure message is not duplicated, and a parameter
+      change is still audited with its before and after values - the *effect* of that change is
+      `P3-19`, delivered 11-12, so this task no longer owns it
 - [ ] **P3-10** Performance budget, measured · @FrozenYty · closes AC-34 · done when a committed script
       measures single-frame latency and the list endpoints' P90 against a database at design capacity,
       and the numbers are pasted into the pull request — a claim is not a measurement
@@ -386,7 +407,8 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         the client's three-second timeout, so a socket that dies **after** `auth_ok` - a camera unplugged
         mid-demo - surfaces as "closed" and the page stops updating instead of polling. Fixing it needs
         `live.js` (lane C), so it belongs here rather than in the websocket task
-- [ ] **P3-13** Scheduled capture · @Gtechson · closes AC-06 · there is no timer anywhere in the system
+- [ ] **P3-13** Scheduled capture · @FrozenYty · closes AC-06 · the capture schedule belongs with the
+      capture module and needs no model and no training · there is no timer anywhere in the system
       yet: done when a schedule of N captures every M minutes produces exactly N batches, a run whose
       device is unavailable is marked failed with a reason, and the schedule survives a restart
 - [x] **P3-14** Result export · @chemflowers · closes AC-14 · done when a result set exports as CSV with
@@ -404,6 +426,10 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         and read-only for C. Agree the split with lane B before starting, rather than in review
       - the data already supports it: `species_dict.conf_thr` exists and **nothing reads it** -
         `detect.py` passes the caller's `conf_thr` straight to the model
+      - **the server half is smaller than it was when this was written:** `P3-19` delivered
+        `server/app/params.py`, so a per-class threshold has a place to be read from rather than needing
+        a new mechanism, and refusing a class code that disagrees with `labels.txt` is one comparison
+        against the delivered file
 
 - [x] **P3-16** Review versions and rollback · @Gtechson · **unblocks `P3-05`** · delivered 11-11 (#148)
       - `GET /api/review/frames/{frame_id}/versions` lists each entry newest first with its action, time,
@@ -469,11 +495,6 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         and `POST /api/users/{id}/reset-password` bumps it. `tests/test_token_epoch.py` shows the old
         token answering `40101` after the reset while the administrator's own session keeps working. The
         SRS records the column at V1.14 and the data-model tables follow in both languages
-- [ ] **GATE P3** — all 36 acceptance items demonstrated live, one after another, no manual database
-      edits in between, and every item traceable to the task that closed it
-
-### P4 — close
-
 - [ ] **P3-21** The interface reads time the way ADR 14 says · @chemflowers · follows **ADR 14** · done
       when no page re-derives a date from the browser's zone, and a report period is not a hardcoded offset
       - `web/static/js/ui.js`'s formatter rebuilds every timestamp in the **browser's** zone, so a reviewer
@@ -491,24 +512,106 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - ADR 14 deliberately left storage and the layout alone, so this is its own change: either derive
         them in the operating zone (and let existing ids keep their basis) or write the basis into the id
         so the two can never be confused
+- [ ] **P3-23** An operations runbook · @FrozenYty · done when someone who has never run the system
+      follows it on a clean machine and needs nothing improvised: deploy from a clone, back up and
+      restore both the database and the frames, rotate the JWT secret without locking everyone out,
+      upgrade a schema that gained a column, read the log for a refused request, and recover a queue
+      that stopped
+      - the pieces exist across `README`, `handover` and `CONTRIBUTING` and none of them is the page
+        someone reaches for at 2 a.m.
+- [ ] **P3-24** The rig link survives the device disappearing · @FrozenYty · done when unplugging and
+      replugging the board needs no server restart: the link reports the gap, reconnects when the port
+      returns, and the capture page says which of the two states it is in
+      - `rig/link.py` opens the port once; a `SerialException` mid-run is the case the state machine
+        already calls `Gone`, and nothing currently tries to leave it
+      - testable without the bench: a test double that raises on the first read and reopens on the next
+        attempt, with the reconnect interval asserted rather than slept
+- [ ] **P3-25** A schema change without a wipe · @Gtechson · done when a column added to `models.py`
+      reaches an **existing populated database** without losing a row, and the route is written down
+      - `create_all` adds a missing *table*, and there is no migration mechanism: the 13-to-14 table
+        change worked by that accident, and the next change is a **column**, which `create_all` will
+        not add to an existing table
+      - done when a test builds a database from the previous schema, upgrades it, and asserts the old
+        rows survive and the new column exists with its documented default
+- [ ] **P3-26** Upload and input limits · @Gtechson · done when a frame above a stated size, an image
+      whose dimensions exceed the model's input, a request body above the declared maximum, and a
+      name carrying `..` or a path separator are each refused with the project envelope - not accepted,
+      and not a 500
+      - the capture route writes whatever bytes arrive into a path built partly from request values,
+        and no maximum is stated anywhere
+- [ ] **P3-27** Undo on the review canvas · @chemflowers · done when a mistaken drag, draw or delete
+      can be undone before submit, and the undo stack is asserted as a pure function under Node
+      - today a wrong drag is unrecoverable until the version panel is used *after* submitting, which
+        is too late for a reviewer working through forty frames
+- [ ] **P3-28** The canvas from the keyboard · @chemflowers · done when a box can be selected, nudged,
+      resized and deleted without a mouse, the focus order is visible, and the keys are printed on the
+      page
+      - the core interaction of the product is mouse-only, and a nudge of one pixel is the correction a
+        reviewer needs most often
+- [ ] **P3-29** Every page survives a failed request · @chemflowers · done when each of the thirteen
+      pages, given a 500, a timeout and a 401, shows a sentence the operator can act on and leaves no
+      spinner running - asserted as a table of (page, failure, expected state)
+      - `P2-12` brought those states to the pages that existed then; the assertion was per page and the
+        pages have been rebuilt since
+- [ ] **P3-30** A weight budget for the frontend · @chemflowers · done when a script measures the JS and
+      CSS each page loads, prints the table, and CI fails above a stated ceiling
+      - no framework and no build tool is a deliberate choice; its cost is that nobody notices a page
+        quietly growing
+- [ ] **P3-31** The report page previews its own figures · @chemflowers · done when the period chooser
+      shows the numbers the report will carry before it is generated, and the preview and the file
+      agree in a test
+      - generating a report to discover it covers the wrong week is this page's ordinary failure
+- [ ] **P3-32** The canvas keeps its place across a reload · @chemflowers · done when the selection,
+      zoom and page survive a refresh, asserted as a pure function that serialises and restores them
+      - a reviewer interrupted mid-set currently starts again from the first frame
+- [ ] **P3-33** The acceptance matrix cannot go quiet · @IkeaFyj · done when a script fails if any of
+      the 36 acceptance items has no ticked task or no test, and the matrix names both for every item
+      - the 11-11 audit found 14 of 36 traced; an item with neither is the one that fails in the review
+- [ ] **P3-34** The test case document says what is true · @IkeaFyj · done when
+      `docs/test-cases-{en,zh}.md` stops calling every case "not implemented" and records, for each
+      case, whether it is automated or manual and where it lives
+      - 21 cases covering already-ticked acceptance items still read as unimplemented
+- [ ] **P3-35** Every closed defect has a regression test · @IkeaFyj · done when the defect log names
+      the test that fails if the defect returns, and a check fails when a defect has none
+- [ ] **P3-36** The traceability figures match the pages · @IkeaFyj · done when the thirteen
+      screenshots are regenerated from the current build and each is referenced by the matrix row it
+      illustrates
+      - the pages were renamed and restyled since the figures were taken
+- [ ] **GATE P3** — all 36 acceptance items demonstrated live, one after another, no manual database
+      edits in between, and every item traceable to the task that closed it · **checked by @IkeaFyj**, not the
+      lane owner (§5.3)
+
+### P4 — close
+
 - [ ] **P4-01** Dataset freeze, then baseline E0 · @Gtechson · closes AC-30 · done when the snapshot is
       frozen **before** the first official run — name, split, seed and manifest written down — and E0
       is recorded with every metric column filled
       - freezing first is the point: a baseline trained on a moving dataset cannot be compared to
         anything, and every later number inherits the mistake
+      - an **exploratory** baseline on a DUO subset is already delivered and is the version tracked in
+        the repository (`models/v8n-E0-exploratory/`). It unblocked the slice; it is **not** the official
+        E0, and the frozen-dataset run below is what the metrics table reports. The name stays as it is so
+        nothing already pointing at it has to move
 - [ ] **P4-02** The three improvements · @Gtechson · closes AC-32 · done when each is isolated on top of
       the previous one, each has a row in the experiment table, and each reports its delta against E0
       - E1 underwater colour correction
       - E2 EMA attention
       - E3 WIoU v3 loss
+      - **one experiment per pull request**: E1, then E2 on top of it, then E3 - three runs and three PRs
+        rather than one batch at the end, so a failure in E2 does not hold E1's record
 - [ ] **P4-03** Ablation and tank fine-tuning · @Gtechson · closes AC-32 · done when the ablation table
       shows each improvement's own contribution, and the fine-tune on tank images is evaluated against
       the same test set
-- [ ] **P4-04** Metric acceptance, per class · @Gtechson @IkeaFyj · closes AC-30, AC-31, AC-33 · done
+- [ ] **P4-04** Metric acceptance, per class · @Gtechson · closes AC-30, AC-31, AC-33 · done
       when all **seven** metrics of SRS Table 6-1 (AL-01..AL-07) are recorded — the count was nine
       before V1.3 deleted AL-08 and AL-09 — and any miss is explained in writing
-- [ ] **P4-05** Defect closure · all · done when every defect has a recorded severity, a fix and a
-      regression check, and blocker and major counts are zero — "no defects" is not a number
+      - it is a reporting task and can start as soon as E0 is recorded: the table fills run by run, so it
+        does not sit on the critical path at the end. The acceptance check is §5.3's - someone other than
+        the owner reads it
+- [ ] **P4-05** Defect closure · @FrozenYty · done when every defect has a recorded severity, a fix and
+      a regression check, and blocker and major counts are zero — "no defects" is not a number
+      - **the owner is one person**, because §5.1 says so and "all" is not an owner. Each lane reports
+        its own defects into the table; this task keeps the counts and the regression checks
 - [ ] **P4-06** Acceptance checklist, demo script, slides · @IkeaFyj · done when every acceptance item
       is ticked with the evidence beside it, and the demo runs end to end on paper without a question
       left unanswerable
@@ -517,6 +620,8 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P4-08** Reproducibility · @Gtechson · closes AC-25 · done when the same configuration run twice
       differs by less than 1 % on every metric, and both runs are in the table — a single run proves
       nothing about the next one
+      - the second run reuses E0's recorded configuration, so it is one repeat rather than a new
+        experiment: a seed change with everything else pinned is what this measures
 - [ ] **P4-09** Submission package · @FrozenYty · closes AC-35 · done when the SRS, the traceability
       matrix, the test report and this plan agree with each other and with the code at one commit, and
       the document index lists nothing that does not exist
@@ -525,7 +630,14 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       response carries both sets of boxes and both version names, and the page can show them side by
       side — it could not be built earlier because it needs two registered versions
 
-- [ ] **GATE P4** — four tables full: metrics, ablation, reproducibility, acceptance checklist
+- [ ] **P4-11** The test report · @IkeaFyj · done when it states the plan, what was executed, what
+      passed, what was skipped and why, and the defects found with their severity - a reader can
+      reproduce the number rather than trust it
+- [ ] **P4-12** A demo driver, not a memory · @IkeaFyj · done when one command runs the slice end to
+      end against a fresh database and prints the numbers a rehearsal needs - frames captured, boxes
+      drawn, per-class counts, elapsed time - so `P4-07` is a run rather than a walkthrough
+- [ ] **GATE P4** — four tables full: metrics, ablation, reproducibility, acceptance checklist · **checked by @IkeaFyj**, not
+      the lane owner (§5.3)
 
 ## 5. Text constraints
 
