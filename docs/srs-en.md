@@ -578,7 +578,7 @@ Each requirement states description, input, processing, output, business rules a
 | Input | Reviewer, conclusion, set of edits |
 | Processing | Write a version record → compute the diff against the previous version → allow rollback, which itself creates a version |
 | Output | Version timeline, diff view, rollback result |
-| Business rules | Version numbers increase monotonically; rollback never deletes history; only analysts and algorithm engineers may review |
+| Business rules | Version numbers increase monotonically; rollback never deletes history; only analysts, algorithm engineers and administrators may review |
 | Acceptance | Two reviews produce two versions; after rollback the result matches the target version exactly and the history remains |
 
 **Table 3-18 FR-M4-03 Hard-example set**
