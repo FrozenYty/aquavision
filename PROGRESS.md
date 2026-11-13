@@ -13,6 +13,21 @@
   folder name in a shared document. The two older entries below still say "the submission folder"; they are
   left as written, since this log is append-only and this entry is where the rename lives.
 
+- **The rig's power was settled at the bench, and the answer is two supplies with one ground.** A single
+  12 V adapter into an MB-102 feeds **only the 5 V side** - the turbidity sensor's VCC, the level shifter's
+  high side and the two 4.7 kOhm pull-ups. The controller keeps its USB cable, which is also the serial
+  link, and its own `3V3` pin feeds the shifter's low side, the OLED and its own logic. That is one 5 V
+  domain and one 3.3 V domain instead of two competing regulators, and the buck module bought on 11-11 is
+  a spare rather than the plan.
+- **The wiring is now in `docs/procurement-en/zh.md` section 5, with the diagram, the pin table and the
+  three things to measure before the first power-on.** The first of those is not a formality: on several
+  MB-102 boards the rail marked 5 V passes the input through instead of regulating it, so a 12 V adapter
+  puts 12 V on a sensor specified for 4.5-5.5 V. Measure that rail with nothing connected, before anything
+  is plugged into it.
+- **Every pin in that table comes from `firmware/main/src/config.h`**, not from memory: GPIO4 button,
+  GPIO5 and GPIO6 the two LEDs behind 330 Ohm, GPIO8 and GPIO9 the I2C pair. A wiring diagram that
+  disagrees with the firmware is two defects, not one.
+
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict

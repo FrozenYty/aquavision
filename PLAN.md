@@ -479,8 +479,13 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       level shifter, and **5 V for the sensor**. A 12 V adapter with a buck module was procured 11-11
       and replaces the earlier dead end - the board has no 5 V output - but it is untested until the
       bench session
-      - wiring as agreed: 12 V adapter -> 5 V module -> sensor VCC, **common ground with the board**;
-        the BSS138 level shifter runs VCCA 3V3, VCCB 5 V, A0 to B0 on GPIO8/SDA, A1 to B1 on GPIO9/SCL
+      - **power settled 11-13: one 12 V adapter into an MB-102, and the MB-102 feeds only the 5 V side** -
+        sensor VCC, shifter VCCB and the two 4.7 kOhm pull-ups. The controller stays on its USB cable, which
+        is also the serial link, and its own `3V3` pin feeds the shifter's VCCA, the OLED and the ESP32
+        logic, so there is one 5 V domain and one ground. The buck module bought on 11-11 is now a spare
+        rather than the plan. **The first power-on still measures the MB-102's 5 V rail**, because on
+        several boards that rail passes the input through instead of regulating it
+      - the BSS138 level shifter runs VCCA 3V3, VCCB 5 V, A0 to B0 on GPIO8/SDA, A1 to B1 on GPIO9/SCL
       - done when `python scripts/test_rig.py` reports the three numbers the design fixed - left/right
         brightness ratio >= 0.7, a 5 cm target >= 45 px at 640 input, no flicker - and `CMD SCAN` shows
         `EVT I2C 49` with the sensor powered
