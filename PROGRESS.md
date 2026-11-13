@@ -65,6 +65,19 @@
   it is not in the water yet, and the tool exits 1 for that rather than reporting a partial pass. The
   official numbers still need the ten-minute run on the assembled tank.
 
+- **The assembly order said the wrong thing about the two status LEDs, and the wrong thing would have cost
+  an hour.** It read "a button press pulses the green or yellow LED for 300 ms", which reads as: press the
+  button, see a light. The firmware does no such thing - a button press emits `EVT TRIGGER` and moves the
+  screen to `Capturing`; the lamp lights only when `CMD RESULT` comes back and is **refused outside that
+  state** (`protocol.cpp` answers `EVT STRAY RESULT` instead). So with no PC on the link, pressing the
+  button lights nothing, and the obvious conclusion at a bench is that the LED or its resistor is wrong.
+  The step now says the LEDs answer a verdict rather than a button, and that silence without a PC is not a
+  fault.
+- **Green is `PASS`, yellow is `RETAKE`, and each is a 300 ms pulse rather than a lamp.** A steady lamp
+  stops carrying information after the first second; the screen keeps the verdict visible, and
+  `pulseLeds` is a flag rather than "the screen changed" so that two `PASS` results in a row still get a
+  second pulse.
+
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict
