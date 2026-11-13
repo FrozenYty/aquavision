@@ -147,6 +147,27 @@ void serviceLeds(uint32_t now) {
   digitalWrite(cfg::PIN_LED_RETAKE, now < ledRetakeUntil ? HIGH : LOW);
 }
 
+//: The blue lamp answers "what is the rig doing", where the other two answer "what did the verdict say".
+//: It is lit in **every** screen - a dark panel must not be able to mean either "idle" or "dead", which
+//: is the whole reason it exists.
+void serviceStateLed(uint32_t now) {
+  bool lit = true;
+  switch (state.screen) {
+    case rig::Screen::Capturing:
+      lit = ((now / cfg::STATE_BLINK_MS) % 2) == 0;
+      break;
+    case rig::Screen::Offline:
+      lit = ((now / cfg::FAULT_BLINK_MS) % 2) == 0;
+      break;
+    default:
+      // Ready, Pass and Retake all mean "powered, link alive, nothing in flight" - the verdict itself is
+      // on the screen and was already pulsed by the green or yellow lamp.
+      lit = true;
+      break;
+  }
+  digitalWrite(cfg::PIN_LED_STATE, lit ? HIGH : LOW);
+}
+
 void serviceLink(uint32_t now) {
   const bool alive = (now - lastPcMessage) < cfg::OFFLINE_AFTER_MS;
   if (!alive && state.link == rig::Link::Alive) {
@@ -174,8 +195,12 @@ void setup() {
   pinMode(cfg::PIN_BUTTON, INPUT_PULLUP);
   pinMode(cfg::PIN_LED_PASS, OUTPUT);
   pinMode(cfg::PIN_LED_RETAKE, OUTPUT);
+  pinMode(cfg::PIN_LED_STATE, OUTPUT);
   digitalWrite(cfg::PIN_LED_PASS, LOW);
   digitalWrite(cfg::PIN_LED_RETAKE, LOW);
+  // Lit from the first millisecond: this lamp's job is to prove the board has power, so it must not wait
+  // for the loop or for the splash to finish before saying so.
+  digitalWrite(cfg::PIN_LED_STATE, HIGH);
 
   Serial.begin(cfg::SERIAL_BAUD);
 
@@ -230,6 +255,7 @@ void loop() {
   serviceAnimation(now);
   serviceCaptureTimeout(now);
   serviceLeds(now);
+  serviceStateLed(now);
   serviceLink(now);
 
   // The five reachable screen/link combinations are enforced here rather than assumed. This costs a

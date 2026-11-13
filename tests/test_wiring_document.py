@@ -53,6 +53,7 @@ def test_the_firmware_still_declares_the_pins_this_project_wires() -> None:
         "PIN_BUTTON": 4,
         "PIN_LED_PASS": 5,
         "PIN_LED_RETAKE": 6,
+        "PIN_LED_STATE": 7,
         "PIN_I2C_SDA": 8,
         "PIN_I2C_SCL": 9,
     }

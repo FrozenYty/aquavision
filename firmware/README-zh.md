@@ -3,7 +3,7 @@
 > 本文为 `firmware/README.md` 的中文对照版，以英文版为准。
 
 `main/` 里的 ESP32-S3 是整套装置上人会碰的那一部分。它上报按键按下，读取浊度传感器，在
-0.96 寸 OLED 上显示最近一次采集的判定，并点亮两颗 LED 中的一颗。
+0.96 寸 OLED 上显示最近一次采集的判定，并点亮三颗 LED 中的一颗。
 
 它**不采图，也不做推理**。这两件事都归 PC，而一帧画面的质量只有 PC 说了算——固件只显示被
 告知的内容。
@@ -51,12 +51,13 @@ python -m pip install platformio
 | 按键 | GPIO 4 | 接 GND；`INPUT_PULLUP`，所以按下读到 LOW |
 | 绿色 LED | GPIO 5 | 串联电阻 330 Ω |
 | 黄色 LED | GPIO 6 | 串联电阻 330 Ω |
+| 蓝色 LED | GPIO 7 | 串联电阻 330 Ω；状态灯，任何时刻都亮着 |
 | OLED SDA | GPIO 8 | I2C，地址 0x3C |
 | OLED SCL | GPIO 9 | I2C |
 | 浊度 SDA | GPIO 8 | 同一条总线，地址 0x49 |
 | 浊度 SCL | GPIO 9 | 同一条总线 |
 
-两颗 LED 都需要电阻。三个 1 kΩ 电阻并联是 333 Ω，够接近了；如果零件盒里本来就有一袋 1 kΩ，
+每颗 LED 各需一只电阻。三个 1 kΩ 电阻并联是 333 Ω，够接近了；如果零件盒里本来就有一袋 1 kΩ，
 这样就不必再买任何东西。
 
 ## 屏幕
@@ -172,7 +173,7 @@ BOOT 键。
 `CMD RESULT 94 PASS OK`、`CMD RESULT 30 RETAKE LOW_LIGHT`、`CMD RESULT 55 RETAKE COLOR_CAST`、
 `CMD RESULT 20 RETAKE UNKNOWN`，以及干脆沉默到十秒超时得到的 `OFFLINE`。
 
-**尚未验证：** 两颗状态 LED，因为 330 ohm 电阻还没到；按键，它也还没到；以及浊度传感器，它得
+**尚未验证：** 三颗状态 LED，因为 330 ohm 电阻还没到；按键，它也还没到；以及浊度传感器，它得
 先有电平转换板。
 
 ## 硬件参考

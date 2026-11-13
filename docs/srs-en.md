@@ -214,7 +214,7 @@ The system has three layers — capture, service and presentation — which exch
 | 7 | Polarising sheet | Linear polariser 200×200 mm, cut into a lamp piece and a lens piece | 1 | Cross-polarisation removes reflections from the wall and the water |
 | 8 | Targets and scenery | Four to six real seafood items, dark stones and weed collected on site | 1 set | Objects to detect and distractors |
 | 9 | Status display | 0.96" OLED, 128×64 monochrome, I2C, address 0x3C | 1 | Shows link state, turbidity, quality score and verdict; no PC needed on site |
-| 10 | Status LEDs | One green and one yellow LED, 330 Ω series resistor | 2 | Green = stored, yellow = retake; flashes 300 ms in step with the screen |
+| 10 | Status LEDs | One green, one yellow and one blue LED, one 330 Ω resistor each | 3 | Green = stored, yellow = retake, blue = the rig's state and lit at every moment |
 
 #### 2.5.2 Development and operation constraints
 
