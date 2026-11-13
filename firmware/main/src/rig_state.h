@@ -54,11 +54,6 @@ struct State {
   //: waste the I2C bus; a redraw on change is enough.
   bool dirty = true;
 
-  //: Set by the protocol when a verdict arrives, consumed by the loop to pulse the LED. A flag rather
-  //: than "did the screen change", because two PASS results in a row are the same screen and the second
-  //: one still deserves a pulse.
-  bool pulseLeds = false;
-
   bool pcAlive() const { return link == Link::Alive; }
 
   void markDirty() { dirty = true; }

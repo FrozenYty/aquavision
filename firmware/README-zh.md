@@ -49,9 +49,9 @@ python -m pip install platformio
 | 信号 | ESP32-S3 | 说明 |
 |---|---|---|
 | 按键 | GPIO 4 | 接 GND；`INPUT_PULLUP`，所以按下读到 LOW |
-| 绿色 LED | GPIO 5 | 阳极接 +5 V，阴极串 330 Ω；**引脚做接地开关，低电平点亮** |
-| 黄色 LED | GPIO 6 | 同上 |
-| 蓝色 LED | GPIO 7 | 同上；状态灯，任何时刻都亮着 |
+| 白色 LED（PASS） | GPIO 5 | 阳极接 +5 V，阴极串 330 Ω；**引脚做接地开关，低电平点亮** |
+| 红色 LED（RETAKE） | GPIO 6 | 同上 |
+| 蓝色 LED（状态） | GPIO 7 | 同上；在另两盏不覆盖的窗口里亮 |
 | OLED SDA | GPIO 8 | I2C，地址 0x3C |
 | OLED SCL | GPIO 9 | I2C |
 | 浊度 SDA | GPIO 8 | 同一条总线，地址 0x49 |

@@ -272,10 +272,12 @@ term(BX + BW - 0.10, B_Y, "GND side", side="right", size=8.0)
 
 # ------------------------------------------------------------------ LEDs
 LED1_Y, LED2_Y, LED3_Y = 6.95, 6.35, 5.75
-for y, name, key in (
-    (LED1_Y, "green LED", "led1"),
-    (LED2_Y, "yellow LED", "led2"),
-    (LED3_Y, "blue LED  (state)", "led3"),
+# The lamp colour is the fill of its symbol and the word on its row; the wire colour stays the pin's, so
+# that red here cannot be confused with the red 5 V rail running past on the right.
+for y, name, key, lamp in (
+    (LED1_Y, "white LED  (PASS)", "led1", "#FFFFFF"),
+    (LED2_Y, "red LED  (RETAKE)", "led2", "#CC2222"),
+    (LED3_Y, "blue LED  (state)", "led3", "#1B62C8"),
 ):
     ax.add_patch(
         FancyBboxPatch(
@@ -293,9 +295,7 @@ for y, name, key in (
     ax.text(BX + 1.75, y, "330 Ω", ha="center", va="center", fontsize=7.8, zorder=5)
     ax.plot([BX + 2.25, BX + 2.75], [y, y], color=C[key], linewidth=2.6, zorder=3)
     ax.add_patch(
-        plt.Circle(
-            (BX + 2.95, y), 0.10, facecolor="white", edgecolor=C[key], linewidth=1.6, zorder=5
-        )
+        plt.Circle((BX + 2.95, y), 0.10, facecolor=lamp, edgecolor=C[key], linewidth=1.6, zorder=5)
     )
     ax.text(BX + 2.95, y - 0.27, "LED", ha="center", va="center", fontsize=6.2, zorder=5)
     ax.add_patch(plt.Circle((BX + 0.10, y), 0.045, color=C["box"], zorder=5))

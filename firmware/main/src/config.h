@@ -16,9 +16,17 @@ constexpr int PIN_BUTTON = 4;      // to GND, INPUT_PULLUP: a press reads LOW
 // HIGH puts it out**. That is what makes them bright enough to read across a bench: from 3.3 V a 2 V LED
 // has 1.3 V of headroom and 330 ohm leaves under 4 mA, while from 5 V the same resistor gives about 9 mA.
 // The pin never sees 5 V - the LED is between it and the rail - and it sinks at most 9 mA.
-constexpr int PIN_LED_PASS = 5;    // green, anode to +5 V, cathode through 330 ohm: LOW lights it
-constexpr int PIN_LED_RETAKE = 6;  // yellow, the same
-constexpr int PIN_LED_STATE = 7;   // blue, the same: the one that is always lit
+// **Colour is a convention here, not a requirement**, and this set was chosen on three grounds.
+// Red marks RETAKE, because the lamp that says "shoot it again" is the one that must not be missed and red
+// is the colour a reader already stops for. White marks PASS: it is the brightest thing available at 9 mA
+// and carries no bad news. Blue marks the state, because an always-on lamp must recede - white there would
+// dominate the two that matter, and it blooms into a white blob on a phone camera.
+// Green for PASS was the obvious choice and was given up twice over: the parts on hand were too dim at 9 mA
+// to read from a metre, and red against green is the one pair a red-green colour-blind operator cannot
+// separate. Red, white and blue differ in brightness as well as hue.
+constexpr int PIN_LED_PASS = 5;    // white, anode to +5 V, cathode through 330 ohm: LOW lights it
+constexpr int PIN_LED_RETAKE = 6;  // red, the same
+constexpr int PIN_LED_STATE = 7;   // blue, the same
 constexpr int PIN_I2C_SDA = 8;
 constexpr int PIN_I2C_SCL = 9;
 
@@ -31,7 +39,6 @@ constexpr uint8_t TURBIDITY_ADDR = 0x49;
 
 constexpr uint32_t SERIAL_BAUD = 115200;
 constexpr uint32_t BUTTON_DEBOUNCE_MS = 25;
-constexpr uint32_t LED_PULSE_MS = 300;
 // The blue state lamp is steady when the rig is idle, blinks slowly while a capture is in flight, and
 // blinks fast when the link is gone. Two rates rather than one, because "busy" and "broken" are different
 // questions, and a single pattern would make the operator read the panel twice to tell them apart.
@@ -54,7 +61,8 @@ constexpr uint32_t SPLASH_MS = 1500;
 //: Bumped whenever the wire protocol or what the panel and lamps do changes, because `EVT HELLO` is how a
 //: host knows which build is on the board - a feature added without a bump is a feature nobody can
 //: confirm is running. 1.2 added the blue state lamp on GPIO7; 1.3 moved the lamps to the 5 V rail with
-//: the pin switching the low side, which inverted what HIGH means for all three.
-constexpr char FIRMWARE_VERSION[] = "1.3";
+//: the pin switching the low side, which inverted what HIGH means for all three; 1.4 made the lamps follow
+//: the screen instead of pulsing for 300 ms, so the two verdict lamps are steady while their verdict is shown.
+constexpr char FIRMWARE_VERSION[] = "1.4";
 
 }  // namespace cfg

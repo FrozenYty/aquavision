@@ -49,9 +49,9 @@ python -m pip install platformio
 | Signal | ESP32-S3 | Note |
 |---|---|---|
 | Button | GPIO 4 | to GND; `INPUT_PULLUP`, so a press reads LOW |
-| Green LED | GPIO 5 | anode to +5 V, cathode through 330 Ω; **the pin sinks, so LOW lights it** |
-| Yellow LED | GPIO 6 | the same |
-| Blue LED | GPIO 7 | the same; the state lamp, lit at every moment |
+| White LED (PASS) | GPIO 5 | anode to +5 V, cathode through 330 Ω; **the pin sinks, so LOW lights it** |
+| Red LED (RETAKE) | GPIO 6 | the same |
+| Blue LED (state) | GPIO 7 | the same; lit on every screen the other two do not cover |
 | OLED SDA | GPIO 8 | I2C, address 0x3C |
 | OLED SCL | GPIO 9 | I2C |
 | Turbidity SDA | GPIO 8 | same bus, address 0x49 |

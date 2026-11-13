@@ -1,6 +1,6 @@
 // Rig controller for AquaVision (P1-06). Wiring only.
 //
-// The ESP32 reports a button press, reads turbidity, drives the OLED and pulses two LEDs. It does no
+// The ESP32 reports a button press, reads turbidity, drives the OLED and lights three lamps. It does no
 // imaging and no inference: the PC owns both, and the PC is the only authority on a frame's quality.
 //
 // What lives where, so a change stays small:
@@ -30,8 +30,6 @@ uint32_t lastTurbidity = 0;
 uint32_t lastHeartbeat = 0;
 uint32_t captureStartedAt = 0;
 uint32_t lastAnimation = 0;
-uint32_t ledPassUntil = 0;
-uint32_t ledRetakeUntil = 0;
 uint32_t lastButtonEdge = 0;
 bool lastButtonLevel = HIGH;
 
@@ -142,18 +140,21 @@ void serviceAnimation(uint32_t now) {
   state.markDirty();
 }
 
-//: The lamps are fed from 5 V and the pin sinks them, so LOW is lit and HIGH is dark. See `config.h` for
-//: why the brightness is worth the inversion.
-void serviceLeds(uint32_t now) {
-  digitalWrite(cfg::PIN_LED_PASS, now < ledPassUntil ? LOW : HIGH);
-  digitalWrite(cfg::PIN_LED_RETAKE, now < ledRetakeUntil ? LOW : HIGH);
+//: The verdict lamps follow the screen: white while PASS is shown, red while RETAKE is. **Steady, not a
+//: 300 ms pulse** - the lamp is a second view of the fact the panel is showing, and a pulse had to be
+//: timed, so a verdict arriving while the loop was busy could have been missed entirely.
+//: The pins sink the lamps (5 V rail), so LOW is lit and HIGH is dark. See `config.h` for why the
+//: brightness was worth the inversion.
+void serviceLeds() {
+  digitalWrite(cfg::PIN_LED_PASS, state.screen == rig::Screen::Pass ? LOW : HIGH);
+  digitalWrite(cfg::PIN_LED_RETAKE, state.screen == rig::Screen::Retake ? LOW : HIGH);
 }
 
-//: The blue lamp answers "what is the rig doing", where the other two answer "what did the verdict say".
-//: It is lit in **every** screen - a dark panel must not be able to mean either "idle" or "dead", which
-//: is the whole reason it exists.
+//: The blue lamp answers what the verdict lamps do not: idle, in flight, and disconnected. Between them the
+//: three lamps cover every screen, so a completely dark panel can only mean no power - which is the whole
+//: reason the third lamp exists.
 void serviceStateLed(uint32_t now) {
-  bool lit = true;
+  bool lit;
   switch (state.screen) {
     case rig::Screen::Capturing:
       lit = ((now / cfg::STATE_BLINK_MS) % 2) == 0;
@@ -161,10 +162,12 @@ void serviceStateLed(uint32_t now) {
     case rig::Screen::Offline:
       lit = ((now / cfg::FAULT_BLINK_MS) % 2) == 0;
       break;
+    case rig::Screen::Pass:
+    case rig::Screen::Retake:
+      lit = false;  // the verdict lamp is lit instead, and two lamps saying one thing is noise
+      break;
     default:
-      // Ready, Pass and Retake all mean "powered, link alive, nothing in flight" - the verdict itself is
-      // on the screen and was already pulsed by the green or yellow lamp.
-      lit = true;
+      lit = true;  // Ready
       break;
   }
   digitalWrite(cfg::PIN_LED_STATE, lit ? LOW : HIGH);
@@ -180,15 +183,6 @@ void serviceLink(uint32_t now) {
   }
   // Recovery is handled where it happens - by `poll` setting `Alive` - and the screen reset lives in the
   // command handlers, so a keepalive cannot overwrite a verdict that is still being read.
-}
-
-//: A result arrived from the PC: light the right LED for a moment.
-void noteResult() {
-  if (state.screen == rig::Screen::Pass) {
-    ledPassUntil = millis() + cfg::LED_PULSE_MS;
-  } else {
-    ledRetakeUntil = millis() + cfg::LED_PULSE_MS;
-  }
 }
 
 }  // namespace
@@ -248,16 +242,12 @@ void loop() {
       protocol::emitScreen(state);
     }
   }
-  if (state.pulseLeds) {
-    noteResult();
-    state.pulseLeds = false;
-  }
   serviceButton(now);
   serviceTurbidity(now);
   serviceHeartbeat(now);
   serviceAnimation(now);
   serviceCaptureTimeout(now);
-  serviceLeds(now);
+  serviceLeds();
   serviceStateLed(now);
   serviceLink(now);
 
