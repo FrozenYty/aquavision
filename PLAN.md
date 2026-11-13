@@ -490,6 +490,12 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         this project uses, and the serial link comes from the **COM** USB-C port because the firmware sends
         `Serial` to UART0 (`ARDUINO_USB_CDC_ON_BOOT=0`)
       - the BSS138 level shifter runs VCCA 3V3, VCCB 5 V, A0 to B0 on GPIO8/SDA, A1 to B1 on GPIO9/SCL
+      - **a third lamp, added 11-13: blue on GPIO7, and it is lit at every moment.** Green and yellow answer
+        the verdict, so `Ready`, `Capturing` and `Offline` had no lamp at all - a healthy idle rig and a dead
+        one looked the same. Blue is steady when idle, blinks slowly (500 ms) while a capture is in flight
+        and fast (150 ms) when the link is gone, because "busy" and "broken" are different questions.
+        Firmware, SRS table 2-3, the wiring table, the firmware README and a new section 10 of the state
+        machine all moved together, and **the firmware compiles** under the pinned toolchain
       - done when `python scripts/test_rig.py` reports the three numbers the design fixed - left/right
         brightness ratio >= 0.7, a 5 cm target >= 45 px at 640 input, no flicker - and
         `python scripts/test_rig_link.py --port COM<n> --scan` finds `49` with the sensor powered and

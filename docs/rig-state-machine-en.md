@@ -210,3 +210,26 @@ new message had to be invented for the rig to learn.
 
 The keepalive obligation of §6 is discharged here: every two seconds, from `OPEN`, for as long as the
 port is held.
+
+## 10. The lamps
+
+Three lamps, and **one of them is lit at every moment** - a dark panel must not be able to mean either
+"idle" or "dead". The green and the yellow answer the last verdict; the blue answers what the rig is doing.
+
+| Screen | green | yellow | blue |
+|---|---|---|---|
+| `Ready` | off | off | steady |
+| `Capturing` | off | off | slow blink, 500 ms |
+| `Pass` | 300 ms pulse | off | steady |
+| `Retake` | off | 300 ms pulse | steady |
+| `Offline` | off | off | fast blink, 150 ms |
+
+**Two blink rates, not one.** "Busy" and "broken" are different questions, and a single pattern would make
+the operator read the panel twice to tell them apart.
+
+**The verdict pulses are short on purpose.** The screen keeps the verdict visible, so a lamp that stayed on
+would stop carrying information after the first second and would compete with the blue lamp for the question
+"what is happening now".
+
+The blue lamp is lit from the first millisecond of `setup()`, before the splash, because proving that the
+board has power is its first job: no blue at all points at the supply, not at the firmware.

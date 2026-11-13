@@ -78,6 +78,22 @@
   `pulseLeds` is a flag rather than "the screen changed" so that two `PASS` results in a row still get a
   second pulse.
 
+- **A third lamp, because two lamps left three states dark.** Green and yellow answer the last verdict, so
+  `Ready`, `Capturing` and `Offline` had **no lamp at all** - a healthy idle rig and a dead one looked
+  identical on the panel. The blue lamp on **GPIO7** is lit at every moment: steady when idle, a slow
+  500 ms blink while a capture is in flight, and a fast 150 ms blink when the link is gone. Two rates rather
+  than one, because "busy" and "broken" are different questions and one pattern would make the operator
+  read the panel twice to tell them apart.
+- **It is lit from the first millisecond of `setup()`, before the splash**, because proving the board has
+  power is its first job: no blue at all points at the supply, not at the firmware.
+- **The change moved five documents at once, which is the only reason it is trustworthy.** The SRS bill of
+  materials went from two status LEDs to three, the wiring table and the firmware README gained the pin, the
+  state machine gained a section listing what each lamp does in each screen, and the guard test that holds
+  that table to `config.h` failed first and passed after both ends were updated - which is exactly the
+  drift it exists to catch.
+- **Drawing it caught a colour collision**: the wiring table had the button and the blue lamp both on
+  "blue" wire. The button moved to purple; a colour convention with a duplicate is not a convention.
+
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict

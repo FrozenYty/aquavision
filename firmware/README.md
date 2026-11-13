@@ -3,7 +3,7 @@
 > Chinese version: [README-zh.md](README-zh.md). This file is the source of truth.
 
 The ESP32-S3 in `main/` is the part of the rig a person touches. It reports a button press, reads the
-turbidity sensor, shows the last capture's verdict on a 0.96" OLED, and lights one of two LEDs.
+turbidity sensor, shows the last capture's verdict on a 0.96" OLED, and lights one of three LEDs.
 
 It does **no imaging and no inference**. The PC owns both, and the PC is the only authority on a
 frame's quality — the firmware displays what it is told.
@@ -51,12 +51,13 @@ python -m pip install platformio
 | Button | GPIO 4 | to GND; `INPUT_PULLUP`, so a press reads LOW |
 | Green LED | GPIO 5 | series resistor, 330 Ω |
 | Yellow LED | GPIO 6 | series resistor, 330 Ω |
+| Blue LED | GPIO 7 | series resistor, 330 Ω; the state lamp, lit at every moment |
 | OLED SDA | GPIO 8 | I2C, address 0x3C |
 | OLED SCL | GPIO 9 | I2C |
 | Turbidity SDA | GPIO 8 | same bus, address 0x49 |
 | Turbidity SCL | GPIO 9 | same bus |
 
-Both LEDs need a resistor. Three 1 kΩ resistors in parallel make 333 Ω, which is close enough and
+Each LED needs its own resistor. Three 1 kΩ resistors in parallel make 333 Ω, which is close enough and
 saves buying anything if the parts box already has a bag of 1 kΩ.
 
 ## The screen
@@ -185,7 +186,7 @@ serial port without a button: `CMD RESULT 94 PASS OK`, `CMD RESULT 30 RETAKE LOW
 `CMD RESULT 55 RETAKE COLOR_CAST`, `CMD RESULT 20 RETAKE UNKNOWN`, and `OFFLINE` by simply staying
 silent for the ten-second timeout.
 
-**Not yet verified:** the two status LEDs, because the 330 ohm resistors had not arrived; the button,
+**Not yet verified:** the three status LEDs, because the 330 ohm resistors had not arrived; the button,
 which had not arrived either; and the turbidity sensor, which needs the level shifter first.
 
 ## Hardware reference
