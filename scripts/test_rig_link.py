@@ -9,6 +9,7 @@ is silent, and finding out which is the first question every other check depends
     python scripts/test_rig_link.py
     python scripts/test_rig_link.py --port COM5 --seconds 10
     python scripts/test_rig_link.py --port COM5 --scan --seconds 6
+    python scripts/test_rig_link.py --port COM5 --answer --seconds 60
 
 Exit codes: 0 the question was answered, 1 it was not, or the port could not be opened.
 
@@ -16,6 +17,15 @@ With `--scan` the tool instead asks the board to walk its I2C bus (`CMD SCAN`) a
 that answered, against the two this rig is built to have. That is the check `P3-17` names, and it is the
 only way to see the bus without a serial terminal. The firmware has no completion marker for a scan, so
 the tool waits a fixed window and says how long it waited rather than pretending the list is complete.
+
+With `--answer` the tool stands in for the server and answers a button press, which is the only way to test
+the two verdict lamps on their own: the firmware pulses a lamp when `CMD RESULT` arrives, and it **refuses**
+a result in any state but `Capturing`, so a bare button press lights nothing and looks like a broken LED.
+Press the button while this runs; it answers each trigger in turn so both lamps can be seen.
+
+**Pick the right port.** On the machine this was written on, `COM3` and `COM4` were Bluetooth serial ports
+with nothing on the other end, and **opening one blocks** rather than failing fast; the rig was
+`USB-Enhanced-SERIAL CH343`. Choose the CH343 port by name.
 
 Opening the port resets the board: the bridge chip's DTR and RTS lines feed the auto-reset circuit, so
 the sketch restarts and reports a fresh `EVT SCREEN READY` before this tool's first ping arrives. That is
@@ -36,6 +46,10 @@ PING = b"CMD PING\n"
 SCAN = b"CMD SCAN\n"
 PONG = "EVT PONG"
 SCAN_PREFIX = "EVT I2C "
+TRIGGER = "EVT TRIGGER"
+#: What `--answer` sends, in turn, so that both lamps can be seen in one run. The scores and the reason
+#: token are the ones `app.rig.protocol` writes; they are copied here for the reason above.
+VERDICTS = (b"CMD RESULT 95 PASS NONE\n", b"CMD RESULT 40 RETAKE LOW_LIGHT\n")
 #: The two devices this rig is built to have on the bus, from `firmware/main/src/config.h`.
 EXPECTED = {"3C": "OLED", "49": "turbidity sensor"}
 BAUD = 115200
@@ -77,6 +91,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="ask the board to walk its I2C bus and report the addresses that answered",
     )
+    parser.add_argument(
+        "--answer",
+        action="store_true",
+        help="stand in for the server and answer each button press with a verdict",
+    )
     args = parser.parse_args(argv)
 
     if not args.port:
@@ -99,7 +118,16 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Cannot open {args.port}: {err}", file=sys.stderr)
         return 1
 
-    if args.scan:
+    if args.scan and args.answer:
+        print("--scan and --answer are different jobs: pass one of them.", file=sys.stderr)
+        port.close()
+        return 2
+    if args.answer:
+        print(
+            f"Answering each button press with a verdict for {args.seconds:g} s "
+            f"(keepalive every {KEEPALIVE_SECONDS:g} s). Press the button now."
+        )
+    elif args.scan:
         print(
             f"Sending CMD SCAN, collecting EVT I2C lines for {args.seconds:g} s "
             f"(keepalive every {KEEPALIVE_SECONDS:g} s)"
@@ -117,6 +145,7 @@ def main(argv: list[str] | None = None) -> int:
     # keeps the link alive just as well - but the keepalive still has to continue while it collects.
     next_ping = 0.0
     scan_sent = False
+    answered = 0
     try:
         while time.monotonic() < deadline:
             now = time.monotonic()
@@ -134,7 +163,12 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             print(f"  {line}")
             seen.append(line)
-            if line == PONG and not args.scan:
+            if args.answer and line.startswith(TRIGGER):
+                verdict = VERDICTS[answered % len(VERDICTS)]
+                answered += 1
+                port.write(verdict)
+                print(f"    -> {verdict.decode('ascii').strip()}")
+            if line == PONG and not args.scan and not args.answer:
                 pong = True
                 break
     except serial.SerialException as err:
@@ -142,6 +176,18 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     finally:
         port.close()
+
+    if args.answer:
+        print()
+        if answered:
+            print(f"Pass: answered {answered} button press(es) - both lamps should have been seen.")
+            return 0
+        print(
+            f"Fail: no EVT TRIGGER in {args.seconds:g} s, so no verdict was sent and no lamp pulsed. "
+            "Press the button while this runs.",
+            file=sys.stderr,
+        )
+        return 1
 
     if args.scan:
         found = scan_addresses(seen)

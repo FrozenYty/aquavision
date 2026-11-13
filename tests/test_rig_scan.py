@@ -46,6 +46,16 @@ def test_the_bench_tool_sends_exactly_what_the_firmware_parses() -> None:
     assert tool.SCAN.decode("ascii") == protocol.scan()
 
 
+def test_the_verdicts_the_tool_sends_are_the_ones_the_server_would_write() -> None:
+    """`--answer` stands in for the server, so its lines are held to the server's grammar."""
+    tool = _load_tool()
+    sent = [line.decode("ascii") for line in tool.VERDICTS]
+    assert protocol.result(95, "PASS") in sent
+    assert protocol.result(40, "RETAKE", protocol.REASON_LOW_LIGHT) in sent
+    # Two different verdicts, so that one run can show both lamps.
+    assert len(sent) == 2
+
+
 def test_the_tool_expects_the_two_addresses_the_rig_actually_has() -> None:
     assert _load_tool().EXPECTED == EXPECTED
 
