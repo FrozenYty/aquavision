@@ -28,6 +28,19 @@
   GPIO5 and GPIO6 the two LEDs behind 330 Ohm, GPIO8 and GPIO9 the I2C pair. A wiring diagram that
   disagrees with the firmware is two defects, not one.
 
+- **The wiring was rewritten against the boards that actually arrived, and two facts changed the design.**
+  The controller is an **ESP32-S3-N16R8**, whose `R8` means 8 MB of octal PSRAM occupies **GPIO33 to
+  GPIO37** - not pins this project uses, but worth writing down because they look free on the silkscreen.
+  The MB-102 turned out to carry **its own 5 V and 3.3 V regulators and an OFF position on each rail
+  jumper**, so the unused rail is switched OFF rather than parked at 3.3 V: two live regulators on one
+  breadboard is exactly how a board's own 3.3 V ends up fighting the module's.
+- **The section is now a DuPont wiring list with a colour per line, not a schematic in the abstract.** It
+  names the silkscreened terminals, marks the two places where one GPIO has to fan out to two loads (SDA
+  and SCL, to the OLED *and* the shifter), and gives the COM port as the one to plug into. The level
+  shifter is an `HW-221` eight-channel board with `R1` to `R8` populated, so the 4.7 kOhm pull-ups may be
+  unnecessary - the check is a resistance measurement from `B0` to `VCCB` with the power off, and it is
+  cheaper than stacking resistors that leave the bus at 3.2 kOhm.
+
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict

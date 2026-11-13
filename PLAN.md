@@ -479,12 +479,16 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       level shifter, and **5 V for the sensor**. A 12 V adapter with a buck module was procured 11-11
       and replaces the earlier dead end - the board has no 5 V output - but it is untested until the
       bench session
-      - **power settled 11-13: one 12 V adapter into an MB-102, and the MB-102 feeds only the 5 V side** -
-        sensor VCC, shifter VCCB and the two 4.7 kOhm pull-ups. The controller stays on its USB cable, which
-        is also the serial link, and its own `3V3` pin feeds the shifter's VCCA, the OLED and the ESP32
-        logic, so there is one 5 V domain and one ground. The buck module bought on 11-11 is now a spare
-        rather than the plan. **The first power-on still measures the MB-102's 5 V rail**, because on
-        several boards that rail passes the input through instead of regulating it
+      - **power settled 11-13, against the boards that actually arrived: one 12 V adapter into the MB-102
+        with one rail jumper on 5 V and the other on OFF, feeding only the 5 V side** - sensor VCC and
+        shifter VCCB. The controller stays on its USB cable, which is also the serial link, and its own
+        `3V3` pin feeds the shifter's VCCA and the OLED, so there is one 5 V domain, one 3.3 V domain and
+        one ground. The buck module bought on 11-11 is a spare rather than the plan. The module carries its
+        own 5 V regulator, so the pass-through risk is smaller than feared, but the rail still gets measured
+        before anything is plugged into it
+      - the board is an **ESP32-S3-N16R8**: 8 MB of octal PSRAM takes **GPIO33 to GPIO37**, none of which
+        this project uses, and the serial link comes from the **COM** USB-C port because the firmware sends
+        `Serial` to UART0 (`ARDUINO_USB_CDC_ON_BOOT=0`)
       - the BSS138 level shifter runs VCCA 3V3, VCCB 5 V, A0 to B0 on GPIO8/SDA, A1 to B1 on GPIO9/SCL
       - done when `python scripts/test_rig.py` reports the three numbers the design fixed - left/right
         brightness ratio >= 0.7, a 5 cm target >= 45 px at 640 input, no flicker - and `CMD SCAN` shows
