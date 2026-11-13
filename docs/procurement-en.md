@@ -141,6 +141,17 @@ the firmware is built with `ARDUINO_USB_CDC_ON_BOOT=0` and sends `Serial` to UAR
 | ESP32 `5` | 330 Ohm into the green LED | white | one resistor per LED, not one shared |
 | ESP32 `6` | 330 Ohm into the yellow LED | grey | the same |
 
+**SDA and SCL are one bus, not one wire per device.** The OLED and the shifter sit on the same pair, and
+the protocol separates them by address - `0x3C` and `0x49`, which do not collide. That is what I2C is for, and
+the level question has already been answered by the shifter: both loads are 3.3 V from the ESP32's side,
+because the 5 V part is beyond it.
+
+Two consequences are worth knowing before they bite. **A fault on the 5 V side can pull the whole pair
+low**, so an OLED that stops answering may be reporting the sensor's problem: unplug `A0` and `A1`, rescan,
+and if the OLED returns, the fault is beyond the shifter. And **the pull-ups from both boards hang on the
+same 3.3 V net** - measure from SDA to `3V3` with the power off and expect a few kOhm; well under 1 kOhm
+means too many of them are stacked.
+
 **Check three things before the first power-on.** Measure the MB-102's 5 V rail with nothing else
 connected. This module does carry its own 5 V regulator, so the pass-through risk that ruins sensors on
 other boards is smaller here - but the check costs ten seconds and the sensor does not survive 12 V. Then
