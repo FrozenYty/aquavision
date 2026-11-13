@@ -70,7 +70,9 @@ constexpr uint32_t SPLASH_MS = 1500;
 //: the pin switching the low side, which inverted what HIGH means for all three; 1.4 made the lamps follow
 //: the screen instead of pulsing for 300 ms, so the two verdict lamps are steady while their verdict is shown;
 //: 1.5 made the turbidity read address a register instead of reading whatever the pointer happened to hold;
-//: 1.6 added `CMD TREAD`, which is how that register's command byte was found and how it stays findable.
-constexpr char FIRMWARE_VERSION[] = "1.6";
+//: 1.6 added `CMD TREAD`, which is how that register's command byte was found and how it stays findable;
+//: 1.7 added `CMD TDUMP`, because two bytes turned out to be byte-identical in air and in water and the whole
+//: frame had to be seen.
+constexpr char FIRMWARE_VERSION[] = "1.8";
 
 }  // namespace cfg

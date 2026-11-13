@@ -45,6 +45,11 @@ int readRegister(uint8_t command);
 //: bytes, so the one this firmware uses was found by sweeping the address space - and this is how that stays
 //: repeatable instead of becoming folklore.
 void emitRegisterRead(uint8_t command);
+//: Reports a raw multi-byte read as `EVT TDUMP <cmd> ack=<n> n=<n> <b0> <b1> ...`.
+//: The reading was byte-identical in air and against a full tank, which says the two bytes this firmware was
+//: collecting are not the measurement - most likely they are a frame header. This command exists to show the
+//: whole frame instead of the first two bytes of it.
+void emitRegisterDump(uint8_t command, uint8_t count);
 void emitPong();
 
 }  // namespace protocol

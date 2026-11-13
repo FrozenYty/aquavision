@@ -186,6 +186,22 @@
   relative conversion decided by the lane that owns the data model, and the sensor's high-counts-mean-clear
   polarity makes that a sign error waiting to happen.
 
+- **The sensor has a real register map, and it is not where the manual says - the manual does not say.** A
+  full sweep of 0x00-0xFF found implemented registers clustered at 0x14, 0x15, 0x4B, 0x60-0x62, 0x64, 0x65 and
+  0x70-0x73, everything else answering `0xFFFF` ("no such register"). That is a device answering questions, not
+  a dead part: the earlier reading of a constant zero was the firmware reading a register that does not exist.
+- **Every answer has a zero second byte, and that is the remaining defect.** `0x6400`, `0x1500`, `0x0200`,
+  `0xDF00`, `0x0100`, `0x0500` - without exception. The manual puts the measurement as high as 16000, which
+  needs sixteen bits, so **the second byte is not being read at all**. The sweep's own tool now separates
+  "this register is unimplemented" (`0xFFFF`) from "this register holds zero", because that distinction is the
+  whole question when sweeping an unknown device.
+- **The manual's timing variant made no difference.** It is explicit - "note there is one STOP and two STARTs" -
+  and the firmware first implemented the more common repeated-START idiom instead. Switching to STOP-then-START
+  is correct per the document and changed nothing measurable; the frames are byte-identical. Recorded because a
+  negative result that cost a flash cycle should not be re-run next week.
+- **`CMD TDUMP` exists because two bytes were the wrong question.** Reading eight raw bytes is what showed the
+  frame shape (`<one byte> 00 00 ...`) that no amount of guessing at a 16-bit value would have revealed.
+
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict
