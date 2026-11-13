@@ -87,7 +87,57 @@ Assemble and power on in six steps, one at a time, so a fault is localised immed
    drift of a ten-minute run under a fixed light level. **Both are required**: the first asks whether
    the camera can be used, the second whether the picture is good enough to detect on.
 
-## 5. Acceptance numbers
+## 5. Power and wiring
+
+One 12 V adapter feeds an MB-102 breadboard supply, and **that supply powers only the 5 V side of the
+rig**. The controller keeps its own: the USB cable to the PC carries both power and the serial link, and
+the board's own regulator makes the 3.3 V that the OLED and the shifter's low side run on. Two supplies,
+one ground.
+
+| Rail | Source | Loads |
+|---|---|---|
+| 5 V | 12 V adapter into the MB-102, its rail jumper set to 5 V | turbidity sensor VCC, shifter VCCB, the two 4.7 kOhm pull-ups |
+| 3.3 V | the controller board's `3V3` pin | OLED VCC, shifter VCCA, the ESP32's own logic |
+| ground | common | every part, including the adapter's negative lead |
+
+```mermaid
+flowchart LR
+  DC["12 V adapter"] --> MB["MB-102, rail jumper on 5 V"]
+  MB -->|"5 V"| S["Turbidity ME2100A-IIC, 0x49"]
+  MB -->|"5 V"| HV["BSS138 VCCB"]
+  HV ---|"B0 / B1"| S
+  PC["PC USB"] -->|"power and data"| ESP["ESP32-S3, USB-UART"]
+  ESP -->|"3V3"| LV["BSS138 VCCA"]
+  ESP -->|"3V3"| OLED["OLED, 0x3C"]
+  LV ---|"A0 / A1"| ESP
+  ESP --> B["button, GPIO4"]
+  ESP --> L1["green LED, GPIO5"]
+  ESP --> L2["yellow LED, GPIO6"]
+  GND["common ground"] --- MB
+  GND --- ESP
+  GND --- S
+```
+
+| From | To | Why it matters |
+|---|---|---|
+| MB-102 5 V | sensor VCC | the part is specified 4.5-5.5 V, and rev A3 dropped the 3.3 V that earlier revisions carried |
+| MB-102 5 V | shifter VCCB | the far side of the bus is 5 V |
+| board `3V3` | shifter VCCA | the near side must match the ESP32's logic level |
+| GPIO8 | shifter A0, then B0 to sensor SDA | wiring the sensor straight to GPIO8 puts 5 V on a 3.3 V pin |
+| GPIO9 | shifter A1, then B1 to sensor SCL | the same, on the clock |
+| sensor SDA and SCL | 4.7 kOhm to **5 V** | the pull-ups belong on the high side |
+| GPIO4 | button, other leg to GND | the part must be momentary: a latching one gives one frame per two presses |
+| GPIO5, GPIO6 | 330 Ohm into an LED, cathode to GND | one resistor per LED, not one shared |
+
+**Check three things before the first power-on.** Measure the MB-102's 5 V rail with nothing else
+connected: on several boards that rail passes the input through instead of regulating it, so 12 V arrives
+where 5 V is printed and the sensor does not survive it. Check whether the shifter board already carries
+10 kOhm pull-ups on each side, because adding 4.7 kOhm beside them leaves about 3.2 kOhm - usable at
+100 kHz, but not something to stack twice. And the register that holds the turbidity reading is still
+unknown, so the first reading is an experiment: try a bare read, then reads after writing commands `0x00`
+to `0x03`, and keep the one whose value falls as the water gets turbid.
+
+## 6. Acceptance numbers
 
 | Check | Pass |
 |---|---|
