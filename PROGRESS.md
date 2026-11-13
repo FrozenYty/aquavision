@@ -94,6 +94,20 @@
 - **Drawing it caught a colour collision**: the wiring table had the button and the blue lamp both on
   "blue" wire. The button moved to purple; a colour convention with a duplicate is not a convention.
 
+- **The wiring picture went into the repository, and the rule it bends was amended rather than ignored.**
+  `CONTRIBUTING.md` said diagrams are Mermaid inside Markdown, never image files. Mermaid cannot show the
+  order of a header's pins, and that order is what someone holding a jumper wire needs, so
+  `docs/rig-wiring.svg` is now the one exception - committed as **SVG, which is text**, beside
+  `scripts/draw_wiring.py`, which regenerates it. A bitmap would have been a blob nobody can review or
+  rebase; a picture with no generator would have been a copy that drifts silently.
+- **The exception is only defensible because it is tested.** `docs/rig-wiring.svg` is the **third** copy of
+  the pin numbers (with `config.h` and the wiring table), so `tests/test_wiring_document.py` now parses the
+  `USED` table out of the drawing script and holds it to the firmware as well. Without that, a pin could
+  move in `config.h`, be fixed in the table, and still be drawn wrong - and the drawing is the copy a person
+  actually wires from.
+- **The local copies moved to scratch.** Once the picture lives in the repository, the loose files in the
+  dated artifact folder are a second copy with no owner, so they went to `DSH_FILES/tmp/`.
+
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict

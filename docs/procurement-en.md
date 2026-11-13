@@ -148,6 +148,10 @@ the firmware is built with `ARDUINO_USB_CDC_ON_BOOT=0` and sends `Serial` to UAR
 | ESP32 `6` | 330 Ohm into the yellow LED | grey | the same |
 | ESP32 `7` | 330 Ohm into the blue LED | blue | the state lamp: steady whenever the rig is powered, blinking when busy or lost |
 
+The same wiring as a picture is `rig-wiring.svg`, in this directory: the pin column keeps the order printed
+on the board, which is what makes it usable with a jumper wire in hand. Table and picture are generated from
+the same numbers, so they cannot disagree without a test saying so.
+
 **SDA and SCL are one bus, not one wire per device.** The OLED and the shifter sit on the same pair, and
 the protocol separates them by address - `0x3C` and `0x49`, which do not collide. That is what I2C is for, and
 the level question has already been answered by the shifter: both loads are 3.3 V from the ESP32's side,
