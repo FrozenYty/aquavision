@@ -76,6 +76,13 @@ void handleLine(rig::State& state, char* text) {
     if (argument != nullptr) {
       protocol::emitRegisterRead(static_cast<uint8_t>(strtol(argument, nullptr, 16)));
     }
+  } else if (strcmp(command, "TDUMP") == 0) {
+    char* argument = strtok_r(nullptr, " ", &cursor);
+    if (argument != nullptr) {
+      char* length = strtok_r(nullptr, " ", &cursor);
+      const uint8_t count = (length == nullptr) ? 8 : static_cast<uint8_t>(atoi(length));
+      protocol::emitRegisterDump(static_cast<uint8_t>(strtol(argument, nullptr, 16)), count);
+    }
   } else if (strcmp(command, "RESULT") == 0) {
     if (handleResult(state, &cursor)) {
       protocol::emitScreen(state);
@@ -158,9 +165,11 @@ void emitTurbidity(int value) { Serial.printf("EVT TURBIDITY %d\n", value); }
 int readRegister(uint8_t command) {
   Wire.beginTransmission(cfg::TURBIDITY_ADDR);
   Wire.write(command);
-  // `false` ends the transmission with a repeated START rather than a STOP, which is the sequence the manual
-  // draws: without it the sensor's pointer does not survive into the read that follows.
-  if (Wire.endTransmission(false) != 0) {
+  // The manual is explicit about this: "note there is one STOP and two STARTs" - the command write is closed
+  // with a **STOP** and the read begins with a fresh START. `false` here (a repeated START, no STOP) is the
+  // more common idiom and it is what this firmware did first; the sensor answered that with a status byte
+  // (`0xFF`) instead of a measurement.
+  if (Wire.endTransmission(true) != 0) {
     return -1;
   }
   Wire.requestFrom(cfg::TURBIDITY_ADDR, static_cast<uint8_t>(2));
@@ -174,6 +183,18 @@ int readRegister(uint8_t command) {
 
 void emitRegisterRead(uint8_t command) {
   Serial.printf("EVT TREG %02X %d\n", command, readRegister(command));
+}
+
+void emitRegisterDump(uint8_t command, uint8_t count) {
+  Wire.beginTransmission(cfg::TURBIDITY_ADDR);
+  Wire.write(command);
+  const uint8_t ack = Wire.endTransmission(true);
+  const uint8_t got = static_cast<uint8_t>(Wire.requestFrom(cfg::TURBIDITY_ADDR, count));
+  Serial.printf("EVT TDUMP %02X ack=%u n=%u", command, ack, got);
+  for (uint8_t i = 0; i < got && Wire.available() > 0; i += 1) {
+    Serial.printf(" %02X", static_cast<uint8_t>(Wire.read()));
+  }
+  Serial.println();
 }
 
 void emitPong() { Serial.println("EVT PONG"); }

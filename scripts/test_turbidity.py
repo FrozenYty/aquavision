@@ -27,6 +27,9 @@ BAUD = 115200
 REGISTER_READ_PREFIX = "EVT TREG "
 #: The sensor's documented output range. Anything outside it is a non-answer rather than a measurement.
 PLAUSIBLE = range(1, 16001)
+#: What a register that does not exist answers with. Named because the difference between "this register is
+#: unimplemented" and "this register holds zero" is the whole question when sweeping an unknown device.
+NO_ANSWER = 0xFFFF
 
 
 def parse_read(line: str) -> tuple[int, int] | None:
@@ -51,6 +54,11 @@ def main() -> int:
     parser.add_argument("--last", type=lambda v: int(v, 0), default=0x1F, help="last command byte")
     parser.add_argument(
         "--settle", type=float, default=0.12, help="seconds to wait for each answer"
+    )
+    parser.add_argument(
+        "--answered-only",
+        action="store_true",
+        help="print only the commands that answered with something other than 0xFFFF",
     )
     args = parser.parse_args()
 
@@ -78,6 +86,8 @@ def main() -> int:
             break
         if value is None:
             print(f"  {command:02X}  no answer")
+            continue
+        if args.answered_only and value == NO_ANSWER:
             continue
         mark = ""
         if value in PLAUSIBLE:
