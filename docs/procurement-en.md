@@ -96,46 +96,59 @@ one ground.
 
 | Rail | Source | Loads |
 |---|---|---|
-| 5 V | 12 V adapter into the MB-102, its rail jumper set to 5 V | turbidity sensor VCC, shifter VCCB, the two 4.7 kOhm pull-ups |
-| 3.3 V | the controller board's `3V3` pin | OLED VCC, shifter VCCA, the ESP32's own logic |
-| ground | common | every part, including the adapter's negative lead |
+| 5 V | 12 V adapter into the MB-102, one rail jumper on 5 V and **the other on OFF** | turbidity sensor VCC, shifter VCCB |
+| 3.3 V | the controller board's `3V3` pin, which its own USB cable feeds | OLED VCC, shifter VCCA, the ESP32's own logic |
+| ground | one, shared | every part, including the adapter's negative lead |
+
+**The rail that is not used is switched OFF, not parked at 3.3 V.** The module has a jumper position for
+each rail; we use 5 V on one and OFF on the other. Two live regulators on one breadboard is how a board's
+own 3.3 V ends up fighting the module's, and the OFF position is what prevents it.
 
 ```mermaid
 flowchart LR
-  DC["12 V adapter"] --> MB["MB-102, rail jumper on 5 V"]
-  MB -->|"5 V"| S["Turbidity ME2100A-IIC, 0x49"]
-  MB -->|"5 V"| HV["BSS138 VCCB"]
+  DC["12 V adapter, 7-12 V"] --> MB["MB-102: one rail jumper 5 V,<br/>the other OFF"]
+  MB -->|"5 V rail"| S["Turbidity ME2100A-IIC, 0x49"]
+  MB -->|"5 V rail"| HV["HW-221 VCCB"]
   HV ---|"B0 / B1"| S
-  PC["PC USB"] -->|"power and data"| ESP["ESP32-S3, USB-UART"]
-  ESP -->|"3V3"| LV["BSS138 VCCA"]
+  PC["PC USB, the COM port"] -->|"power and serial"| ESP["ESP32-S3-N16R8"]
+  ESP -->|"3V3"| LV["HW-221 VCCA"]
   ESP -->|"3V3"| OLED["OLED, 0x3C"]
-  LV ---|"A0 / A1"| ESP
+  ESP -->|"GPIO8 / GPIO9"| LV
+  ESP -->|"GPIO8 / GPIO9"| OLED
   ESP --> B["button, GPIO4"]
   ESP --> L1["green LED, GPIO5"]
   ESP --> L2["yellow LED, GPIO6"]
-  GND["common ground"] --- MB
+  GND["one ground"] --- MB
   GND --- ESP
   GND --- S
 ```
 
-| From | To | Why it matters |
-|---|---|---|
-| MB-102 5 V | sensor VCC | the part is specified 4.5-5.5 V, and rev A3 dropped the 3.3 V that earlier revisions carried |
-| MB-102 5 V | shifter VCCB | the far side of the bus is 5 V |
-| board `3V3` | shifter VCCA | the near side must match the ESP32's logic level |
-| GPIO8 | shifter A0, then B0 to sensor SDA | wiring the sensor straight to GPIO8 puts 5 V on a 3.3 V pin |
-| GPIO9 | shifter A1, then B1 to sensor SCL | the same, on the clock |
-| sensor SDA and SCL | 4.7 kOhm to **5 V** | the pull-ups belong on the high side |
-| GPIO4 | button, other leg to GND | the part must be momentary: a latching one gives one frame per two presses |
-| GPIO5, GPIO6 | 330 Ohm into an LED, cathode to GND | one resistor per LED, not one shared |
+The board is an **ESP32-S3-N16R8**: terminal names below are the ones silkscreened on it, and the `R8`
+matters - 8 MB of octal PSRAM takes **GPIO33 to GPIO37**, so those five pins are not free. Nothing this
+project uses is among them. Wire it from the **COM** USB-C port, the one behind the CH343 bridge, because
+the firmware is built with `ARDUINO_USB_CDC_ON_BOOT=0` and sends `Serial` to UART0.
+
+| From | To | Colour | Why |
+|---|---|---|---|
+| ESP32 `8` | OLED SDA and shifter `A0` | yellow | one GPIO, two loads: fan it out on the breadboard, not by twisting wires |
+| ESP32 `9` | OLED SCL and shifter `A1` | green | the same, on the clock |
+| shifter `B0` | sensor SDA | yellow | the 5 V side of the bus |
+| shifter `B1` | sensor SCL | green | the same |
+| ESP32 `3V3` | OLED VCC and shifter `VCCA` | orange | the control side only |
+| MB-102 `5V` | sensor VCC and shifter `VCCB` | red | the sensor side only |
+| MB-102 `GND` | ESP32 `GND`, sensor GND, shifter `GND` | black | one ground: split grounds are the intermittent-I2C fault that hides longest |
+| ESP32 `4` | button, other leg to GND | blue | momentary part only - a latching one gives one frame per two presses |
+| ESP32 `5` | 330 Ohm into the green LED | white | one resistor per LED, not one shared |
+| ESP32 `6` | 330 Ohm into the yellow LED | grey | the same |
 
 **Check three things before the first power-on.** Measure the MB-102's 5 V rail with nothing else
-connected: on several boards that rail passes the input through instead of regulating it, so 12 V arrives
-where 5 V is printed and the sensor does not survive it. Check whether the shifter board already carries
-10 kOhm pull-ups on each side, because adding 4.7 kOhm beside them leaves about 3.2 kOhm - usable at
-100 kHz, but not something to stack twice. And the register that holds the turbidity reading is still
-unknown, so the first reading is an experiment: try a bare read, then reads after writing commands `0x00`
-to `0x03`, and keep the one whose value falls as the water gets turbid.
+connected. This module does carry its own 5 V regulator, so the pass-through risk that ruins sensors on
+other boards is smaller here - but the check costs ten seconds and the sensor does not survive 12 V. Then
+measure from shifter `B0` to `VCCB` with the power off: the `HW-221` board is populated with `R1` to `R8`,
+and if those are the 10 kOhm pull-ups they look like, **no 4.7 kOhm resistors are needed** - adding them
+beside 10 kOhm leaves 3.2 kOhm, which works at 100 kHz but is not worth stacking. And the register that
+holds the turbidity reading is still unknown, so the first reading is an experiment: a bare read, then
+reads after writing commands `0x00` to `0x03`, and keep the one whose value falls as the water gets turbid.
 
 ## 6. Acceptance numbers
 
