@@ -81,7 +81,10 @@ Assemble and power on in six steps, one at a time, so a fault is localised immed
    Set one touch-dimming level and **tape over the touch area**. Tape the polariser flat to the lamp
    head, corners taut, no warp.
 5. Display and LEDs — an I2C scan shows both `0x3C` (OLED) and `0x49` (turbidity); the screen boots to
-   `AQUAVISION` then settles on `READY`; a button press pulses the green or yellow LED for 300 ms.
+   `AQUAVISION` then settles on `READY`; **the LEDs answer a verdict, not the button** - with the server
+   attached, press the button and the green or the yellow one pulses for 300 ms once the verdict comes
+   back. **With no PC on the link, a button press lights neither, and that is not a fault**: the button
+   only starts a capture, and the firmware pulses a lamp when `CMD RESULT` answers it.
 6. Camera — exposure lock, `python scripts/test_exposure.py` exits 0; then `python scripts/test_rig.py`
    exits 0, which measures the left/right brightness ratio, the 5 cm target width and the brightness
    drift of a ten-minute run under a fixed light level. **Both are required**: the first asks whether
@@ -138,7 +141,7 @@ the firmware is built with `ARDUINO_USB_CDC_ON_BOOT=0` and sends `Serial` to UAR
 | MB-102 `5V` | sensor VCC and shifter `VCCB` | red | the sensor side only |
 | MB-102 `GND` | ESP32 `GND`, sensor GND, shifter `GND` | black | one ground: split grounds are the intermittent-I2C fault that hides longest |
 | ESP32 `4` | button, other leg to GND | blue | momentary part only - a latching one gives one frame per two presses |
-| ESP32 `5` | 330 Ohm into the green LED | white | one resistor per LED, not one shared |
+| ESP32 `5` | 330 Ohm into the green LED | white | one per LED, as the SRS specifies; only one is ever lit |
 | ESP32 `6` | 330 Ohm into the yellow LED | grey | the same |
 
 **SDA and SCL are one bus, not one wire per device.** The OLED and the shifter sit on the same pair, and
