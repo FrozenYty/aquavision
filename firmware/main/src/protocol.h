@@ -36,6 +36,15 @@ void emitStrayResult(int score);
 //: state machine has a hole and the panel is showing something it should not.
 void emitInvariant(rig::Screen screen, rig::Link link);
 void emitTurbidity(int value);
+
+//: Reads two bytes from one register of the turbidity sensor and returns them big-endian, or -1 when the
+//: sensor does not answer. This is the only place the manual's read sequence is written down: it wants a
+//: *repeated* START between the command byte and the data, which is easy to get subtly wrong in a second copy.
+int readRegister(uint8_t command);
+//: Reports a register read as `EVT TREG <cmd> <value>`. The vendor manual publishes no table of command
+//: bytes, so the one this firmware uses was found by sweeping the address space - and this is how that stays
+//: repeatable instead of becoming folklore.
+void emitRegisterRead(uint8_t command);
 void emitPong();
 
 }  // namespace protocol

@@ -14,6 +14,9 @@ from typing import Final
 from app.vision.quality import Quality
 
 EVENT_PREFIX: Final = "EVT "
+#: The prefix of a register-read report. Copied by `scripts/test_turbidity.py`, which may not import this
+#: module; `tests/test_rig_scan.py` holds the copy to this line.
+REGISTER_READ_PREFIX: Final = "EVT TREG "
 COMMAND_PREFIX: Final = "CMD "
 
 #: The reason tokens the firmware accepts, exactly as `rig_state.cpp` spells them. A token the rig does
@@ -66,6 +69,15 @@ def scan() -> str:
     to this function.
     """
     return f"{COMMAND_PREFIX}SCAN\n"
+
+
+def register_read(command: int) -> str:
+    """Ask the firmware to read one register of the turbidity sensor and report it.
+
+    Bench-only, and it exists because the sensor's manual specifies the shape of a register read but publishes
+    no table of command bytes - so the byte the firmware uses was found by sweeping, not by reading.
+    """
+    return f"{COMMAND_PREFIX}TREAD {command:02X}\n"
 
 
 def ready() -> str:

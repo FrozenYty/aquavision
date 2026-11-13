@@ -165,6 +165,27 @@
   colour lives in one place in the code and is named in the documents from it; had the firmware driven
   named colours instead of named roles, every round would have been a code change.
 
+- **The turbidity read never addressed a register, which is why it was a constant zero.** The firmware called
+  `Wire.requestFrom(0x49, 2)` and took whatever the sensor's pointer happened to hold. The manual's read
+  sequence wants a command byte followed by a **repeated START** before the data comes back, and the firmware
+  now does that (`protocol::readRegister`, one implementation shared by the periodic read and the bench probe).
+- **The manual publishes no table of command bytes.** It gives the sequence, the address (`7'b100_1001` =
+  0x49), the output range (1 to 16000; 14000 for a 20 mm white board) and the light wavelength, and then
+  stops. So the byte this firmware uses is a **bench finding, not a quotation**, and `CMD TREAD <hex>` plus
+  `scripts/test_turbidity.py` exist so the finding stays repeatable instead of becoming folklore.
+- **The first sweep was wrong and looked right.** The script printed its own loop counter instead of the
+  command byte the answer carried, so a lagging reply was labelled with the next request; the table came out
+  off by one and entirely plausible. The fix is to match on the byte in the line, and a test now pins it.
+- **Sweeping with the probe in air answers nothing.** Every command byte from 0x00 to 0x1F returned `0xFF00`,
+  with two odd values (`0x6400`, `0x1500`) whose low byte is zero - consistent with a sensor that
+  acknowledges every read and has no measurement to give because there is no reflecting surface in front of
+  it. The sweep needs the probe against the tank wall; until then the command byte is unverified.
+- **The server drops the reading, and that is lane B.** `server/app/rig/service.py:61` logs `EVT TURBIDITY`
+  and discards it, while `turbidity_rel` already exists in the model, the capture API and the serialiser.
+  Reported rather than changed: the field's meaning ("0 clear, 100 most turbid", per SRS) needs the raw to
+  relative conversion decided by the lane that owns the data model, and the sensor's high-counts-mean-clear
+  polarity makes that a sign error waiting to happen.
+
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict
