@@ -12,9 +12,13 @@ namespace cfg {
 // ---------------------------------------------------------------------------- pins
 
 constexpr int PIN_BUTTON = 4;      // to GND, INPUT_PULLUP: a press reads LOW
-constexpr int PIN_LED_PASS = 5;    // green, 330 ohm to GND
-constexpr int PIN_LED_RETAKE = 6;  // yellow, 330 ohm to GND
-constexpr int PIN_LED_STATE = 7;   // blue, 330 ohm to GND: the one that is always lit
+// The three lamps sit on the 5 V rail and the pin switches the low side, so **LOW lights a lamp and
+// HIGH puts it out**. That is what makes them bright enough to read across a bench: from 3.3 V a 2 V LED
+// has 1.3 V of headroom and 330 ohm leaves under 4 mA, while from 5 V the same resistor gives about 9 mA.
+// The pin never sees 5 V - the LED is between it and the rail - and it sinks at most 9 mA.
+constexpr int PIN_LED_PASS = 5;    // green, anode to +5 V, cathode through 330 ohm: LOW lights it
+constexpr int PIN_LED_RETAKE = 6;  // yellow, the same
+constexpr int PIN_LED_STATE = 7;   // blue, the same: the one that is always lit
 constexpr int PIN_I2C_SDA = 8;
 constexpr int PIN_I2C_SCL = 9;
 
@@ -49,7 +53,8 @@ constexpr uint32_t SPLASH_MS = 1500;
 
 //: Bumped whenever the wire protocol or what the panel and lamps do changes, because `EVT HELLO` is how a
 //: host knows which build is on the board - a feature added without a bump is a feature nobody can
-//: confirm is running. 1.2 added the blue state lamp on GPIO7.
-constexpr char FIRMWARE_VERSION[] = "1.2";
+//: confirm is running. 1.2 added the blue state lamp on GPIO7; 1.3 moved the lamps to the 5 V rail with
+//: the pin switching the low side, which inverted what HIGH means for all three.
+constexpr char FIRMWARE_VERSION[] = "1.3";
 
 }  // namespace cfg

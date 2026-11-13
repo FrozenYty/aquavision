@@ -224,6 +224,11 @@ Three lamps, and **one of them is lit at every moment** - a dark panel must not 
 | `Retake` | off | 300 ms pulse | steady |
 | `Offline` | off | off | fast blink, 150 ms |
 
+**The pins sink, they do not drive.** Each lamp's anode is on the 5 V rail and the pin pulls its cathode
+down, so a multimeter on a lamp pin reads LOW while that lamp is lit - the opposite of what the panel shows.
+That is what makes them bright enough to read: from 3.3 V a 2 V LED through 330 Ohm leaves under 4 mA,
+while from 5 V the same resistor gives about 9 mA, and the pin never sees more than the LED's own drop.
+
 **Two blink rates, not one.** "Busy" and "broken" are different questions, and a single pattern would make
 the operator read the panel twice to tell them apart.
 

@@ -142,9 +142,11 @@ void serviceAnimation(uint32_t now) {
   state.markDirty();
 }
 
+//: The lamps are fed from 5 V and the pin sinks them, so LOW is lit and HIGH is dark. See `config.h` for
+//: why the brightness is worth the inversion.
 void serviceLeds(uint32_t now) {
-  digitalWrite(cfg::PIN_LED_PASS, now < ledPassUntil ? HIGH : LOW);
-  digitalWrite(cfg::PIN_LED_RETAKE, now < ledRetakeUntil ? HIGH : LOW);
+  digitalWrite(cfg::PIN_LED_PASS, now < ledPassUntil ? LOW : HIGH);
+  digitalWrite(cfg::PIN_LED_RETAKE, now < ledRetakeUntil ? LOW : HIGH);
 }
 
 //: The blue lamp answers "what is the rig doing", where the other two answer "what did the verdict say".
@@ -165,7 +167,7 @@ void serviceStateLed(uint32_t now) {
       lit = true;
       break;
   }
-  digitalWrite(cfg::PIN_LED_STATE, lit ? HIGH : LOW);
+  digitalWrite(cfg::PIN_LED_STATE, lit ? LOW : HIGH);
 }
 
 void serviceLink(uint32_t now) {
@@ -196,11 +198,12 @@ void setup() {
   pinMode(cfg::PIN_LED_PASS, OUTPUT);
   pinMode(cfg::PIN_LED_RETAKE, OUTPUT);
   pinMode(cfg::PIN_LED_STATE, OUTPUT);
-  digitalWrite(cfg::PIN_LED_PASS, LOW);
-  digitalWrite(cfg::PIN_LED_RETAKE, LOW);
+  // HIGH is dark here: the pins sink the lamps rather than feeding them.
+  digitalWrite(cfg::PIN_LED_PASS, HIGH);
+  digitalWrite(cfg::PIN_LED_RETAKE, HIGH);
   // Lit from the first millisecond: this lamp's job is to prove the board has power, so it must not wait
   // for the loop or for the splash to finish before saying so.
-  digitalWrite(cfg::PIN_LED_STATE, HIGH);
+  digitalWrite(cfg::PIN_LED_STATE, LOW);
 
   Serial.begin(cfg::SERIAL_BAUD);
 

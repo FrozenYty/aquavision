@@ -306,7 +306,7 @@ for i, line in enumerate(
     [
         "1.  5 V rail with nothing on it: 5 V, not 12 V.",
         "2.  Power off, B0–VCCB ≈10 kΩ → no 4.7 kΩ.",
-        "3.  COM port, not native USB; register unknown.",
+        "3.  COM port, not native USB.",
     ]
 ):
     ax.text(9.20, 5.00 - i * 0.30, line, fontsize=7.7, color="#333333", va="center")
@@ -314,7 +314,7 @@ for i, line in enumerate(
 # ------------------------------------------------------------------ ground bus
 BUS_Y = 0.70
 ax.plot(
-    [0.95, 13.10], [BUS_Y, BUS_Y], color=C["gnd"], linewidth=4.2, zorder=3, solid_capstyle="round"
+    [0.95, 12.60], [BUS_Y, BUS_Y], color=C["gnd"], linewidth=4.2, zorder=3, solid_capstyle="round"
 )
 ax.text(
     6.8,
@@ -346,10 +346,12 @@ ground(SL, SHD_Y, 5.55)
 ground(TL, T_GND_Y, 8.30)
 ground(OL, O_GND_Y, 8.65)
 ground(BX + BW - 0.10, B_Y, 12.45)
-for y, key, xd in ((LED1_Y, "led1", 12.55), (LED2_Y, "led2", 12.75), (LED3_Y, "led3", 12.95)):
+# The lamps' anodes go to the 5 V rail and the pin sinks them, so the line on their right is a supply
+# rather than a return - the one place where the colour says the current runs the other way.
+for y, xd in ((LED1_Y, 12.75), (LED2_Y, 12.95), (LED3_Y, 13.15)):
     ax.plot([BX + 3.05, xd], [y, y], color=C[key], linewidth=2.0, zorder=3)
-    ax.plot([xd, xd], [y, BUS_Y], color=C[key], linewidth=2.0, zorder=3)
-    junction(xd, BUS_Y, "gnd")
+    ax.plot([xd, xd], [y, 1.05], color=C["5v"], linewidth=2.2, zorder=3)
+    junction(xd, 1.05, "5v")
 
 # ------------------------------------------------------------------ 3.3 V net
 L33 = 3.75
@@ -387,9 +389,9 @@ wire([(EX + EW, PINY["7"]), (LL3, PINY["7"]), (LL3, LED3_Y), (BX + 0.10, LED3_Y)
 
 # ------------------------------------------------------------------ 5 V
 L5 = 3.30
-wire(
-    [(MX + MW, M5_Y), (L5, M5_Y), (L5, 1.05), (8.60, 1.05), (8.60, VCCB_Y), (SR, VCCB_Y)], "5v", 2.6
-)
+wire([(MX + MW, M5_Y), (L5, M5_Y), (L5, 1.05), (13.25, 1.05)], "5v", 2.6)
+junction(8.60, 1.05, "5v")
+wire([(8.60, 1.05), (8.60, VCCB_Y), (SR, VCCB_Y)], "5v", 2.6)
 junction(8.60, VCCB_Y, "5v")
 wire([(8.60, VCCB_Y), (TL, T_VCC_Y)], "5v", 2.6)
 ax.text(

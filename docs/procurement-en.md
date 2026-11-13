@@ -93,7 +93,9 @@ Assemble and power on in six steps, one at a time, so a fault is localised immed
    back. **With no PC on the link, a button press lights neither, and that is not a fault**: the button
    only starts a capture, and the firmware pulses a lamp when `CMD RESULT` answers it. **The blue lamp is
    already steady the moment power arrives** - check that first, because no blue at all points at the
-   supply rather than at the firmware.
+   supply rather than at the firmware. **The lamps are fed from 5 V and the pin switches the low side, so
+   LOW lights one and HIGH puts it out** - anode to 5 V, cathode through its 330 Ohm to the pin. Wired the
+   other way round it will not light at all, and the pin never sees more than the LED's forward drop.
 6. Camera — exposure lock, `python scripts/test_exposure.py` exits 0; then `python scripts/test_rig.py`
    exits 0, which measures the left/right brightness ratio, the 5 cm target width and the brightness
    drift of a ten-minute run under a fixed light level. **Both are required**: the first asks whether
@@ -108,7 +110,7 @@ one ground.
 
 | Rail | Source | Loads |
 |---|---|---|
-| 5 V | 12 V adapter into the MB-102, one rail jumper on 5 V and **the other on OFF** | turbidity sensor VCC, shifter VCCB |
+| 5 V | 12 V adapter into the MB-102, one rail jumper on 5 V and **the other on OFF** | turbidity sensor VCC, shifter VCCB, the anodes of the three lamps |
 | 3.3 V | the controller board's `3V3` pin, which its own USB cable feeds | OLED VCC, shifter VCCA, the ESP32's own logic |
 | ground | one, shared | every part, including the adapter's negative lead |
 
@@ -128,9 +130,12 @@ flowchart LR
   ESP -->|"GPIO8 / GPIO9"| LV
   ESP -->|"GPIO8 / GPIO9"| OLED
   ESP --> B["button, GPIO4"]
-  ESP --> L1["green LED, GPIO5"]
-  ESP --> L2["yellow LED, GPIO6"]
-  ESP --> L3["blue LED, GPIO7"]
+  MB -->|"5 V"| L1["green LED"]
+  ESP -->|"sinks"| L1
+  MB -->|"5 V"| L2["yellow LED"]
+  ESP -->|"sinks"| L2
+  MB -->|"5 V"| L3["blue LED"]
+  ESP -->|"sinks"| L3
   GND["one ground"] --- MB
   GND --- ESP
   GND --- S
@@ -151,9 +156,9 @@ the firmware is built with `ARDUINO_USB_CDC_ON_BOOT=0` and sends `Serial` to UAR
 | MB-102 `5V` | sensor VCC and shifter `VCCB` | red | the sensor side only |
 | MB-102 `GND` | ESP32 `GND`, sensor GND, shifter `GND` | black | one ground: split grounds are the intermittent-I2C fault that hides longest |
 | ESP32 `4` | button, other leg to GND | purple | momentary part only - a latching one gives one frame per two presses |
-| ESP32 `5` | 330 Ohm into the green LED | white | one per LED, as the SRS specifies; only one is ever lit |
-| ESP32 `6` | 330 Ohm into the yellow LED | grey | the same |
-| ESP32 `7` | 330 Ohm into the blue LED | blue | the state lamp: steady whenever the rig is powered, blinking when busy or lost |
+| ESP32 `5` | 330 Ohm from the green LED's cathode | white | the lamp's anode is on 5 V and the pin sinks it, so **LOW lights it** |
+| ESP32 `6` | 330 Ohm from the yellow LED's cathode | grey | the same |
+| ESP32 `7` | 330 Ohm from the blue LED's cathode | blue | the state lamp: steady whenever the rig is powered, blinking when busy or lost |
 
 The same wiring as a picture is `rig-wiring.svg`, in this directory: the pin column keeps the order printed
 on the board, which is what makes it usable with a jumper wire in hand. Table and picture are generated from

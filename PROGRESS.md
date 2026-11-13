@@ -122,6 +122,21 @@
   the power-off continuity check (one leg to `4`, the other to `GND`, neither on a rail; 3.3 V to ground open
   while held), and notes that a 330 Ohm series resistor turns the next such mistake into "nothing happens".
 
+- **Dimmest-lamp problem solved by moving the lamps to the 5 V rail, at the cost of inverting the logic.**
+  From 3.3 V a 2 V LED through 330 Ohm leaves under 4 mA - readable on a desk, invisible from the bench.
+  From the 5 V rail the same resistor gives about 9 mA, and the pin sinks that current without ever seeing
+  more than the LED's forward drop. The price is that **LOW now means lit** for all three lamps, so the
+  firmware inverted them (1.3) and the wiring table, both firmware READMEs, the state machine and the
+  drawing all say so.
+- **A feature added without a version bump cost real time, and is now a rule.** The blue lamp went in
+  without moving `FIRMWARE_VERSION`, so the board kept answering `EVT HELLO 1.1` and there was no way to
+  tell from the host whether the new build was running. It is 1.3 now, and the constant carries the rule
+  beside it: `EVT HELLO` exists to answer "which build is this", so behaviour that changes must move it.
+- **The bench found two faults the documents had predicted but not described as symptoms.** A switch across
+  the power rails raised `BOD` instead of just not working; a lamp on the wrong side of the resistor looked
+  like a software bug. Both are now written as symptoms in the assembly step, with the measurement that
+  separates them from a firmware fault.
+
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict
