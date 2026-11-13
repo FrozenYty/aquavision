@@ -8,8 +8,14 @@ is silent, and finding out which is the first question every other check depends
 
     python scripts/test_rig_link.py
     python scripts/test_rig_link.py --port COM5 --seconds 10
+    python scripts/test_rig_link.py --port COM5 --scan --seconds 6
 
-Exit codes: 0 a PONG arrived, 1 no PONG in time or the port could not be opened.
+Exit codes: 0 the question was answered, 1 it was not, or the port could not be opened.
+
+With `--scan` the tool instead asks the board to walk its I2C bus (`CMD SCAN`) and reports every address
+that answered, against the two this rig is built to have. That is the check `P3-17` names, and it is the
+only way to see the bus without a serial terminal. The firmware has no completion marker for a scan, so
+the tool waits a fixed window and says how long it waited rather than pretending the list is complete.
 
 Opening the port resets the board: the bridge chip's DTR and RTS lines feed the auto-reset circuit, so
 the sketch restarts and reports a fresh `EVT SCREEN READY` before this tool's first ping arrives. That is
@@ -27,11 +33,30 @@ import time
 # imported: `app.rig.protocol` pulls in `app.vision.quality`, which pulls in OpenCV and numpy - not
 # dependencies a laptop sitting on a bench with one cable should need to check the cable.
 PING = b"CMD PING\n"
+SCAN = b"CMD SCAN\n"
 PONG = "EVT PONG"
+SCAN_PREFIX = "EVT I2C "
+#: The two devices this rig is built to have on the bus, from `firmware/main/src/config.h`.
+EXPECTED = {"3C": "OLED", "49": "turbidity sensor"}
 BAUD = 115200
 KEEPALIVE_SECONDS = 2.0
 DEFAULT_SECONDS = 5.0
 READ_TIMEOUT_SECONDS = 0.2
+
+
+def scan_addresses(lines: list[str]) -> dict[str, str]:
+    """The addresses a scan reported, in the order they arrived.
+
+    The firmware prints `EVT I2C %02X`, so the value keeps its upper-case hex spelling - `49` and not
+    `0x49`, because that is what the person reading the terminal will match against the datasheet.
+    """
+    found: dict[str, str] = {}
+    for line in lines:
+        if line.startswith(SCAN_PREFIX):
+            address = line[len(SCAN_PREFIX) :].strip().upper()
+            if address:
+                found[address] = EXPECTED.get(address, "something the rig does not expect")
+    return found
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -45,7 +70,12 @@ def main(argv: list[str] | None = None) -> int:
         "--seconds",
         type=float,
         default=DEFAULT_SECONDS,
-        help=f"how long to wait for EVT PONG (default {DEFAULT_SECONDS:g})",
+        help=f"how long to wait for EVT PONG, or to collect a scan (default {DEFAULT_SECONDS:g})",
+    )
+    parser.add_argument(
+        "--scan",
+        action="store_true",
+        help="ask the board to walk its I2C bus and report the addresses that answered",
     )
     args = parser.parse_args(argv)
 
@@ -69,21 +99,33 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Cannot open {args.port}: {err}", file=sys.stderr)
         return 1
 
-    print(
-        f"Sending CMD PING every {KEEPALIVE_SECONDS:g} s, "
-        f"waiting up to {args.seconds:g} s for EVT PONG"
-    )
+    if args.scan:
+        print(
+            f"Sending CMD SCAN, collecting EVT I2C lines for {args.seconds:g} s "
+            f"(keepalive every {KEEPALIVE_SECONDS:g} s)"
+        )
+    else:
+        print(
+            f"Sending CMD PING every {KEEPALIVE_SECONDS:g} s, "
+            f"waiting up to {args.seconds:g} s for EVT PONG"
+        )
     pong = False
+    seen: list[str] = []
     deadline = time.monotonic() + args.seconds
     # The first ping goes out at once: the rig wants a command every two seconds, not two seconds of
-    # silence before the first one.
+    # silence before the first one. The scan rides along, because a scan is also a `CMD` line and it
+    # keeps the link alive just as well - but the keepalive still has to continue while it collects.
     next_ping = 0.0
+    scan_sent = False
     try:
         while time.monotonic() < deadline:
             now = time.monotonic()
             if now >= next_ping:
                 port.write(PING)
                 next_ping = now + KEEPALIVE_SECONDS
+                if args.scan and not scan_sent:
+                    port.write(SCAN)
+                    scan_sent = True
             raw = port.readline()
             if not raw:
                 continue
@@ -91,7 +133,8 @@ def main(argv: list[str] | None = None) -> int:
             if not line:
                 continue
             print(f"  {line}")
-            if line == PONG:
+            seen.append(line)
+            if line == PONG and not args.scan:
                 pong = True
                 break
     except serial.SerialException as err:
@@ -99,6 +142,27 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     finally:
         port.close()
+
+    if args.scan:
+        found = scan_addresses(seen)
+        print()
+        if not found:
+            print(
+                f"Fail: no EVT I2C line in {args.seconds:g} s. Either nothing is on the bus, or the scan "
+                "did not reach the board - run this tool without --scan first, because a board that "
+                "cannot answer CMD PING cannot answer CMD SCAN either.",
+                file=sys.stderr,
+            )
+            return 1
+        for address, what in found.items():
+            print(f"  found {address}  {what}")
+        missing = [
+            f"{address} ({what})" for address, what in EXPECTED.items() if address not in found
+        ]
+        if missing:
+            print(f"  not found: {', '.join(missing)}")
+        print(f"Pass: {len(found)} address(es) answered in the {args.seconds:g} s window.")
+        return 0
 
     if pong:
         print(f"Pass: {args.port} answered EVT PONG.")

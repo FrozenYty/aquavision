@@ -41,6 +41,30 @@
   unnecessary - the check is a resistance measurement from `B0` to `VCCB` with the power off, and it is
   cheaper than stacking resistors that leave the bus at 3.2 kOhm.
 
+- **The acceptance for `P3-17` had a half with no way to run it.** `CMD SCAN` exists in the firmware
+  (`protocol.cpp` walks the bus and prints `EVT I2C <address>`), and the task asks for `EVT I2C 49` - but
+  **nothing on the PC could send it**: the link tool only sent `CMD PING`, and the server never sends a
+  scan. `python scripts/test_rig_link.py --scan` now does, and it prints the addresses it found against the
+  two this rig is built to have. Without it the bench session would have needed a serial terminal to tick
+  its own acceptance.
+- **A scan has no completion marker, so the tool says how long it waited.** The firmware prints one line per
+  device and stops; a reader that waited too briefly and a reader that walked the whole bus look identical
+  unless the window is reported. The tool also keeps pinging while it collects, because a `CMD SCAN` is a
+  keepalive too and the rig goes `OFFLINE` after ten seconds of silence.
+- **`CMD SCAN` was not in the state machine's event table either**, so the document now lists it as E10 with
+  what it does and does not change: it refreshes the link timer like any other `CMD` line, and the panel is
+  untouched.
+- **The wiring table is now held to the firmware.** `tests/test_wiring_document.py` compares the GPIO
+  numbers in `docs/procurement-en/zh.md` section 5 against `firmware/main/src/config.h`, in both directions
+  and in both languages, because a pin that moves in one place and not the other leaves a rig that is wired
+  correctly and behaves as if it is not. Writing it caught its own first bug: the pattern for a pin name
+  excluded digits, so `PIN_I2C_SDA` was invisible and the test failed rather than passing on an empty parse.
+- **The optical half of `P3-17` was measured ahead of the assembly, on the camera alone.** Two minutes, no
+  rig lamp: the left/right brightness ratio is **0.809** against a floor of 0.70, and the frame-to-frame
+  brightness drift is **2.2 %** against a ceiling of 5 % - both pass. The 5 cm target reads **0 px** because
+  it is not in the water yet, and the tool exits 1 for that rather than reporting a partial pass. The
+  official numbers still need the ten-minute run on the assembled tank.
+
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict

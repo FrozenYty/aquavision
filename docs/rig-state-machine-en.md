@@ -47,10 +47,18 @@ is nobody to talk to.
 | E7 | Turbidity reading (every 5 s) | sensor |
 | E8 | Heartbeat tick (1 s) | timer |
 | E9 | Spinner tick (250 ms) | timer |
+| E10 | `CMD SCAN` | PC |
 
 Only a line that starts with `CMD` and names an action counts as the PC being alive. A line that is not a
 `CMD` line, or a bare `CMD` with nothing after it, is ignored entirely: it does not refresh the link timer
 and cannot recover `Offline`.
+
+**`CMD SCAN` is an assembly tool, not part of a run.** It makes the firmware walk addresses 1 to 126 and
+print one `EVT I2C <address>` line for each device that answers, then stop. It has no completion marker, so
+a reader waits a fixed window rather than a terminator, and **how long it waited belongs in what it
+reports** - a short window that found nothing and a complete walk that found nothing are different facts.
+Nothing in the state machine changes: it refreshes the link timer like any other `CMD` line and the panel is
+untouched, so the screens below are the same with and without a board on the bus.
 
 ## 4. Composite states
 

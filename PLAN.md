@@ -491,8 +491,14 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         `Serial` to UART0 (`ARDUINO_USB_CDC_ON_BOOT=0`)
       - the BSS138 level shifter runs VCCA 3V3, VCCB 5 V, A0 to B0 on GPIO8/SDA, A1 to B1 on GPIO9/SCL
       - done when `python scripts/test_rig.py` reports the three numbers the design fixed - left/right
-        brightness ratio >= 0.7, a 5 cm target >= 45 px at 640 input, no flicker - and `CMD SCAN` shows
-        `EVT I2C 49` with the sensor powered
+        brightness ratio >= 0.7, a 5 cm target >= 45 px at 640 input, no flicker - and
+        `python scripts/test_rig_link.py --port COM<n> --scan` finds `49` with the sensor powered and
+        `3C` for the OLED. **The scan tool was added 11-13**: until then `CMD SCAN` existed in the
+        firmware and nothing on the PC could send it, so that half of the acceptance had no way to run
+      - **optical half measured 11-13, ahead of assembly**: on the camera alone, 2 minutes, no rig
+        lamp - brightness ratio 0.809 (floor 0.70) and frame-to-frame drift 2.2 % (ceiling 5 %) pass;
+        the 5 cm target reads 0 px because it is not in the water yet. The official numbers still
+        need the ten-minute run on the assembled tank
       - **`P4-07`'s rehearsals cannot start before this is done**, and neither can the optical half of
         `P1-06`'s original acceptance
 - [x] **P3-18** The time basis: one zone decides every calendar question · @Gtechson · with **ADR 14** ·
