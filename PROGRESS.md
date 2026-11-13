@@ -165,6 +165,20 @@
   colour lives in one place in the code and is named in the documents from it; had the firmware driven
   named colours instead of named roles, every round would have been a code change.
 
+- **The RETAKE lamp is yellow, not red, and the reason is mechanical rather than optical.** The red part's
+  leads were too short to seat beside the other two, so the lamp that was chosen for its meaning was replaced
+  by the one that fits. The convention is written down as it is built, not as it was intended: white for
+  `Pass`, yellow for `Retake`, blue for the state.
+- **That leaves white and yellow as the closest pair in the set**, which is worth stating plainly because it
+  weakens the argument that put a colour on each state. What separates the two verdict lamps at a glance is
+  their **position** - two fixed, labelled rows - and the screen saying which it is. A red part with normal
+  leads would restore the stronger contrast; nothing else about the build would change, because the pins are
+  named by role and not by colour.
+- **Three palette revisions in one afternoon cost one file's worth of code and eleven files' worth of prose.**
+  The colour is named once in `config.h` and once per document, so each revision was mechanical - and each one
+  was a chance for a document to be left describing the previous lamp. `grep` for the retired colour is what
+  caught them, not memory.
+
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict

@@ -17,15 +17,18 @@ constexpr int PIN_BUTTON = 4;      // to GND, INPUT_PULLUP: a press reads LOW
 // has 1.3 V of headroom and 330 ohm leaves under 4 mA, while from 5 V the same resistor gives about 9 mA.
 // The pin never sees 5 V - the LED is between it and the rail - and it sinks at most 9 mA.
 // **Colour is a convention here, not a requirement**, and this set was chosen on three grounds.
-// Red marks RETAKE, because the lamp that says "shoot it again" is the one that must not be missed and red
-// is the colour a reader already stops for. White marks PASS: it is the brightest thing available at 9 mA
-// and carries no bad news. Blue marks the state, because an always-on lamp must recede - white there would
-// dominate the two that matter, and it blooms into a white blob on a phone camera.
-// Green for PASS was the obvious choice and was given up twice over: the parts on hand were too dim at 9 mA
+// White marks PASS: it is the brightest thing available at 9 mA and carries no bad news. Yellow marks
+// RETAKE, because that is the signal nobody may miss and yellow is the conventional warning colour. Blue
+// marks the state, because an always-on lamp must recede - white there would dominate the two that matter,
+// and it blooms into a featureless blob on a phone camera.
+// Green was the obvious choice for PASS and was given up twice over: the parts on hand were too dim at 9 mA
 // to read from a metre, and red against green is the one pair a red-green colour-blind operator cannot
-// separate. Red, white and blue differ in brightness as well as hue.
+// separate. A red lamp was the first choice for RETAKE and was set aside on the bench for a mechanical
+// reason, not an optical one: its leads were too short to seat beside the other two. **White and yellow are
+// therefore the closest pair in this set**, so position - not hue - is what separates the two verdict lamps
+// at a glance, which is why they sit in fixed, labelled rows.
 constexpr int PIN_LED_PASS = 5;    // white, anode to +5 V, cathode through 330 ohm: LOW lights it
-constexpr int PIN_LED_RETAKE = 6;  // red, the same
+constexpr int PIN_LED_RETAKE = 6;  // yellow, the same
 constexpr int PIN_LED_STATE = 7;   // blue, the same
 constexpr int PIN_I2C_SDA = 8;
 constexpr int PIN_I2C_SCL = 9;

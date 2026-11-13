@@ -276,7 +276,7 @@ LED1_Y, LED2_Y, LED3_Y = 6.95, 6.35, 5.75
 # that red here cannot be confused with the red 5 V rail running past on the right.
 for y, name, key, lamp in (
     (LED1_Y, "white LED  (PASS)", "led1", "#FFFFFF"),
-    (LED2_Y, "red LED  (RETAKE)", "led2", "#CC2222"),
+    (LED2_Y, "yellow LED  (RETAKE)", "led2", "#E8A200"),
     (LED3_Y, "blue LED  (state)", "led3", "#1B62C8"),
 ):
     ax.add_patch(

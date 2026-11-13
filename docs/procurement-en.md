@@ -132,7 +132,7 @@ flowchart LR
   ESP --> B["button, GPIO4"]
   MB -->|"5 V"| L1["white LED, PASS"]
   ESP -->|"sinks"| L1
-  MB -->|"5 V"| L2["red LED, RETAKE"]
+  MB -->|"5 V"| L2["yellow LED, RETAKE"]
   ESP -->|"sinks"| L2
   MB -->|"5 V"| L3["blue LED"]
   ESP -->|"sinks"| L3
@@ -157,7 +157,7 @@ the firmware is built with `ARDUINO_USB_CDC_ON_BOOT=0` and sends `Serial` to UAR
 | MB-102 `GND` | ESP32 `GND`, sensor GND, shifter `GND` | black | one ground: split grounds are the intermittent-I2C fault that hides longest |
 | ESP32 `4` | button, other leg to GND | purple | momentary part only - a latching one gives one frame per two presses |
 | ESP32 `5` | 330 Ohm from the white LED's cathode | white | the PASS lamp: anode on 5 V, pin sinks it, so **LOW lights it** |
-| ESP32 `6` | 330 Ohm from the red LED's cathode | grey | the RETAKE lamp, the same |
+| ESP32 `6` | 330 Ohm from the yellow LED's cathode | grey | the RETAKE lamp, the same |
 | ESP32 `7` | 330 Ohm from the blue LED's cathode | blue | the state lamp: steady when idle, blinking when busy or lost, dark while a verdict is shown |
 
 The same wiring as a picture is `rig-wiring.svg`, in this directory: the pin column keeps the order printed

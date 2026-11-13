@@ -140,7 +140,7 @@ void serviceAnimation(uint32_t now) {
   state.markDirty();
 }
 
-//: The verdict lamps follow the screen: white while PASS is shown, red while RETAKE is. **Steady, not a
+//: The verdict lamps follow the screen: white while PASS is shown, yellow while RETAKE is. **Steady, not a
 //: 300 ms pulse** - the lamp is a second view of the fact the panel is showing, and a pulse had to be
 //: timed, so a verdict arriving while the loop was busy could have been missed entirely.
 //: The pins sink the lamps (5 V rail), so LOW is lit and HIGH is dark. See `config.h` for why the

@@ -214,10 +214,10 @@ port is held.
 ## 10. The lamps
 
 Three lamps, and **one of them is lit at every moment** - a dark panel must not be able to mean either
-"idle" or "dead". Two of them answer the last verdict - **white for `Pass`, red for `Retake`** - and the
+"idle" or "dead". Two of them answer the last verdict - **white for `Pass`, yellow for `Retake`** - and the
 blue one answers what the rig is doing.
 
-| Screen | white, PASS | red, RETAKE | blue, state |
+| Screen | white, PASS | yellow, RETAKE | blue, state |
 |---|---|---|---|
 | `Ready` | off | off | steady |
 | `Capturing` | off | off | slow blink, 500 ms |
@@ -234,17 +234,19 @@ while from 5 V the same resistor gives about 9 mA, and the pin never sees more t
 the operator read the panel twice to tell them apart.
 
 **The verdict lamps are steady, and they hand over to the blue one.** White stays lit while `Pass` is on
-the screen and red while `Retake` is, so a lamp is a second view of the fact the panel is already showing
+the screen and yellow while `Retake` is, so a lamp is a second view of the fact the panel is already showing
 rather than a separate fact to time. The blue lamp goes **dark** in those two screens: two lamps saying one
 thing is noise.
 
-**Why these three colours.** Red on `Retake` because that is the signal nobody may miss, and red is what a
-reader already stops for. White on `Pass` because it is the brightest thing available at 9 mA and carries no
-bad news. Blue on the state because an always-on lamp has to recede: white there would dominate the two that
-matter, and it blooms into a featureless blob on a phone camera. Green was the obvious choice for `Pass` and
-was given up twice over - the parts on hand were too dim to read from a metre, and **red against green is the
-one pair a red-green colour-blind operator cannot separate**, while red, white and blue differ in brightness
-as well as hue.
+**Why these three colours.** White on `Pass` because it is the brightest thing available at 9 mA and
+carries no bad news. Yellow on `Retake` because that is the signal nobody may miss, and yellow is the
+conventional warning colour. Blue on the state because an always-on lamp has to recede: white there would
+dominate the two that matter, and it blooms into a featureless blob on a phone camera. Green was the obvious
+choice for `Pass` and was given up twice over - the parts on hand were too dim to read from a metre, and
+**red against green is the one pair a red-green colour-blind operator cannot separate**. A red lamp was the
+first choice for `Retake` and was set aside for a mechanical reason rather than an optical one: its leads were
+too short to seat beside the other two. **White and yellow are therefore the closest pair here**, so it is the
+lamps' fixed positions, not their hues, that separate them at a glance.
 
 **What the lamps must never do is leave the panel dark.** Between them they cover every screen - green or
 yellow for a verdict, blue for idle, in flight and disconnected - so no lamp at all can only mean no power.

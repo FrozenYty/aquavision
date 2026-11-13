@@ -50,7 +50,7 @@ python -m pip install platformio
 |---|---|---|
 | Button | GPIO 4 | to GND; `INPUT_PULLUP`, so a press reads LOW |
 | White LED (PASS) | GPIO 5 | anode to +5 V, cathode through 330 Ω; **the pin sinks, so LOW lights it** |
-| Red LED (RETAKE) | GPIO 6 | the same |
+| Yellow LED (RETAKE) | GPIO 6 | the same |
 | Blue LED (state) | GPIO 7 | the same; lit on every screen the other two do not cover |
 | OLED SDA | GPIO 8 | I2C, address 0x3C |
 | OLED SCL | GPIO 9 | I2C |

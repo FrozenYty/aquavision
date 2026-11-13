@@ -494,7 +494,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         a completely dark panel now means no power. Without it, `Ready`, `Capturing` and `Offline` had no lamp
         at all and a healthy idle rig looked exactly like a dead one. Blue is steady when idle, blinks slowly
         (500 ms) while a capture is in flight and fast (150 ms) when the link is gone, because "busy" and
-        "broken" are different questions. The verdict lamps are **white for `Pass` and red for `Retake`**,
+        "broken" are different questions. The verdict lamps are **white for `Pass` and yellow for `Retake`**,
         both steady while their screen is shown, and they are lit by the pin sinking them rather than by the
         pin driving them.
         Firmware, SRS table 2-3, the wiring table, the firmware README and a new section 10 of the state
