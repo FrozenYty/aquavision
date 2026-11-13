@@ -96,6 +96,9 @@ Assemble and power on in six steps, one at a time, so a fault is localised immed
    supply rather than at the firmware. **The lamps are fed from 5 V and the pin switches the low side, so
    LOW lights one and HIGH puts it out** - anode to 5 V, cathode through its 330 Ohm to the pin. Wired the
    other way round it will not light at all, and the pin never sees more than the LED's forward drop.
+   **A lead too short to reach is a mechanical problem with a mechanical fix** - a 2 cm jumper makes up the
+   distance - and not a reason to fit a lamp of another colour, because the colour is part of what the lamps
+   mean.
 6. Camera — exposure lock, `python scripts/test_exposure.py` exits 0; then `python scripts/test_rig.py`
    exits 0, which measures the left/right brightness ratio, the 5 cm target width and the brightness
    drift of a ten-minute run under a fixed light level. **Both are required**: the first asks whether
