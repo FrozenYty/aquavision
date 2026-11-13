@@ -57,6 +57,17 @@ def ping() -> str:
     return f"{COMMAND_PREFIX}PING\n"
 
 
+def scan() -> str:
+    """`CMD SCAN`: walk the I2C bus and answer one `EVT I2C <address>` line per device that replies.
+
+    An assembly tool rather than part of a run - it is how `P3-17` confirms the OLED and the sensor are
+    wired before anything is asked of them. It exists here so the grammar has one home: the bench script
+    copies this line instead of importing it, because importing pulls in OpenCV, and a test holds the copy
+    to this function.
+    """
+    return f"{COMMAND_PREFIX}SCAN\n"
+
+
 def ready() -> str:
     return f"{COMMAND_PREFIX}READY\n"
 
