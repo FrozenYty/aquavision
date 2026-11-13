@@ -1,3 +1,18 @@
+## 2026-11-13
+
+- **The folder beside the repository was renamed, because it was named for the smaller half of what it
+  holds.** `aquavision-submissions` is now `aquavision-local`. What is in it is not submissions: it is the
+  `srs-v1.4.docx` original and three vendor PDFs, one of which - the turbidity manual, page 10 - forbids
+  disclosure without written consent. What those share is that they **cannot be committed**, and the new
+  name says that instead of guessing at a category, so the next file lands there for its own reason rather
+  than because it looked like a deliverable.
+- **The rename broke nothing, and one sentence still had to change.** A search for the old name across the
+  workspace returned no reference to it: the folder had always been described rather than addressed. The
+  one live mention was a category, `CONTRIBUTING.md` section 5 calling these "submission artefacts", and it
+  now names the property instead - things that cannot be committed - because section 6 forbids a local
+  folder name in a shared document. The two older entries below still say "the submission folder"; they are
+  left as written, since this log is append-only and this entry is where the rename lives.
+
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict
