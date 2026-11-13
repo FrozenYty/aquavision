@@ -108,6 +108,20 @@
 - **The local copies moved to scratch.** Once the picture lives in the repository, the loose files in the
   dated artifact folder are a second copy with no owner, so they went to `DSH_FILES/tmp/`.
 
+- **The button was shorting the 3.3 V rail to ground, and the board said so in one line.**
+  `BOD: Brownout detector was triggered` with `rst:0x3 (RTC_SW_SYS_RST)` repeated every time the key was
+  pressed, once with `rst:0x1 (POWERON)` as the whole board lost power. The panel dimming first is the tell:
+  the OLED sits on the same 3.3 V rail, so a rail that collapses takes the picture with it before the
+  brownout detector resets the chip.
+- **An `EVT TRIGGER` arriving made it look like the button worked.** It did not: the pull-up only reads LOW
+  when the rail itself falls, so the firmware was reporting the brownout as a press. The firmware was
+  cleared by inspection - `PIN_BUTTON` appears three times, `INPUT_PULLUP`, `digitalRead` and the constant,
+  and is never driven.
+- **A momentary switch is a dead short by design**, so the fault was never in the switch: it was in which
+  two nodes its legs were on. Assembly section 4 step 1 now says a press must never disturb the panel, gives
+  the power-off continuity check (one leg to `4`, the other to `GND`, neither on a rail; 3.3 V to ground open
+  while held), and notes that a 330 Ohm series resistor turns the next such mistake into "nothing happens".
+
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict

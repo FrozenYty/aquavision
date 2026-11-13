@@ -69,7 +69,14 @@ day after the lamp was checked — ADR 10.
 
 Assemble and power on in six steps, one at a time, so a fault is localised immediately:
 
-1. ESP32 + tactile switch — serial prints a line on each press. **Debounce first**: one press, one line.
+1. ESP32 + tactile switch - serial prints a line on each press. **Debounce first**: one press, one line.
+   **A press must never disturb the panel.** If pressing dims the OLED or restarts the board, a leg is on a
+   power rail: a momentary switch is a dead short when it spans two supplies, and the board reports it as
+   `BOD: Brownout detector was triggered` in the serial log. Power off and check: one leg to `4`, the other
+   to `GND`, and **neither leg touching a red or a blue rail**. The six-pin `XKB8080-W` makes this easy to
+   get wrong - find the pair that closes with a multimeter, as section 3 says. A 330 Ohm series resistor
+   from the switch to `4` turns a future mistake into "nothing happens" instead of a brownout, and the pin
+   still reads a solid LOW because its internal pull-up is 45 kOhm.
 2. Level shifter — measure 3.3 V on VCCA and 5 V on VCCB. **This board cannot be skipped:** rev A3 of the
    ME2100A-IIC datasheet dropped the 3.3 V specification, so the part runs at 4.5-5.5 V and its I2C
    lines are pulled up to 5 V, which the ESP32 does not tolerate. Low side to the ESP32's 3V3 and
