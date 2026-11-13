@@ -110,7 +110,12 @@ names where they are (§6).
   “8-channel bidirectional level shifter” rather than the shop listing title. Product names,
   quotations and search strings that only exist in Chinese belong in the `-zh` counterpart. The one
   exception is the README language switcher, which is navigation rather than prose.
-- Diagrams are Mermaid code blocks inside Markdown, never image files.
+- Diagrams are Mermaid code blocks inside Markdown, never image files — **with one exception**: the rig's
+  pin-by-pin wiring is `docs/rig-wiring.svg`, drawn by `scripts/draw_wiring.py`. Mermaid cannot show the
+  order of a header's pins, and that order is exactly what a person holding a jumper wire needs. The
+  exception is only defensible because it is reproducible: the script is committed beside the picture, the
+  picture is text rather than a bitmap, and `tests/test_wiring_document.py` holds both the table and the
+  script to `firmware/main/src/config.h`, so a pin that moves cannot leave a drawing behind.
 - Never commit:
 
 ```

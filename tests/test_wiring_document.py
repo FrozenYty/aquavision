@@ -17,6 +17,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 CONFIG = REPO / "firmware" / "main" / "src" / "config.h"
 PAIR = [REPO / "docs" / "procurement-en.md", REPO / "docs" / "procurement-zh.md"]
+DRAWING = REPO / "scripts" / "draw_wiring.py"
 
 #: The terminal names in the wiring table that are ESP32 GPIO numbers rather than rails.
 ESP_PIN = re.compile(r"ESP32\s*`(\d{1,2})`")
@@ -71,3 +72,18 @@ def test_the_wiring_table_names_exactly_the_firmware_pins() -> None:
 
 def test_both_languages_of_the_wiring_table_agree_on_the_pins() -> None:
     assert documented_pins(PAIR[0]) == documented_pins(PAIR[1])
+
+
+def test_the_drawing_script_draws_the_pins_the_firmware_declares() -> None:
+    """The picture is a third copy of the pin numbers, so it gets held to the same source.
+
+    `docs/rig-wiring.svg` is generated from `scripts/draw_wiring.py`, whose `USED` table names the pins it
+    draws. Without this check a pin could move in `config.h`, be fixed in the table and still be drawn
+    wrong - and the drawing is the copy a person actually wires from.
+    """
+    source = DRAWING.read_text(encoding="utf-8")
+    used = re.search(r"USED = \{([^}]*)\}", source)
+    assert used is not None, "the drawing script no longer has a USED table"
+    drawn = {name for name in re.findall(r'"(\d{1,2})":', used.group(1))}
+    declared = {str(number) for number in firmware_pins().values()}
+    assert drawn == declared
