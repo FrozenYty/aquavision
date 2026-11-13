@@ -214,22 +214,40 @@ port is held.
 ## 10. The lamps
 
 Three lamps, and **one of them is lit at every moment** - a dark panel must not be able to mean either
-"idle" or "dead". The green and the yellow answer the last verdict; the blue answers what the rig is doing.
+"idle" or "dead". Two of them answer the last verdict - **white for `Pass`, red for `Retake`** - and the
+blue one answers what the rig is doing.
 
-| Screen | green | yellow | blue |
+| Screen | white, PASS | red, RETAKE | blue, state |
 |---|---|---|---|
 | `Ready` | off | off | steady |
 | `Capturing` | off | off | slow blink, 500 ms |
-| `Pass` | 300 ms pulse | off | steady |
-| `Retake` | off | 300 ms pulse | steady |
+| `Pass` | lit | off | off |
+| `Retake` | off | lit | off |
 | `Offline` | off | off | fast blink, 150 ms |
+
+**The pins sink, they do not drive.** Each lamp's anode is on the 5 V rail and the pin pulls its cathode
+down, so a multimeter on a lamp pin reads LOW while that lamp is lit - the opposite of what the panel shows.
+That is what makes them bright enough to read: from 3.3 V a 2 V LED through 330 Ohm leaves under 4 mA,
+while from 5 V the same resistor gives about 9 mA, and the pin never sees more than the LED's own drop.
 
 **Two blink rates, not one.** "Busy" and "broken" are different questions, and a single pattern would make
 the operator read the panel twice to tell them apart.
 
-**The verdict pulses are short on purpose.** The screen keeps the verdict visible, so a lamp that stayed on
-would stop carrying information after the first second and would compete with the blue lamp for the question
-"what is happening now".
+**The verdict lamps are steady, and they hand over to the blue one.** White stays lit while `Pass` is on
+the screen and red while `Retake` is, so a lamp is a second view of the fact the panel is already showing
+rather than a separate fact to time. The blue lamp goes **dark** in those two screens: two lamps saying one
+thing is noise.
+
+**Why these three colours.** Red on `Retake` because that is the signal nobody may miss, and red is what a
+reader already stops for. White on `Pass` because it is the brightest thing available at 9 mA and carries no
+bad news. Blue on the state because an always-on lamp has to recede: white there would dominate the two that
+matter, and it blooms into a featureless blob on a phone camera. Green was the obvious choice for `Pass` and
+was given up twice over - the parts on hand were too dim to read from a metre, and **red against green is the
+one pair a red-green colour-blind operator cannot separate**, while red, white and blue differ in brightness
+as well as hue.
+
+**What the lamps must never do is leave the panel dark.** Between them they cover every screen - green or
+yellow for a verdict, blue for idle, in flight and disconnected - so no lamp at all can only mean no power.
 
 The blue lamp is lit from the first millisecond of `setup()`, before the splash, because proving that the
-board has power is its first job: no blue at all points at the supply, not at the firmware.
+board has power is its first job: nothing lit at all points at the supply, not at the firmware.

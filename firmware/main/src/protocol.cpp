@@ -42,7 +42,6 @@ bool handleResult(rig::State& state, char** cursor) {
   state.reason = rig::reasonFromToken(reason);
   state.frames += 1;
   state.screen = (strcmp(verdict, "PASS") == 0) ? rig::Screen::Pass : rig::Screen::Retake;
-  state.pulseLeds = true;
   state.markDirty();
   return true;
 }

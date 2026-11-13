@@ -49,16 +49,19 @@ python -m pip install platformio
 | Signal | ESP32-S3 | Note |
 |---|---|---|
 | Button | GPIO 4 | to GND; `INPUT_PULLUP`, so a press reads LOW |
-| Green LED | GPIO 5 | series resistor, 330 Ω |
-| Yellow LED | GPIO 6 | series resistor, 330 Ω |
-| Blue LED | GPIO 7 | series resistor, 330 Ω; the state lamp, lit at every moment |
+| White LED (PASS) | GPIO 5 | anode to +5 V, cathode through 330 Ω; **the pin sinks, so LOW lights it** |
+| Red LED (RETAKE) | GPIO 6 | the same |
+| Blue LED (state) | GPIO 7 | the same; lit on every screen the other two do not cover |
 | OLED SDA | GPIO 8 | I2C, address 0x3C |
 | OLED SCL | GPIO 9 | I2C |
 | Turbidity SDA | GPIO 8 | same bus, address 0x49 |
 | Turbidity SCL | GPIO 9 | same bus |
 
-Each LED needs its own resistor. Three 1 kΩ resistors in parallel make 333 Ω, which is close enough and
-saves buying anything if the parts box already has a bag of 1 kΩ.
+Each LED needs its own resistor, and **the resistor sits on the cathode side, between the lamp and the
+pin**. From 3.3 V a 2 V LED has 1.3 V of headroom, so 330 Ω leaves under 4 mA - too dim to read across a
+bench - while the same resistor on the 5 V rail gives about 9 mA. The pin sinks that current and never
+sees the rail, because the LED is between the two. HIGH is therefore dark and LOW is lit, which is the
+opposite of the obvious wiring; check it before wondering why nothing lights.
 
 ## The screen
 

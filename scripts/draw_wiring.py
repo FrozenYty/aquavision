@@ -272,10 +272,12 @@ term(BX + BW - 0.10, B_Y, "GND side", side="right", size=8.0)
 
 # ------------------------------------------------------------------ LEDs
 LED1_Y, LED2_Y, LED3_Y = 6.95, 6.35, 5.75
-for y, name, key in (
-    (LED1_Y, "green LED", "led1"),
-    (LED2_Y, "yellow LED", "led2"),
-    (LED3_Y, "blue LED  (state)", "led3"),
+# The lamp colour is the fill of its symbol and the word on its row; the wire colour stays the pin's, so
+# that red here cannot be confused with the red 5 V rail running past on the right.
+for y, name, key, lamp in (
+    (LED1_Y, "white LED  (PASS)", "led1", "#FFFFFF"),
+    (LED2_Y, "red LED  (RETAKE)", "led2", "#CC2222"),
+    (LED3_Y, "blue LED  (state)", "led3", "#1B62C8"),
 ):
     ax.add_patch(
         FancyBboxPatch(
@@ -293,9 +295,7 @@ for y, name, key in (
     ax.text(BX + 1.75, y, "330 Ω", ha="center", va="center", fontsize=7.8, zorder=5)
     ax.plot([BX + 2.25, BX + 2.75], [y, y], color=C[key], linewidth=2.6, zorder=3)
     ax.add_patch(
-        plt.Circle(
-            (BX + 2.95, y), 0.10, facecolor="white", edgecolor=C[key], linewidth=1.6, zorder=5
-        )
+        plt.Circle((BX + 2.95, y), 0.10, facecolor=lamp, edgecolor=C[key], linewidth=1.6, zorder=5)
     )
     ax.text(BX + 2.95, y - 0.27, "LED", ha="center", va="center", fontsize=6.2, zorder=5)
     ax.add_patch(plt.Circle((BX + 0.10, y), 0.045, color=C["box"], zorder=5))
@@ -306,7 +306,7 @@ for i, line in enumerate(
     [
         "1.  5 V rail with nothing on it: 5 V, not 12 V.",
         "2.  Power off, B0–VCCB ≈10 kΩ → no 4.7 kΩ.",
-        "3.  COM port, not native USB; register unknown.",
+        "3.  COM port, not native USB.",
     ]
 ):
     ax.text(9.20, 5.00 - i * 0.30, line, fontsize=7.7, color="#333333", va="center")
@@ -314,7 +314,7 @@ for i, line in enumerate(
 # ------------------------------------------------------------------ ground bus
 BUS_Y = 0.70
 ax.plot(
-    [0.95, 13.10], [BUS_Y, BUS_Y], color=C["gnd"], linewidth=4.2, zorder=3, solid_capstyle="round"
+    [0.95, 12.60], [BUS_Y, BUS_Y], color=C["gnd"], linewidth=4.2, zorder=3, solid_capstyle="round"
 )
 ax.text(
     6.8,
@@ -346,10 +346,12 @@ ground(SL, SHD_Y, 5.55)
 ground(TL, T_GND_Y, 8.30)
 ground(OL, O_GND_Y, 8.65)
 ground(BX + BW - 0.10, B_Y, 12.45)
-for y, key, xd in ((LED1_Y, "led1", 12.55), (LED2_Y, "led2", 12.75), (LED3_Y, "led3", 12.95)):
+# The lamps' anodes go to the 5 V rail and the pin sinks them, so the line on their right is a supply
+# rather than a return - the one place where the colour says the current runs the other way.
+for y, xd in ((LED1_Y, 12.75), (LED2_Y, 12.95), (LED3_Y, 13.15)):
     ax.plot([BX + 3.05, xd], [y, y], color=C[key], linewidth=2.0, zorder=3)
-    ax.plot([xd, xd], [y, BUS_Y], color=C[key], linewidth=2.0, zorder=3)
-    junction(xd, BUS_Y, "gnd")
+    ax.plot([xd, xd], [y, 1.05], color=C["5v"], linewidth=2.2, zorder=3)
+    junction(xd, 1.05, "5v")
 
 # ------------------------------------------------------------------ 3.3 V net
 L33 = 3.75
@@ -387,9 +389,9 @@ wire([(EX + EW, PINY["7"]), (LL3, PINY["7"]), (LL3, LED3_Y), (BX + 0.10, LED3_Y)
 
 # ------------------------------------------------------------------ 5 V
 L5 = 3.30
-wire(
-    [(MX + MW, M5_Y), (L5, M5_Y), (L5, 1.05), (8.60, 1.05), (8.60, VCCB_Y), (SR, VCCB_Y)], "5v", 2.6
-)
+wire([(MX + MW, M5_Y), (L5, M5_Y), (L5, 1.05), (13.25, 1.05)], "5v", 2.6)
+junction(8.60, 1.05, "5v")
+wire([(8.60, 1.05), (8.60, VCCB_Y), (SR, VCCB_Y)], "5v", 2.6)
 junction(8.60, VCCB_Y, "5v")
 wire([(8.60, VCCB_Y), (TL, T_VCC_Y)], "5v", 2.6)
 ax.text(
