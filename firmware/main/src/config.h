@@ -47,6 +47,9 @@ constexpr uint32_t SPLASH_MS = 1500;
 
 // ---------------------------------------------------------------------------- identity
 
-constexpr char FIRMWARE_VERSION[] = "1.1";
+//: Bumped whenever the wire protocol or what the panel and lamps do changes, because `EVT HELLO` is how a
+//: host knows which build is on the board - a feature added without a bump is a feature nobody can
+//: confirm is running. 1.2 added the blue state lamp on GPIO7.
+constexpr char FIRMWARE_VERSION[] = "1.2";
 
 }  // namespace cfg
