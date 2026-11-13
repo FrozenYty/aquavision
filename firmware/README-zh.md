@@ -111,6 +111,7 @@ y 55..62  TURB 12400                                  FRAMES 12
 | → PC | `EVT SCREEN <name> <score>` | 一次屏幕变化：READY、CAPTURING、PASS、RETAKE、OFFLINE。采集超时先发 `EVT TIMEOUT`，紧接这一条 |
 | → PC | `EVT TRIGGER <millis>` | 按键被按下，一次采集开始了 |
 | → PC | `EVT TURBIDITY <value>` | 每 5 s 一次的新读数 |
+| → PC | `EVT TREG <cmd> <value>` | 按需读取浊度传感器的某一个寄存器；不应答时为 `-1` |
 | → PC | `EVT TIMEOUT <millis>` | 5 s 内没有等到判定；屏幕切到 RETAKE，随后发 `EVT SCREEN RETAKE -1` |
 | → PC | `EVT STRAY RESULT <score>` | 没有在途采集却来了判定；该判定**没有**被采用 |
 | → PC | `EVT INVARIANT <screen> <link>` | 不该存在的屏幕/链路组合；线上永远不该出现 |
@@ -119,6 +120,7 @@ y 55..62  TURB 12400                                  FRAMES 12
 | PC → | `CMD READY` | 回到空闲屏幕 |
 | PC → | `CMD PING` | 存活检查 |
 | PC → | `CMD SCAN` | 重新扫描 I2C 总线，报出每个应答的地址 |
+| PC → | `CMD TREAD <hex>` | 读取浊度传感器的一个寄存器。厂商手册只给了读时序、没给命令字表，`config.h` 里那个字节就是这样扫出来的 |
 
 `REASON` 是一个 token：`LOW_LIGHT`、`BLUR`、`COLOR_CAST`、`NONE`、`UNKNOWN` 或 `NO_REPLY`。
 `NO_REPLY` 由装置自己生成，永远不会发给装置；`UNKNOWN` 是服务端在没有任何子分数能指出原因时发的

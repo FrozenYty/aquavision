@@ -34,6 +34,12 @@ constexpr int PIN_I2C_SCL = 9;
 
 constexpr uint8_t OLED_ADDR = 0x3C;
 constexpr uint8_t TURBIDITY_ADDR = 0x49;
+//: The vendor manual specifies the *shape* of a register read - START, address+W, ACK, CMD, ACK, repeated
+//: START, address+R, ACK, data, STOP - and states the address (`7'b100_1001`, which is 0x49), but publishes
+//: **no table of CMD values**. So this byte is a bench finding rather than a quotation, and it is the one
+//: number in this file that a different batch of the same sensor could invalidate. If the reading is ever a
+//: constant 0 or 65535 again, sweep this value before suspecting the wiring.
+constexpr uint8_t TURBIDITY_CMD = 0x00;
 
 // ---------------------------------------------------------------------------- timing
 
@@ -62,7 +68,9 @@ constexpr uint32_t SPLASH_MS = 1500;
 //: host knows which build is on the board - a feature added without a bump is a feature nobody can
 //: confirm is running. 1.2 added the blue state lamp on GPIO7; 1.3 moved the lamps to the 5 V rail with
 //: the pin switching the low side, which inverted what HIGH means for all three; 1.4 made the lamps follow
-//: the screen instead of pulsing for 300 ms, so the two verdict lamps are steady while their verdict is shown.
-constexpr char FIRMWARE_VERSION[] = "1.4";
+//: the screen instead of pulsing for 300 ms, so the two verdict lamps are steady while their verdict is shown;
+//: 1.5 made the turbidity read address a register instead of reading whatever the pointer happened to hold;
+//: 1.6 added `CMD TREAD`, which is how that register's command byte was found and how it stays findable.
+constexpr char FIRMWARE_VERSION[] = "1.6";
 
 }  // namespace cfg

@@ -35,15 +35,9 @@ bool lastButtonLevel = HIGH;
 
 //: The measurement itself. Returns -1 when the sensor does not answer, which the screen shows as
 //: "--" rather than as a zero — a plausible wrong number is worse than a visible gap.
-int readTurbidity() {
-  Wire.requestFrom(cfg::TURBIDITY_ADDR, static_cast<uint8_t>(2));
-  if (Wire.available() < 2) {
-    return -1;
-  }
-  const int high = Wire.read();
-  const int low = Wire.read();
-  return (high << 8) | low;
-}
+//: The bus sequence lives in `protocol::readRegister` so that the bench sweep and this call cannot drift
+//: apart - a second copy of a repeated-START read is a bug waiting for a quiet afternoon.
+int readTurbidity() { return protocol::readRegister(cfg::TURBIDITY_CMD); }
 
 void serviceButton(uint32_t now) {
   const bool level = digitalRead(cfg::PIN_BUTTON);

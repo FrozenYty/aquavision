@@ -69,6 +69,13 @@ void handleLine(rig::State& state, char* text) {
     // Rescan on demand. The boot scan is the only other look at the bus, and it happens before anyone has
     // had a chance to move a wire: without this, every wiring change costs a power cycle to test.
     protocol::emitI2CScan();
+  } else if (strcmp(command, "TREAD") == 0) {
+    // `CMD TREAD 00` - read one register and report it. Bench-only, and the reason it exists is that the
+    // sensor's manual gives the shape of a read but not the command byte to put in it.
+    char* argument = strtok_r(nullptr, " ", &cursor);
+    if (argument != nullptr) {
+      protocol::emitRegisterRead(static_cast<uint8_t>(strtol(argument, nullptr, 16)));
+    }
   } else if (strcmp(command, "RESULT") == 0) {
     if (handleResult(state, &cursor)) {
       protocol::emitScreen(state);
@@ -147,6 +154,27 @@ void emitInvariant(rig::Screen screen, rig::Link link) {
 void emitTrigger(uint32_t millisNow) { Serial.printf("EVT TRIGGER %lu\n", (unsigned long)millisNow); }
 
 void emitTurbidity(int value) { Serial.printf("EVT TURBIDITY %d\n", value); }
+
+int readRegister(uint8_t command) {
+  Wire.beginTransmission(cfg::TURBIDITY_ADDR);
+  Wire.write(command);
+  // `false` ends the transmission with a repeated START rather than a STOP, which is the sequence the manual
+  // draws: without it the sensor's pointer does not survive into the read that follows.
+  if (Wire.endTransmission(false) != 0) {
+    return -1;
+  }
+  Wire.requestFrom(cfg::TURBIDITY_ADDR, static_cast<uint8_t>(2));
+  if (Wire.available() < 2) {
+    return -1;
+  }
+  const int high = Wire.read();
+  const int low = Wire.read();
+  return (high << 8) | low;
+}
+
+void emitRegisterRead(uint8_t command) {
+  Serial.printf("EVT TREG %02X %d\n", command, readRegister(command));
+}
 
 void emitPong() { Serial.println("EVT PONG"); }
 
