@@ -221,6 +221,24 @@
   finished rig needs no cable to the PC, over BLE, because the site's network is a campus one that an ESP32
   cannot join). Both carry their own "done when", so neither can be closed on a feeling.
 
+- **A white surface at 20 mm changed nothing.** The manual calibrates at `L=20mm` against a white board
+  (14000 typical), so the working distance looked like the explanation for a part that ignored air, water and
+  a hand alike. Twelve implemented registers, the same paper at the documented distance, **byte for byte
+  identical**. The distance theory is closed with it.
+- **The manual has no command table, and that is now a reading rather than a suspicion.** Its timing and
+  protocol sections are figures, not text: they were extracted from the PDF and read. One is generic I2C bit
+  timing (`tSU;STO`, `tHD;STA`), the other names its fields plainly - `Device (Slave) Address (7bits)`,
+  `Register Address N (8bits)` - and gives no value for N. So the sweep was the only way to learn the map,
+  and no further sweep will produce a command byte the document never had.
+- **The manual did settle the direction I had guessed wrong.** Page 4: clear liquid reads **maximum**, and
+  the value falls as turbidity rises. My "a reflective sensor must read higher with more particles" was
+  wrong; the procurement document's sentence was right. Corrected in `P3-37` so the raw-to-relative mapping
+  cannot be built on the wrong polarity.
+- **A claim was made before it was true, and the user paid for it.** The message said a sampler had been
+  started; no job had been launched, so the white paper was placed in front of a measurement that was not
+  running. The re-run took two seconds. Saying "running" is a claim like any other, and this one was not
+  checked.
+
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict
