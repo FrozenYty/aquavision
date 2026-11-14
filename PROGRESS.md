@@ -239,6 +239,23 @@
   running. The re-run took two seconds. Saying "running" is a claim like any other, and this one was not
   checked.
 
+- **The transport seam is in, and the wire did not move.** `protocol.cpp` no longer names `Serial`: every one
+  of its sixteen touch points goes through `transport::`, which `transport.cpp` implements on the UART today
+  and a Bluetooth service will implement later. The check that matters is that nothing observable changed -
+  `EVT HELLO`, `EVT SCREEN READY`, `EVT PONG` and both `EVT I2C` addresses are byte-for-byte what they were,
+  which is the only acceptance this step can have. `P3-38`'s first step is done; the radio is now a file.
+- **The I2C layer is not trustworthy, and that reframes the whole turbidity hunt.** Three separate readings
+  now disagree with themselves: `0x14` failed to answer three times in twenty consecutive reads; register
+  `0x64` reads `0xDF` at 100 kHz and `0x00` at 10 kHz; and the periodic turbidity read reported `65280`
+  before and **`512` after the same firmware was flashed at a different clock**. A value that changes with
+  the clock and sometimes does not arrive at all is a physical-layer symptom, not a register-map one.
+- **What that means for the conclusion drawn earlier:** "the measurement is not in the visible register map"
+  was read from a bus that drops answers. It may still be true, but it is no longer **proven**, and the
+  register hunt stops here until the wiring is fixed. The named defect is unchanged and specific: the BSS138
+  shifter needs a pull-up on each side, and the 3.3 V side has only the ESP32's internal ~45 kOhm.
+- **`I2C_CLOCK_HZ` is a config constant rather than a literal**, so the next measurement of this kind costs an
+  edit instead of a search.
+
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict

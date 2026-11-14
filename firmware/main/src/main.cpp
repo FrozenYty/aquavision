@@ -15,6 +15,7 @@
 #include <Wire.h>
 
 #include "config.h"
+#include "transport.h"
 #include "protocol.h"
 #include "rig_state.h"
 #include "screen.h"
@@ -193,7 +194,7 @@ void setup() {
   // for the loop or for the splash to finish before saying so.
   digitalWrite(cfg::PIN_LED_STATE, LOW);
 
-  Serial.begin(cfg::SERIAL_BAUD);
+  transport::begin();
 
   Wire.begin(cfg::PIN_I2C_SDA, cfg::PIN_I2C_SCL);
   Wire.setClock(cfg::I2C_CLOCK_HZ);

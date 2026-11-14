@@ -2,6 +2,8 @@
 
 #include "protocol.h"
 
+#include "transport.h"
+
 #include <Arduino.h>
 #include <cstdlib>
 #include <cstring>
@@ -104,8 +106,8 @@ namespace protocol {
 bool poll(rig::State& state) {
   sawCommand = false;
 
-  while (Serial.available() > 0) {
-    const char c = static_cast<char>(Serial.read());
+  while (transport::available() > 0) {
+    const char c = static_cast<char>(transport::readByte());
     if (c == '\n' || c == '\r') {
       if (length > 0) {
         line[length] = '\0';
@@ -144,30 +146,30 @@ void emitI2CScan() {
   for (uint8_t address = 1; address < 127; ++address) {
     Wire.beginTransmission(address);
     if (Wire.endTransmission() == 0) {
-      Serial.printf("EVT I2C %02X\n", address);
+      transport::printf("EVT I2C %02X\n", address);
     }
   }
 }
 
 void emitScreen(const rig::State& state) {
-  Serial.printf("EVT SCREEN %s %d\n", screenName(state.screen), state.score);
+  transport::printf("EVT SCREEN %s %d\n", screenName(state.screen), state.score);
 }
 
-void emitHello() { Serial.printf("EVT HELLO %s\n", cfg::FIRMWARE_VERSION); }
+void emitHello() { transport::printf("EVT HELLO %s\n", cfg::FIRMWARE_VERSION); }
 
 void emitTimeout(uint32_t millisNow) {
-  Serial.printf("EVT TIMEOUT %lu\n", (unsigned long)millisNow);
+  transport::printf("EVT TIMEOUT %lu\n", (unsigned long)millisNow);
 }
 
-void emitStrayResult(int score) { Serial.printf("EVT STRAY RESULT %d\n", score); }
+void emitStrayResult(int score) { transport::printf("EVT STRAY RESULT %d\n", score); }
 
 void emitInvariant(rig::Screen screen, rig::Link link) {
-  Serial.printf("EVT INVARIANT %s %s\n", screenName(screen), rig::linkName(link));
+  transport::printf("EVT INVARIANT %s %s\n", screenName(screen), rig::linkName(link));
 }
 
-void emitTrigger(uint32_t millisNow) { Serial.printf("EVT TRIGGER %lu\n", (unsigned long)millisNow); }
+void emitTrigger(uint32_t millisNow) { transport::printf("EVT TRIGGER %lu\n", (unsigned long)millisNow); }
 
-void emitTurbidity(int value) { Serial.printf("EVT TURBIDITY %d\n", value); }
+void emitTurbidity(int value) { transport::printf("EVT TURBIDITY %d\n", value); }
 
 int readRegister(uint8_t command) {
   Wire.beginTransmission(cfg::TURBIDITY_ADDR);
@@ -192,7 +194,7 @@ int readRegister(uint8_t command) {
 }
 
 void emitRegisterRead(uint8_t command) {
-  Serial.printf("EVT TREG %02X %d\n", command, readRegister(command));
+  transport::printf("EVT TREG %02X %d\n", command, readRegister(command));
 }
 
 void emitRegisterWrite(uint8_t command, uint8_t value) {
@@ -200,7 +202,7 @@ void emitRegisterWrite(uint8_t command, uint8_t value) {
   Wire.write(command);
   Wire.write(value);
   const uint8_t ack = Wire.endTransmission(true);
-  Serial.printf("EVT TWRITE %02X %02X ack=%u\n", command, value, ack);
+  transport::printf("EVT TWRITE %02X %02X ack=%u\n", command, value, ack);
 }
 
 void emitRegisterDump(uint8_t command, uint8_t count) {
@@ -208,13 +210,14 @@ void emitRegisterDump(uint8_t command, uint8_t count) {
   Wire.write(command);
   const uint8_t ack = Wire.endTransmission(true);
   const uint8_t got = static_cast<uint8_t>(Wire.requestFrom(cfg::TURBIDITY_ADDR, count));
-  Serial.printf("EVT TDUMP %02X ack=%u n=%u", command, ack, got);
+  transport::printf("EVT TDUMP %02X ack=%u n=%u", command, ack, got);
   for (uint8_t i = 0; i < got && Wire.available() > 0; i += 1) {
-    Serial.printf(" %02X", static_cast<uint8_t>(Wire.read()));
+    transport::printf(" %02X", static_cast<uint8_t>(Wire.read()));
   }
-  Serial.println();
+  transport::newline();
 }
 
-void emitPong() { Serial.println("EVT PONG"); }
+void emitPong() { transport::printf("EVT PONG");
+  transport::newline(); }
 
 }  // namespace protocol

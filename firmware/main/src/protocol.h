@@ -17,7 +17,7 @@ namespace protocol {
 //: Returns true if a command arrived, which is what keeps the link watchdog alive.
 bool poll(rig::State& state);
 
-//: Outgoing events. Each writes one line to `Serial`.
+//: Outgoing events. Each writes one line to the transport, whichever wire that is.
 void emitHello();
 // Reports every address that answers on the I2C bus, one EVT line each.
 void emitI2CScan();
