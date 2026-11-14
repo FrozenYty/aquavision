@@ -296,6 +296,20 @@
   nowhere near the 10 mA the datasheet calls for, and driving no emitter. VCC at the pin, or the current in
   series, separates the two in thirty seconds.
 
+- **`0x70` is latched, not live, and the last test settles it.** A white surface at the 2 cm the manual
+  calibrates at, held for ten seconds inside a 150-second watch, moved nothing: `00 00` in every sample. Yet
+  that same register has held **three** values across boots - 1280, 2560, and 0 - so it is written at start-up
+  and never again. A measurement that only updates when the board is reset is not a measurement.
+- **Everything the readable map can tell us has now been asked.** Full sweep on a corrupt bus and again on a
+  clean one; writes to six zero slots; 10 kHz and 100 kHz; eight, four and two byte reads; a STOP-then-START
+  sequence; hand, white paper, dark corner, air and water. The map answers and does not move. **The turbidity
+  question is now the vendor's**, and the letter to `karen@e-light.com.cn` carries a much stronger case than
+  it would have yesterday, because the bus it was measured on is provably clean.
+- **This does not block the project, and the SRS already said so.** "When the sensor is absent the field is
+  left empty, and it is excluded from statistics rather than estimated" is the specified behaviour for a sensor
+  that cannot be read, and it is exactly the state this one is in. The rig computes, shows `--` on the panel
+  and reports nothing, which is honest, rather than reporting a register that only updates on boot.
+
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict
