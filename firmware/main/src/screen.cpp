@@ -32,16 +32,9 @@ constexpr int HINT_BASELINE = 25;     // the free band above the banner
 constexpr int RULE_BOTTOM = 54;
 constexpr int FOOTER_BASELINE = 62;
 
-// Horizontal bands. The footer is two fixed columns so a five-digit turbidity reading cannot walk into
-// the frame counter: the largest value the sensor produces is 16000, so five digits is the normal case,
-// not an edge case.
+// Horizontal bands. The footer carries one right-aligned column, the frame counter.
 constexpr int MARGIN = 4;
 constexpr int RIGHT_EDGE = 128 - MARGIN;
-// The footer keeps one gutter width in both columns: label, six pixels, value. The turbidity value is
-// left-aligned after that gutter rather than right-aligned to a column edge, because a right-aligned
-// value leaves a two-pixel gap after a five-digit reading and a wide one after a three-digit reading -
-// two different gaps in the same row.
-constexpr int FOOTER_VALUE_LEFT = 34;  // 4 + "TURB" (24) + 6
 constexpr int FRAMES_EDGE = RIGHT_EDGE; // the frame counter is right-aligned as one string
 
 }  // namespace layout
@@ -150,17 +143,6 @@ const char* reasonWords(rig::Reason reason) {
 
 void drawFooter(U8G2& display, const rig::State& state) {
   display.setFont(u8g2_font_5x7_tf);
-
-  display.drawStr(MARGIN, FOOTER_BASELINE, "TURB");
-  if (state.turbidity < 0) {
-    // Five dashes, not two: the reading is four or five digits wide, so the placeholder occupies the
-    // same stretch as the number will and the row does not jump when data arrives.
-    display.drawStr(FOOTER_VALUE_LEFT, FOOTER_BASELINE, "-----");
-  } else {
-    char value[8];
-    snprintf(value, sizeof(value), "%d", state.turbidity);
-    display.drawStr(FOOTER_VALUE_LEFT, FOOTER_BASELINE, value);
-  }
 
   char frames[16];
   snprintf(frames, sizeof(frames), "FRAMES %d", state.frames);

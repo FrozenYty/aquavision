@@ -16,6 +16,7 @@ drawing is reproducible, and a wire that moves is a change to this file and to t
 from __future__ import annotations
 
 import argparse
+import io
 from pathlib import Path
 
 import matplotlib
@@ -38,6 +39,7 @@ C = {
     "led1": "#7A7A7A",
     "led2": "#4A4A4A",
     "led3": "#1565C0",
+    "bar": "#8D6E63",
     "box": "#2B2B2B",
     "unused": "#C4C4C4",
 }
@@ -132,8 +134,7 @@ ax.text(0.5, 11.55, "AquaVision rig — wiring", fontsize=17, fontweight="bold",
 ax.text(
     0.5,
     11.20,
-    "ESP32-S3-N16R8   ·   MB-102 (7–12 V in)   ·   HW-221 8-channel level shifter   ·   "
-    "ME2100A-IIC turbidity 0x49   ·   SSD1306 OLED 0x3C",
+    "ESP32-S3-N16R8   ·   MB-102 (7–12 V in)   ·   SSD1306 OLED 0x3C   ·   10-LED bar on GPIO 10–18 and 21",
     fontsize=8.6,
     color="#444444",
     va="center",
@@ -163,9 +164,28 @@ PINS = [
     "11",
     "12",
     "13",
+    "14",
 ]
-TOP, STEP = 10.30, 0.29
-USED = {"3V3": "3v3", "4": "btn", "5": "led1", "6": "led2", "7": "led3", "8": "sda", "9": "scl"}
+TOP, STEP = 10.30, 0.28
+USED = {
+    "3V3": "3v3",
+    "4": "btn",
+    "5": "led1",
+    "6": "led2",
+    "7": "led3",
+    "8": "sda",
+    "9": "scl",
+    "10": "bar",
+    "11": "bar",
+    "12": "bar",
+    "13": "bar",
+    "14": "bar",
+    "15": "bar",
+    "16": "bar",
+    "17": "bar",
+    "18": "bar",
+    "21": "bar",
+}
 PINY = {}
 for i, name in enumerate(PINS):
     y = TOP - i * STEP
@@ -183,20 +203,36 @@ for i, name in enumerate(PINS):
         ax.text(EX + 0.31, y, name, fontsize=8.2, color=C["unused"], va="center", zorder=5)
 ax.text(
     EX + EW / 2,
-    4.95,
-    "bottom pins by the USB ports",
+    3.66,
+    "pins by the USB ports",
     fontsize=6.9,
     color="#777777",
     ha="center",
     va="center",
 )
-EGND_Y, E5V_Y = 4.55, 4.25
+EGND_Y, E5V_Y, E21_Y = 4.22, 3.95, 4.55
 ax.add_patch(plt.Circle((EX + 0.20, EGND_Y), 0.045, color=C["gnd"], zorder=5))
 ax.text(
     EX + 0.31, EGND_Y, "GND", fontsize=9.4, fontweight="bold", color=C["gnd"], va="center", zorder=5
 )
 ax.add_patch(plt.Circle((EX + 0.20, E5V_Y), 0.045, color=C["unused"], zorder=5))
 ax.text(EX + 0.31, E5V_Y, "5V", fontsize=8.2, color=C["unused"], va="center", zorder=5)
+# GPIO 21 is the bar's last lamp and it is **not** in the left column: it sits on the right header, beside
+# the USB pair, so it is drawn with these rows instead of in the order above.
+ax.add_patch(plt.Circle((EX + 0.20, E21_Y), 0.045, color=C["bar"], zorder=5))
+ax.text(
+    EX + 0.31, E21_Y, "21", fontsize=9.4, fontweight="bold", color=C["bar"], va="center", zorder=5
+)
+ax.text(
+    EX + 0.55,
+    E21_Y,
+    "right header",
+    fontsize=6.6,
+    color="#777777",
+    va="center",
+    zorder=5,
+)
+ax.plot([EX + 1.65, EX + EW], [E21_Y, E21_Y], color=C["bar"], linewidth=1.0, zorder=3)
 
 # ------------------------------------------------------------------ MB-102
 MX, MW = 0.4, 2.5
@@ -216,31 +252,73 @@ M5_Y, MG_Y = 2.85, 2.15
 term(MX + MW - 0.10, M5_Y, "5V", side="right")
 term(MX + MW - 0.10, MG_Y, "GND", side="right")
 
-# ------------------------------------------------------------------ shifter
-SX, SW = 5.90, 2.00
-SY, SH = 1.60, 2.20
-box(SX, SY, SW, SH, "HW-221", "8 channels, 2 used")
-SL, SR = SX + 0.10, SX + SW - 0.10
-VCCA_Y, A0_Y, A1_Y, SHD_Y = 3.40, 2.80, 2.40, 1.90
-VCCB_Y, B0_Y, B1_Y = 3.40, 2.80, 2.40
-term(SL, VCCA_Y, "VCCA", size=8.2)
-term(SL, A0_Y, "A0", size=8.2)
-term(SL, A1_Y, "A1", size=8.2)
-term(SL, SHD_Y, "GND", size=8.2)
-term(SR, VCCB_Y, "VCCB", side="right", size=8.2)
-term(SR, B0_Y, "B0", side="right", size=8.2)
-term(SR, B1_Y, "B1", side="right", size=8.2)
-
-# ------------------------------------------------------------------ sensor
-TX, TW = 8.90, 3.50
-TY, TH = 1.60, 2.20
-box(TX, TY, TW, TH, "Turbidity ME2100A-IIC", "5 V part · address 0x49")
-TL = TX + 0.10
-T_VCC_Y, T_SDA_Y, T_SCL_Y, T_GND_Y = 3.40, 2.80, 2.40, 1.90
-term(TL, T_VCC_Y, "VCC", size=8.2)
-term(TL, T_SDA_Y, "SDA", size=8.2)
-term(TL, T_SCL_Y, "SCL", size=8.2)
-term(TL, T_GND_Y, "GND", size=8.2)
+# ------------------------------------------------------------------ LED bar
+# Ten single LEDs on GPIO 10-18 and 21. Wired exactly like the three lamps below: anode on the 5 V
+# rail through its own 330 Ohm, cathode on its own pin, so the pin sinks the current and LOW lights it.
+# Level 1 is GPIO 10 and level 10 is GPIO 21; the lamps are yellow for levels 1-7 and white for 8-10,
+# which is the split the parts on hand support - see `config.h`.
+BAR_PINS = [str(number) for number in [*range(10, 19), 21]]
+BAR_COLOURS = ["#F2C200"] * 7 + ["#FFFFFF"] * 3
+BARX, BARW = 8.90, 3.50
+BARY, BARH = 1.55, 2.55
+box(
+    BARX,
+    BARY,
+    BARW,
+    BARH,
+    "LED bar — GPIO 10-18, 21",
+    "yellow 1-7, white 8-10 · 5 V → 330 Ω → anode",
+)
+BAR_X0, BAR_Y, BAR_R = 9.30, 2.55, 0.085
+BAR_DX = (12.30 - BAR_X0) / (len(BAR_PINS) - 1)
+BAR_RAIL_Y = 3.20
+bar_x = [BAR_X0 + index * BAR_DX for index in range(len(BAR_PINS))]
+wire([(BARX, BAR_RAIL_Y), (12.35, BAR_RAIL_Y)], "5v", 2.2)
+for index, (pin, x) in enumerate(zip(BAR_PINS, bar_x, strict=True)):
+    ax.plot([x, x], [BAR_RAIL_Y, BAR_Y + BAR_R], color=C["5v"], linewidth=1.8, zorder=3)
+    ax.add_patch(
+        plt.Circle(
+            (x, BAR_Y),
+            BAR_R,
+            facecolor=BAR_COLOURS[index],
+            edgecolor=C["bar"],
+            linewidth=1.3,
+            zorder=5,
+        )
+    )
+    ax.text(x, BAR_Y - 0.28, pin, ha="center", va="center", fontsize=6.4, zorder=5)
+ax.text(
+    BARX + BARW / 2,
+    BARY + 0.22,
+    "level 1 (left)  →  10 (right)",
+    fontsize=6.6,
+    color="#666666",
+    ha="center",
+    va="center",
+    zorder=5,
+)
+# The ten pins leave as one ribbon: a stub from each pin to a bus beside the header, then a single line to
+# the bar. Ten separate wires across the I2C lanes would be ten crossings and one lie - a ribbon cable is
+# what a person actually plugs in, and the last lamp joins it from the right header.
+BAR_BUS = 3.62
+for pin in BAR_PINS:
+    y = E21_Y if pin == "21" else PINY[pin]
+    ax.plot([EX + EW, BAR_BUS], [y, y], color=C["bar"], linewidth=2.0, zorder=3)
+    junction(BAR_BUS, y, "bar")
+ax.plot([BAR_BUS, BAR_BUS], [4.30, PINY["15"]], color=C["bar"], linewidth=3.2, zorder=3)
+wire([(BAR_BUS, 4.30), (8.75, 4.30), (8.75, 3.85), (BARX, 3.85)], "bar", 3.0)
+ax.text(
+    7.20,
+    4.60,
+    "10 wires",
+    fontsize=7.4,
+    color=C["bar"],
+    ha="center",
+    va="center",
+    fontweight="bold",
+    zorder=7,
+    bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor=C["bar"], linewidth=0.6),
+)
 
 # ------------------------------------------------------------------ OLED
 OX, OW = 8.90, 3.50
@@ -305,8 +383,7 @@ ax.text(9.20, 5.35, "Before the first power-on", fontsize=10.0, fontweight="bold
 for i, line in enumerate(
     [
         "1.  5 V rail with nothing on it: 5 V, not 12 V.",
-        "2.  Power off, B0–VCCB ≈10 kΩ → no 4.7 kΩ.",
-        "3.  COM port, not native USB.",
+        "2.  COM port, not native USB.",
     ]
 ):
     ax.text(9.20, 5.00 - i * 0.30, line, fontsize=7.7, color="#333333", va="center")
@@ -342,9 +419,7 @@ def ground(x_from, y_from, x_bus):
 
 ground(3.05, EGND_Y, 3.20)
 ground(MX + MW - 0.10, MG_Y, 2.80)
-ground(SL, SHD_Y, 5.55)
-ground(TL, T_GND_Y, 8.30)
-ground(OL, O_GND_Y, 8.65)
+ground(OL, O_GND_Y, 12.55)
 ground(BX + BW - 0.10, B_Y, 12.45)
 # The lamps' anodes go to the 5 V rail and the pin sinks them, so the line on their right is a supply
 # rather than a return - the one place where the colour says the current runs the other way.
@@ -355,27 +430,29 @@ for y, xd in ((LED1_Y, 12.75), (LED2_Y, 12.95), (LED3_Y, 13.15)):
 
 # ------------------------------------------------------------------ 3.3 V net
 L33 = 3.75
-wire([(EX + EW, PINY["3V3"]), (L33, PINY["3V3"])], "3v3")
-junction(L33, PINY["3V3"], "3v3")
-wire([(L33, PINY["3V3"]), (L33, VCCA_Y), (SL, VCCA_Y)], "3v3")
-wire([(L33, PINY["3V3"]), (OL, O_VCC_Y)], "3v3")
-lane_label(L33, 6.80, "3.3 V", "3v3")
+wire([(EX + EW, PINY["3V3"]), (L33, PINY["3V3"]), (L33, O_VCC_Y), (OL, O_VCC_Y)], "3v3")
+ax.text(
+    5.60,
+    O_VCC_Y + 0.14,
+    "3.3 V",
+    fontsize=7.8,
+    color=C["3v3"],
+    ha="center",
+    va="center",
+    fontweight="bold",
+    zorder=7,
+    bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor=C["3v3"], linewidth=0.6),
+)
 
 # ------------------------------------------------------------------ SDA
 LS = 4.05
-wire([(EX + EW, PINY["8"]), (LS, PINY["8"])], "sda")
-junction(LS, PINY["8"], "sda")
-wire([(LS, PINY["8"]), (LS, A0_Y), (SL, A0_Y)], "sda")
-wire([(LS, PINY["8"]), (LS, O_SDA_Y), (OL, O_SDA_Y)], "sda")
-lane_label(LS, 5.30, "SDA", "sda")
+wire([(EX + EW, PINY["8"]), (LS, PINY["8"]), (LS, O_SDA_Y), (OL, O_SDA_Y)], "sda")
+lane_label(LS, 8.20, "SDA", "sda")
 
 # ------------------------------------------------------------------ SCL
 LC = 4.35
-wire([(EX + EW, PINY["9"]), (LC, PINY["9"])], "scl")
-junction(LC, PINY["9"], "scl")
-wire([(LC, PINY["9"]), (LC, A1_Y), (SL, A1_Y)], "scl")
-wire([(LC, PINY["9"]), (LC, O_SCL_Y), (OL, O_SCL_Y)], "scl")
-lane_label(LC, 4.85, "SCL", "scl")
+wire([(EX + EW, PINY["9"]), (LC, PINY["9"]), (LC, O_SCL_Y), (OL, O_SCL_Y)], "scl")
+lane_label(LC, 7.60, "SCL", "scl")
 
 # ------------------------------------------------------------------ button / LEDs
 LB = 4.65
@@ -390,10 +467,9 @@ wire([(EX + EW, PINY["7"]), (LL3, PINY["7"]), (LL3, LED3_Y), (BX + 0.10, LED3_Y)
 # ------------------------------------------------------------------ 5 V
 L5 = 3.30
 wire([(MX + MW, M5_Y), (L5, M5_Y), (L5, 1.05), (13.25, 1.05)], "5v", 2.6)
-junction(8.60, 1.05, "5v")
-wire([(8.60, 1.05), (8.60, VCCB_Y), (SR, VCCB_Y)], "5v", 2.6)
-junction(8.60, VCCB_Y, "5v")
-wire([(8.60, VCCB_Y), (TL, T_VCC_Y)], "5v", 2.6)
+# The bar's rail: every anode comes off it through its own 330 Ohm inside the box.
+junction(8.55, 1.05, "5v")
+wire([(8.55, 1.05), (8.55, BAR_RAIL_Y), (BARX, BAR_RAIL_Y)], "5v", 2.6)
 ax.text(
     6.05,
     1.32,
@@ -406,13 +482,9 @@ ax.text(
     zorder=7,
     bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor=C["5v"], linewidth=0.6),
 )
-# shifter high side to the sensor
-wire([(SR, B0_Y), (TL, T_SDA_Y)], "sda")
-wire([(SR, B1_Y), (TL, T_SCL_Y)], "scl")
-
 # ------------------------------------------------------------------ legend
 LX, LYW = 13.45, 2.10
-LY, LH = 5.55, 5.05
+LY, LH = 4.90, 5.70
 ax.add_patch(
     FancyBboxPatch(
         (LX, LY),
@@ -445,6 +517,7 @@ rows = [
     ("led1", "GPIO5"),
     ("led2", "GPIO6"),
     ("led3", "GPIO7"),
+    ("bar", "GPIO10-18, 21"),
 ]
 for i, (key, name) in enumerate(rows):
     y = LY + LH - 0.70 - i * 0.46
@@ -457,8 +530,13 @@ def main() -> int:
     parser.add_argument("--png", action="store_true", help="also write a PNG beside the SVG")
     args = parser.parse_args()
 
+    # Written through `io` and as bytes rather than straight to the path so the file keeps LF endings.
+    # Matplotlib opens the target in text mode, which on Windows writes CRLF; `.gitattributes` stores this
+    # file as `eol=lf`, so a direct save shows every line as changed and leaves a line-ending warning.
     svg = DOCS / "rig-wiring.svg"
-    fig.savefig(svg, facecolor="white", bbox_inches="tight")
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format="svg", facecolor="white", bbox_inches="tight")
+    svg.write_bytes(buffer.getvalue().replace(b"\r\n", b"\n"))
     print(f"wrote {svg.relative_to(svg.parent.parent)}")
     if args.png:
         png = DOCS / "rig-wiring.png"

@@ -90,7 +90,7 @@ Keep it in `web/static/mock/fixtures.js`, shaped like `api-contract`:
 { frame_id: "20261105T193012-0042", session_id: "s-a3-007",
   captured_at: "2026-11-05T19:30:12+08:00",
   quality: { sharpness: 78, brightness: 91, colorcast: 85, score: 86, verdict: "ok" },
-  env: { turbidity_rel: 12 }, width: 1920, height: 1080 }
+  width: 1920, height: 1080 }
 
 { class_code: "holothurian", confidence: 0.87, x: 0.41, y: 0.52, w: 0.12, h: 0.09 }
 ```

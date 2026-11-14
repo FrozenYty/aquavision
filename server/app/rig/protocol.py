@@ -14,8 +14,8 @@ from typing import Final
 from app.vision.quality import Quality
 
 EVENT_PREFIX: Final = "EVT "
-#: The prefix of a register-read report. Copied by `scripts/test_turbidity.py`, which may not import this
-#: module; `tests/test_rig_scan.py` holds the copy to this line.
+#: The prefix of a register-read report. The tool that copied it, `scripts/test_turbidity.py`, was removed
+#: with the turbidity sensor on 11-14, so nothing on this side holds a copy of this line any more.
 REGISTER_READ_PREFIX: Final = "EVT TREG "
 COMMAND_PREFIX: Final = "CMD "
 

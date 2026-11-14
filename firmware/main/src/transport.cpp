@@ -14,8 +14,8 @@ namespace transport {
 
 namespace {
 
-//: Enough for the longest event this firmware emits (a six-byte register dump is about 45 characters) with
-//: room to spare, because a truncated line would be a protocol error rather than a display glitch.
+//: Enough for the longest event this firmware emits - an `EVT INVARIANT` line at 29 bytes - with room to
+//: spare, because a truncated line would be a protocol error rather than a display glitch.
 constexpr size_t BUFFER_SIZE = 96;
 
 }  // namespace

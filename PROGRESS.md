@@ -1,3 +1,46 @@
+## 2026-11-14
+
+- **The turbidity sensor is gone, and this time the decision is final.** A full sweep of all 256 register
+  addresses, on the bus that removing the shifter had just proven clean, found only configuration registers
+  and **not one of them changed value in response to light** - hand, white paper at 2 cm, a dark corner, air
+  and water all read the same - while the vendor states the part has no register map and published none.
+  `P3-37` is closed by the removal rather than by a measurement; `EVT TURBIDITY`, `CMD TREAD` and `CMD TDUMP`
+  left the firmware with the sensor in 1.12, and so did the two probe scripts whose only job was to keep the
+  hunt repeatable.
+- **What replaced it is ten lamps on GPIO 10-18 and 21 - the score bar.** One dot sweeping out and back on
+  `READY`, a bar filling one lamp at a time on `CAPTURING`, the score as a level on `PASS`/`RETAKE` (one
+  lamp per ten percent; yellow up to 70, white for the top band), all ten dark on `OFFLINE`. Wired exactly
+  like the three lamps - 5 V rail, its own 330 Ω, cathode on the pin, so `LOW` lights it. **The pins are not
+  contiguous because 19 and 20 are the USB pair**, so `config.h` declares an explicit `PIN_BAR` array and
+  the last lamp leaves from the right header.
+- **Removing the BSS138 shifter took the bus from seventeen-of-twenty reads answering to twenty-of-twenty.**
+  The shifter was not protecting the bus, it was corrupting it: the same twenty reads of the same register
+  answered seventeen times with it in circuit and twenty times without it, and that is what the sensor's last
+  weeks were spent measuring - a device that answered most of the time.
+- **An I2C device with no supply still acknowledges its address.** The sensor answered `0x49` through a whole
+  session in which its emitter was dark, because an unpowered part is phantom-powered through the bus
+  pull-ups and its own protection diodes: enough to acknowledge, nowhere near enough to measure. So **"the
+  scan found it" never proved it was powered**, and an address in a scan is not evidence that the part can do
+  anything. Only a reading that moves is.
+- **Both languages moved in the same commit, and the wiring picture was regenerated rather than edited.**
+  The sensor and the shifter left the SRS, the data model, the procurement list, the architecture diagrams,
+  the API contract, the prototype notes and the state machine together; section 5 of `procurement` now
+  carries ten bar rows and section 10 of the state machine carries what each screen's bar does.
+  `docs/rig-wiring.svg` was rewritten by `scripts/draw_wiring.py`, and the wiring test now holds the table,
+  the drawing and `config.h` to each other for the bar's ten pins as well.
+- **`EVT TURBIDITY` was `E7`, and removing it moved the two timers up one number.** `CMD SCAN` is still
+  `E10` - it was `E10` when it was added and it keeps that number - and the bar's own step is `E9`, because a
+  redraw in the wrong state is a visible defect and the event table is where that is written down.
+- **The bench scan tool now expects one address, not two.** `scripts/test_rig_link.py --scan` reports `3C`
+  as the OLED and anything else as a part this rig does not have, which is what a bus with one device on it
+  should say.
+- **`turbidity_rel` left the documents but not yet the database.** It is gone from the data model, the API
+  contract and the SRS field dictionary, and `server/app/models.py` still declares the column - **lane B's
+  to remove**, and until then `media_asset` may carry a field nothing writes.
+- **Named here so it is not mistaken for done:** `firmware/README.md` and `firmware/README-zh.md` still
+  describe the turbidity sensor, `EVT TURBIDITY`, `CMD TREAD` and a three-lamp panel with no bar. They
+  belong to the firmware lane and were left untouched on purpose.
+
 ## 2026-11-13
 
 - **The folder beside the repository was renamed, because it was named for the smaller half of what it

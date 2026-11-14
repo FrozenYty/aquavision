@@ -25,7 +25,7 @@ AquaVision — underwater species detection and monitoring. A USB camera feeds a
 YOLOv8 detection, then human review; corrections flow back into training. Four classes: sea
 cucumber, sea urchin, scallop, starfish.
 
-One FastAPI process, a static frontend, and an ESP32 that only handles the trigger, the turbidity sensor and its panel.
+One FastAPI process, a static frontend, and an ESP32 that only handles the trigger and its panel.
 
 Phase and task state live in `PLAN.md`. Recent changes live in `PROGRESS.md`. Do not restate either
 one here — stale summaries are worse than none.

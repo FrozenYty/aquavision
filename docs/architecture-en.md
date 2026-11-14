@@ -20,7 +20,7 @@ Design goals, in order:
 ```mermaid
 flowchart LR
     CAM[USB camera] --> CAP[Capture service]
-    MCU[ESP32: trigger, sensors, display] -. serial .-> CAP
+    MCU[ESP32: trigger and panel] -. serial .-> CAP
     CAP --> Q[Quality scoring]
     Q --> DB[(PostgreSQL)]
     Q --> FS[(Local files)]
@@ -114,8 +114,7 @@ smooth instead of degrading to 3 fps.
 ```mermaid
 flowchart TD
     A[Trigger: button or schedule] --> B[Grab frame, lock exposure]
-    B --> C[Read sensor: turbidity]
-    C --> D[Quality score: sharpness, brightness, colour cast]
+    B --> D[Quality score: sharpness, brightness, colour cast]
     D -->|score ≥ 60| E[Persist frame + metadata]
     D -->|score < 60| F[Persist, mark as retake, skip detection]
     E --> G[Detection queue]

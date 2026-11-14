@@ -107,7 +107,6 @@ Append only; never updated or deleted in place (archival is an export).
 | `quality_score` | SMALLINT | DEFAULT 0 | Quality score 0–100 |
 | `quality_flag` | SMALLINT | DEFAULT 0 | 0 ok, 1 needs retake |
 | `is_retake` | SMALLINT | DEFAULT 0 | Is a retaken frame |
-| `turbidity_rel` | SMALLINT | NULL | Turbidity 0-100, 0 = clear; NULL without sensor |
 | `created_at` | TIMESTAMP | DEFAULT now() | Ingestion time |
 
 ### 3.4 detect_task

@@ -24,9 +24,9 @@ int available();
 //: One byte, or -1 when there is none.
 int readByte();
 
-//: Formats like `printf` and puts the bytes on the wire. Fragments are fine: the register dump emits a line
-//: in four calls, and the wire is a byte stream either way. Lines are short by design - the longest thing
-//: this firmware emits is eight bytes of dump.
+//: Formats like `printf` and puts the bytes on the wire. Fragments are fine: `EVT PONG` goes out as two calls,
+//: and the wire is a byte stream either way. Lines are short by design - the longest thing this firmware emits
+//: is an `EVT INVARIANT` line, 29 bytes, and the longest routine one is `EVT SCREEN` at 24.
 void printf(const char* format, ...);
 
 //: Ends the current line. Bytes, not a newline convention: `Serial.println` writes `\r\n` and the PC end

@@ -44,9 +44,9 @@ is nobody to talk to.
 | E4 | A well-formed `CMD RESULT` (score and verdict present) | PC |
 | E5 | A `CMD` line the firmware does not act on (unknown verb, or missing arguments) | PC |
 | E6 | Ten seconds of silence | link timer |
-| E7 | Turbidity reading (every 5 s) | sensor |
-| E8 | Heartbeat tick (1 s) | timer |
-| E9 | Spinner tick (250 ms) | timer |
+| E7 | Heartbeat tick (1 s) | timer |
+| E8 | Spinner tick (250 ms) | timer |
+| E9 | Bar step (150 ms sweeping, 80 ms filling) | timer |
 | E10 | `CMD SCAN` | PC |
 
 Only a line that starts with `CMD` and names an action counts as the PC being alive. A line that is not a
@@ -89,16 +89,17 @@ the link timer instead of where the PC actually spoke.
 Rows are the five reachable composites. `-` means the state does not change; **rejected** means it does
 not change *and* the event is reported.
 
-| Composite \ Event | E1 button | E2 PING | E3 READY | E4 RESULT | E5 unknown | E6 silence | E7 turbidity | E8 heartbeat | E9 spinner |
+| Composite \ Event | E1 button | E2 PING | E3 READY | E4 RESULT | E5 unknown | E6 silence | E7 heartbeat | E8 spinner | E9 bar |
 |---|---|---|---|---|---|---|---|---|---|
-| Ready + Alive | Capturing | Ready | Ready | **rejected** | Ready | Offline | Ready | Ready | `-` |
+| Ready + Alive | Capturing | Ready | Ready | **rejected** | Ready | Offline | Ready | `-` | Ready |
 | Capturing + Alive | **ignored** | Capturing | Ready | Pass / Retake | Capturing | Offline | Capturing | Capturing | Capturing |
-| Pass + Alive | Capturing | Pass | Ready | **rejected** | Pass | Offline | Pass | Pass | `-` |
-| Retake + Alive | Capturing | Retake | Ready | **rejected** | Retake | Offline | Retake | Retake | `-` |
+| Pass + Alive | Capturing | Pass | Ready | **rejected** | Pass | Offline | Pass | `-` | `-` |
+| Retake + Alive | Capturing | Retake | Ready | **rejected** | Retake | Offline | Retake | `-` | `-` |
 | Offline + Gone | `-` | Ready | Ready | rejected, then Ready | Ready | `-` | `-` | `-` | `-` |
 
 E7, E8 and E9 never change the screen; they redraw it. They are in the table because a redraw in the
-wrong state is itself a visible defect - the spinner must not advance on a result screen.
+wrong state is itself a visible defect - the spinner must not advance on a result screen, and the bar's
+level must not move once a verdict is on it.
 
 ## 6. The rules and why
 
@@ -211,7 +212,7 @@ new message had to be invented for the rig to learn.
 The keepalive obligation of §6 is discharged here: every two seconds, from `OPEN`, for as long as the
 port is held.
 
-## 10. The lamps
+## 10. The lamps and the LED bar
 
 Three lamps, and **one of them is lit at every moment** - a dark panel must not be able to mean either
 "idle" or "dead". Two of them answer the last verdict - **white for `Pass`, red for `Retake`** - and the
@@ -248,6 +249,39 @@ as well as hue.
 
 **What the lamps must never do is leave the panel dark.** Between them they cover every screen - green or
 yellow for a verdict, blue for idle, in flight and disconnected - so no lamp at all can only mean no power.
+
+**The bar is ten lamps on GPIO 10-18 and 21, and it is the panel's second view of the score.** Its wiring is
+the lamps' wiring repeated ten times: each anode on the 5 V rail through its own 330 Ohm, each cathode on
+its own pin, so **LOW lights a bar lamp and HIGH puts it out**. The pins are not contiguous because 19 and
+20 are the USB pair, which is why the last lamp leaves on the other header. It is what replaced the turbidity
+sensor, which was removed on 11-14 because no register of it tracked the water (P3-37).
+
+| Screen | bar |
+|---|---|
+| `Ready` | one dot, walking out to the last lamp and back, 150 ms per step |
+| `Capturing` | a bar filling 1, 2, ... 10 and starting over, 80 ms per lamp |
+| `Pass` | the score as a level, one lamp per ten percent |
+| `Retake` | the same, from that verdict's score |
+| `Offline` | all dark |
+
+**Levels 1 to 7 are yellow and 8 to 10 white - the top band, 80 and above.** White is the brightest thing
+available at 9 mA. Red was dropped because the red lamps on the bench are a different height, and a row of
+mismatched lamps reads as damage rather than as design; blue is absent because it belongs to the state lamp,
+so a blue segment would be read as "idle". **Pass and fail are not in this row either**: they stay with the
+two verdict lamps, which answer a question the bar does not.
+
+**A score below zero lights all ten rather than none.** No verdict at all is not a score of nought, and a
+dark bar would be reporting a number nobody measured.
+
+**The bar is the one part of the panel allowed to go dark, and the rule above survives it.** `Offline` is
+the single screen where the blue lamp is already saying that nobody is talking to the rig, so ten dark lamps
+beside a fast-blinking lamp read as a panel that is alive with nothing to show, not as a panel without
+power. That is also why the never-all-dark invariant belongs to the three lamps: a bar that dimmed its own
+level would lose the one thing it is there for.
+
+**Ten steps is a display, not a measurement.** The score is on the screen as digits; the bar is what a
+person reads from across the room, where digits are not legible, and one lamp per ten percent is the
+resolution that distance supports. Nothing reads the bar back, and no level of it is an acceptance number.
 
 The blue lamp is lit from the first millisecond of `setup()`, before the splash, because proving that the
 board has power is its first job: nothing lit at all points at the supply, not at the firmware.

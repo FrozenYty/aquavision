@@ -14,9 +14,9 @@ is silent, and finding out which is the first question every other check depends
 Exit codes: 0 the question was answered, 1 it was not, or the port could not be opened.
 
 With `--scan` the tool instead asks the board to walk its I2C bus (`CMD SCAN`) and reports every address
-that answered, against the two this rig is built to have. That is the check `P3-17` names, and it is the
-only way to see the bus without a serial terminal. The firmware has no completion marker for a scan, so
-the tool waits a fixed window and says how long it waited rather than pretending the list is complete.
+that answered, against the one this rig is built to have, the OLED. That is the check `P3-17` names, and it
+is the only way to see the bus without a serial terminal. The firmware has no completion marker for a scan,
+so the tool waits a fixed window and says how long it waited rather than pretending the list is complete.
 
 With `--answer` the tool stands in for the server and answers a button press, which is the only way to test
 the two verdict lamps on their own: the firmware pulses a lamp when `CMD RESULT` arrives, and it **refuses**
@@ -50,8 +50,8 @@ TRIGGER = "EVT TRIGGER"
 #: What `--answer` sends, in turn, so that both lamps can be seen in one run. The scores and the reason
 #: token are the ones `app.rig.protocol` writes; they are copied here for the reason above.
 VERDICTS = (b"CMD RESULT 95 PASS NONE\n", b"CMD RESULT 40 RETAKE LOW_LIGHT\n")
-#: The two devices this rig is built to have on the bus, from `firmware/main/src/config.h`.
-EXPECTED = {"3C": "OLED", "49": "turbidity sensor"}
+#: The one device this rig is built to have on the bus, from `firmware/main/src/config.h`.
+EXPECTED = {"3C": "OLED"}
 BAUD = 115200
 KEEPALIVE_SECONDS = 2.0
 DEFAULT_SECONDS = 5.0
@@ -61,8 +61,9 @@ READ_TIMEOUT_SECONDS = 0.2
 def scan_addresses(lines: list[str]) -> dict[str, str]:
     """The addresses a scan reported, in the order they arrived.
 
-    The firmware prints `EVT I2C %02X`, so the value keeps its upper-case hex spelling - `49` and not
-    `0x49`, because that is what the person reading the terminal will match against the datasheet.
+    The firmware prints `EVT I2C %02X`, so the value keeps the upper-case hex spelling it arrived in -
+    `3C` and not `0x3c` - because that is what the person reading the terminal will match against the
+    module's silkscreen.
     """
     found: dict[str, str] = {}
     for line in lines:

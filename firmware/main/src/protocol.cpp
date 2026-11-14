@@ -71,27 +71,6 @@ void handleLine(rig::State& state, char* text) {
     // Rescan on demand. The boot scan is the only other look at the bus, and it happens before anyone has
     // had a chance to move a wire: without this, every wiring change costs a power cycle to test.
     protocol::emitI2CScan();
-  } else if (strcmp(command, "TREAD") == 0) {
-    // `CMD TREAD 00` - read one register and report it. Bench-only, and the reason it exists is that the
-    // sensor's manual gives the shape of a read but not the command byte to put in it.
-    char* argument = strtok_r(nullptr, " ", &cursor);
-    if (argument != nullptr) {
-      protocol::emitRegisterRead(static_cast<uint8_t>(strtol(argument, nullptr, 16)));
-    }
-  } else if (strcmp(command, "TDUMP") == 0) {
-    char* argument = strtok_r(nullptr, " ", &cursor);
-    if (argument != nullptr) {
-      char* length = strtok_r(nullptr, " ", &cursor);
-      const uint8_t count = (length == nullptr) ? 8 : static_cast<uint8_t>(atoi(length));
-      protocol::emitRegisterDump(static_cast<uint8_t>(strtol(argument, nullptr, 16)), count);
-    }
-  } else if (strcmp(command, "TWRITE") == 0) {
-    char* address = strtok_r(nullptr, " ", &cursor);
-    char* value = strtok_r(nullptr, " ", &cursor);
-    if (address != nullptr && value != nullptr) {
-      protocol::emitRegisterWrite(static_cast<uint8_t>(strtol(address, nullptr, 16)),
-                                  static_cast<uint8_t>(strtol(value, nullptr, 16)));
-    }
   } else if (strcmp(command, "RESULT") == 0) {
     if (handleResult(state, &cursor)) {
       protocol::emitScreen(state);
@@ -168,54 +147,6 @@ void emitInvariant(rig::Screen screen, rig::Link link) {
 }
 
 void emitTrigger(uint32_t millisNow) { transport::printf("EVT TRIGGER %lu\n", (unsigned long)millisNow); }
-
-void emitTurbidity(int value) { transport::printf("EVT TURBIDITY %d\n", value); }
-
-int readRegister(uint8_t command) {
-  Wire.beginTransmission(cfg::TURBIDITY_ADDR);
-  Wire.write(command);
-  // The manual is explicit about this: "note there is one STOP and two STARTs" - the command write is closed
-  // with a **STOP** and the read begins with a fresh START. `false` here (a repeated START, no STOP) is the
-  // more common idiom and it is what this firmware did first; the sensor answered that with a status byte
-  // (`0xFF`) instead of a measurement.
-  if (Wire.endTransmission(true) != 0) {
-    return -1;
-  }
-  // The STOP closes the command write, so the sensor is free to go and fetch what it was asked for; without
-  // this pause the read that follows can catch it before the register is ready.
-  delay(20);
-  Wire.requestFrom(cfg::TURBIDITY_ADDR, static_cast<uint8_t>(2));
-  if (Wire.available() < 2) {
-    return -1;
-  }
-  const int high = Wire.read();
-  const int low = Wire.read();
-  return (high << 8) | low;
-}
-
-void emitRegisterRead(uint8_t command) {
-  transport::printf("EVT TREG %02X %d\n", command, readRegister(command));
-}
-
-void emitRegisterWrite(uint8_t command, uint8_t value) {
-  Wire.beginTransmission(cfg::TURBIDITY_ADDR);
-  Wire.write(command);
-  Wire.write(value);
-  const uint8_t ack = Wire.endTransmission(true);
-  transport::printf("EVT TWRITE %02X %02X ack=%u\n", command, value, ack);
-}
-
-void emitRegisterDump(uint8_t command, uint8_t count) {
-  Wire.beginTransmission(cfg::TURBIDITY_ADDR);
-  Wire.write(command);
-  const uint8_t ack = Wire.endTransmission(true);
-  const uint8_t got = static_cast<uint8_t>(Wire.requestFrom(cfg::TURBIDITY_ADDR, count));
-  transport::printf("EVT TDUMP %02X ack=%u n=%u", command, ack, got);
-  for (uint8_t i = 0; i < got && Wire.available() > 0; i += 1) {
-    transport::printf(" %02X", static_cast<uint8_t>(Wire.read()));
-  }
-  transport::newline();
-}
 
 void emitPong() { transport::printf("EVT PONG");
   transport::newline(); }

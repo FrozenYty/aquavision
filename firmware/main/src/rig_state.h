@@ -40,11 +40,6 @@ struct State {
   Screen screen = Screen::Ready;  // `setup()` starts Alive; a fresh rig is waiting, not broken
   int score = -1;      // -1 means no verdict yet; the screen leaves the number out
   Reason reason = Reason::None;
-  int turbidity = -1;   // -1 means no reading yet; the screen shows "--"
-  // No trend field. The screen used to draw a triangle for rising, falling and steady, decided by an
-  // absolute threshold of two counts on a reading that spans 700-16000 - two counts is noise at that
-  // scale, so the mark flickered. A trend worth showing has to be relative, and until there is a reason
-  // for one, the reading itself is the honest display.
   int frames = 0;       // accepted or judged, this session
   Link link = Link::Alive;
   bool heartbeatOn = true;
@@ -57,11 +52,6 @@ struct State {
   bool pcAlive() const { return link == Link::Alive; }
 
   void markDirty() { dirty = true; }
-
-  void noteTurbidity(int value) {
-    turbidity = value;
-    markDirty();
-  }
 };
 
 //: The three facts that separate a working rig from a lying one. Of the ten screen/link combinations

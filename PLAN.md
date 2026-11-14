@@ -475,21 +475,26 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         rather than a count; the contract table, both contract documents and `/api/health`'s
         `contract_routes` moved together, 42 to 44, and that field is now tied to the table by a test
 - [ ] **P3-17** Rig assembly and its optical numbers · @FrozenYty · split out of `P1-06` on 11-11 ·
-      the parts still owed: resistors for the two LEDs, the button (not arrived), the turbidity sensor's
-      level shifter, and **5 V for the sensor**. A 12 V adapter with a buck module was procured 11-11
-      and replaces the earlier dead end - the board has no 5 V output - but it is untested until the
-      bench session
+      the parts still owed: three more 330 Ω resistors - the bar took the count to thirteen and ten
+      arrived - the button (not arrived), and **5 V for the LED side**. A 12 V adapter with a buck module
+      was procured 11-11 and replaces the earlier dead end - the board has no 5 V output - but it is
+      untested until the bench session
       - **power settled 11-13, against the boards that actually arrived: one 12 V adapter into the MB-102
-        with one rail jumper on 5 V and the other on OFF, feeding only the 5 V side** - sensor VCC and
-        shifter VCCB. The controller stays on its USB cable, which is also the serial link, and its own
-        `3V3` pin feeds the shifter's VCCA and the OLED, so there is one 5 V domain, one 3.3 V domain and
+        with one rail jumper on 5 V and the other on OFF, feeding only the 5 V side** - the LED anodes.
+        The controller stays on its USB cable, which is also the serial link, and its own
+        `3V3` pin feeds the OLED, so there is one 5 V domain, one 3.3 V domain and
         one ground. The buck module bought on 11-11 is a spare rather than the plan. The module carries its
         own 5 V regulator, so the pass-through risk is smaller than feared, but the rail still gets measured
         before anything is plugged into it
       - the board is an **ESP32-S3-N16R8**: 8 MB of octal PSRAM takes **GPIO33 to GPIO37**, none of which
         this project uses, and the serial link comes from the **COM** USB-C port because the firmware sends
         `Serial` to UART0 (`ARDUINO_USB_CDC_ON_BOOT=0`)
-      - the BSS138 level shifter runs VCCA 3V3, VCCB 5 V, A0 to B0 on GPIO8/SDA, A1 to B1 on GPIO9/SCL
+      - **the BSS138 level shifter was removed on 11-14**: with it in circuit 3 of 20 register reads
+        failed, without it 20 of 20 answered, so the bus runs straight from GPIO8/9 to the OLED and nothing
+        on it is a 5 V part
+      - **the score bar replaced the sensor on 11-14**: ten lamps on GPIO 10-18 and 21, wired like the
+        three lamps - 5 V rail, 330 Ω each, cathode on the pin, `LOW` lit. `config.h` carries the pin
+        order, the two colours and the two step times
       - **a third lamp, added 11-13: blue on GPIO7**, covering every screen the two verdict lamps do not, so
         a completely dark panel now means no power. Without it, `Ready`, `Capturing` and `Offline` had no lamp
         at all and a healthy idle rig looked exactly like a dead one. Blue is steady when idle, blinks slowly
@@ -501,9 +506,10 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         machine all moved together, and **the firmware compiles** under the pinned toolchain
       - done when `python scripts/test_rig.py` reports the three numbers the design fixed - left/right
         brightness ratio >= 0.7, a 5 cm target >= 45 px at 640 input, no flicker - and
-        `python scripts/test_rig_link.py --port COM<n> --scan` finds `49` with the sensor powered and
-        `3C` for the OLED. **The scan tool was added 11-13**: until then `CMD SCAN` existed in the
-        firmware and nothing on the PC could send it, so that half of the acceptance had no way to run
+        `python scripts/test_rig_link.py --port COM<n> --scan` finds `3C` for the OLED. **The scan tool
+        was added 11-13**: until then `CMD SCAN` existed in the
+        firmware and nothing on the PC could send it, so that half of the acceptance had no way to run.
+        It expected `49` beside `3C` until 11-14, when the sensor left and the expectation went with it
       - **optical half measured 11-13, ahead of assembly**: on the camera alone, 2 minutes, no rig
         lamp - brightness ratio 0.809 (floor 0.70) and frame-to-frame drift 2.2 % (ceiling 5 %) pass;
         the 5 cm target reads 0 px because it is not in the water yet. The official numbers still
@@ -661,27 +667,21 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       edits in between, and every item traceable to the task that closed it · **checked by @IkeaFyj**, not the
       lane owner (§5.3)
 
-- [ ] **P3-37** The turbidity sensor either measures or says it cannot · @FrozenYty · the rig's third
-      sensor, and the only one whose register map the vendor never published · done when a command byte is
-      known whose value moves with the water (clear, then a few drops of milk) and the firmware reads it as
-      the measurement - **or** the vendor supplies the register table and it is implemented - and in either
-      case no document still calls the register "unverified"
-      - **what 11-13/14 established:** a full sweep of `0x00`-`0xFF` found implemented registers at `0x14`,
-        `0x15`, `0x4B`, `0x60`-`0x62`, `0x64`, `0x65` and `0x70`-`0x73`, everything else answering `0xFFFF`.
-        The device therefore answers; the original constant zero was the firmware reading a register that
-        does not exist, and the read timing (`STOP` then `START`, which the manual states explicitly) is now
-        correct
-      - **the unresolved defect:** every answer is one meaningful byte followed by zeros, and every one of
-        those first bytes was **identical with the probe in air and against a full tank**. Sixteen bits are
-        needed for the documented 1-16000 range, so the second byte is not being read - and a device that
-        releases the bus floats to `0xFF`, not to `0x00`, which points at the level shifter's A-side
-        pull-up as much as at the protocol
-      - remaining experiments: write a control value into the registers that read zero (`CMD TWRITE`), read
-        one byte rather than two, drop the I2C clock, and measure the pull-ups with a meter. Then ask the
-        vendor, with the evidence above, rather than sweeping further
-      - **lane B owns two things here**: `turbidity_rel` means "0 clear, 100 most turbid" while the sensor
-        reads high for clear water, so the mapping's sign is a decision for the data model's owner; and
-        `server/app/rig/service.py` currently logs `EVT TURBIDITY` and discards the value
+- [x] **P3-37** The turbidity sensor either measures or says it cannot · @FrozenYty · **closed 11-14 by
+      removing the sensor**, because it could not measure and could not say anything else: a full sweep of
+      all 256 register addresses, on a bus that removing the BSS138 shifter had just taken from 17-of-20
+      reads answering to 20-of-20, found only configuration registers, and **not one of them changed value
+      in response to light** - hand, white paper at 2 cm, a dark corner, air and water all read the same -
+      while the vendor states the part has no register map and published none. What replaced it is the panel
+      feature it never was: **ten lamps on GPIO 10-18 and 21**, wired like the three lamps (5 V rail, 330 Ω
+      each, cathode on the pin, `LOW` lit), showing the score as a level, one dot sweeping on `Ready` and a
+      filling bar on `Capturing` (`config.h`, `docs/rig-state-machine-en.md` §10).
+      - `EVT TURBIDITY`, `CMD TREAD` and `CMD TDUMP` left the firmware with the sensor in 1.12, along with
+        the two probe scripts (`scripts/test_turbidity.py`, `tests/test_turbidity_probe.py`), and both
+        wiring and state-machine documents were rewritten rather than trimmed
+      - **lane B still owes one thing**: `turbidity_rel` is gone from the data model and the contract
+        documents but the column remains in `server/app/models.py`, so `media_asset` may now carry an
+        orphaned field that nothing writes
 - [ ] **P3-38** The finished rig needs no cable to the PC · @FrozenYty · the assembled rig must run from a
       power module with only the camera's wire on the desk · done when a verdict and its lamps reach the PC
       over BLE with the serial cable unplugged, the `rig-serial` build still exists and is documented as the

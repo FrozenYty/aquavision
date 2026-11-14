@@ -102,7 +102,6 @@
 | `quality_score` | SMALLINT | DEFAULT 0 | 质量总分 0–100 |
 | `quality_flag` | SMALLINT | DEFAULT 0 | 0 合格／1 需重拍 |
 | `is_retake` | SMALLINT | DEFAULT 0 | 是否为重拍帧 |
-| `turbidity_rel` | SMALLINT | NULL | 浊度相对值 0–100，0 为清澈；无传感器时为空 |
 | `created_at` | TIMESTAMP | DEFAULT now() | 入库时间 |
 
 ### 3.4 detect_task 识别任务表

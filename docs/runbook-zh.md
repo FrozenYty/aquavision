@@ -182,7 +182,7 @@ python -c "import sqlite3; [print(r) for r in sqlite3.connect('data/app.db').exe
 
 ## 11. 本手册不覆盖的部分
 
-- **硬件。** 接线、电平转换和光学指标在 `procurement-en.md` 与 `rig-state-machine-en.md` 里。
+- **硬件。** 接线和光学指标在 `procurement-en.md` 与 `rig-state-machine-en.md` 里。
 - **训练。** 见 `PLAN.md` 的 P4 与 `test-plan-en.md`。
 - **迁移机制**，因为它还不存在；等它存在了，第 7 节会缩成一条命令，这一段也会删掉。
 - **第二个应用进程。** 参数缓存是短 TTL 而不是写时失效，这对单进程是正确的，对多进程未经验证；

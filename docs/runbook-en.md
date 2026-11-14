@@ -212,7 +212,7 @@ are deployment decisions, and changing one means a restart on purpose.
 
 ## 11. What this runbook does not cover
 
-- **Hardware.** Wiring, the level shifter and the optical numbers are in `procurement-en.md` and
+- **Hardware.** Wiring and the optical numbers are in `procurement-en.md` and
   `rig-state-machine-en.md`.
 - **Training.** `PLAN.md` P4 and `test-plan-en.md`.
 - **The migration mechanism**, because it does not exist yet; when it does, section 7 shrinks to one

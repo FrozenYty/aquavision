@@ -125,7 +125,6 @@ the number of routes is a consequence, not a target.
   "captured_at": "2026-11-03T19:30:12.418+08:00",
   "quality": { "score": 66, "verdict": "ok" },
   "is_retake": false,
-  "env": { "turbidity_rel": 12 },
   "width": 1920, "height": 1080
 }
 ```

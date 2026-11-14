@@ -35,25 +35,7 @@ void emitStrayResult(int score);
 //: A screen/link combination that should be impossible. Never expected on the wire; if it appears, the
 //: state machine has a hole and the panel is showing something it should not.
 void emitInvariant(rig::Screen screen, rig::Link link);
-void emitTurbidity(int value);
 
-//: Reads two bytes from one register of the turbidity sensor and returns them big-endian, or -1 when the
-//: sensor does not answer. This is the only place the manual's read sequence is written down: it wants a
-//: *repeated* START between the command byte and the data, which is easy to get subtly wrong in a second copy.
-int readRegister(uint8_t command);
-//: Reports a register read as `EVT TREG <cmd> <value>`. The vendor manual publishes no table of command
-//: bytes, so the one this firmware uses was found by sweeping the address space - and this is how that stays
-//: repeatable instead of becoming folklore.
-void emitRegisterRead(uint8_t command);
-//: Reports a raw multi-byte read as `EVT TDUMP <cmd> ack=<n> n=<n> <b0> <b1> ...`.
-//: The reading was byte-identical in air and against a full tank, which says the two bytes this firmware was
-//: collecting are not the measurement - most likely they are a frame header. This command exists to show the
-//: whole frame instead of the first two bytes of it.
-void emitRegisterDump(uint8_t command, uint8_t count);
-//: Writes one byte to one register and reports `EVT TWRITE <cmd> <value> ack=<n>`. The registers that read
-//: back zero are the candidates for a control slot: writing to them is the last cheap way to find out whether
-//: this module needs a conversion started before it will report one.
-void emitRegisterWrite(uint8_t command, uint8_t value);
 void emitPong();
 
 }  // namespace protocol

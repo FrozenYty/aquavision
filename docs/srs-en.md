@@ -160,7 +160,7 @@ The system has three layers — capture, service and presentation — which exch
 
 #### 2.4.1 Layer responsibilities
 
-- **Capture layer**: USB camera, trigger board and turbidity sensor. Grabs raw frames, locks exposure and white balance, reports water parameters, and performs no inference.
+- **Capture layer**: USB camera and trigger board. Grabs raw frames, locks exposure and white balance, and performs no inference.
 - **Service layer**: capture service, detection service, job queue, file storage and PostgreSQL. Scores quality, stores frames, schedules detection, persists results and aggregates statistics.
 - **Presentation layer**: 13 browser pages. Capture control, result review, statistics and reports, model experiments.
 
@@ -168,7 +168,7 @@ The system has three layers — capture, service and presentation — which exch
 
 - ① **Open the camera**: on start-up, enumerate local video devices and take the first available one by default.
 - ② **Lock exposure**: read the current exposure, lock it, and fix white balance and gain. If locking fails, refuse to start capture.
-- ③ **Grab and read sensors**: take frames at the configured rate (1 frame/s by default), discard the first, read turbidity and report it with the frame.
+- ③ **Grab the frame**: take frames at the configured rate (1 frame/s by default) and discard the first.
 - ④ **Score quality**: weighted score over sharpness, brightness and colour cast; below 60 means retake.
 - ⑤ **Register**: store on disk as site/date/index, write the image row and generate the resource code.
 - ⑥ **Queue for detection**: passing frames enter the queue; failing frames are stored but not queued, and a retake is prompted.
@@ -181,7 +181,6 @@ The system has three layers — capture, service and presentation — which exch
 - **Frame rate**: 1 frame/s by default, adjustable from 0.2 to 5.
 - **Timestamp**: the server's receive time to the millisecond, stored alongside UTC.
 - **Idempotence**: the frame index is unique within a capture session; grabbing twice does not create a second record.
-- **Environment**: turbidity is reported per frame as a relative value (0 clear, 100 most turbid), sampled every 5 s; with no sensor the field stays empty and is excluded from statistics.
 - **Failure**: if the camera is unavailable the capture is marked failed with a prompt to check the device, and no empty record is written.
 
 ### 2.5 Environment and constraints
@@ -207,13 +206,13 @@ The system has three layers — capture, service and presentation — which exch
 |---|---|---|---|---|
 | 1 | USB camera | 1080P, adjustable focus, manual exposure, driver-free UVC | 1 | Image capture |
 | 2 | Fill light | Existing LED study lamp, 10 W, 4000 K, Ra90, no visible flicker, USB-powered | 1 | 45° fill from above; a DC supply carries no mains ripple and the honeycomb lens spreads the light evenly |
-| 3 | Controller board | ESP32-S3, USB serial | 1 | Accepts the trigger, reads the turbidity sensor, drives the status display and the status LEDs, reports over USB serial |
-| 4 | Turbidity sensor | ME2100A-IIC, I2C digital, reflective | 1 | Reads water turbidity, mounted against the outer wall |
+| 3 | Controller board | ESP32-S3, USB serial | 1 | Accepts the trigger, drives the status display, the status LEDs and the LED bar, reports over USB serial |
+| 4 | LED bar | Ten single LEDs on GPIO 10-18 and 21, 5 V through 330 Ω each, cathode to the pin, yellow then white | 1 | Shows the score as a level of 0-10 lit lamps, and one dot or a filling bar while idle and capturing |
 | 5 | Trigger button | Tactile switch | 1 | Triggers one capture by hand |
 | 6 | Demonstration tank | Ultra-clear glass tank 300×170×200 mm, 5 mm walls | 1 | Simulates an underwater scene; glass has no stress birefringence, which cross-polarisation needs |
 | 7 | Polarising sheet | Linear polariser 200×200 mm, cut into a lamp piece and a lens piece | 1 | Cross-polarisation removes reflections from the wall and the water |
 | 8 | Targets and scenery | Four to six real seafood items, dark stones and weed collected on site | 1 set | Objects to detect and distractors |
-| 9 | Status display | 0.96" OLED, 128×64 monochrome, I2C, address 0x3C | 1 | Shows link state, turbidity, quality score and verdict; no PC needed on site |
+| 9 | Status display | 0.96" OLED, 128×64 monochrome, I2C, address 0x3C | 1 | Shows link state, quality score and verdict; no PC needed on site |
 | 10 | Status LEDs | One white, one red and one blue LED, one 330 Ω resistor each | 3 | The white lamp is lit while PASS is shown, the red while RETAKE is, blue for every other screen; between them no screen is dark |
 
 #### 2.5.2 Development and operation constraints
@@ -228,7 +227,6 @@ The system has three layers — capture, service and presentation — which exch
 
 - The system runs on a single server with a GPU and no more than 10 concurrent detection jobs; load targets assume a small intranet.
 - Capture uses the local USB camera and depends on no network or external device; the demonstration is filmed through an ultra-clear glass tank.
-- Turbidity is reported automatically by the capture-end sensor as a 0-100 relative value every 5 s; with no sensor the field stays empty and is excluded from statistics rather than estimated.
 - The public DUO dataset (four classes — sea cucumber, sea urchin, scallop, starfish — over seven thousand images with an official split) is available for teaching; additional footage is shot by the group in the tank. The training set is at least 3000 images and the test set at least 500, split by near-duplicate frame groups so that no group spans both sides.
 - The supervisor holds a fixed weekly review and Q&A session, and allocates administrator accounts.
 
@@ -1081,7 +1079,6 @@ Field level, one field per row, with types and constraints usable directly for s
 | quality_score | SMALLINT | DEFAULT 0 | Total score 0-100 |
 | quality_flag | SMALLINT | DEFAULT 0 | 0 pass / 1 needs retake |
 | is_retake | SMALLINT | DEFAULT 0 | Whether this frame is a retake |
-| turbidity_rel | SMALLINT | NULL | Relative turbidity 0-100, 0 clear; from the capture sensor |
 | created_at | TIMESTAMP | DEFAULT now() | Registered at |
 
 #### 4.2.4 detect_task
