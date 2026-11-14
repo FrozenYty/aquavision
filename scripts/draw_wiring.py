@@ -2,7 +2,8 @@
 
 Not a mechanical drawing. Boxes are on a grid with gaps, so no net has to cross a box and no label lands on
 top of another; the ESP32's pin column keeps its real order so the reader can count down the header.
-Colour says which wire it is, and the label on the line says the same thing for a printout.
+Colour says which wire it is, and the label on the line says the same thing for a printout. A junction
+carries a dot and a crossing does not, which is the only convention the picture relies on.
 
     python scripts/draw_wiring.py            # writes docs/rig-wiring.svg
     python scripts/draw_wiring.py --png      # also writes docs/rig-wiring.png, which is not committed
@@ -23,7 +24,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.patches import FancyBboxPatch
+from matplotlib.patches import FancyBboxPatch, Rectangle
 
 W, H = 16.0, 12.0
 #: The diagram lives beside the document that describes the same wiring, so neither can be read alone.
@@ -31,15 +32,12 @@ DOCS = Path(__file__).resolve().parent.parent / "docs"
 
 C = {
     "3v3": "#D97A00",
-    "5v": "#C8102E",
-    "gnd": "#111111",
     "sda": "#B8860B",
     "scl": "#1F7A3D",
     "btn": "#6A1B9A",
-    "led1": "#7A7A7A",
-    "led2": "#4A4A4A",
-    "led3": "#1565C0",
-    "bar": "#8D6E63",
+    "seg": "#8D6E63",
+    "com": "#1565C0",
+    "gnd": "#111111",
     "box": "#2B2B2B",
     "unused": "#C4C4C4",
 }
@@ -113,20 +111,47 @@ def junction(x, y, key):
     ax.add_patch(plt.Circle((x, y), 0.055, color=C[key], zorder=6))
 
 
-def lane_label(x, y, text, key):
+def label(x, y, text, key=None, size=7.6):
     ax.text(
         x,
         y,
         text,
-        fontsize=7.8,
-        color=C[key],
-        rotation=90,
+        fontsize=size,
+        color=C[key] if key else "#333333",
         ha="center",
         va="center",
         fontweight="bold",
         zorder=7,
-        bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor=C[key], linewidth=0.6),
+        bbox=dict(
+            boxstyle="round,pad=0.15",
+            facecolor="white",
+            edgecolor=C[key] if key else "#999999",
+            linewidth=0.6,
+        ),
     )
+
+
+def digit(cx, cy, w=0.44, h=0.72):
+    """One seven-segment digit, drawn as the seven bars it is."""
+    left, right = cx - w / 2, cx + w / 2
+    top, bottom = cy + h / 2, cy - h / 2
+    for pts in (
+        [(left, top), (right, top)],  # A
+        [(right, top), (right, cy)],  # B
+        [(right, cy), (right, bottom)],  # C
+        [(left, bottom), (right, bottom)],  # D
+        [(left, cy), (left, bottom)],  # E
+        [(left, top), (left, cy)],  # F
+        [(left, cy), (right, cy)],  # G
+    ):
+        ax.plot(
+            [p[0] for p in pts],
+            [p[1] for p in pts],
+            color="#3A3A3A",
+            linewidth=2.6,
+            solid_capstyle="round",
+            zorder=5,
+        )
 
 
 # ------------------------------------------------------------------ title
@@ -134,15 +159,16 @@ ax.text(0.5, 11.55, "AquaVision rig — wiring", fontsize=17, fontweight="bold",
 ax.text(
     0.5,
     11.20,
-    "ESP32-S3-N16R8   ·   MB-102 (7–12 V in)   ·   SSD1306 OLED 0x3C   ·   10-LED bar on GPIO 10–18 and 21",
+    "ESP32-S3-N16R8   ·   SSD1306 OLED 0x3C   ·   four-digit display, common anode   ·   "
+    "every panel pin is a GPIO: no 5 V rail",
     fontsize=8.6,
     color="#444444",
     va="center",
 )
 
 # ------------------------------------------------------------------ ESP32
-EX, EW = 0.4, 3.1
-EY, EH = 3.55, 7.45
+EX, EW = 0.40, 3.10
+EY, EH = 3.40, 7.50
 box(EX, EY, EW, EH, "ESP32-S3-N16R8", "left header, names as printed")
 PINS = [
     "3V3",
@@ -166,25 +192,26 @@ PINS = [
     "13",
     "14",
 ]
-TOP, STEP = 10.30, 0.28
+TOP, STEP = 9.90, 0.28
+#: Every GPIO this rig wires, and which wire it is. The wiring test parses this table and holds it to
+#: `config.h`; the drawing itself reads the same entries, so a pin cannot be drawn that is not listed here.
+#: Segment A is GPIO 3 and B-G are 13-18; the four commons are 5, 6, 7 and 10, digit 1 first.
 USED = {
     "3V3": "3v3",
     "4": "btn",
-    "5": "led1",
-    "6": "led2",
-    "7": "led3",
+    "5": "com",
+    "6": "com",
+    "7": "com",
+    "10": "com",
+    "3": "seg",
+    "13": "seg",
+    "14": "seg",
+    "15": "seg",
+    "16": "seg",
+    "17": "seg",
+    "18": "seg",
     "8": "sda",
     "9": "scl",
-    "10": "bar",
-    "11": "bar",
-    "12": "bar",
-    "13": "bar",
-    "14": "bar",
-    "15": "bar",
-    "16": "bar",
-    "17": "bar",
-    "18": "bar",
-    "21": "bar",
 }
 PINY = {}
 for i, name in enumerate(PINS):
@@ -194,212 +221,169 @@ for i, name in enumerate(PINS):
         PINY[name] = y
         ax.add_patch(plt.Circle((EX + 0.20, y), 0.045, color=C[key], zorder=5))
         ax.text(
-            EX + 0.31, y, name, fontsize=9.4, fontweight="bold", color=C[key], va="center", zorder=5
+            EX + 0.31, y, name, fontsize=9.2, fontweight="bold", color=C[key], va="center", zorder=5
         )
         ax.plot([EX + 0.52, EX + EW], [y, y], color=C[key], linewidth=1.0, zorder=3)
-    elif key:
-        ax.text(EX + 0.31, y, name, fontsize=8.0, color=C["unused"], va="center", zorder=5)
     else:
-        ax.text(EX + 0.31, y, name, fontsize=8.2, color=C["unused"], va="center", zorder=5)
+        ax.text(EX + 0.31, y, name, fontsize=8.0, color=C["unused"], va="center", zorder=5)
 ax.text(
     EX + EW / 2,
-    3.66,
+    4.25,
     "pins by the USB ports",
     fontsize=6.9,
     color="#777777",
     ha="center",
     va="center",
 )
-EGND_Y, E5V_Y, E21_Y = 4.22, 3.95, 4.55
+EGND_Y = 3.80
 ax.add_patch(plt.Circle((EX + 0.20, EGND_Y), 0.045, color=C["gnd"], zorder=5))
 ax.text(
-    EX + 0.31, EGND_Y, "GND", fontsize=9.4, fontweight="bold", color=C["gnd"], va="center", zorder=5
+    EX + 0.31, EGND_Y, "GND", fontsize=9.2, fontweight="bold", color=C["gnd"], va="center", zorder=5
 )
-ax.add_patch(plt.Circle((EX + 0.20, E5V_Y), 0.045, color=C["unused"], zorder=5))
-ax.text(EX + 0.31, E5V_Y, "5V", fontsize=8.2, color=C["unused"], va="center", zorder=5)
-# GPIO 21 is the bar's last lamp and it is **not** in the left column: it sits on the right header, beside
-# the USB pair, so it is drawn with these rows instead of in the order above.
-ax.add_patch(plt.Circle((EX + 0.20, E21_Y), 0.045, color=C["bar"], zorder=5))
-ax.text(
-    EX + 0.31, E21_Y, "21", fontsize=9.4, fontweight="bold", color=C["bar"], va="center", zorder=5
-)
-ax.text(
-    EX + 0.55,
-    E21_Y,
-    "right header",
-    fontsize=6.6,
-    color="#777777",
-    va="center",
-    zorder=5,
-)
-ax.plot([EX + 1.65, EX + EW], [E21_Y, E21_Y], color=C["bar"], linewidth=1.0, zorder=3)
+ax.plot([EX + 0.52, EX + EW], [EGND_Y, EGND_Y], color=C["gnd"], linewidth=1.0, zorder=3)
 
-# ------------------------------------------------------------------ MB-102
-MX, MW = 0.4, 2.5
-MY, MH = 1.15, 2.15
-box(MX, MY, MW, MH, "MB-102", "12 V into the DC jack")
+# ------------------------------------------------------------------ lanes and ribbons
+# The panel leaves the header as two ribbons - seven segment wires and four common wires - and they hug the
+# header because the two pin groups are interleaved: a ribbon that started further right would be crossed by
+# every stub of the other one. The four single nets leave in their own lanes beyond them.
+SEG_BUS, COM_BUS = 3.62, 3.78
+L_BTN, L_3V3, L_SDA, L_SCL = 3.98, 4.18, 4.38, 4.58
+
+# ------------------------------------------------------------------ segment ribbon
+for pin in ("15", "16", "17", "18", "3", "13", "14"):
+    y = PINY[pin]
+    ax.plot([EX + EW, SEG_BUS], [y, y], color=C["seg"], linewidth=1.8, zorder=3)
+    junction(SEG_BUS, y, "seg")
+
+# ------------------------------------------------------------------ common ribbon
+# No resistor anywhere on this one: a common is the anode of its digit, and it carries the sum of that
+# digit's segment currents, so exactly one of the four may be high at a time.
+for pin in ("5", "6", "7", "10"):
+    y = PINY[pin]
+    ax.plot([EX + EW, COM_BUS], [y, y], color=C["com"], linewidth=1.8, zorder=3)
+    junction(COM_BUS, y, "com")
+wire([(COM_BUS, PINY["5"]), (COM_BUS, 8.10), (6.60, 8.10)], "com", 2.8)
+label(5.10, 8.32, "4 commons", "com", size=7.2)
+wire([(SEG_BUS, PINY["15"]), (SEG_BUS, 4.95), (6.60, 4.95)], "seg", 2.8)
+label(5.05, 4.72, "7 segments", "seg", size=7.2)
+
+# ------------------------------------------------------------------ 3.3 V net
+wire([(EX + EW, PINY["3V3"]), (L_3V3, PINY["3V3"]), (L_3V3, 10.65), (6.70, 10.65)], "3v3")
+label(5.80, 10.86, "3.3 V", "3v3")
+
+# ------------------------------------------------------------------ SDA and SCL
+wire([(EX + EW, PINY["8"]), (L_SDA, PINY["8"]), (L_SDA, 10.25), (6.70, 10.25)], "sda")
+label(5.80, 10.46, "SDA", "sda")
+wire([(EX + EW, PINY["9"]), (L_SCL, PINY["9"]), (L_SCL, 9.90), (6.70, 9.90)], "scl")
+label(5.80, 10.06, "SCL", "scl")
+
+# ------------------------------------------------------------------ button
+wire([(EX + EW, PINY["4"]), (L_BTN, PINY["4"]), (L_BTN, 3.40), (6.70, 3.40)], "btn")
+label(5.30, 3.62, "GPIO4", "btn", size=7.2)
+
+# ------------------------------------------------------------------ the display
+DX, DW = 6.60, 6.00
+DY, DH = 4.60, 4.30
+box(
+    DX,
+    DY,
+    DW,
+    DH,
+    "four-digit seven-segment display",
+    "common anode · 240 Ω per segment · the four commons are direct",
+)
+# Four digits, left to right, the order the firmware calls 1-4.
+for index in range(4):
+    cx = DX + 1.65 + index * 0.90
+    digit(cx, 7.25)
+    ax.text(cx, 6.70, str(index + 1), ha="center", va="center", fontsize=7.4, color="#555555")
 ax.text(
-    MX + MW / 2,
-    MY + 0.55,
-    "rail A jumper:  5 V\nrail B jumper:  OFF",
+    DX + DW / 2,
+    6.30,
+    "one common high at a time",
     ha="center",
     va="center",
-    fontsize=8.0,
-    color="#333333",
+    fontsize=6.8,
+    color="#666666",
     zorder=5,
 )
-M5_Y, MG_Y = 2.85, 2.15
-term(MX + MW - 0.10, M5_Y, "5V", side="right")
-term(MX + MW - 0.10, MG_Y, "GND", side="right")
-
-# ------------------------------------------------------------------ LED bar
-# Ten single LEDs on GPIO 10-18 and 21. Wired exactly like the three lamps below: anode on the 5 V
-# rail through its own 330 Ohm, cathode on its own pin, so the pin sinks the current and LOW lights it.
-# Level 1 is GPIO 10 and level 10 is GPIO 21; the lamps are yellow for levels 1-7 and white for 8-10,
-# which is the split the parts on hand support - see `config.h`.
-BAR_PINS = [str(number) for number in [*range(10, 19), 21]]
-BAR_COLOURS = ["#F2C200"] * 7 + ["#FFFFFF"] * 3
-BARX, BARW = 8.90, 3.50
-BARY, BARH = 1.55, 2.55
-box(
-    BARX,
-    BARY,
-    BARW,
-    BARH,
-    "LED bar — GPIO 10-18, 21",
-    "yellow 1-7, white 8-10 · 5 V → 330 Ω → anode",
-)
-BAR_X0, BAR_Y, BAR_R = 9.30, 2.55, 0.085
-BAR_DX = (12.30 - BAR_X0) / (len(BAR_PINS) - 1)
-BAR_RAIL_Y = 3.20
-bar_x = [BAR_X0 + index * BAR_DX for index in range(len(BAR_PINS))]
-wire([(BARX, BAR_RAIL_Y), (12.35, BAR_RAIL_Y)], "5v", 2.2)
-for index, (pin, x) in enumerate(zip(BAR_PINS, bar_x, strict=True)):
-    ax.plot([x, x], [BAR_RAIL_Y, BAR_Y + BAR_R], color=C["5v"], linewidth=1.8, zorder=3)
+# The seven segment resistors, drawn as the row of identical parts they are.
+for index in range(7):
+    rx = DX + 1.40 + index * 0.45
     ax.add_patch(
-        plt.Circle(
-            (x, BAR_Y),
-            BAR_R,
-            facecolor=BAR_COLOURS[index],
-            edgecolor=C["bar"],
-            linewidth=1.3,
+        Rectangle(
+            (rx, 5.52),
+            0.30,
+            0.16,
+            facecolor="#FFFFFF",
+            edgecolor=C["seg"],
+            linewidth=1.2,
             zorder=5,
         )
     )
-    ax.text(x, BAR_Y - 0.28, pin, ha="center", va="center", fontsize=6.4, zorder=5)
+wire([(DX, 4.95), (DX + 1.20, 4.95), (DX + 1.20, 5.60), (DX + 1.40, 5.60)], "seg", 2.0)
 ax.text(
-    BARX + BARW / 2,
-    BARY + 0.22,
-    "level 1 (left)  →  10 (right)",
-    fontsize=6.6,
-    color="#666666",
+    DX + DW / 2 + 0.35,
+    5.15,
+    "240 Ω ×7, one per segment",
     ha="center",
     va="center",
+    fontsize=6.8,
+    color=C["seg"],
     zorder=5,
 )
-# The ten pins leave as one ribbon: a stub from each pin to a bus beside the header, then a single line to
-# the bar. Ten separate wires across the I2C lanes would be ten crossings and one lie - a ribbon cable is
-# what a person actually plugs in, and the last lamp joins it from the right header.
-BAR_BUS = 3.62
-for pin in BAR_PINS:
-    y = E21_Y if pin == "21" else PINY[pin]
-    ax.plot([EX + EW, BAR_BUS], [y, y], color=C["bar"], linewidth=2.0, zorder=3)
-    junction(BAR_BUS, y, "bar")
-ax.plot([BAR_BUS, BAR_BUS], [4.30, PINY["15"]], color=C["bar"], linewidth=3.2, zorder=3)
-wire([(BAR_BUS, 4.30), (8.75, 4.30), (8.75, 3.85), (BARX, 3.85)], "bar", 3.0)
 ax.text(
-    7.20,
-    4.60,
-    "10 wires",
-    fontsize=7.4,
-    color=C["bar"],
+    DX + DW / 2 + 0.35,
+    4.80,
+    "segments A-G drive that segment on the digit whose common is high",
     ha="center",
     va="center",
-    fontweight="bold",
-    zorder=7,
-    bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor=C["bar"], linewidth=0.6),
+    fontsize=6.4,
+    color="#666666",
+    zorder=5,
 )
 
 # ------------------------------------------------------------------ OLED
-OX, OW = 8.90, 3.50
-OY, OH = 9.00, 2.10
+OX, OW = 6.60, 3.30
+OY, OH = 9.30, 1.70
 box(OX, OY, OW, OH, "OLED SSD1306", "3.3 V part · address 0x3C")
 OL = OX + 0.10
-O_VCC_Y, O_SDA_Y, O_SCL_Y, O_GND_Y = 10.35, 9.85, 9.45, 9.30
+O_VCC_Y, O_SDA_Y, O_SCL_Y = 10.65, 10.25, 9.90
 term(OL, O_VCC_Y, "VCC", size=8.2)
 term(OL, O_SDA_Y, "SDA", size=8.2)
 term(OL, O_SCL_Y, "SCL", size=8.2)
-term(OL, O_GND_Y, "GND", size=8.2)
+O_GND_Y = 9.55
+term(OX + OW - 0.10, O_GND_Y, "GND", side="right", size=8.2)
 
 # ------------------------------------------------------------------ button
-BX, BW = 8.90, 3.50
-BY, BH = 7.60, 1.10
+BX, BW = 6.60, 3.30
+BY, BH = 3.00, 1.00
 box(BX, BY, BW, BH, None)
 ax.text(
     BX + BW / 2,
-    BY + BH - 0.22,
+    BY + BH - 0.20,
     "momentary button",
     ha="center",
     va="top",
     fontsize=9.5,
     fontweight="bold",
 )
-B_Y = 8.00
+B_Y = 3.40
 term(BX + 0.10, B_Y, "GPIO4 side", size=8.0)
 term(BX + BW - 0.10, B_Y, "GND side", side="right", size=8.0)
 
-# ------------------------------------------------------------------ LEDs
-LED1_Y, LED2_Y, LED3_Y = 6.95, 6.35, 5.75
-# The lamp colour is the fill of its symbol and the word on its row; the wire colour stays the pin's, so
-# that red here cannot be confused with the red 5 V rail running past on the right.
-for y, name, key, lamp in (
-    (LED1_Y, "white LED  (PASS)", "led1", "#FFFFFF"),
-    (LED2_Y, "red LED  (RETAKE)", "led2", "#CC2222"),
-    (LED3_Y, "blue LED  (state)", "led3", "#1B62C8"),
-):
-    ax.add_patch(
-        FancyBboxPatch(
-            (BX, y - 0.24),
-            BW,
-            0.48,
-            boxstyle="round,pad=0.02,rounding_size=0.06",
-            linewidth=1.1,
-            edgecolor=C["box"],
-            facecolor="#F7F7F7",
-            zorder=2,
-        )
-    )
-    ax.text(BX + 0.14, y, name, ha="left", va="center", fontsize=8.4, zorder=5)
-    ax.text(BX + 1.75, y, "330 Ω", ha="center", va="center", fontsize=7.8, zorder=5)
-    ax.plot([BX + 2.25, BX + 2.75], [y, y], color=C[key], linewidth=2.6, zorder=3)
-    ax.add_patch(
-        plt.Circle((BX + 2.95, y), 0.10, facecolor=lamp, edgecolor=C[key], linewidth=1.6, zorder=5)
-    )
-    ax.text(BX + 2.95, y - 0.27, "LED", ha="center", va="center", fontsize=6.2, zorder=5)
-    ax.add_patch(plt.Circle((BX + 0.10, y), 0.045, color=C["box"], zorder=5))
-
-# ------------------------------------------------------------------ checks
-ax.text(9.20, 5.35, "Before the first power-on", fontsize=10.0, fontweight="bold", va="center")
-for i, line in enumerate(
-    [
-        "1.  5 V rail with nothing on it: 5 V, not 12 V.",
-        "2.  COM port, not native USB.",
-    ]
-):
-    ax.text(9.20, 5.00 - i * 0.30, line, fontsize=7.7, color="#333333", va="center")
-
 # ------------------------------------------------------------------ ground bus
-BUS_Y = 0.70
+BUS_Y = 1.40
 ax.plot(
-    [0.95, 12.60], [BUS_Y, BUS_Y], color=C["gnd"], linewidth=4.2, zorder=3, solid_capstyle="round"
+    [0.95, 12.95], [BUS_Y, BUS_Y], color=C["gnd"], linewidth=4.2, zorder=3, solid_capstyle="round"
 )
 ax.text(
-    6.8,
-    0.33,
-    "one ground — every part, including the adapter's negative lead",
+    6.9,
+    0.98,
+    "one ground — every part, including the adapter's negative lead if it is used",
     ha="center",
     va="center",
-    fontsize=8.8,
+    fontsize=8.6,
     color=C["gnd"],
     fontweight="bold",
 )
@@ -417,74 +401,26 @@ def ground(x_from, y_from, x_bus):
     junction(x_bus, BUS_Y, "gnd")
 
 
-ground(3.05, EGND_Y, 3.20)
-ground(MX + MW - 0.10, MG_Y, 2.80)
-ground(OL, O_GND_Y, 12.55)
-ground(BX + BW - 0.10, B_Y, 12.45)
-# The lamps' anodes go to the 5 V rail and the pin sinks them, so the line on their right is a supply
-# rather than a return - the one place where the colour says the current runs the other way.
-for y, xd in ((LED1_Y, 12.75), (LED2_Y, 12.95), (LED3_Y, 13.15)):
-    ax.plot([BX + 3.05, xd], [y, y], color=C[key], linewidth=2.0, zorder=3)
-    ax.plot([xd, xd], [y, 1.05], color=C["5v"], linewidth=2.2, zorder=3)
-    junction(xd, 1.05, "5v")
+ground(EX + EW, EGND_Y, 3.25)
+ground(OX + OW - 0.10, O_GND_Y, 12.90)
+ground(BX + BW - 0.10, B_Y, 12.60)
 
-# ------------------------------------------------------------------ 3.3 V net
-L33 = 3.75
-wire([(EX + EW, PINY["3V3"]), (L33, PINY["3V3"]), (L33, O_VCC_Y), (OL, O_VCC_Y)], "3v3")
-ax.text(
-    5.60,
-    O_VCC_Y + 0.14,
-    "3.3 V",
-    fontsize=7.8,
-    color=C["3v3"],
-    ha="center",
-    va="center",
-    fontweight="bold",
-    zorder=7,
-    bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor=C["3v3"], linewidth=0.6),
-)
+# ------------------------------------------------------------------ checks
+ax.text(13.30, 10.60, "Before the first power-on", fontsize=10.0, fontweight="bold", va="center")
+for i, line in enumerate(
+    [
+        "1.  240 Ω between each pin and",
+        "    its own segment.",
+        "2.  No resistor on a common.",
+        "3.  Never two commons high.",
+        "4.  No panel pin on a power rail.",
+    ]
+):
+    ax.text(13.30, 10.18 - i * 0.32, line, fontsize=7.4, color="#333333", va="center")
 
-# ------------------------------------------------------------------ SDA
-LS = 4.05
-wire([(EX + EW, PINY["8"]), (LS, PINY["8"]), (LS, O_SDA_Y), (OL, O_SDA_Y)], "sda")
-lane_label(LS, 8.20, "SDA", "sda")
-
-# ------------------------------------------------------------------ SCL
-LC = 4.35
-wire([(EX + EW, PINY["9"]), (LC, PINY["9"]), (LC, O_SCL_Y), (OL, O_SCL_Y)], "scl")
-lane_label(LC, 7.60, "SCL", "scl")
-
-# ------------------------------------------------------------------ button / LEDs
-LB = 4.65
-wire([(EX + EW, PINY["4"]), (LB, PINY["4"]), (LB, B_Y), (BX + 0.10, B_Y)], "btn")
-LL1 = 4.95
-wire([(EX + EW, PINY["5"]), (LL1, PINY["5"]), (LL1, LED1_Y), (BX + 0.10, LED1_Y)], "led1")
-LL2 = 5.25
-wire([(EX + EW, PINY["6"]), (LL2, PINY["6"]), (LL2, LED2_Y), (BX + 0.10, LED2_Y)], "led2")
-LL3 = 5.45
-wire([(EX + EW, PINY["7"]), (LL3, PINY["7"]), (LL3, LED3_Y), (BX + 0.10, LED3_Y)], "led3")
-
-# ------------------------------------------------------------------ 5 V
-L5 = 3.30
-wire([(MX + MW, M5_Y), (L5, M5_Y), (L5, 1.05), (13.25, 1.05)], "5v", 2.6)
-# The bar's rail: every anode comes off it through its own 330 Ohm inside the box.
-junction(8.55, 1.05, "5v")
-wire([(8.55, 1.05), (8.55, BAR_RAIL_Y), (BARX, BAR_RAIL_Y)], "5v", 2.6)
-ax.text(
-    6.05,
-    1.32,
-    "5 V",
-    fontsize=8.0,
-    color=C["5v"],
-    ha="center",
-    va="center",
-    fontweight="bold",
-    zorder=7,
-    bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor=C["5v"], linewidth=0.6),
-)
 # ------------------------------------------------------------------ legend
-LX, LYW = 13.45, 2.10
-LY, LH = 4.90, 5.70
+LX, LYW = 13.30, 2.40
+LY, LH = 2.60, 5.60
 ax.add_patch(
     FancyBboxPatch(
         (LX, LY),
@@ -509,20 +445,17 @@ ax.text(
 )
 rows = [
     ("3v3", "3.3 V"),
-    ("5v", "5 V"),
     ("gnd", "ground"),
     ("sda", "SDA"),
     ("scl", "SCL"),
     ("btn", "GPIO4"),
-    ("led1", "GPIO5"),
-    ("led2", "GPIO6"),
-    ("led3", "GPIO7"),
-    ("bar", "GPIO10-18, 21"),
+    ("seg", "segment, 240 Ω"),
+    ("com", "common, direct"),
 ]
 for i, (key, name) in enumerate(rows):
-    y = LY + LH - 0.70 - i * 0.46
+    y = LY + LH - 0.75 - i * 0.60
     ax.plot([LX + 0.20, LX + 0.78], [y, y], color=C[key], linewidth=3.2, solid_capstyle="round")
-    ax.text(LX + 0.92, y, name, ha="left", va="center", fontsize=8.6, zorder=4)
+    ax.text(LX + 0.92, y, name, ha="left", va="center", fontsize=7.8, zorder=4)
 
 
 def main() -> int:

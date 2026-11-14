@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <cstring>
 
 namespace rig {
@@ -33,6 +34,11 @@ enum class Screen {
 // `cfg::CAPTURE_TIMEOUT_MS`, so there is nothing to report a score for.
 enum class Reason { None, LowLight, Blur, ColorCast, Unknown, NoReply };
 
+//: A fault is not a screen: the rig stays in the state it was in, and the panel shows the fault over the
+//: top for `cfg::FAULT_FACE_MS`. These are the three events that used to produce a log line and nothing a
+//: person at the bench could see, which made a broken rig and an idle one look the same.
+enum class Fault { None, Timeout, Stray, Invariant };
+
 const char* reasonToken(Reason reason);
 Reason reasonFromToken(const char* token);
 
@@ -41,6 +47,13 @@ struct State {
   int score = -1;      // -1 means no verdict yet; the screen leaves the number out
   Reason reason = Reason::None;
   int frames = 0;       // accepted or judged, this session
+  int passCount = 0;    // verdicts that came back PASS, this session
+  int retakeCount = 0;  // verdicts that came back RETAKE, this session
+  Fault fault = Fault::None;
+  uint32_t faultAt = 0;  // millis of the most recent fault; the face holds `cfg::FAULT_FACE_MS`
+  //: When PASS or RETAKE was shown. The panel returns to READY after `cfg::VERDICT_FACE_MS` without a new
+  //: capture, so a conclusion does not stay up forever with no date on it.
+  uint32_t verdictAt = 0;
   Link link = Link::Alive;
   bool heartbeatOn = true;
   uint8_t animPhase = 0;  // which of the three spinner dots is lit, 0-2

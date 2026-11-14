@@ -206,14 +206,13 @@ The system has three layers — capture, service and presentation — which exch
 |---|---|---|---|---|
 | 1 | USB camera | 1080P, adjustable focus, manual exposure, driver-free UVC | 1 | Image capture |
 | 2 | Fill light | Existing LED study lamp, 10 W, 4000 K, Ra90, no visible flicker, USB-powered | 1 | 45° fill from above; a DC supply carries no mains ripple and the honeycomb lens spreads the light evenly |
-| 3 | Controller board | ESP32-S3, USB serial | 1 | Accepts the trigger, drives the status display, the status LEDs and the LED bar, reports over USB serial |
-| 4 | LED bar | Ten single LEDs on GPIO 10-18 and 21, 5 V through 330 Ω each, cathode to the pin, yellow then white | 1 | Shows the score as a level of 0-10 lit lamps, and one dot or a filling bar while idle and capturing |
+| 3 | Controller board | ESP32-S3, USB serial | 1 | Accepts the trigger, drives the status display and the four-digit display, reports over USB serial |
+| 4 | Four-digit display | Four-digit seven-segment display, common anode; segments A-G on GPIO 3 and 13-18, 240 Ω each; digit commons 1-4 on GPIO 5, 6, 7 and 10, direct | 1 | Shows the process state, the score with its verdict, and the fault codes `E0`-`E3` |
 | 5 | Trigger button | Tactile switch | 1 | Triggers one capture by hand |
 | 6 | Demonstration tank | Ultra-clear glass tank 300×170×200 mm, 5 mm walls | 1 | Simulates an underwater scene; glass has no stress birefringence, which cross-polarisation needs |
 | 7 | Polarising sheet | Linear polariser 200×200 mm, cut into a lamp piece and a lens piece | 1 | Cross-polarisation removes reflections from the wall and the water |
 | 8 | Targets and scenery | Four to six real seafood items, dark stones and weed collected on site | 1 set | Objects to detect and distractors |
 | 9 | Status display | 0.96" OLED, 128×64 monochrome, I2C, address 0x3C | 1 | Shows link state, quality score and verdict; no PC needed on site |
-| 10 | Status LEDs | One white, one red and one blue LED, one 330 Ω resistor each | 3 | The white lamp is lit while PASS is shown, the red while RETAKE is, blue for every other screen; between them no screen is dark |
 
 #### 2.5.2 Development and operation constraints
 

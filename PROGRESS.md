@@ -41,6 +41,49 @@
   describe the turbidity sensor, `EVT TURBIDITY`, `CMD TREAD` and a three-lamp panel with no bar. They
   belong to the firmware lane and were left untouched on purpose.
 
+- **The bar never shipped; the panel is a four-digit seven-segment display, and it took the lamps' pins.**
+  Segments A-G on GPIO 3 and 13-18 through 240 ohm each, digit commons 1-4 on GPIO 5, 6, 7 and 10 direct,
+  button on GPIO 4, OLED unchanged on GPIO 8/9. The ten-lamp bar and the three status lamps are both gone,
+  and **the lamps' three pins are the display's commons** - keeping them would have meant two panels fighting
+  for one header. `config.h` is still the only place a pin is written, and the firmware is 1.13.
+- **The multiplexer moved into a hardware timer, because the loop-driven one flickered.** One digit every
+  250 us, about 1 kHz for the whole face. The loop only publishes which mask each digit should show, copied
+  under a critical section; the handler turns one mask into GPIO register writes. The flicker was measured in
+  the mechanism rather than argued about: an OLED transfer blocks the loop for 20-25 ms, and in that window a
+  loop-driven panel held one digit at full duty while the other three were dark. A panel that stutters is a
+  panel whose faces cannot be read, so the display no longer depends on the loop keeping up.
+- **The faces are a pacing rule, not a list of numbers: what works runs steadily, what failed blinks, and
+  nothing on a desk instrument exceeds about 1 Hz.** `READY` fills its four positions with one dash at 500 ms
+  a step and **holds all four for a second** - filling and holding reads as breathing, filling and vanishing
+  reads as a break. `CAPTURING` turns the fourth digit one segment per 250 ms, `PASS` wipes left to right
+  once and then holds the score with `P`, and `RETAKE` blinks the same at 1 Hz. **`OFFLINE` is the code
+  `E0`**, blinking at 0.5 Hz: losing the link is a fault, so numbering the screen is honest rather than a
+  workaround, and it is deliberately slower than a retake - a warning should be quicker than a fault report.
+  `E1`, `E2` and `E3` stay the three events that used to be swallowed, one keepalive each.
+- **Only nine characters can be drawn: the digits and A, C, E, F, H, L, P, U.** `O` reads as `0`, `S` as
+  `5`, `I` as `1`, `G` sits between `6` and `9`, and M, W, K, V, X, Y and Z cannot be formed at all - so a
+  word becomes a code, which is exactly why the faults are numbered. The table in `main.cpp` holds only the
+  glyphs a face actually shows, because a character nothing displays is an entry nothing can check.
+- **Every interval is an integer multiple of the 2 s PC keepalive.** One keepalive is a fault face and one
+  rehearsal step, two the capture timeout (**4 s, down from 5**), three the rehearsal hold, five offline
+  detection, six the verdict face. They are written as products of `cfg::PC_KEEPALIVE_MS` so a keepalive
+  change moves all of them together, and **a verdict outliving the link-loss threshold is the point of the
+  six**: the dead link is reported before a verdict clears itself. A rehearsal makes the fault faces
+  reachable at all - six seconds held from `READY` walks the eight faces at 2 s each, display-only, nothing
+  on the wire - because a face nobody has ever seen is a face that fails on the day.
+- **Every document that described the bar or the lamps now describes the display, in both languages.**
+  `docs/rig-state-machine-{en,zh}.md` gained the faces, the pacing rule, the character rule and a timing
+  table, and its transition matrix gained an `E11 verdict expired` column because a verdict clears on its
+  own; `firmware/README.md` and `README-zh.md` were rewritten to the panel and to the OLED footer that
+  actually exists; SRS Table 2-3's display row is the four-digit module and the status-LED row is gone;
+  procurement section 5 carries the fourteen panel pins. `scripts/draw_wiring.py` was rewritten and
+  `docs/rig-wiring.svg` regenerated from it rather than edited, and `tests/test_wiring_document.py` now
+  reads `SEGMENT_PINS` and `DIGIT_PINS` instead of the names that no longer exist.
+- **The 5 V rail now has no load, and that is a consequence worth writing down.** The lamps and the bar were
+  its only loads; every pin the display uses is a GPIO and the segment resistors go to those pins, so the
+  controller's USB cable is the only supply the panel needs. The 12 V adapter and the MB-102 stay on the
+  parts list, and the rail is measured once and then left alone.
+
 ## 2026-11-13
 
 - **The folder beside the repository was renamed, because it was named for the smaller half of what it

@@ -7,6 +7,11 @@ expensive kind of fault to find, because each document looks right on its own.
 
 The same drift applies to the two languages of that table: a wire colour or a pin number that differs
 between them is two instructions, and the person wiring cannot tell which one is current.
+
+The panel is why this file reads two arrays rather than a list of single-pin constants. Segments A-G are
+`SEGMENT_PINS` and the four digit commons are `DIGIT_PINS`, in the order the firmware drives them, so the
+order is checked as well as the membership: a segment list that is one entry short still wires every pin
+and draws the wrong digit.
 """
 
 from __future__ import annotations
@@ -22,54 +27,42 @@ DRAWING = REPO / "scripts" / "draw_wiring.py"
 #: The terminal names in the wiring table that are ESP32 GPIO numbers rather than rails.
 ESP_PIN = re.compile(r"ESP32\s*`(\d{1,2})`")
 CONFIG_PIN = re.compile(r"constexpr\s+[A-Za-z0-9_:]+\s+(PIN_[A-Z0-9_]+)\s*=\s*(\d+)\s*;")
-CONFIG_PIN_ARRAY = re.compile(
-    r"constexpr\s+[A-Za-z0-9_:]+\s+(PIN_[A-Z0-9_]+)\s*\[[^\]]*\]\s*=\s*\{([^}]*)\}"
+CONFIG_ARRAY = re.compile(
+    r"constexpr\s+[A-Za-z0-9_:]+\s+(SEGMENT_PINS|DIGIT_PINS)\s*\[[^\]]*\]\s*=\s*\{([^}]*)\}"
 )
-CONFIG_BAR_FIRST = re.compile(r"constexpr\s+[A-Za-z0-9_:]+\s+PIN_BAR_FIRST\s*=\s*(\d+)\s*;")
-CONFIG_BAR_COUNT = re.compile(r"constexpr\s+[A-Za-z0-9_:]+\s+BAR_LEDS\s*=\s*(\d+)\s*;")
 
 
 def firmware_pins() -> dict[str, int]:
-    """Every single-pin constant in `config.h`, by name.
-
-    `PIN_BAR_FIRST` is in here too: it is a pin the firmware declares, and it is also the bar's first
-    element, which is why the bar's own list is read separately rather than derived from it.
-    """
+    """Every single-pin constant in `config.h`, by name."""
     return {
         name: int(number) for name, number in CONFIG_PIN.findall(CONFIG.read_text(encoding="utf-8"))
     }
 
 
-def firmware_bar_pins() -> list[int]:
-    """The bar's pins, in the order the firmware lights them.
+def firmware_array(name: str) -> list[int]:
+    """One of the panel's pin arrays, in the order the firmware drives it.
 
-    Two spellings are read, because `config.h` may enumerate the bar or state a first pin and a count. The
-    enumerated list wins when both are present: a count cannot express a gap, and this bar skips the two USB
-    pins. A name inside the list is resolved through the pin constants, and a name that cannot be resolved is
-    a failure rather than a shorter list - a parse that quietly drops one entry is how a test passes on
-    nothing.
+    A name inside the list is resolved through the pin constants, and a name that cannot be resolved is a
+    failure rather than a shorter list - a parse that quietly drops one entry is how a test passes on
+    nothing. A missing array is a failure too: it means the panel moved and this file did not.
     """
     text = CONFIG.read_text(encoding="utf-8")
-    enumerated = CONFIG_PIN_ARRAY.search(text)
-    if enumerated:
-        body = enumerated.group(2)
-        for name, number in firmware_pins().items():
-            body = body.replace(name, str(number))
-        unresolved = re.findall(r"[A-Za-z_][A-Za-z0-9_]*", body)
-        assert not unresolved, f"the bar's pin list names {unresolved}, which is not a number"
-        return [int(number) for number in re.findall(r"\d+", body)]
-
-    first = CONFIG_BAR_FIRST.search(text)
-    count = CONFIG_BAR_COUNT.search(text)
-    if first and count:
-        return list(range(int(first.group(1)), int(first.group(1)) + int(count.group(1))))
-    return []
+    arrays = dict(CONFIG_ARRAY.findall(text))
+    assert name in arrays, f"config.h no longer declares {name}"
+    body = arrays[name]
+    for constant, number in firmware_pins().items():
+        body = body.replace(constant, str(number))
+    unresolved = re.findall(r"[A-Za-z_][A-Za-z0-9_]*", body)
+    assert not unresolved, f"{name} names {unresolved}, which is not a number"
+    return [int(number) for number in re.findall(r"\d+", body)]
 
 
 def firmware_wired_pins() -> set[str]:
-    """Every GPIO the firmware declares a wire for: the single pins and the bar."""
+    """Every GPIO the firmware declares a wire for: the single pins and the panel's two arrays."""
     declared = {str(number) for number in firmware_pins().values()}
-    return declared | {str(number) for number in firmware_bar_pins()}
+    segments = {str(number) for number in firmware_array("SEGMENT_PINS")}
+    digits = {str(number) for number in firmware_array("DIGIT_PINS")}
+    return declared | segments | digits
 
 
 def wiring_section(path: Path) -> str:
@@ -93,16 +86,16 @@ def test_the_firmware_still_declares_the_pins_this_project_wires() -> None:
     """A rename in `config.h` is a rename everywhere; this is the list the rest of the file depends on."""
     assert firmware_pins() == {
         "PIN_BUTTON": 4,
-        "PIN_LED_PASS": 5,
-        "PIN_LED_RETAKE": 6,
-        "PIN_LED_STATE": 7,
         "PIN_I2C_SDA": 8,
         "PIN_I2C_SCL": 9,
-        "PIN_BAR_FIRST": 10,
     }
-    assert firmware_bar_pins() == [10, 11, 12, 13, 14, 15, 16, 17, 18, 21], (
-        "the bar is ten lamps on GPIO 10-18 and 21 in this project's documents, with the last one on the "
-        f"right header because 19 and 20 are the USB pair; config.h declares {firmware_bar_pins()}"
+    assert firmware_array("SEGMENT_PINS") == [3, 13, 14, 15, 16, 17, 18], (
+        "the display's segments are A-G on GPIO 3 and 13-18 in this project's documents, in that order; "
+        f"config.h declares {firmware_array('SEGMENT_PINS')}"
+    )
+    assert firmware_array("DIGIT_PINS") == [5, 6, 7, 10], (
+        "the digit commons are 1-4 on GPIO 5, 6, 7 and 10 in this project's documents, digit 1 first; "
+        f"config.h declares {firmware_array('DIGIT_PINS')}"
     )
 
 

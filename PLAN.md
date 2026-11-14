@@ -475,12 +475,17 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         rather than a count; the contract table, both contract documents and `/api/health`'s
         `contract_routes` moved together, 42 to 44, and that field is now tied to the table by a test
 - [ ] **P3-17** Rig assembly and its optical numbers · @FrozenYty · split out of `P1-06` on 11-11 ·
-      the parts still owed: three more 330 Ω resistors - the bar took the count to thirteen and ten
-      arrived - the button (not arrived), and **5 V for the LED side**. A 12 V adapter with a buck module
+      the parts still owed are the panel's: **seven 240 Ω segment resistors**, one per segment - the lot on
+      the purchase list is 330 Ω and does not cover that value - and the four-digit display module. The
+      button is not owed: it was on the bench on 11-13, when a miswired press reported itself as a
+      brownout. A 12 V adapter with a buck module
       was procured 11-11 and replaces the earlier dead end - the board has no 5 V output - but it is
       untested until the bench session
       - **power settled 11-13, against the boards that actually arrived: one 12 V adapter into the MB-102
-        with one rail jumper on 5 V and the other on OFF, feeding only the 5 V side** - the LED anodes.
+        with one rail jumper on 5 V and the other on OFF, feeding only the 5 V side** - which was the LED
+        anodes, and which since 11-14 **has no load at all**: every pin the four-digit display uses is a
+        GPIO, so the controller's USB cable is the only supply the panel needs and the 5 V rail is measured
+        once and then left alone.
         The controller stays on its USB cable, which is also the serial link, and its own
         `3V3` pin feeds the OLED, so there is one 5 V domain, one 3.3 V domain and
         one ground. The buck module bought on 11-11 is a spare rather than the plan. The module carries its
@@ -492,18 +497,25 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - **the BSS138 level shifter was removed on 11-14**: with it in circuit 3 of 20 register reads
         failed, without it 20 of 20 answered, so the bus runs straight from GPIO8/9 to the OLED and nothing
         on it is a 5 V part
-      - **the score bar replaced the sensor on 11-14**: ten lamps on GPIO 10-18 and 21, wired like the
-        three lamps - 5 V rail, 330 Ω each, cathode on the pin, `LOW` lit. `config.h` carries the pin
-        order, the two colours and the two step times
-      - **a third lamp, added 11-13: blue on GPIO7**, covering every screen the two verdict lamps do not, so
-        a completely dark panel now means no power. Without it, `Ready`, `Capturing` and `Offline` had no lamp
-        at all and a healthy idle rig looked exactly like a dead one. Blue is steady when idle, blinks slowly
-        (500 ms) while a capture is in flight and fast (150 ms) when the link is gone, because "busy" and
-        "broken" are different questions. The verdict lamps are **white for `Pass` and red for `Retake`**,
-        both steady while their screen is shown, and they are lit by the pin sinking them rather than by the
-        pin driving them.
+      - **the sensor's replacement changed twice on 11-14, and the second one is the panel.** First a
+        ten-lamp bar on GPIO 10-18 and 21, wired like the lamps; then **the four-digit seven-segment
+        display**, which is what `config.h` and `main.cpp` implement: segments A-G on GPIO 3 and 13-18
+        through 240 Ω each, digit commons 1-4 on GPIO 5, 6, 7 and 10 direct, one face per screen, the
+        faults as `E0`-`E3`, and the multiplexer in a hardware timer. The bar never shipped, and **the pins
+        the three lamps sat on are the display's commons**
+      - **a third lamp, added 11-13 and retired 11-14: blue on GPIO7**, covering every screen the two
+        verdict lamps did not, so
+        a completely dark panel meant no power. Without it, `Ready`, `Capturing` and `Offline` had no lamp
+        at all and a healthy idle rig looked exactly like a dead one. Blue was steady when idle, blinked
+        slowly (500 ms) while a capture was in flight and fast (150 ms) when the link was gone, because
+        "busy" and
+        "broken" are different questions. The verdict lamps were **white for `Pass` and red for `Retake`**,
+        both steady while their screen was shown, and they were lit by the pin sinking them rather than by the
+        pin driving them. **All three went with the display**, whose commons are those pins; what the change
+        left behind is the rule they were built on - **every screen has a face, `OFFLINE` included**.
         Firmware, SRS table 2-3, the wiring table, the firmware README and a new section 10 of the state
-        machine all moved together, and **the firmware compiles** under the pinned toolchain
+        machine all moved together for the lamps, and for the display again, and **the firmware compiles**
+        under the pinned toolchain
       - done when `python scripts/test_rig.py` reports the three numbers the design fixed - left/right
         brightness ratio >= 0.7, a 5 cm target >= 45 px at 640 input, no flicker - and
         `python scripts/test_rig_link.py --port COM<n> --scan` finds `3C` for the OLED. **The scan tool
@@ -673,9 +685,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       reads answering to 20-of-20, found only configuration registers, and **not one of them changed value
       in response to light** - hand, white paper at 2 cm, a dark corner, air and water all read the same -
       while the vendor states the part has no register map and published none. What replaced it is the panel
-      feature it never was: **ten lamps on GPIO 10-18 and 21**, wired like the three lamps (5 V rail, 330 Ω
-      each, cathode on the pin, `LOW` lit), showing the score as a level, one dot sweeping on `Ready` and a
-      filling bar on `Capturing` (`config.h`, `docs/rig-state-machine-en.md` §10).
+      feature it never was: **the four-digit seven-segment display**, segments A-G on GPIO 3 and 13-18 with
+      its commons on 5, 6, 7 and 10 (`config.h`, `docs/rig-state-machine-en.md` §10); the ten-lamp bar that
+      stood in for it earlier the same day never shipped.
       - `EVT TURBIDITY`, `CMD TREAD` and `CMD TDUMP` left the firmware with the sensor in 1.12, along with
         the two probe scripts (`scripts/test_turbidity.py`, `tests/test_turbidity_probe.py`), and both
         wiring and state-machine documents were rewritten rather than trimmed
@@ -683,7 +695,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         documents but the column remains in `server/app/models.py`, so `media_asset` may now carry an
         orphaned field that nothing writes
 - [ ] **P3-38** The finished rig needs no cable to the PC · @FrozenYty · the assembled rig must run from a
-      power module with only the camera's wire on the desk · done when a verdict and its lamps reach the PC
+      power module with only the camera's wire on the desk · done when a verdict reaches the PC
       over BLE with the serial cable unplugged, the `rig-serial` build still exists and is documented as the
       fallback, and the bench tools can reach the rig without a COM port
       - **BLE rather than WiFi, and the reason is not preference:** the network available at this site is a

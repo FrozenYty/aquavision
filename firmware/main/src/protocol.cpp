@@ -36,6 +36,10 @@ bool handleResult(rig::State& state, char** cursor) {
   // operator has already read. Dropped silently it would leave the PC believing the rig took it, so it
   // is dropped loudly - the same reason TCP answers an unexpected segment with a reset.
   if (state.screen != rig::Screen::Capturing) {
+    // A stray result is a fault, not just a log line: the panel has to say something the operator can
+    // see, or a PC sending out of turn looks exactly like a rig with nothing to report.
+    state.fault = rig::Fault::Stray;
+    state.faultAt = millis();
     protocol::emitStrayResult(score);
     return false;
   }
@@ -44,6 +48,14 @@ bool handleResult(rig::State& state, char** cursor) {
   state.reason = rig::reasonFromToken(reason);
   state.frames += 1;
   state.screen = (strcmp(verdict, "PASS") == 0) ? rig::Screen::Pass : rig::Screen::Retake;
+  state.verdictAt = millis();
+  // The session tally, one per accepted verdict: a stray result has already returned above, and a repeated
+  // line arrives with no capture in flight, so neither can reach this line.
+  if (state.screen == rig::Screen::Pass) {
+    state.passCount += 1;
+  } else {
+    state.retakeCount += 1;
+  }
   state.markDirty();
   return true;
 }

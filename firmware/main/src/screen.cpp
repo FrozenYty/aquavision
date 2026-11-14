@@ -144,6 +144,13 @@ const char* reasonWords(rig::Reason reason) {
 void drawFooter(U8G2& display, const rig::State& state) {
   display.setFont(u8g2_font_5x7_tf);
 
+  // The session tally, PASS then RETAKE. A count since boot with nothing persisted: a reboot is a new
+  // session by definition. Drawn before the first capture as well, because a blank cell reads as one
+  // that failed rather than as a tally at zero.
+  char tally[16];
+  snprintf(tally, sizeof(tally), "P%d R%d", state.passCount, state.retakeCount);
+  display.drawStr(MARGIN, FOOTER_BASELINE, tally);
+
   char frames[16];
   snprintf(frames, sizeof(frames), "FRAMES %d", state.frames);
   display.drawStr(FRAMES_EDGE - display.getStrWidth(frames), FOOTER_BASELINE, frames);
