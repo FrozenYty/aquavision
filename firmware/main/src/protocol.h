@@ -50,6 +50,10 @@ void emitRegisterRead(uint8_t command);
 //: collecting are not the measurement - most likely they are a frame header. This command exists to show the
 //: whole frame instead of the first two bytes of it.
 void emitRegisterDump(uint8_t command, uint8_t count);
+//: Writes one byte to one register and reports `EVT TWRITE <cmd> <value> ack=<n>`. The registers that read
+//: back zero are the candidates for a control slot: writing to them is the last cheap way to find out whether
+//: this module needs a conversion started before it will report one.
+void emitRegisterWrite(uint8_t command, uint8_t value);
 void emitPong();
 
 }  // namespace protocol

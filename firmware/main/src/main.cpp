@@ -196,6 +196,7 @@ void setup() {
   Serial.begin(cfg::SERIAL_BAUD);
 
   Wire.begin(cfg::PIN_I2C_SDA, cfg::PIN_I2C_SCL);
+  Wire.setClock(cfg::I2C_CLOCK_HZ);
 
   // Bring-up aid: say what answered on the bus, so a display or a sensor that is not wired shows up
   // in the serial log instead of only as a blank screen. The PC ignores line types it does not know.

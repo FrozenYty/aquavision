@@ -661,6 +661,44 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       edits in between, and every item traceable to the task that closed it · **checked by @IkeaFyj**, not the
       lane owner (§5.3)
 
+- [ ] **P3-37** The turbidity sensor either measures or says it cannot · @FrozenYty · the rig's third
+      sensor, and the only one whose register map the vendor never published · done when a command byte is
+      known whose value moves with the water (clear, then a few drops of milk) and the firmware reads it as
+      the measurement - **or** the vendor supplies the register table and it is implemented - and in either
+      case no document still calls the register "unverified"
+      - **what 11-13/14 established:** a full sweep of `0x00`-`0xFF` found implemented registers at `0x14`,
+        `0x15`, `0x4B`, `0x60`-`0x62`, `0x64`, `0x65` and `0x70`-`0x73`, everything else answering `0xFFFF`.
+        The device therefore answers; the original constant zero was the firmware reading a register that
+        does not exist, and the read timing (`STOP` then `START`, which the manual states explicitly) is now
+        correct
+      - **the unresolved defect:** every answer is one meaningful byte followed by zeros, and every one of
+        those first bytes was **identical with the probe in air and against a full tank**. Sixteen bits are
+        needed for the documented 1-16000 range, so the second byte is not being read - and a device that
+        releases the bus floats to `0xFF`, not to `0x00`, which points at the level shifter's A-side
+        pull-up as much as at the protocol
+      - remaining experiments: write a control value into the registers that read zero (`CMD TWRITE`), read
+        one byte rather than two, drop the I2C clock, and measure the pull-ups with a meter. Then ask the
+        vendor, with the evidence above, rather than sweeping further
+      - **lane B owns two things here**: `turbidity_rel` means "0 clear, 100 most turbid" while the sensor
+        reads high for clear water, so the mapping's sign is a decision for the data model's owner; and
+        `server/app/rig/service.py` currently logs `EVT TURBIDITY` and discards the value
+- [ ] **P3-38** The finished rig needs no cable to the PC · @FrozenYty · the assembled rig must run from a
+      power module with only the camera's wire on the desk · done when a verdict and its lamps reach the PC
+      over BLE with the serial cable unplugged, the `rig-serial` build still exists and is documented as the
+      fallback, and the bench tools can reach the rig without a COM port
+      - **BLE rather than WiFi, and the reason is not preference:** the network available at this site is a
+        campus one - WPA2-Enterprise or a browser portal - and an ESP32 can join neither without extra
+        machinery. BLE needs no network, no SSID, no password and no adapter
+      - the order is fixed by what each step can prove: extract the firmware's in/out seam first (no
+        behaviour change, serial untouched), then a twenty-minute spike measuring connect time, the
+        integrity of a forty-byte message and recovery after a three-second disconnect, and only then the
+        real service and the PC-side `Transport` - which `rig/link.py` already declares as a `Protocol`
+      - **the risk is time, not success.** A Windows BLE connection takes anything from one to twenty
+        seconds and a reconnect can take longer; both happen during setup, because debugging stays wired and
+        the link is established before the demonstration and held by the existing two-second keepalive
+      - the fallback is a build target, not a paragraph: `rig-serial` stays, so a misbehaving radio costs
+        thirty seconds and one cable rather than the demonstration
+
 ### P4 — close
 
 - [ ] **P4-01** Dataset freeze, then baseline E0 · @Gtechson · closes AC-30 · done when the snapshot is

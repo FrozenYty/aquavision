@@ -202,6 +202,25 @@
 - **`CMD TDUMP` exists because two bytes were the wrong question.** Reading eight raw bytes is what showed the
   frame shape (`<one byte> 00 00 ...`) that no amount of guessing at a 16-bit value would have revealed.
 
+- **Writing to the sensor changes nothing.** `CMD TWRITE` landed and six candidate control slots (the ones
+  that read back zero: `0x60`, `0x61`, `0x62`, `0x71`, `0x72`, `0x73`) were each written `0x01`. Every write
+  was acknowledged (`ack=0`) and **not one register moved**. The "write a value to start a conversion" theory
+  is closed.
+- **The first attempt at that measurement was wrong and looked right.** The probe cleared its input buffer
+  before every request, which discarded replies that arrived quickly; the baseline then held five unread
+  registers, and the diff reported those unreadings as changes. Re-run with a self-checking baseline - two
+  consecutive dumps compared before anything is written - the answer was "no change" and the tool could say
+  why. Second time today that a plausible table came from a broken instrument rather than from the sensor.
+- **A ten-times slower clock did not produce the missing second byte**, so weak 3.3 V pull-ups do not explain
+  the zero tail. It did expose something else: register `0x64` reads `0xDF` at 100 kHz and `0x00` at 10 kHz.
+  Either that register is live - it is the only value ever observed to differ between two readings - or the
+  faster clock corrupted it, which would mean the rising edges are marginal after all and the fault shows up
+  as a wrong byte rather than a missing one. Both readings point at the same repair: **4.7 kOhm pull-ups on
+  the 3.3 V side**, which the bus has never had.
+- **`PLAN.md` gained `P3-37`** (the turbidity sensor either measures or says it cannot) **and `P3-38`** (the
+  finished rig needs no cable to the PC, over BLE, because the site's network is a campus one that an ESP32
+  cannot join). Both carry their own "done when", so neither can be closed on a feeling.
+
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict

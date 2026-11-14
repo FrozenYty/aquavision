@@ -83,6 +83,13 @@ void handleLine(rig::State& state, char* text) {
       const uint8_t count = (length == nullptr) ? 8 : static_cast<uint8_t>(atoi(length));
       protocol::emitRegisterDump(static_cast<uint8_t>(strtol(argument, nullptr, 16)), count);
     }
+  } else if (strcmp(command, "TWRITE") == 0) {
+    char* address = strtok_r(nullptr, " ", &cursor);
+    char* value = strtok_r(nullptr, " ", &cursor);
+    if (address != nullptr && value != nullptr) {
+      protocol::emitRegisterWrite(static_cast<uint8_t>(strtol(address, nullptr, 16)),
+                                  static_cast<uint8_t>(strtol(value, nullptr, 16)));
+    }
   } else if (strcmp(command, "RESULT") == 0) {
     if (handleResult(state, &cursor)) {
       protocol::emitScreen(state);
@@ -172,6 +179,9 @@ int readRegister(uint8_t command) {
   if (Wire.endTransmission(true) != 0) {
     return -1;
   }
+  // The STOP closes the command write, so the sensor is free to go and fetch what it was asked for; without
+  // this pause the read that follows can catch it before the register is ready.
+  delay(20);
   Wire.requestFrom(cfg::TURBIDITY_ADDR, static_cast<uint8_t>(2));
   if (Wire.available() < 2) {
     return -1;
@@ -183,6 +193,14 @@ int readRegister(uint8_t command) {
 
 void emitRegisterRead(uint8_t command) {
   Serial.printf("EVT TREG %02X %d\n", command, readRegister(command));
+}
+
+void emitRegisterWrite(uint8_t command, uint8_t value) {
+  Wire.beginTransmission(cfg::TURBIDITY_ADDR);
+  Wire.write(command);
+  Wire.write(value);
+  const uint8_t ack = Wire.endTransmission(true);
+  Serial.printf("EVT TWRITE %02X %02X ack=%u\n", command, value, ack);
 }
 
 void emitRegisterDump(uint8_t command, uint8_t count) {
