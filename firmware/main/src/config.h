@@ -39,7 +39,13 @@ constexpr uint8_t TURBIDITY_ADDR = 0x49;
 //: **no table of CMD values**. So this byte is a bench finding rather than a quotation, and it is the one
 //: number in this file that a different batch of the same sensor could invalidate. If the reading is ever a
 //: constant 0 or 65535 again, sweep this value before suspecting the wiring.
-constexpr uint8_t TURBIDITY_CMD = 0x00;
+//: **Not zero.** Register `0x00` turns out to echo whatever register was addressed before it - the periodic
+//: reading tracked my sweeps (`65280`, `512`, `2560`) instead of tracking water, which is what an echo looks
+//: like from the outside. `0x70` is the only register that has ever held two different values across sessions
+//: (1280, then 2560) and its magnitude sits inside the documented output range, so it is the current best
+//: candidate for the measurement. It reads a constant while the scene is constant, which is expected - and it
+//: did not move when the probe was covered, which is the open question.
+constexpr uint8_t TURBIDITY_CMD = 0x70;
 //: Under investigation. Every register answers with one meaningful byte followed by zeros, and a device that
 //: releases the bus floats high (`0xFF`), not low - so the second byte is either never driven or never made
 //: it back here. The 3.3 V side of the level shifter relies on the ESP32's internal ~45 kOhm pull-up, which
@@ -79,6 +85,6 @@ constexpr uint32_t SPLASH_MS = 1500;
 //: 1.6 added `CMD TREAD`, which is how that register's command byte was found and how it stays findable;
 //: 1.7 added `CMD TDUMP`, because two bytes turned out to be byte-identical in air and in water and the whole
 //: frame had to be seen.
-constexpr char FIRMWARE_VERSION[] = "1.10";
+constexpr char FIRMWARE_VERSION[] = "1.11";
 
 }  // namespace cfg

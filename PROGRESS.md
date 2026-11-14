@@ -275,6 +275,27 @@
   before the result was believed. The zero tail, the "no measurement in the register map", and the write
   probe's "no effect" were each read from a bus that dropped answers or a sensor that was not powered.
 
+- **Register `0x00` is an echo, and the firmware had been reading it as the measurement since day one.** It
+  returns whatever register was addressed before it: the periodic `EVT TURBIDITY` tracked this session's sweeps
+  (`65280`, then `512`, then `2560`) instead of tracking water, and a one-off `0x00 = 15 00` in a long run was
+  exactly the `0x15` read that preceded it. Read `0x70` *then* `0x00` and both answer `0A 00`. **`TURBIDITY_CMD`
+  is now `0x70`** (firmware 1.11) - the only register that has held two different values across sessions
+  (1280, then 2560) and whose magnitude lands inside the documented 700-16000 range.
+- **`0x70` still does not answer light, and its stillness is itself evidence.** A hundred-second watch through
+  four deliberate changes - hand over the probe, uncovered, a white surface at 2 cm, a dark corner - left it at
+  exactly `0A 00` in all 367 samples. The manual promises repeatability within ±2 %, which at 2560 is ±51
+  counts: **a real measurement cannot be bit-exact across 367 reads**, so `0x70` behaves like a latched value
+  rather than a live one.
+- **The bus itself is now trustworthy, which is what makes those two findings worth stating.** 3471 reads
+  across thirteen registers with **zero failures** once the BSS138 shifter was out of the circuit, against
+  seventeen-of-twenty successes with it in. Everything concluded before that repair was concluded about the
+  wire; everything after it is about the sensor.
+- **What the next measurement must settle, and it needs a meter rather than more code:** whether the module is
+  powered in its own right or only phantom-powered through the bus. An I2C part with no supply still
+  acknowledges its address - enough to look healthy in every scan this project has ever run - while drawing
+  nowhere near the 10 mA the datasheet calls for, and driving no emitter. VCC at the pin, or the current in
+  series, separates the two in thirty seconds.
+
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict
