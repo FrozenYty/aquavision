@@ -256,6 +256,25 @@
 - **`I2C_CLOCK_HZ` is a config constant rather than a literal**, so the next measurement of this kind costs an
   edit instead of a search.
 
+- **The level shifter was corrupting the bus, and removing it fixed that.** With the BSS138 in circuit,
+  twenty consecutive reads of `0x14` produced **seventeen answers and three silences**, and the same register
+  read `0xDF` at 100 kHz and `0x00` at 10 kHz. Wired straight to the ESP32 - sensor on 5 V, no shifter, not
+  even an external pull-up - the same twenty reads answer **twenty times with one value**. The user proposed
+  the shifter as the suspect; the measurement agrees with them.
+- **A device that answers is not a device that is powered.** The sensor acknowledged at `0x49` throughout a
+  period in which **its emitter LED was dark**. An I2C part with no supply is phantom-powered through the bus
+  pull-ups and its own protection diodes: enough to acknowledge an address, nowhere near enough to drive an
+  LED or take a measurement. Every "the scan found `49`, so the sensor works" in this project's history rests
+  on that unstated assumption, and it is wrong.
+- **The register map read on the clean bus is not the map read on the broken one**, which is the clearest
+  demonstration yet that the earlier sweeps were measuring the wire: `0x00` answered `0xFF00` before and
+  `512` now, `0x65` was `256` and is `0`, `0x64` was `57088` and is `0`, and **`0x70` moved from 1280 to 2560**
+  - the first register ever observed to change value. Whether `0x70` is the measurement or a gain setting is
+  the next question, and it can only be asked of a sensor whose emitter is actually lit.
+- **Three conclusions were withdrawn in one day, all for the same reason**: the instrument was not trusted
+  before the result was believed. The zero tail, the "no measurement in the register map", and the write
+  probe's "no effect" were each read from a bus that dropped answers or a sensor that was not powered.
+
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict
