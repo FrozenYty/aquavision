@@ -183,27 +183,33 @@ void drawReady(U8G2& display) {
   drawBanner(display, "READY", false);
 }
 
-// Three dots under the word, one alight at a time. A still CAPTURING screen cannot say whether the
-// board is waiting on the PC or has stopped working, and the press is the moment an operator most wants
-// to know the rig is alive.
+// Six dots in a row, the lit one walking left to right: one step here is one step on the panel's rotating
+// segment, because both read the same shared phase (`serviceDisplay`) and both have
+// `cfg::DISPLAY_ROTATE_STEPS` steps. The two screens show one event at two scales.
+//
+// **A row, not a ring, and that is deliberate.** Six dots on a ring inside the 24 px band above the banner
+// come out about three pixels each on a radius of eight, with under two pixels between them, which is not
+// legible at arm's length; a row fits the band with room to spare and can be read from a normal viewing
+// distance. The arrangement is the one thing that was traded away - the correspondence was not, so do not
+// "fix" this back into a ring.
 void drawCapturing(U8G2& display, const rig::State& state) {
   drawBannerFrame(display, false);
 
   display.setFont(u8g2_font_helvB10_tr);
   drawCentred(display, "CAPTURING", BANNER_SINGLE);
 
-  // The dots live in the free band above the banner, not in the strip under the word: at three pixels
-  // across a filled and a hollow mark are nearly indistinguishable, which made the animation read as a
-  // static row of specks. At radius 2 they are five pixels across - one solid, two open - and the band
-  // from 10 to 32 is unused on this screen anyway, because CAPTURING carries no score.
-  constexpr int spacing = 14;
-  constexpr int dot_y = 24;
-  for (int i = 0; i < 3; ++i) {
-    const int x = 64 + (i - 1) * spacing;
-    if (i == state.animPhase) {
-      display.drawDisc(x, dot_y, 2);
+  // Radius 2 - five pixels across - with sixteen between centres: one solid mark and five open ones, which
+  // reads as a position in a sequence rather than as a row of specks.
+  constexpr int DOT_SPACING = 16;
+  constexpr int DOT_Y = 21;
+  constexpr int FIRST_X = 64 - (cfg::DISPLAY_ROTATE_STEPS - 1) * DOT_SPACING / 2;  // centred on the panel
+
+  for (uint8_t step = 0; step < cfg::DISPLAY_ROTATE_STEPS; ++step) {
+    const int x = FIRST_X + step * DOT_SPACING;
+    if (step == state.animPhase) {
+      display.drawDisc(x, DOT_Y, 2);
     } else {
-      display.drawCircle(x, dot_y, 2);
+      display.drawCircle(x, DOT_Y, 2);
     }
   }
 }

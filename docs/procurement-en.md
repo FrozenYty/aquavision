@@ -90,10 +90,11 @@ Assemble and power on in four steps, one at a time, so a fault is localised imme
    is a reversed resistor or a wrong segment long before it is a dead pin. **A lead too short to reach is a
    mechanical problem with a mechanical fix** - a 2 cm jumper makes up the distance - and not a reason to
    rearrange the segment order, because the order is what the firmware writes.
-   **The lamps and the bar are gone**; the nine faces that matter now are the self-test, `READY`,
-   `CAPTURING`, `PASS`, `RETAKE`, `Err1`, `Err2`, `Err3` and `Err0`, and **holding the button for six seconds
-   from `READY` walks all nine in order** - which is how the fault windows and the link code are seen on a
-   bench where nothing is failing and the cable is staying in.
+   **The lamps and the bar are gone**; what the panel can show now is the self-test, `READY`, `CAPTURING`,
+   `PASS`, `RETAKE`, `Err0` and the three fault windows `Err1`-`Err3`. **The button has one meaning - a press
+   captures - so the fault windows cannot be performed on demand**: they appear when their event happens, and
+   on a bench where nothing is failing the serial log is where they are seen. `Err0` needs only the PC to fall
+   silent for ten seconds.
 4. Camera — exposure lock, `python scripts/test_exposure.py` exits 0; then `python scripts/test_rig.py`
    exits 0, which measures the left/right brightness ratio, the 5 cm target width and the brightness
    drift of a ten-minute run under a fixed light level. **Both are required**: the first asks whether
@@ -189,5 +190,5 @@ running, four pins alternate and never two at once.
 | Light stability | Ten minutes of capture on USB: mean brightness of the first and last frame differ by < 5 % |
 | Polariser flatness | No visible warp; the lens-side sheet locked at the darkest orientation |
 | Target size | A 5 cm object ≥ 45 px wide at 640 input |
-| Display | The boot self-test walks all 28 segment positions and then shows `8888`; a six-second hold on the button from `READY` walks the nine rehearsal faces in order; and `Err0` blinks within ten seconds of the PC falling silent |
+| Display | The boot self-test walks all 28 segment positions and then shows `8888`; a press from `READY` starts a capture and the panel shows `CAPTURING`; and `Err0` blinks within ten seconds of the PC falling silent |
 | Tank | 24 h filled, no seepage, front wall without scratches or tint |

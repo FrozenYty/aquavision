@@ -44,7 +44,10 @@ Reason reasonFromToken(const char* token);
 
 struct State {
   Screen screen = Screen::Ready;  // `setup()` starts Alive; a fresh rig is waiting, not broken
-  int score = -1;      // -1 means no verdict yet; the screen leaves the number out
+  //: -1 means "no measurement": the panel draws blanks for the digits and the OLED draws no number, so
+  //: neither screen invents a zero. Only two places write it - a capture in flight, and the retake that
+  //: `serviceCaptureTimeout` creates - while `protocol.cpp` clamps whatever the PC sends into 0-100.
+  int score = -1;
   Reason reason = Reason::None;
   int frames = 0;       // accepted or judged, this session
   Fault fault = Fault::None;
@@ -54,9 +57,10 @@ struct State {
   uint32_t verdictAt = 0;
   Link link = Link::Alive;
   bool heartbeatOn = true;
-  //: The shared animation phase, 0-2: the CAPTURING step of the same clock the panel's rotating segment
-  //: reads. Derived by `serviceDisplay`, never advanced by a counter of its own - two periods for one event
-  //: drift, however carefully they are tuned.
+  //: The shared animation phase, 0 to `cfg::DISPLAY_ROTATE_STEPS` - 1: which step of the CAPTURING
+  //: rotation is current. The panel lights that rim segment and the OLED lights that dot of its ring, so
+  //: both screens read this one number. Derived by `serviceDisplay`, never advanced by a counter of its
+  //: own - two periods for one event drift, however carefully they are tuned.
   uint8_t animPhase = 0;
 
   //: Set when something visible changed. The renderer clears it. A redraw per frame would flicker and

@@ -4,7 +4,7 @@
 // It does no imaging and no inference: the PC owns both, and the PC is the only authority on a frame's quality.
 //
 // What lives where, so a change stays small:
-//   config.h     pins, timings, addresses — the file to edit when hardware moves
+//   config.h     pins, timings, addresses ? the file to edit when hardware moves
 //   rig_state.h  what the rig knows (screen, score, ...)
 //   screen.cpp   the 128x64 layout, one function per state
 //   protocol.cpp the serial grammar
@@ -34,19 +34,6 @@ uint32_t lastHeartbeat = 0;
 uint32_t captureStartedAt = 0;
 uint32_t lastButtonEdge = 0;
 bool lastButtonLevel = HIGH;
-//: The button's gesture state. The release is what tells a capture from a rehearsal, so a press has to be
-//: remembered rather than acted on: `buttonHeld` until it is let go, `holdBecameRehearsal` once the hold
-//: has become one, and `pressedFromReady` because a rehearsal may only start from READY.
-bool buttonHeld = false;
-bool holdBecameRehearsal = false;
-bool pressedFromReady = false;
-uint32_t buttonPressedAt = 0;
-//: The bench rehearsal: display-only, started from READY, one face every `cfg::REHEARSAL_STEP_MS`.
-struct Rehearsal {
-  bool active = false;
-  uint32_t startedAt = 0;
-};
-Rehearsal rehearsal;
 //: When the boot clock starts, and the only clock either screen reads for it. The OLED holds its splash
 //: until `BOOT_SEQUENCE_MS` has passed on this clock, so the two screens cannot disagree about whether the
 //: rig is still booting; the self-test runs in front of an operator who is already looking at the panel.
@@ -56,48 +43,20 @@ uint32_t displayStartedAt = 0;
 rig::Screen lastDisplayedScreen = rig::Screen::Ready;
 uint32_t lastDisplayChange = 0;
 
-//: The button does two things with one gesture, and the release is what tells them apart: let go before
-//: `cfg::REHEARSAL_HOLD_MS` and it is a capture, still held when the hold completes and it is the
-//: rehearsal. A short press therefore stays a capture however slowly it is released, and a rehearsal exists
-//: only from READY, so it can neither interrupt nor imitate a capture in flight.
+//: The button has one meaning: a press captures. The edge is debounced here, and the capture is refused
+//: when there is nothing to receive it - no link, or a shot already in flight - so the rig has one entry
+//: point rather than a gesture to be interpreted. The release is not an event.
 void serviceButton(uint32_t now) {
   const bool level = digitalRead(cfg::PIN_BUTTON);
   if (level == lastButtonLevel || now - lastButtonEdge < cfg::BUTTON_DEBOUNCE_MS) {
-    // No edge, or one still bouncing. The long press is noticed while the button is held, because three
-    // seconds is a moment rather than a second event.
-    if (buttonHeld && !holdBecameRehearsal && now - buttonPressedAt >= cfg::REHEARSAL_HOLD_MS) {
-      if (pressedFromReady && state.screen == rig::Screen::Ready) {
-        rehearsal.active = true;
-        rehearsal.startedAt = now;
-        holdBecameRehearsal = true;
-      }
-    }
     return;
   }
 
   lastButtonEdge = now;
   lastButtonLevel = level;
 
-  if (level == LOW) {
-    // A press during the rehearsal ends it, and is spent doing so: its release must not fire a capture.
-    if (rehearsal.active) {
-      rehearsal.active = false;
-      return;
-    }
-    buttonHeld = true;
-    buttonPressedAt = now;
-    holdBecameRehearsal = false;
-    pressedFromReady = (state.screen == rig::Screen::Ready);
-    return;
-  }
-
-  // The release edge.
-  if (!buttonHeld) {
-    return;  // the release of the press that ended the rehearsal
-  }
-  buttonHeld = false;
-  if (holdBecameRehearsal) {
-    return;  // the hold already became the rehearsal, so letting go captures nothing
+  if (level != LOW) {
+    return;  // only the press acts
   }
 
   // A capture needs a PC to receive it, and the invariant already ties `Gone` to the OFFLINE screen, so
@@ -211,16 +170,20 @@ uint8_t segmentsFor(char c) {
 //: A score right-aligned in digits 1-3 with the verdict letter in the fourth: 95 reads ` 95P`. Clamped,
 //: not trusted: the protocol clamps too, but this is the last place a -1 or a 137 could reach the glass.
 void scoreMask(int score, char verdict, uint8_t mask[4]) {
-  if (score < 0) {
-    score = 0;
-  }
-  if (score > 100) {
-    score = 100;
-  }
-  char number[4];
-  const int digits = snprintf(number, sizeof(number), "%d", score);
-  for (int i = 0; i < digits; ++i) {
-    mask[3 - digits + i] = segmentsFor(number[i]);
+  // A negative score means "no measurement" - the PC's `-1` - and it is drawn as blanks rather than as a
+  // zero nobody measured. That matters most in the one case that produces it: a `NO REPLY` retake reads
+  // `   F`, not `  0F`, because a `0` beside a timeout invents the very number the timeout says is missing.
+  // The OLED draws no number at all for the same score, so the two screens agree. Every writer of a
+  // negative score is listed in `rig_state.h`; the protocol clamps everything the PC sends into 0-100.
+  if (score >= 0) {
+    if (score > 100) {
+      score = 100;  // the protocol clamps too, but this is the last place a 137 could reach the glass
+    }
+    char number[4];
+    const int digits = snprintf(number, sizeof(number), "%d", score);
+    for (int i = 0; i < digits; ++i) {
+      mask[3 - digits + i] = segmentsFor(number[i]);
+    }
   }
   mask[3] = segmentsFor(verdict);
 }
@@ -254,8 +217,7 @@ void faultMask(uint32_t faultAge, rig::Fault fault, uint8_t mask[4]) {
 //: One face of one screen: the idle dash, `CAP`, a verdict or the link code. `faceAge` is how long this
 //: face has been up, and it is the only clock any of them reads: a face always starts at the beginning of
 //: its own cycle, so the idle dash begins at position one and no face inherits a phase from the one before
-//: it. Parameterised rather than read from `state` because the rehearsal shows these same faces without
-//: any screen having changed.
+//: it. Parameterised rather than read from `state` so the face is a pure function of its arguments.
 void screenFace(uint32_t faceAge, rig::Screen screen, int score, uint8_t mask[4]) {
   switch (screen) {
     case rig::Screen::Ready: {
@@ -275,7 +237,8 @@ void screenFace(uint32_t faceAge, rig::Screen screen, int score, uint8_t mask[4]
       mask[0] = segmentsFor('C');
       mask[1] = segmentsFor('A');
       mask[2] = segmentsFor('P');
-      mask[3] = static_cast<uint8_t>(1u << ((faceAge / cfg::DISPLAY_ROTATE_MS) % 6));
+      mask[3] = static_cast<uint8_t>(
+          1u << ((faceAge / cfg::DISPLAY_ROTATE_MS) % cfg::DISPLAY_ROTATE_STEPS));
       break;
     case rig::Screen::Pass:
     case rig::Screen::Retake: {
@@ -314,8 +277,8 @@ void screenFace(uint32_t faceAge, rig::Screen screen, int score, uint8_t mask[4]
   }
 }
 
-//: How long the whole self-test runs - the sweep, the settled eights and the blank - so that both the boot
-//: path and the rehearsal read it from one place rather than repeating the sum.
+//: How long the whole self-test runs - the sweep, the settled eights and the blank - so that the boot path
+//: reads it from one place rather than repeating the sum.
 constexpr uint32_t BOOT_SEQUENCE_MS =
     28 * cfg::DISPLAY_BOOT_SWEEP_MS + cfg::DISPLAY_BOOT_TEST_MS + cfg::DISPLAY_BOOT_BLANK_MS;
 
@@ -335,49 +298,6 @@ void bootMask(uint32_t bootAge, uint8_t mask[4]) {
   }
 }
 
-//: The rehearsal's steps: the boot self-test, the idle dash, `CAP`, both verdicts, the three fault codes
-//: and the link code, in that order, `cfg::REHEARSAL_STEP_MS` each and wrapping. It exists because some of
-//: these faces are otherwise unreachable on a bench where nothing is failing - `Err0` worst of all, since
-//: it needs a cable pulled - and a face nobody has ever seen is a face that fails on the day. Each step is
-//: also that face's own beginning: the step age is the face age, so a step shows the face from its first
-//: frame rather than joining it mid-cycle.
-void rehearsalMask(uint32_t now, uint8_t mask[4]) {
-  constexpr uint8_t STEPS = 9;
-  const uint32_t elapsed = now - rehearsal.startedAt;
-  const uint8_t step = static_cast<uint8_t>((elapsed / cfg::REHEARSAL_STEP_MS) % STEPS);
-  const uint32_t stepAge = elapsed % cfg::REHEARSAL_STEP_MS;
-
-  switch (step) {
-    case 0:
-      bootMask(stepAge, mask);  // the real self-test: the sweep, then the settled eights
-      break;
-    case 1:
-      screenFace(stepAge, rig::Screen::Ready, -1, mask);  // the travelling dash
-      break;
-    case 2:
-      screenFace(stepAge, rig::Screen::Capturing, -1, mask);
-      break;
-    case 3:
-      screenFace(stepAge, rig::Screen::Pass, 95, mask);  // the sweep plays, as it does on arrival
-      break;
-    case 4:
-      screenFace(stepAge, rig::Screen::Retake, 30, mask);
-      break;
-    case 5:
-      faultMask(stepAge, rig::Fault::Timeout, mask);
-      break;
-    case 6:
-      faultMask(stepAge, rig::Fault::Stray, mask);
-      break;
-    case 7:
-      faultMask(stepAge, rig::Fault::Invariant, mask);
-      break;
-    default:
-      screenFace(stepAge, rig::Screen::Offline, -1, mask);  // Err0, blink and all
-      break;
-  }
-}
-
 //: How long the current face has been up: the screen's age, clamped to the end of the boot so that the
 //: first face after the self-test begins at its own start instead of picking up mid-phase. One definition,
 //: read by every face and by the spinner, because a second clock for the same event can only drift.
@@ -392,18 +312,11 @@ uint32_t faceAgeAt(uint32_t now, uint32_t screenAge) {
 void displayMask(uint32_t now, uint32_t screenAge, uint8_t mask[4]) {
   mask[0] = mask[1] = mask[2] = mask[3] = 0;
 
-  // A fault outranks everything, the rehearsal included. It is the one thing on this panel that must not
-  // be missed: one keepalive is long enough to read a code and short enough to be over, and no routine
-  // status change can cut it short because this is decided before any screen is looked at.
+  // A fault outranks every screen. It is the one thing on this panel that must not be missed: one keepalive
+  // is long enough to read a code and short enough to be over, and no routine status change can cut it
+  // short because this is decided before any screen is looked at.
   if (state.fault != rig::Fault::None && now - state.faultAt < cfg::FAULT_FACE_MS) {
     faultMask(now - state.faultAt, state.fault, mask);
-    return;
-  }
-
-  // The rehearsal is display-only: the rig stays READY, nothing goes on the wire, and the panel walks
-  // through every face it has.
-  if (rehearsal.active) {
-    rehearsalMask(now, mask);
     return;
   }
 
@@ -500,12 +413,12 @@ void serviceDisplay(uint32_t now) {
   const uint32_t screenAge = now - lastDisplayChange;
 
   // The spinner on the OLED and the rotating segment on the panel are one animation, so they read one
-  // phase: the same step of the same clock. The OLED is redrawn on the tick that turns the segment, which is
-  // what stops two indicators of one event from drifting apart - tuning two periods until they look close
-  // only hides the drift.
+  // phase: the same step of the same clock, with the same six steps. The OLED is redrawn on the tick that
+  // turns the segment, which is what stops two indicators of one event from drifting apart - tuning two
+  // periods until they look close only hides the drift.
   if (state.screen == rig::Screen::Capturing) {
-    const uint8_t phase =
-        static_cast<uint8_t>((faceAgeAt(now, screenAge) / cfg::DISPLAY_ROTATE_MS) % 3);
+    const uint8_t phase = static_cast<uint8_t>(
+        (faceAgeAt(now, screenAge) / cfg::DISPLAY_ROTATE_MS) % cfg::DISPLAY_ROTATE_STEPS);
     if (state.animPhase != phase) {
       state.animPhase = phase;
       state.markDirty();
@@ -605,8 +518,14 @@ void loop() {
 
   // The five reachable screen/link combinations are enforced here rather than assumed. This costs a
   // comparison per loop and turns a state bug into a serial line instead of a panel that quietly lies.
+  //
+  // One report per episode, re-armed as soon as the pairing is sound again: the check keeps watching after
+  // it fires. A latch that reported once and then stayed quiet looked like a monitor while saying nothing at
+  // all about the second violation.
   static bool invariantReported = false;
-  if (!rig::invariantHolds(state) && !invariantReported) {
+  if (rig::invariantHolds(state)) {
+    invariantReported = false;
+  } else if (!invariantReported) {
     invariantReported = true;
     state.fault = rig::Fault::Invariant;
     state.faultAt = now;

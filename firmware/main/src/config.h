@@ -30,10 +30,9 @@ constexpr uint8_t OLED_ADDR = 0x3C;
 constexpr uint32_t SERIAL_BAUD = 115200;
 constexpr uint32_t BUTTON_DEBOUNCE_MS = 25;
 //: The PC is required to send `CMD PING` at least every two seconds, and **this is the unit the link
-//: intervals are multiples of**: one is the fault face and a rehearsal step, two the capture timeout, three
-//: the rehearsal hold, five the offline threshold and six the verdict face. They are written as products of
-//: it on purpose - a keepalive that changes must move all of them with it, and this is the one number that
-//: cannot be edited alone.
+//: intervals are multiples of**: two is the capture timeout, five the offline threshold and six the verdict
+//: face, with one for the fault face. They are written as products of it on purpose - a keepalive that
+//: changes must move all of them with it, and this is the one number that cannot be edited alone.
 constexpr uint32_t PC_KEEPALIVE_MS = 2000;
 // Silence for five keepalives is a real disconnection rather than an idle rig - enough to ride out a busy
 // PC without flashing `Offline` at a hiccup, at the cost of up to ten seconds of stale display.
@@ -71,6 +70,10 @@ constexpr uint32_t DISPLAY_BOOT_BLANK_MS = 40 * DISPLAY_UNIT_MS;
 // is the code `Err0`.
 constexpr uint32_t DISPLAY_READY_STEP_MS = 20 * DISPLAY_UNIT_MS;
 constexpr uint32_t DISPLAY_ROTATE_MS = 10 * DISPLAY_UNIT_MS;
+//: The rotating indicator has six steps on both screens: the panel's segment walks the digit's six rim
+//: segments A-F clockwise, and the OLED draws a six-dot ring in that same order. One constant, so the two
+//: cannot end up with different step counts.
+constexpr uint8_t DISPLAY_ROTATE_STEPS = 6;
 // The arrival sweep is ten units, so the score lands a quarter second after the verdict arrives.
 constexpr uint32_t DISPLAY_SWEEP_MS = 10 * DISPLAY_UNIT_MS;
 // One hertz, half a second either way: the RETAKE warning, and every fault code. The codes all blink at
@@ -79,11 +82,6 @@ constexpr uint32_t DISPLAY_BLINK_MS = 20 * DISPLAY_UNIT_MS;
 // A fault takes the panel for one keepalive - two seconds, forty units: those events used to be swallowed
 // and silence looks exactly like a healthy rig, and a four-character code is read well inside two seconds.
 constexpr uint32_t FAULT_FACE_MS = 1 * PC_KEEPALIVE_MS;
-constexpr uint32_t REHEARSAL_STEP_MS = 1 * PC_KEEPALIVE_MS;
-// The hold is three keepalives. Three seconds sat in the same order of magnitude as the capture timeout,
-// where a slow press and a deliberate hold could be confused; three keepalives is unmistakably deliberate
-// and collides with nothing.
-constexpr uint32_t REHEARSAL_HOLD_MS = 3 * PC_KEEPALIVE_MS;
 // A verdict is a conclusion, not a permanent label: six keepalives after the verdict the panel goes back to
 // the idle face. The number is `OFFLINE_AFTER_MS` plus one keepalive, and that relationship is the point:
 // **a verdict outlives the link-loss threshold on purpose**, so the link is always reported before a
@@ -117,9 +115,9 @@ constexpr uint32_t VERDICT_FACE_MS = 6 * PC_KEEPALIVE_MS;
 //: shows the score right-aligned with `P`, and RETAKE blinks the same with `F`; the faults that used to be
 //: swallowed are the codes `Err0` a lost link, `Err1` a capture timeout, `Err2` a stray result and `Err3` a
 //: broken invariant, all four blinking at one hertz, and a verdict goes back to READY after
-//: `cfg::VERDICT_FACE_MS`. A hold of three keepalives on the button, from READY only, rehearses all nine
-//: faces in turn; the multiplexer runs in a hardware timer, so an OLED transfer cannot stall the panel, and
-//: both screens read one boot clock so the splash is held until the panel's self-test has finished. The
+//: `cfg::VERDICT_FACE_MS`. The button has one meaning - a press captures - and the multiplexer runs in a
+//: hardware timer, so an OLED transfer cannot stall the panel. Both screens read one boot clock, so the
+//: splash is held until the panel's self-test has finished. The
 //: ten-lamp bar never shipped, and the display's commons are the pins the three status lamps sat on, so
 //: this build retires those as well.
 constexpr char FIRMWARE_VERSION[] = "1.13";

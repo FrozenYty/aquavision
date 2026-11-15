@@ -1,5 +1,24 @@
 ## 2026-11-15
 
+- **The rehearsal is gone, and the button has one meaning again: a press captures, on the pressing edge.** The
+  six-second hold, the two-second step and the nine-face walk were a second meaning for one control, and the
+  press that ended a rehearsal was consumed rather than capturing - the exact ambiguity the matrix exists to
+  catch. The fault faces stay; they are simply no longer performed on demand, so a bench where nothing is
+  failing sees them in the serial log (`EVT TIMEOUT`, `EVT STRAY RESULT`, `EVT INVARIANT`) and `Err0` after ten
+  seconds of silence. The release is not an event at all.
+- **A full state × event audit then walked every cell of the matrix and found the documents wrong in four
+  places.** `Ready` is a **one-way marquee** - digits 1, 2, 3, 4 and straight back to 1, 500 ms each, two
+  seconds a cycle - and the wrap is deliberate, not a defect to "fix" into a bounce; four documents plus this
+  log had said there-and-back. The matrix had no column for `CMD SCAN` or for the four-second capture timeout,
+  which left `Capturing` with no cell for the one transition that does not need the PC. §3's claim that `SCAN`
+  leaves the panel untouched was false from `Offline`, where a command is also the PC returning.
+- **A no-op `CMD READY` is a broadcast, not a transition.** The firmware emits `EVT SCREEN READY`
+  unconditionally, so `§8` now says "from `Ready`, or from any other screen" instead of "from any other
+  screen", and the event list says so too.
+- **Two behaviours the matrix has no dimension for are now written down rather than left silent.** A fault
+  window outranks every screen, so a verdict arriving inside one loses its arrival sweep - eaten, not deferred;
+  and a score of `-1` draws blanks and the verdict letter, never a zero, because a zero beside a timeout
+  invents the number the timeout says is missing.
 - **The fault codes are `Err0`-`Err3` now, four characters to the width of the panel, and all four look
   identical: they blink at one hertz.** The code is the identifier and the rhythm carries nothing, so there is
   no second rate and no special case for the link. What differs is only how long a face stays - `Err0` has no
@@ -10,12 +29,12 @@
 - **A retake reads ` 40F`, not ` 40E`, and that is legibility rather than spelling.** `E` begins every fault
   code, so a score of 40 on a retake sat one glance away from an `Err` face; `F` is the left column with the
   top and middle bars, and no code contains it.
-- **`READY` walks one dash out to the fourth digit and back: 1, 2, 3, 4, 3, 2 and round again, 500 ms a
-  position, three seconds a cycle.** No frame is dark and no frame holds more than one dash - that is
-  structural, not tuning. **The return path replaced an earlier held phase and must not be reinstated**: a
-  loop has a visible break where it wraps from the fourth digit straight back to the first, while a
-  there-and-back reads as breathing, and a waiting rig should look like it is breathing rather than like a
-  conveyor belt. The face also cannot be taken for `OFFLINE`, which is a code.
+- **`READY` is a one-way marquee: 1, 2, 3, 4 and straight back to 1, 500 ms a position, two seconds a
+  cycle.** No frame is dark and no frame holds more than one dash - that is structural, not tuning. **The wrap
+  is deliberate**: the dash starts over at the first digit instead of turning round, so the face is a conveyor
+  with a visible break, and `config.h` says not to "fix" it into a bounce. An earlier version held all four
+  dashes for a second instead; the marquee replaced it. The face also cannot be taken for `OFFLINE`, which is
+  a code.
 - **The boot self-test is two seconds: a 700 ms sweep of the 28 segment positions at 25 ms each, then `8888`
   for 300 ms, then 1000 ms with every digit dark.** The dark phase deliberately has the largest share of the
   three, because it was the part that went by invisibly before. Sequential rather than a static row of eights,
@@ -23,9 +42,9 @@
   The `PASS` arrival sweep shortened to 250 ms with it.
 - **Every face interval is an integer multiple of a 25 ms unit, `cfg::DISPLAY_UNIT_MS`, written as a product
   the way the keepalive rule is.** The keepalive still governs the state intervals - fault window, capture
-  timeout, rehearsal hold, offline threshold, verdict - and the display unit governs the faces. **The 250 us
-  digit period is a different domain**, a hardware figure in microseconds, and the 25 ms button debounce is
-  not a face interval either. Two rules, two tables, and neither may drift into the other.
+  timeout, offline threshold, verdict - and the display unit governs the faces. **The 250 us digit period is a
+  different domain**, a hardware figure in microseconds, and the 25 ms button debounce is not a face interval
+  either. Two rules, two tables, and neither may drift into the other.
 - **A face runs only on its own age, and that closed a real defect.** The end of the boot sequence and any
   screen change both start that age at zero, so no face inherits a phase from what was on the panel before; a
   fault's age is its phase too, so the blink starts with the fault. Without the clamp the idle cycle picked up
@@ -37,12 +56,14 @@
 - **The alphabet gained a lowercase `r` and lost three letters.** It is the digits, `A`, `C`, `E`, `F`, `P`
   and `r` - `r` admitted for `Err`, the one word the fault codes are built from, and the only lowercase letter
   drawn; `H`, `L` and `U` were theoretical, and a glyph no face displays is how the next person concludes a
-  character is safe to draw. The rehearsal walks nine faces, `Err0` included, because that one otherwise needs
-  a cable pulled.
-- **Nine files moved and no pin did.** `docs/rig-state-machine-{en,zh}.md` (the E9 row and section 10),
-  `firmware/README.md` and `README-zh.md`, procurement section 4 and its acceptance table, SRS Table 2-3's
-  display row, and `P3-17` in `PLAN.md`. `scripts/draw_wiring.py` and `docs/rig-wiring.svg` did not change:
-  the segment and common pins are the same fourteen, and the drawing is about pins.
+  character is safe to draw.
+- **Nine files moved and no pin did.** `docs/rig-state-machine-{en,zh}.md` (the event table, the matrix, the
+  rules, the event list and section 10), `firmware/README.md` and `README-zh.md`, procurement section 4 and its
+  acceptance table, SRS Table 2-3's display row, and `P3-17` in `PLAN.md`. `scripts/draw_wiring.py` and
+  `docs/rig-wiring.svg` did not change: the segment and common pins are the same fourteen, and the drawing is
+  about pins. Two more things moved with the audit: the OLED footer is `v1.13` rather than a session tally
+  (there is no tally left in the state), and `CAPTURING` draws a row of six dots sharing the panel's phase,
+  not three.
 
 ## 2026-11-14
 

@@ -25,10 +25,10 @@ pins are declared in `config.h`; the panel is `P3-17`'s to put on the bench.
 | File | What it owns | Edit it when |
 |---|---|---|
 | `src/config.h` | pins, timings, I2C addresses | a wire moves, or a period feels wrong |
-| `src/rig_state.h` | what the rig knows: screen, score, reason, session tally, frame count, fault, link | a new value has to be remembered |
+| `src/rig_state.h` | what the rig knows: screen, score, reason, frame count, fault, link | a new value has to be remembered |
 | `src/screen.cpp` | the OLED's 128×64 layout, one function per state | the screen should look different |
 | `src/protocol.cpp` | the serial grammar | the PC and the board must say something new |
-| `src/main.cpp` | the loop, the button gesture, the display's faces, and the timer that multiplexes them | almost never |
+| `src/main.cpp` | the loop, the button, the display's faces, and the timer that multiplexes them | almost never |
 
 Adding a screen state is five edits: an entry in `rig::Screen`, a `drawX` function in `screen.cpp`, a
 `case` in `render()`, a `case` in `screenFace()` in `main.cpp` so the panel has a face for it, and a
@@ -94,7 +94,7 @@ y 33..53  +-----------------------------------------------------+
           |                       RETAKE                        |    filled = PASS, outline = RETAKE
           +-----------------------------------------------------+
 y 54      -------------------------------------------------------
-y 55..62  P3 R1                                    FRAMES 12
+y 55..62  v1.13                                    FRAMES 12
 ```
 
 **Shape carries the verdict.** A pass fills the banner, a retake outlines it, so the two are
@@ -107,13 +107,14 @@ smudge.
 19, so at baseline 31 its digits occupy rows 12-31; the bold 7x13 label reports ascent 9, so at baseline
 26 it occupies 17-26. Both centre on 21.5. A 5x7 label at the same baseline sat 1.5 px low.
 
-**The footer is the session tally and the frame counter.** `P3 R1` on the left, `FRAMES 12` on the right,
-and both are drawn on the first screen as well as later ones: a blank cell reads as a cell that failed,
-not as a tally at zero. The tally counts since boot with nothing persisted, so a reboot is a new session
-by definition.
+**The footer is the firmware version and the frame counter.** `v1.13` on the left, built from the same
+constant `EVT HELLO` sends, so the panel and the log cannot disagree about which build is running;
+`FRAMES 12` on the right is a real capture count. There is no session tally any more - a count of verdicts
+is a statistic, and the PC keeps the record.
 
-**States without a score use the free band.** READY puts `PRESS TO CAPTURE` there and CAPTURING puts
-three dots, one lit at a time at a quarter-second. At three pixels a filled and a hollow mark were
+**States without a score use the free band.** READY puts `PRESS TO CAPTURE` there and CAPTURING puts a row
+of six dots, one lit at a time at a quarter-second, which is one step of the same phase as the panel's
+rotating segment (`cfg::DISPLAY_ROTATE_STEPS`). At three pixels a filled and a hollow mark were
 indistinguishable; at radius 2 the animation reads. OFFLINE replaces the whole screen with three centred
 lines - the earlier single line at 12 px was wider than the panel and lost its last letters.
 
@@ -142,7 +143,7 @@ dash after a power-up sat on digit 2 instead of digit 1.
 | Face | What it shows | Timing |
 |---|---|---|
 | boot | one segment at a time through all 28 positions, then `8888`, then dark | 25 ms per position (700 ms), 300 ms of eights, 1000 ms dark: two seconds, once |
-| `READY` | one dash, segment G alone, at digit 1, 2, 3, 4, 3, 2 and round again | 500 ms per position, 3 s a cycle |
+| `READY` | one dash, segment G alone, walking digit 1, 2, 3, 4 and starting over at 1 | 500 ms per position, 2 s a cycle |
 | `CAPTURING` | `CAP`, with one segment walking the rim of the fourth digit | 250 ms per step |
 | `PASS` | a left-to-right sweep, then the score in digits 1-3 and `P`: ` 95P` | 250 ms sweep on arrival, then steady |
 | `RETAKE` | the score and `F`, the whole panel blinking: ` 40F` | 1 Hz |
@@ -151,11 +152,12 @@ dash after a power-up sat on digit 2 instead of digit 1.
 | fault `Err2` | stray result, blinking | 1 Hz for 2 s |
 | fault `Err3` | broken invariant, blinking | 1 Hz for 2 s |
 
-**`READY` walks out and comes back; `OFFLINE` is a code.** Digits 1, 2, 3, 4, 3, 2 and round again, half a
-second at each position: three seconds a cycle, no dark frame, and never more than one dash lit. **The return
-path replaced an earlier held phase, so do not reinstate one**: a loop has a visible break where it wraps from
-the fourth digit straight back to the first, while a there-and-back reads as breathing. It cannot be mistaken
-for `OFFLINE` either, which is a code now, half a second either way.
+**`READY` is a one-way marquee; `OFFLINE` is a code.** Digits 1, 2, 3, 4 and straight back to 1, half a second
+at each position: two seconds a cycle, no dark frame, and never more than one dash lit. **The wrap is
+deliberate** - the dash starts over at the first digit instead of turning round, so the face is a conveyor
+with a visible break, and `config.h` says not to "fix" it into a bounce. An earlier version held all four
+dashes for a second instead; the marquee replaced it. It cannot be mistaken for `OFFLINE` either, which is a
+code now, half a second either way.
 
 **`Err0` is the `OFFLINE` screen; `Err1`-`Err3` are fault windows, and all four look the same.** Each code
 blinks at one hertz - the code is the identifier and the rhythm carries nothing, so there is no second rate
@@ -168,15 +170,22 @@ nothing a person at the bench could see, which made a broken rig and an idle one
 apart; `F` is the left column with the top and middle bars, and no code contains it.
 
 **A verdict is a conclusion, not a label.** `PASS` and `RETAKE` go back to `READY` after 12 s with no new
-press. The score is not lost - the OLED's tally keeps the session and the PC keeps the record - and a
+press. The score is not lost - the PC keeps the record - and a
 panel still reading ` 95P` long after the press looks hung rather than waiting. `OFFLINE` is deliberately
 excluded: a lost link is a fault, not a completion, and it stays until the link returns.
 
-**The rehearsal walks all nine faces, `Err0` included.** That one otherwise needs a cable pulled, and a face
-nobody has seen is a face that fails on the day. Holding the button for 6 s from `READY` shows the boot
-self-test, `READY`, `CAPTURING`, `PASS`, `RETAKE`, `Err1`, `Err2`, `Err3` and `Err0`, one every 2 s, and each
-step starts its face from its own first frame. A press ends the rehearsal and is spent ending it; a release
-before the hold completes is still a capture.
+**There is no rehearsal; the button has one meaning.** A press captures, on the pressing edge, and the release
+is not an event at all, so a fault face appears only when its event happens: a bench where nothing is failing
+never shows `Err1` to `Err3`, and `Err0` needs the PC to fall silent for ten seconds. That is why those events
+are reported on the wire as well as drawn - `EVT TIMEOUT`, `EVT STRAY RESULT`, `EVT INVARIANT` are the other
+place a fault is visible.
+
+**A fault outranks the screen, and an unknown score is never a zero.** A fault window covers the panel while
+the screen underneath moves, so a verdict that arrives inside one loses its arrival sweep - the 250 ms has
+expired by the time the fault clears, and the animation is eaten rather than deferred. And a score of `-1`,
+which is what a capture with no reply leaves behind, draws **blanks and the verdict letter**: a `NO REPLY`
+retake reads `   F`, not `  0F`, because a zero beside a timeout invents the number the timeout says is
+missing. The OLED draws no number for the same score.
 
 **The alphabet is the digits, `A`, `C`, `E`, `F`, `P` and a lowercase `r`.** `r` is admitted for `Err`, the
 one word the fault codes are built from, and it is the only lowercase letter drawn; `-` is segment G alone,
@@ -185,12 +194,11 @@ the idle dash. Anything outside the set either collides with a digit - `O` reads
 therefore becomes a code, which is why a fault is `Err1` and not `TIME`. The table in `main.cpp` implements
 only what a face displays, because an unused glyph is how the next person concludes a character is safe.
 
-**Every state interval is a multiple of the PC keepalive, 2 s.** One keepalive is a fault window and one
-rehearsal step; two is the capture timeout (**4 s**); three the rehearsal hold; five the offline
-threshold; six the verdict face. They are written as products of `cfg::PC_KEEPALIVE_MS` on purpose: a
-keepalive that changes must move all of them with it, and that is the one number that cannot be edited
-alone. A verdict therefore outlives the link-loss threshold deliberately - the link is reported before a
-verdict clears on its own.
+**Every state interval is a multiple of the PC keepalive, 2 s.** One keepalive is a fault window; two is the
+capture timeout (**4 s**); five the offline threshold; six the verdict face. They are written as products of
+`cfg::PC_KEEPALIVE_MS` on purpose: a keepalive that changes must move all of them with it, and that is the
+one number that cannot be edited alone. A verdict therefore outlives the link-loss threshold deliberately -
+the link is reported before a verdict clears on its own.
 
 **Every face interval is a multiple of `cfg::DISPLAY_UNIT_MS`, 25 ms**, and written as a product for the
 same reason: each of them divides by twenty-five and gives a whole number. The 250 µs digit period is a

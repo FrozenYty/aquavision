@@ -38,28 +38,29 @@ is nobody to talk to.
 
 | # | Event | Source |
 |---|---|---|
-| E1 | Button pressed (falling edge, debounced 25 ms) | operator |
+| E1 | Button pressed (falling edge, debounced 25 ms) - the press is the whole gesture and the release is not an event | operator |
 | E2 | `CMD PING` | PC |
 | E3 | `CMD READY` | PC |
 | E4 | A well-formed `CMD RESULT` (score and verdict present) | PC |
 | E5 | A `CMD` line the firmware does not act on (unknown verb, or missing arguments) | PC |
 | E6 | Ten seconds of silence | link timer |
 | E7 | Heartbeat tick (1 s) | timer |
-| E8 | Spinner tick (250 ms) | timer |
+| E8 | Rotation step (250 ms), shared by the OLED's dot row and the panel's segment | timer |
 | E9 | Display face step (25 ms boot sweep, 500 ms dash, 250 ms rotation and sweep, 500 ms blink) | timer |
 | E10 | `CMD SCAN` | PC |
 | E11 | Verdict face expired (12 s with no press) | timer |
+| E12 | Capture timeout (4 s with no verdict) | timer |
 
-Only a line that starts with `CMD` and names an action counts as the PC being alive. A line that is not a
-`CMD` line, or a bare `CMD` with nothing after it, is ignored entirely: it does not refresh the link timer
-and cannot recover `Offline`.
+Any line that starts with `CMD` and carries a word after it counts as the PC being alive, whether or not the
+firmware acts on that verb. A line that is not a `CMD` line, or a bare `CMD` with nothing after it, is
+ignored entirely: it does not refresh the link timer and cannot recover `Offline`.
 
 **`CMD SCAN` is an assembly tool, not part of a run.** It makes the firmware walk addresses 1 to 126 and
 print one `EVT I2C <address>` line for each device that answers, then stop. It has no completion marker, so
 a reader waits a fixed window rather than a terminator, and **how long it waited belongs in what it
 reports** - a short window that found nothing and a complete walk that found nothing are different facts.
-Nothing in the state machine changes: it refreshes the link timer like any other `CMD` line and the panel is
-untouched, so the screens below are the same with and without a board on the bus.
+While the link is alive it changes nothing on the panel; from `Offline` it recovers the link like every
+other command, because a command *is* the PC being alive (§5, E10).
 
 ## 4. Composite states
 
@@ -79,30 +80,34 @@ Ten pairs, five of which must never exist. The right-hand column is the invarian
 Offline  <=>  Gone          and          everything else  =>  Alive
 ```
 
-`rig::invariantHolds` encodes it, the loop checks it once per pass and reports `EVT INVARIANT` if it is
-ever broken. It has never fired. Two earlier drafts got this wrong in opposite directions - one showed
-`OFFLINE` ten seconds after every power-up because it measured the absence of a PC nobody had promised,
-the other could leave the panel on `OFFLINE` while the link was alive, because recovery was handled in
-the link timer instead of where the PC actually spoke.
+`rig::invariantHolds` encodes it, the loop checks it once per pass and reports `EVT INVARIANT` once per
+episode, re-arming as soon as the pairing is sound again. It has never fired. Two earlier drafts got this
+wrong in opposite directions - one showed `OFFLINE` ten seconds after every power-up because it measured the
+absence of a PC nobody had promised, the other could leave the panel on `OFFLINE` while the link was alive,
+because recovery was handled in the link timer instead of where the PC actually spoke.
 
 ## 5. Transitions
 
 Rows are the five reachable composites. `-` means the state does not change; **rejected** means it does
 not change *and* the event is reported.
 
-| Composite \ Event | E1 button | E2 PING | E3 READY | E4 RESULT | E5 unknown | E6 silence | E7 heartbeat | E8 spinner | E9 display | E11 expired |
-|---|---|---|---|---|---|---|---|---|---|---|
-| Ready + Alive | Capturing | Ready | Ready | **rejected** | Ready | Offline | Ready | `-` | Ready | `-` |
-| Capturing + Alive | **ignored** | Capturing | Ready | Pass / Retake | Capturing | Offline | Capturing | Capturing | Capturing | `-` |
-| Pass + Alive | Capturing | Pass | Ready | **rejected** | Pass | Offline | Pass | `-` | `-` | Ready |
-| Retake + Alive | Capturing | Retake | Ready | **rejected** | Retake | Offline | Retake | `-` | Retake | Ready |
-| Offline + Gone | `-` | Ready | Ready | rejected, then Ready | Ready | `-` | `-` | `-` | Offline | `-` |
+| Composite \ Event | E1 button | E2 PING | E3 READY | E4 RESULT | E5 unknown | E6 silence | E7 heartbeat | E8 rotation | E9 display | E10 SCAN | E11 expired | E12 timeout |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Ready + Alive | Capturing | Ready | Ready | **rejected** | Ready | Offline | Ready | `-` | Ready | `-` | `-` | `-` |
+| Capturing + Alive | **ignored** | Capturing | Ready | Pass / Retake | Capturing | Offline | Capturing | Capturing | Capturing | `-` | `-` | Retake |
+| Pass + Alive | Capturing | Pass | Ready | **rejected** | Pass | Offline | Pass | `-` | `-` | `-` | Ready | `-` |
+| Retake + Alive | Capturing | Retake | Ready | **rejected** | Retake | Offline | Retake | `-` | Retake | `-` | Ready | `-` |
+| Offline + Gone | `-` | Ready | Ready | rejected, then Ready | Ready | `-` | `-` | `-` | Offline | Ready | `-` | `-` |
 
-E7, E8 and E9 never change the screen; they redraw it. They are in the table because a redraw in the
-wrong state is itself a visible defect - the spinner must not advance on a result screen, the fourth
-digit must not turn once a verdict is on the panel, and a verdict's face must not appear without a
-capture. E11 is the only timer in this table that changes the screen: a verdict is a conclusion, not a
-permanent label.
+E7, E8, E9 and E10 never change the screen by themselves: they redraw it, or - for `CMD SCAN` while the link
+is alive - leave it exactly as it was. They are in the table because a redraw in the wrong state is itself a
+visible defect: the rotation must not advance on a result screen, the fourth digit must not turn once a
+verdict is on the panel, and a verdict's face must not appear without a capture. E10's one exception is
+`Offline`, where a command is also the PC returning. E11 and E12 are the two timers that change a live
+screen on their own, and E12 fires in `Capturing` only.
+
+**The fault overlay has no column here.** It outranks every screen rather than competing with one, and what
+that costs - a verdict arriving inside a fault window loses its arrival sweep - is in §10.
 
 ## 6. The rules and why
 
@@ -143,8 +148,9 @@ firmware makes, including the ones the button, the link timer and boot cause. Th
 (§8) - a transition that for one afternoon was the single exception, and was fixed rather than documented.
 Before the screen events existed, a wiring fault and a logic fault looked identical from the serial port.
 
-**8. The invariant is checked, not assumed.** One comparison per loop pass; a violation is a serial line
-rather than a panel that quietly lies.
+**8. The invariant is checked, not assumed.** One comparison per loop pass, and one report per episode:
+the flag is re-armed as soon as the pairing is sound again, so a monitor cannot fire once and then stay
+quiet about the second violation. A violation is a serial line rather than a panel that quietly lies.
 
 ## 7. Diagram
 
@@ -172,14 +178,14 @@ flowchart TD
 |---|---|
 | boot | `EVT HELLO <version>`, ..., `EVT SCREEN READY -1` |
 | any command from `Offline` → Ready | `EVT SCREEN READY <score>` |
-| `CMD READY` from any other screen → Ready | `EVT SCREEN READY <score>` |
+| `CMD READY` from Ready, or from any other screen → Ready | `EVT SCREEN READY <score>` - emitted unconditionally, so a no-op `READY` is a broadcast of the screen the rig is already on |
 | Ready → Capturing | `EVT SCREEN CAPTURING -1` then `EVT TRIGGER <millis>` |
 | Capturing → Pass / Retake | `EVT SCREEN PASS\|RETAKE <score>` |
 | Capturing → Retake (`NO REPLY`) | `EVT TIMEOUT <millis>` then `EVT SCREEN RETAKE -1` |
 | Pass / Retake → Ready (verdict face expired) | `EVT SCREEN READY <score>` |
 | any → Offline | `EVT SCREEN OFFLINE <score>` |
 | rejected RESULT | `EVT STRAY RESULT <score>` |
-| invariant broken (never observed) | `EVT INVARIANT <screen> <link>` |
+| invariant broken (reports once per episode) | `EVT INVARIANT <screen> <link>` |
 
 A score of `-1` in `EVT SCREEN` means no verdict has been received yet, so the screen has no number to
 draw. The field is not reset by a link transition or by `CMD READY`: on `READY` and `OFFLINE` it can still
@@ -257,7 +263,7 @@ phase the same way.
 | Screen | Face | Timing |
 |---|---|---|
 | boot | one segment at a time through all 28 positions, then `8888`, then dark | 25 ms per position (700 ms), 300 ms of eights, 1000 ms dark: two seconds, once |
-| `Ready` | one dash (segment G alone) at digit 1, 2, 3, 4, 3, 2 and round again | 500 ms per position, 3 s a cycle |
+| `Ready` | one dash (segment G alone) walking digit 1, 2, 3, 4 and starting over at 1 | 500 ms per position, 2 s a cycle |
 | `Capturing` | `CAP`, with one segment walking the rim of the fourth digit | 250 ms per step |
 | `Pass` | a left-to-right sweep, then the score right-aligned in digits 1-3 and `P`: ` 95P` | 250 ms sweep on arrival, then steady |
 | `Retake` | the score and `F`, the whole panel blinking: ` 40F` | 1 Hz |
@@ -266,12 +272,12 @@ phase the same way.
 | fault `Err2` | a stray result, blinking | 1 Hz for 2 s |
 | fault `Err3` | a broken invariant, blinking | 1 Hz for 2 s |
 
-**`Ready` walks out and comes back: digits 1, 2, 3, 4, 3, 2, then round again, half a second at each position
-and three seconds a cycle.** No frame is dark and no frame ever holds more than one dash, and that is
-structural rather than tuned. **The return path replaced an earlier held phase, and it must not be
-reinstated**: a loop has a visible break where it wraps from the fourth digit straight back to the first,
-while a there-and-back reads as breathing, which is what a waiting rig should look like. It cannot be
-mistaken for `Offline` either, because that face is a code.
+**`Ready` is a one-way marquee: digits 1, 2, 3, 4 and straight back to 1, half a second at each position,
+two seconds a cycle.** No frame is dark and no frame ever holds more than one dash, and that is structural
+rather than tuned. **The wrap is deliberate**: the dash starts over at the first digit instead of turning
+round, so the face is a conveyor with a visible break, and `config.h` carries a comment saying not to "fix"
+it into a bounce. An earlier version held all four dashes for a second instead of wrapping; the marquee
+replaced it. It cannot be mistaken for `Offline` either, because that face is a code.
 
 **`Err0` is the `Offline` screen; `Err1`-`Err3` are fault windows, and all four look the same.** Each code
 blinks at one hertz - the code is the identifier and the rhythm carries nothing, so there is no second rate
@@ -287,15 +293,23 @@ apart; `F` is the left column with the top and middle bars, and no code contains
 **A verdict is a conclusion, not a permanent label.** `Pass` and `Retake` return to `Ready` after 12 s with
 no new press - six keepalives, which is `OFFLINE_AFTER_MS` plus one. That relationship is the point: a
 verdict outlives the link-loss threshold on purpose, so a dead link is always reported before a verdict
-clears on its own. Nothing is lost by moving on, because the OLED tally keeps the session and the PC keeps
-the record; `Offline` is deliberately excluded, because a lost link is a fault rather than a completion.
+clears on its own. Nothing is lost by moving on, because the PC keeps the record and the operator's own
+eyes had the verdict for its whole twelve seconds; `Offline` is deliberately excluded, because a lost link
+is a fault rather than a completion.
 
-**The rehearsal walks all nine faces, `Err0` included.** That one otherwise needs a cable pulled, and a face
-nobody has ever seen is a face that fails on the day. Holding the button for three keepalives (6 s) from
-`Ready` shows the boot self-test, `Ready`, `Capturing`, `Pass`, `Retake`, `Err1`, `Err2`, `Err3` and `Err0`,
-one keepalive each, and each step starts its face from its own first frame rather than joining it mid-cycle.
-A press ends the rehearsal and is spent ending it; a release before the hold completes is still a capture.
-It is display-only: the rig stays `Ready` and nothing goes on the wire.
+**There is no rehearsal; the button has one meaning.** A press captures, on the pressing edge, and the
+release is not an event at all, so a fault face appears only when its event happens: a bench where nothing
+is failing never shows `Err1` to `Err3`, and `Err0` needs the PC to fall silent for ten seconds. The serial
+log is the other place those events are visible - `EVT TIMEOUT`, `EVT STRAY RESULT`, `EVT INVARIANT` - and
+that is why they are reported as well as drawn.
+
+**Two things the matrix has no dimension for, both deliberate.** A fault window outranks every screen, so a
+verdict that arrives inside one moves the screen underneath while the fault is drawn over it: by the time
+the fault clears, the `Pass` sweep's 250 ms has already expired, and the arrival animation is **eaten rather
+than deferred**. And an unknown score - `-1`, a capture that got no reply - is drawn as **blanks and the
+verdict letter**, never as a zero: a `NO REPLY` retake reads `   F`, not `  0F`, because a zero beside a
+timeout invents the very number the timeout says is missing. The OLED draws no number for the same score, so
+the two screens agree.
 
 **The alphabet is the digits, `A`, `C`, `E`, `F`, `P` and a lowercase `r`.** `r` is admitted for `Err`, the
 one word the fault codes are built from, and it is the only lowercase letter drawn; `-` is segment G alone,
@@ -310,9 +324,8 @@ of it on purpose - a keepalive that changes must move all of them with it, and t
 
 | Keepalives | Interval | What it times |
 |---|---|---|
-| 1 | 2 s | a fault window, one rehearsal step |
+| 1 | 2 s | a fault window |
 | 2 | 4 s | the capture timeout |
-| 3 | 6 s | the rehearsal hold |
 | 5 | 10 s | offline detection |
 | 6 | 12 s | the verdict face |
 
@@ -329,5 +342,4 @@ is not one either: the number matches by coincidence, not by construction.
 | 20 | 500 ms | one `Ready` dash step, one `Retake` or code half-cycle |
 | 28 | 700 ms | the whole 28-position boot sweep |
 | 40 | 1000 ms | the dark blank after the eights |
-| 80 | 2 s | one fault window |
-| 120 | 3 s | the whole `Ready` cycle |
+| 80 | 2 s | one fault window, the whole `Ready` cycle |
