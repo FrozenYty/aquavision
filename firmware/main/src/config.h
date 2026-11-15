@@ -92,6 +92,49 @@ constexpr uint32_t FAULT_FACE_MS = 1 * PC_KEEPALIVE_MS;
 // fault, not a completion, and it stays visible until the link returns.
 constexpr uint32_t VERDICT_FACE_MS = 6 * PC_KEEPALIVE_MS;
 
+// ---------------------------------------------------------------------------- ble
+
+//: Which carrier this build runs. The build environment defines it - `rig-ble` sets `AV_BLE_CARRIER` -
+//: and nothing sets it by hand: two builds of one firmware that disagree about their own wire is the
+//: failure this flag exists to prevent. It selects the OLED's offline line, which is the one string on
+//: the panel that is false in the other build (docs/rig-transport-en.md §10, §11).
+#ifdef AV_BLE_CARRIER
+constexpr bool BLE_CARRIER = true;
+#else
+constexpr bool BLE_CARRIER = false;
+#endif
+
+//: The advertised name is ours; the three UUIDs are not. This is the Nordic UART Service, a de-facto
+//: standard, so a phone app or a terminal that speaks NUS reaches the rig without a profile of our own:
+//: the central writes to the RX characteristic and the rig notifies on TX. Both ends read these strings -
+//: `server/app/rig/ble.py` carries the same four - and they are written down here rather than in the
+//: transport because a name is an identity, not a pin.
+constexpr char BLE_NAME[] = "AQUAVISION";
+constexpr char BLE_SERVICE_UUID[] = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
+constexpr char BLE_RX_UUID[] = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E";
+constexpr char BLE_TX_UUID[] = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E";
+
+//: A central that connects and never subscribes is dropped after ten seconds (§5 rule 2): five
+//: keepalives, and deliberately longer than the PC's own five-second subscription timeout, so that in the
+//: ordinary failure the PC's timer fires first and the operator reads a PC-side timeout rather than a
+//: rig-side eviction.
+constexpr uint32_t BLE_SUBSCRIBE_GRACE_MS = 5 * PC_KEEPALIVE_MS;
+//: Five disconnects inside sixty seconds - thirty keepalives - is a fault, not a link a sixth attempt
+//: will fix (§5 rule 5). The state stays `Advertising` and this count carries the decision.
+constexpr uint32_t BLE_DROP_STORM_WINDOW_MS = 30 * PC_KEEPALIVE_MS;
+constexpr uint8_t BLE_DROP_STORM_LIMIT = 5;
+
+//: The MTU this end asks for. A protocol line is under forty bytes, so any MTU above 43 - forty plus the
+//: three-byte notification header - carries one in a single notification; 247 is what most stacks accept
+//: and it is well under the 512 an attribute may hold. The measured figure is what matters, not this one:
+//: the peer may grant less, and `transport_ble.cpp` splits a line to whatever was negotiated.
+constexpr uint16_t BLE_PREFERRED_MTU = 247;
+//: How often the loop asks to advertise again while a return to `Advertising` has not taken. A restart
+//: immediately after a disconnect can be refused while the host finishes that disconnect, and a refused
+//: restart that is never retried is a rig that is running and cannot be found. Fast enough to be
+//: findable a moment later, slow enough not to spin at loop rate.
+constexpr uint32_t BLE_ADVERTISE_RETRY_MS = 250;
+
 // ---------------------------------------------------------------------------- identity
 
 //: Bumped whenever the wire protocol or what the panel shows changes, because `EVT HELLO` is how a host

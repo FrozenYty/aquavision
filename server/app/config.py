@@ -8,6 +8,7 @@ here: no port, path or secret is hardcoded elsewhere. The DSN keeps the name `DB
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -48,6 +49,12 @@ class Settings(BaseSettings):
     # is the normal case for everyone who is not at the rig.
     rig_port: str = Field(default="", validation_alias="AV_RIG_PORT")
     rig_baud: int = Field(default=115200, validation_alias="AV_RIG_BAUD")
+    #: Which wire carries the rig link (ADR 16, docs/rig-transport-en.md §11): `serial` over the cable, or
+    #: `ble` for the finished rig, which is found by its advertised name and needs no port. Named rather
+    #: than a boolean so a third carrier is one value and not a second flag nobody remembers.
+    rig_transport: Literal["serial", "ble"] = Field(
+        default="serial", validation_alias="AV_RIG_TRANSPORT"
+    )
     # The rig requires a keepalive at least every two seconds or it declares itself offline.
     rig_keepalive_seconds: float = Field(default=2.0, validation_alias="AV_RIG_KEEPALIVE_SECONDS")
 

@@ -20,6 +20,9 @@ opencv-python-headless==5.0.0.93
 numpy==2.4.6
 # pyserial: the PC side of the ESP32 rig link (P2-17).
 pyserial==3.5
+# bleak: the cable-free side of the same link (P3-38). The BLE client in app/rig/ble.py and the bench
+# tool scripts/test_rig_ble.py both import it; the tests do not need an adapter, only the service does.
+bleak==3.1.0
 # tzdata: Windows ships no IANA database, so ZoneInfo("Asia/Shanghai") raises there without it.
 # app/timebase.py resolves AV_TIMEZONE on every deployment (ADR 14), not only where the OS has zones.
 tzdata==2026.6

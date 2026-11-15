@@ -21,7 +21,7 @@ FastAPI 进程运行在一台机器上，摄像头通过 USB 连接。
 ```mermaid
 flowchart LR
     CAM[USB 摄像头] --> CAP[采集服务]
-    MCU[ESP32：触发与面板] -. 串口 .-> CAP
+    MCU[ESP32：触发与面板] -. 串口或 BLE .-> CAP
     CAP --> Q[质量判定]
     Q --> DB[(PostgreSQL)]
     Q --> FS[(本地文件)]
@@ -99,7 +99,7 @@ tests/
 | 识别 | 按需：`POST /api/detect/frames/{id}` 单帧、批量任务由工作线程池执行、实时 socket 按 `detect_interval_ms` 推理 | 实时 socket 让抓帧与推理各按自己的节奏走；见 ADR 03 |
 | 批量任务 | 固定线程池，2 个工作线程 | 不引 Celery 与 Redis，任务状态存 PostgreSQL |
 | 接口 | 同步 `def` 处理函数由 FastAPI 线程池执行，另有一个 WebSocket 路由 | 提供 REST；`/ws/capture` 按 api-contract 第七节推送实时画面，轮询只是 socket 无法提供时的兜底 |
-| 装置链路 | 一个读线程加一个保活线程，仅在设置了 `AV_RIG_PORT` 时启动 | 板子是可选的；没有板子的机器不是「降级状态」。链路的状态与保活规则见 `docs/rig-state-machine-zh.md` 第九节 |
+| 装置链路 | 一个读线程加一个保活线程，仅在设置了 `AV_RIG_PORT` 或 `AV_RIG_TRANSPORT=ble` 时启动 | 板子是可选的；没有板子的机器不是「降级状态」。链路的状态与保活规则见 `docs/rig-state-machine-zh.md` 第九节；两种物理载体见 `docs/rig-transport-zh.md` |
 
 **识别频率与显示帧率不同，这一点只在实时 socket 上成立。** 页面在 `start` 消息里给出帧率
 （客户端为 10 fps）与识别间隔（`detect_interval_ms`，默认 300 ms）；抓帧持续进行，推理在线程池里跑，
@@ -157,6 +157,7 @@ AV_QUALITY_THRESHOLD=60
 AV_CAMERA_INDEX=0
 AV_RIG_PORT=                        # 留空即不启用装置链路；板子是可选的
 AV_RIG_BAUD=115200
+AV_RIG_TRANSPORT=serial             # 或 ble：无线缆的成品装置，按广播名找到（ADR 16）
 AV_RIG_KEEPALIVE_SECONDS=2.0
 AV_WORKER_ENABLED=1
 AV_WORKER_POLL_SECONDS=1.0
@@ -195,3 +196,4 @@ AV_WORKER_POLL_SECONDS=1.0
 | [14](adr/14-the-time-basis.md) | 存储仍是 UTC，所有日历问题由一个配置的时区回答：`AV_TIMEZONE`，默认北京，一天为该时区的 00:00 至 23:59，且所有发出的时间戳都带偏移 |
 | [15](adr/15-parameters-take-effect-live.md) | 操作员可改的参数在下一次做决定的时刻生效——单一读取入口、短 TTL、声明取值范围——而不是等下次重启 |
 | [13](adr/13-weights-in-the-repository.md) | 交付的模型权重进仓库；数据集、采集帧与训练产物仍在外 |
+| [16](adr/16-rig-cable-free-over-ble.md) | 成品装置以 BLE 免线缆运行，因为现场校园网对装置不可用；`rig-serial` 作为构建变体保留而不删除 |

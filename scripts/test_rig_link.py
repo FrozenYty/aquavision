@@ -10,6 +10,7 @@ is silent, and finding out which is the first question every other check depends
     python scripts/test_rig_link.py --port COM5 --seconds 10
     python scripts/test_rig_link.py --port COM5 --scan --seconds 6
     python scripts/test_rig_link.py --port COM5 --answer --seconds 60
+    python scripts/test_rig_link.py --ble --scan --seconds 6
 
 Exit codes: 0 the question was answered, 1 it was not, or the port could not be opened.
 
@@ -17,6 +18,11 @@ With `--scan` the tool instead asks the board to walk its I2C bus (`CMD SCAN`) a
 that answered, against the one this rig is built to have, the OLED. That is the check `P3-17` names, and it
 is the only way to see the bus without a serial terminal. The firmware has no completion marker for a scan,
 so the tool waits a fixed window and says how long it waited rather than pretending the list is complete.
+
+**`--ble` runs the same checks over the radio instead of the cable** (`docs/rig-transport-en.md` §8). It is
+the same protocol on the same wire format - `CMD SCAN` is a line like any other - and it is here because the
+one tool that tests wiring must not need the cable the finished rig does not have. The rig is found by its
+advertised name, so `--ble` takes no port.
 
 With `--answer` the tool stands in for the server and answers a button press, which is the only way to test
 the two verdict lamps on their own: the firmware pulses a lamp when `CMD RESULT` arrives, and it **refuses**
@@ -38,6 +44,7 @@ import argparse
 import os
 import sys
 import time
+from pathlib import Path
 
 # The two protocol tokens this tool needs, from the table in `firmware/README.md`. Copied rather than
 # imported: `app.rig.protocol` pulls in `app.vision.quality`, which pulls in OpenCV and numpy - not
@@ -56,6 +63,11 @@ BAUD = 115200
 KEEPALIVE_SECONDS = 2.0
 DEFAULT_SECONDS = 5.0
 READ_TIMEOUT_SECONDS = 0.2
+#: How long `--ble` waits for the client to reach `Streaming`: one scan, one connection and one
+#: subscription, plus the reconnect the design allows for - a bound, not a prediction.
+BLE_DEADLINE_SECONDS = 50.0
+#: The advertised name the BLE client looks for (`docs/rig-transport-en.md` §12).
+RIG_NAME = "AQUAVISION"
 
 
 def scan_addresses(lines: list[str]) -> dict[str, str]:
@@ -97,31 +109,77 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="stand in for the server and answer each button press with a verdict",
     )
+    parser.add_argument(
+        "--ble",
+        action="store_true",
+        help="reach the rig over the radio instead of a serial port; found by its advertised name",
+    )
     args = parser.parse_args(argv)
 
-    if not args.port:
-        print("No port given: pass --port or set AV_RIG_PORT.", file=sys.stderr)
-        return 1
+    if args.ble and args.port:
+        print("--ble and --port are different wires: pass one of them.", file=sys.stderr)
+        return 2
 
-    # Imported here so `--help` still works on a machine that has not installed pyserial yet.
-    try:
-        import serial
-    except ImportError:
-        print("pyserial is not installed: pip install -r requirements-server.txt", file=sys.stderr)
-        return 1
+    client = None
+    if args.ble:
+        # Imported here, like `serial` below, and for a stronger reason: this path is for the finished rig,
+        # which has no cable, so a machine that runs it does not have to have pyserial at all. Only
+        # `app.rig.ble` is imported, not `app.rig.protocol` - the protocol tokens above stay copies.
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "server"))
+        try:
+            from app.rig.ble import BleClient, BleState
+        except ImportError:
+            print("bleak is not installed: pip install -r requirements-server.txt", file=sys.stderr)
+            return 1
 
-    # Said before the port is touched: a tool that then waits two seconds should look like a board
-    # that is not answering, not like a tool that hung.
-    print(f"Opening {args.port} at {BAUD} baud")
-    try:
-        port = serial.Serial(args.port, BAUD, timeout=READ_TIMEOUT_SECONDS)
-    except serial.SerialException as err:
-        print(f"Cannot open {args.port}: {err}", file=sys.stderr)
-        return 1
+        client = BleClient()
+        print(f"Looking for {RIG_NAME} over BLE for up to {BLE_DEADLINE_SECONDS:g} s")
+        client.request_link()
+        deadline = time.monotonic() + BLE_DEADLINE_SECONDS
+        while client.state is not BleState.STREAMING and time.monotonic() < deadline:
+            time.sleep(0.05)
+        if client.state is not BleState.STREAMING:
+            print(
+                f"Fail: nothing reached Streaming over BLE in {BLE_DEADLINE_SECONDS:g} s "
+                f"(state {client.state.name.lower()}). Is the rig flashed rig-ble and powered, and does "
+                "this machine have a BLE adapter?",
+                file=sys.stderr,
+            )
+            client.stop()
+            return 1
+        port = client.open_transport()
+        # What a failure looks like on this wire. `serial.SerialException` is not in scope on a machine
+        # without pyserial, and every failure of a BLE transport is an `OSError`.
+        failure = OSError
+    else:
+        if not args.port:
+            print("No port given: pass --port or set AV_RIG_PORT.", file=sys.stderr)
+            return 1
+
+        # Imported here so `--help` still works on a machine that has not installed pyserial yet.
+        try:
+            import serial
+        except ImportError:
+            print(
+                "pyserial is not installed: pip install -r requirements-server.txt", file=sys.stderr
+            )
+            return 1
+
+        # Said before the port is touched: a tool that then waits two seconds should look like a board
+        # that is not answering, not like a tool that hung.
+        print(f"Opening {args.port} at {BAUD} baud")
+        try:
+            port = serial.Serial(args.port, BAUD, timeout=READ_TIMEOUT_SECONDS)
+        except serial.SerialException as err:
+            print(f"Cannot open {args.port}: {err}", file=sys.stderr)
+            return 1
+        failure = serial.SerialException
 
     if args.scan and args.answer:
         print("--scan and --answer are different jobs: pass one of them.", file=sys.stderr)
         port.close()
+        if client is not None:
+            client.stop()
         return 2
     if args.answer:
         print(
@@ -172,11 +230,13 @@ def main(argv: list[str] | None = None) -> int:
             if line == PONG and not args.scan and not args.answer:
                 pong = True
                 break
-    except serial.SerialException as err:
-        print(f"Fail: the port failed during the check: {err}", file=sys.stderr)
+    except failure as err:
+        print(f"Fail: the wire failed during the check: {err}", file=sys.stderr)
         return 1
     finally:
         port.close()
+        if client is not None:
+            client.stop()
 
     if args.answer:
         print()
@@ -211,11 +271,19 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Pass: {len(found)} address(es) answered in the {args.seconds:g} s window.")
         return 0
 
+    wire = "BLE" if args.ble else args.port
     if pong:
-        print(f"Pass: {args.port} answered EVT PONG.")
+        print(f"Pass: {wire} answered EVT PONG.")
         return 0
+    if args.ble:
+        print(
+            f"Fail: no EVT PONG over BLE within {args.seconds:g} s. Check that the rig is powered and "
+            "that its panel does not read Err4.",
+            file=sys.stderr,
+        )
+        return 1
     print(
-        f"Fail: no EVT PONG within {args.seconds:g} s on {args.port}. "
+        f"Fail: no EVT PONG within {args.seconds:g} s on {wire}. "
         f"Check the cable, the board power and the baud rate ({BAUD}).",
         file=sys.stderr,
     )

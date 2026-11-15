@@ -20,7 +20,7 @@ Design goals, in order:
 ```mermaid
 flowchart LR
     CAM[USB camera] --> CAP[Capture service]
-    MCU[ESP32: trigger and panel] -. serial .-> CAP
+    MCU[ESP32: trigger and panel] -. serial or BLE .-> CAP
     CAP --> Q[Quality scoring]
     Q --> DB[(PostgreSQL)]
     Q --> FS[(Local files)]
@@ -99,7 +99,7 @@ One process, five concerns:
 | Detection | On demand: one frame from `POST /api/detect/frames/{id}`, a batch through the worker pool, or the live socket at its `detect_interval_ms` | The live socket keeps capture and inference at their own rates; see ADR 03 |
 | Batch jobs | Fixed thread pool, 2 workers | No Celery, no Redis; task state lives in PostgreSQL |
 | API | Sync `def` handlers, run by FastAPI in its thread pool, plus one WebSocket route | Serves REST; `/ws/capture` streams the live feed as api-contract §7 defines it, and polling is only the fallback when the socket cannot be served |
-| Rig link | One reader thread plus one keepalive thread, started only when `AV_RIG_PORT` is set | The board is optional; a machine without one is not degraded. The link's states and the keepalive rule are in `docs/rig-state-machine-en.md` §9 |
+| Rig link | One reader thread plus one keepalive thread, started only when `AV_RIG_PORT` is set or `AV_RIG_TRANSPORT=ble` | The board is optional; a machine without one is not degraded. The link's states and the keepalive rule are in `docs/rig-state-machine-en.md` §9; the two wires are in `docs/rig-transport-en.md` |
 
 **Detection rate is not the display rate on the live socket.** The page asks for a frame rate in its
 `start` message (10 fps in the client) and a detection interval (`detect_interval_ms`, 300 ms by
@@ -161,6 +161,7 @@ AV_QUALITY_THRESHOLD=60
 AV_CAMERA_INDEX=0
 AV_RIG_PORT=                        # empty turns the rig link off; the board is optional
 AV_RIG_BAUD=115200
+AV_RIG_TRANSPORT=serial             # or ble: the cable-free rig, found by its advertised name (ADR 16)
 AV_RIG_KEEPALIVE_SECONDS=2.0
 AV_WORKER_ENABLED=1
 AV_WORKER_POLL_SECONDS=1.0
@@ -201,3 +202,4 @@ per working directory.
 | [14](adr/14-the-time-basis.md) | Storage stays UTC and one configured zone answers every calendar question: `AV_TIMEZONE`, Beijing by default, a day from 00:00 to 23:59 in that zone, and every emitted timestamp carrying its offset |
 | [15](adr/15-parameters-take-effect-live.md) | A parameter the operator can change takes effect at the next decision point - one accessor, a short TTL, a declared range - not at the next restart |
 | [13](adr/13-weights-in-the-repository.md) | The delivered model is tracked in the repository; datasets, frames and training runs stay out |
+| [16](adr/16-rig-cable-free-over-ble.md) | The finished rig is cable-free over BLE because the site's campus network is unavailable to it, and `rig-serial` stays as a build variant rather than being removed |

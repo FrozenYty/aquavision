@@ -4,27 +4,30 @@
 throwaway database it creates and checks the numbers it printed against the rows the API actually
 wrote. A driver that stops running a step, or prints a number the database disagrees with, fails here.
 
-The driver is run with the checkout-local inference interpreter when the checkout has one:
-`ultralytics` and torch are not in the server environment. Where there is none, the driver states that
-box counts are absent, and the test asserts that statement rather than a count.
+The driver is run with the `aquavision` conda environment's interpreter, which is where `ultralytics` and
+torch live — the server environment has neither. That environment sits outside the checkout, so it is
+found through conda rather than by a path inside this repository, and the test **skips** with that reason
+where the machine has no such environment. Where the environment exists but `ultralytics` is not in it
+yet, the driver states that box counts are absent, and the test asserts that statement rather than a
+count.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import sqlite3
 import subprocess
-import sys
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
+CONDA_ENV = "aquavision"
 DRIVER = ROOT / "scripts" / "demo.py"
-INFER_PYTHON = ROOT / ".venv-infer" / "Scripts" / "python.exe"
 DEV_DATABASE = ROOT / "data" / "app.db"
 DELIVERED_FILES = ("best.pt", "labels.txt", "metrics.json")
 
@@ -33,9 +36,22 @@ FRAMES_CAPTURED = re.compile(r"^frames captured (\d+)$", re.MULTILINE)
 BOXES_DRAWN = re.compile(r"^boxes drawn (\d+)$", re.MULTILINE)
 
 
-def driver_python() -> Path:
-    """The inference interpreter when this checkout has one, the test runner's otherwise."""
-    return INFER_PYTHON if INFER_PYTHON.is_file() else Path(sys.executable)
+def conda_python() -> Path | None:
+    """The `aquavision` environment's interpreter, or None where this machine has no such environment.
+
+    The environment lives outside the checkout, so it is located through conda's own machinery rather
+    than by a path that would be right on one machine only: `conda init` sets `CONDA_EXE`, and the base
+    directory above it is where the environments live.
+    """
+    conda = os.environ.get("CONDA_EXE") or shutil.which("conda")
+    if not conda:
+        return None
+    base = Path(conda).resolve().parent.parent
+    for name in ("python.exe", "python"):
+        interpreter = base / "envs" / CONDA_ENV / name
+        if interpreter.is_file():
+            return interpreter
+    return None
 
 
 def can_detect(python: Path) -> bool:
@@ -78,7 +94,12 @@ def rows(summary: dict, query: str, parameters: tuple = ()):
 @pytest.fixture(scope="module")
 def run():
     """One driver run for the module: loading the weights is the expensive part of it."""
-    python = driver_python()
+    python = conda_python()
+    if python is None:
+        pytest.skip(
+            f"the {CONDA_ENV} conda environment is not on this machine, so the driver has no "
+            "inference dependencies to run with"
+        )
     inference = can_detect(python)
     before = (
         DEV_DATABASE.exists(),

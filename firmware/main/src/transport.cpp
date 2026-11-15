@@ -1,5 +1,6 @@
-// The serial implementation of `transport` - the one the bench uses. A Bluetooth implementation joins it
-// beside this file and implements the same four calls; nothing above this layer changes.
+// The serial implementation of `transport` - the one the bench uses, and the `rig-serial` build. The
+// Bluetooth implementation lives beside this file as `transport_ble.cpp` and answers the same calls;
+// nothing above this layer changes.
 
 #include "transport.h"
 
@@ -20,11 +21,24 @@ constexpr size_t BUFFER_SIZE = 96;
 
 }  // namespace
 
-void begin() { Serial.begin(cfg::SERIAL_BAUD); }
+//: Always `Ok`. Opening the UART cannot fail in a way this rig can see: the bridge chip answers whatever
+//: is on the other end, so a missing cable is a link that never speaks, which is the protocol's `Gone`
+//: and not a carrier fault.
+Result begin() {
+  Serial.begin(cfg::SERIAL_BAUD);
+  return Result::Ok;
+}
 
 int available() { return Serial.available(); }
 
 int readByte() { return Serial.read(); }
+
+//: A cable has no radio to fail, and a carry that cannot drop cannot reach a drop-storm fault.
+bool faulted() { return false; }
+
+//: A UART has no subscription to enable: a PC that opens the port sees the very next line, because there
+//: is no window between attaching and being able to read one.
+bool subscribed() { return false; }
 
 void printf(const char* format, ...) {
   char buffer[BUFFER_SIZE];

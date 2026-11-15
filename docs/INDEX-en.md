@@ -34,6 +34,7 @@ only single-language files above the line. Within `docs/`, the fastest route is 
 | name a thing consistently | `glossary-en-zh.md` |
 | know why a decision was made | `adr/` |
 | know what the rig does in any situation | `rig-state-machine-en.md` |
+| know how the rig reaches the PC with no cable | `rig-transport-en.md` |
 
 ## 2. The map
 
@@ -50,10 +51,11 @@ only single-language files above the line. Within `docs/`, the fastest route is 
 | `copy-review-en/zh.md` | findings on the interface copy, by page | the copy is rewritten or the page set changes | @FrozenYty |
 | `handover-en/zh.md` | work that changed hands, and the bar it must clear | an item is accepted or a new one opens | @FrozenYty |
 | `rig-state-machine-en/zh.md` | every screen and every event, with the resulting state | a state or an event is added |
+| `rig-transport-en/zh.md` | the BLE layer on both ends, the two transition matrices, the timings, the failure faces | a transport, a BLE state or a timeout is added | @FrozenYty |
 | `runbook-en/zh.md` | start it, back it up, restore it, rotate the secret, upgrade the schema, read the log | a deployment step changes, or the migration mechanism arrives | @FrozenYty | @FrozenYty |
 | `test-cases-en/zh.md` | one case per acceptance item, and how to run it | an acceptance item changes, or a case is executed | @IkeaFyj |
 | `glossary-en-zh.md` | the one word for each concept | a new concept appears | @FrozenYty |
-| `adr/01-15` | why a decision was taken and when to revisit it | never edited; superseded instead | the author of that ADR |
+| `adr/01-16` | why a decision was taken and when to revisit it | never edited; superseded instead | the author of that ADR |
 | `PLAN.md` | phases, tasks, gates | a task is delivered or re-scoped | every lane |
 | `PROGRESS.md` | what happened and why it moved | continuously, append only | whoever did the work |
 
@@ -83,6 +85,7 @@ A change is rarely local. This is the list that keeps `grep` from being the only
 | a metric or acceptance item | SRS §3.5 and §8, `test-plan`, `PLAN.md` P4 |
 | a class or its order | `glossary`, `species_dict` seed, `prepare_dataset.CLASS_CODES`, the frontend colour tokens |
 | hardware | `procurement`, SRS table 2-3, `PLAN.md` P1-06 |
+| the rig's transport | `rig-transport`, `rig-state-machine` §6 and §9, the ADR that decided it, `PLAN.md` P3-38 |
 | a phase boundary | `PLAN.md`, `PROGRESS.md`, and this index if a document was added |
 | anything with a doc pair | both languages, in the same commit |
 

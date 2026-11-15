@@ -36,12 +36,21 @@
 
 ## 编译与烧录
 
+两个环境，一根线一个（`docs/rig-transport-en.md` §11）：`rig-serial` 是线缆与台架，`rig-ble` 是成品
+装置，而且它什么都不往 UART 写。
+
 ```
 cd firmware/main
-pio run                 # compile
-pio run --target upload # flash
-pio device monitor      # watch the protocol
+pio run -e rig-serial                  # compile the cable build (the default)
+pio run -e rig-serial --target upload  # flash it
+pio run -e rig-ble                     # compile the Bluetooth build
+pio run -e rig-ble --target upload     # flash it
+pio device monitor                     # watch the protocol; the serial build only
 ```
+
+**串口版是作为一个目标活下来的，不是作为一段文字。** 射频出问题必须只花三十秒和一根线，而不是花掉演
+示：烧 `rig-serial`、插上线、把服务指向一个 COM 口。只有这个目标一直在编译、一直在被使用，上面这句话
+才成立，所以台架上的活归它。
 
 PlatformIO 会按锁定的版本拉取 U8g2。如果没装 `pio`：
 
@@ -138,6 +147,7 @@ y 55..62  v1.13                                    FRAMES 12
 | 故障 `Err1` | 采集超时，闪烁 | 1 Hz，持续 2 s |
 | 故障 `Err2` | 无对应采集的判定，闪烁 | 1 Hz，持续 2 s |
 | 故障 `Err3` | 不变式被破坏，闪烁 | 1 Hz，持续 2 s |
+| 故障 `Err4` | 射频失效，闪烁 | 1 Hz，且没有窗口：直到断电重启或重新烧录 |
 
 **`READY` 是一条单向走带，`OFFLINE` 是一个代码。** 第 1、2、3、4 位，然后直接回到第 1 位，每位半秒：
 一周期两秒，没有全黑帧，也从不同时亮两条横杠。**这个回绕是故意的**——横杠在第 1 位重新开始，而不是
@@ -145,11 +155,16 @@ y 55..62  v1.13                                    FRAMES 12
 四条横杠一起保持一秒；走带取代了它。它也不会被误认成 `OFFLINE`，因为那一屏现在是一个代码，半秒亮、
 半秒灭。
 
-**`Err0` 是 `OFFLINE` 这一屏，`Err1`-`Err3` 是故障窗口，而四个看起来一样。** 每个代码都以 1 Hz 闪烁
+**`Err0` 是 `OFFLINE` 这一屏，`Err1`-`Err4` 是故障窗口，而五个看起来一样。** 每个代码都以 1 Hz 闪烁
 ——代码就是标识，节奏不携带信息，所以没有第二种频率，链路也没有特例。不同的只有画面停留多久：`Err0`
-没有窗口，因为掉线会一直持续到链路回来，而 `Err1` 到 `Err3` 在两秒后清除。那是它什么时候离开，不是它
-长什么样。三个窗口存在，是因为那些事件过去只产生一行日志、台架前的人看不到任何东西，于是一台坏掉的装置
-和一台空闲的装置长得一样。
+没有窗口，因为掉线会一直持续到链路回来；`Err4` 也没有，因为射频死了不是等一等就能解决的；而 `Err1` 到
+`Err3` 在两秒后清除。那是它什么时候离开，不是它长什么样。三个窗口存在，是因为那些事件过去只产生一行
+日志、台架前的人看不到任何东西，于是一台坏掉的装置和一台空闲的装置长得一样。**`Err4` 是 `rig-ble`
+构建的代码，表示射频没有启动，或者链路在一分钟内、正在通话时断了五次**——一个连上又礼貌离开的客户端
+不算掉线，台架上一连串有意的连接/断开循环因此不会把装置打下线。它压过 `Err0`——两者在同一刻都成立，
+但后者说的是错的：等一等是掉线的正确反应，却是射频失效的错误反应。OLED 没有代码画面，所以 `Err4` 时
+由它自己画 `RADIO FAULT` 和 `REFLASH RIG-SERIAL`，而且那个构建里 `OFFLINE` 的最后一行写的是
+`NO LINK TO PC`，不是 `CHECK USB CABLE`。
 
 **重拍读 `F`，不是 `E`。** `E` 是每一个故障代码的开头，` 40E` 与一个 `Err` 画面只差一眼；`F` 是左列
 加上上横与中横，任何代码里都没有它。

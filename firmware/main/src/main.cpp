@@ -193,12 +193,14 @@ void scoreMask(int score, char verdict, uint8_t mask[4]) {
 //: of the panel. Numbered because the alphabet above has no unambiguous `t`, `O` or `I`, and because the
 //: next fault then costs nothing: `Err4` needs no glyph work.
 //:
-//: **All four look the same: they blink at one hertz.** The code is the identifier and the rhythm carries
+//: **All five look the same: they blink at one hertz.** The code is the identifier and the rhythm carries
 //: nothing, so there is no special case for the link and no second rate for the others. What differs is
 //: only how long a face stays: `Err0` has no window at all, because a lost link lasts until the link comes
-//: back, while `Err1` to `Err3` clear after `cfg::FAULT_FACE_MS`. That is when it leaves, not how it looks -
-//: do not "fix" the two into agreement. The fault age is the phase, so the blink starts with the fault
-//: rather than wherever the previous face happened to be.
+//: back, and `Err4` - a radio that did not start, or has dropped five times in a minute - has none either,
+//: because waiting is what an operator does about `Err0` and the wrong thing to do about `Err4`. `Err1` to
+//: `Err3` clear after `cfg::FAULT_FACE_MS`. That is when it leaves, not how it looks - do not "fix" the
+//: two into agreement. The fault age is the phase, so the blink starts with the fault rather than wherever
+//: the previous face happened to be.
 void faultMask(uint32_t faultAge, rig::Fault fault, uint8_t mask[4]) {
   if ((faultAge / cfg::DISPLAY_BLINK_MS) % 2 != 0) {
     return;  // the dark half of the blink; every digit stays as it was left
@@ -208,6 +210,8 @@ void faultMask(uint32_t faultAge, rig::Fault fault, uint8_t mask[4]) {
     code = "Err1";
   } else if (fault == rig::Fault::Invariant) {
     code = "Err3";
+  } else if (fault == rig::Fault::Radio) {
+    code = "Err4";
   }
   for (uint8_t i = 0; i < 4 && code[i] != '\0'; ++i) {
     mask[i] = segmentsFor(code[i]);
@@ -314,8 +318,12 @@ void displayMask(uint32_t now, uint32_t screenAge, uint8_t mask[4]) {
 
   // A fault outranks every screen. It is the one thing on this panel that must not be missed: one keepalive
   // is long enough to read a code and short enough to be over, and no routine status change can cut it
-  // short because this is decided before any screen is looked at.
-  if (state.fault != rig::Fault::None && now - state.faultAt < cfg::FAULT_FACE_MS) {
+  // short because this is decided before any screen is looked at. `Err4` is the exception to the window,
+  // not to the ranking: a dead radio is not fixed by waiting, so it has no window at all (§10).
+  const bool faultShowing =
+      state.fault != rig::Fault::None &&
+      (state.fault == rig::Fault::Radio || now - state.faultAt < cfg::FAULT_FACE_MS);
+  if (faultShowing) {
     faultMask(now - state.faultAt, state.fault, mask);
     return;
   }
@@ -463,7 +471,12 @@ void setup() {
   pinMode(cfg::PIN_BUTTON, INPUT_PULLUP);
   beginDisplay();
 
-  transport::begin();
+  // The wire: a UART always opens, and a radio can refuse. A refusal is not fatal - the rig keeps drawing
+  // its panel - but it is `Err4` rather than a rig that looks merely unreachable (§8, §10).
+  if (transport::begin() != transport::Result::Ok) {
+    state.fault = rig::Fault::Radio;
+    state.faultAt = millis();
+  }
 
   Wire.begin(cfg::PIN_I2C_SDA, cfg::PIN_I2C_SCL);
 
@@ -530,6 +543,25 @@ void loop() {
     state.fault = rig::Fault::Invariant;
     state.faultAt = now;
     protocol::emitInvariant(state.screen, state.link);
+  }
+
+  // A PC that has just subscribed missed every line emitted while nobody was listening - `EVT HELLO`, the
+  // I2C scan, the starting screen - so the rig says where it is now instead of leaving the PC to infer it
+  // from the next change. Asked once per subscription, and **not a liveness claim**: the keepalive rule
+  // below is untouched, so a client that subscribes and then says nothing still makes the rig `Gone`.
+  // The serial wire answers false: a port that is open reads the very next line already.
+  if (transport::subscribed()) {
+    protocol::emitScreen(state);
+  }
+
+  // The carrier's own fault, and the only one no protocol event can report: a radio that kept dropping is
+  // `Err4`, and it is set after the invariant check so that it wins the frame - both codes are true at the
+  // same moment and only one of them tells the operator what to do (§10). The call is also this layer's
+  // clock for its own idle timer, which is why it is not inside a condition.
+  if (transport::faulted() && state.fault != rig::Fault::Radio) {
+    state.fault = rig::Fault::Radio;
+    state.faultAt = now;
+    state.markDirty();
   }
 
   // Both screens read the one boot clock: while the panel is still walking its self-test the OLED keeps the

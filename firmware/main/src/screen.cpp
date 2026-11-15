@@ -170,7 +170,31 @@ void drawOffline(U8G2& display) {
   drawCentred(display, "OFFLINE", 34);
 
   display.setFont(u8g2_font_5x7_tf);
-  drawCentred(display, "CHECK USB CABLE", 52);
+  // The one line on this panel that is false in the other build: `rig-serial` is right to say the cable is
+  // the thing to check, and `rig-ble` has no cable - a finished rig that tells its operator to check one it
+  // does not have is worse than a blank line (docs/rig-transport-en.md §10).
+  drawCentred(display, cfg::BLE_CARRIER ? "NO LINK TO PC" : "CHECK USB CABLE", 52);
+
+  display.setDrawColor(1);
+}
+
+//: `Err4`, the face the OLED does not have today: for `Err1` to `Err3` the fault overlay is the panel's and
+//: this screen keeps drawing whatever was underneath, but a dead radio has `Offline` underneath - the wrong
+//: story, because both are true and only one of them is worth waiting for. So the OLED draws the fault
+//: itself, in the same inverted treatment as `OFFLINE`, and one line saying what to do about it: a
+//: power-cycle or `rig-serial` (§10).
+void drawRadioFault(U8G2& display) {
+  display.drawBox(0, 0, 128, 64);
+  display.setDrawColor(0);
+
+  display.setFont(u8g2_font_5x7_tf);
+  drawCentred(display, "AQUAVISION", 12);
+
+  display.setFont(u8g2_font_helvB12_tr);
+  drawCentred(display, "RADIO FAULT", 34);
+
+  display.setFont(u8g2_font_5x7_tf);
+  drawCentred(display, "REFLASH RIG-SERIAL", 52);
 
   display.setDrawColor(1);
 }
@@ -243,6 +267,14 @@ void renderSplash(U8G2& display) {
 
 void render(U8G2& display, const rig::State& state) {
   display.clearBuffer();
+
+  // `Err4` outranks every screen, and unlike the other faults it replaces what is underneath rather than
+  // being drawn over it: the screen underneath a dead radio is `Offline`, which says the PC is the problem.
+  if (state.fault == rig::Fault::Radio) {
+    drawRadioFault(display);
+    display.sendBuffer();
+    return;
+  }
 
   if (state.screen == rig::Screen::Offline) {
     drawOffline(display);

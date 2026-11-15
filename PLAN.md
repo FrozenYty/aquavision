@@ -283,8 +283,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - `requirements.txt` already pins `ultralytics`; **no new dependency file is needed** - the path
         existed and nobody had walked it, which is why the weights could be delivered, tracked and
         registered while the machine still refused to load them
-      - the environment is per checkout and git-ignored (`.venv-infer/`); the server environment stays
-        light, which is ADR 11's argument, and the training environment is never installed into
+      - the environment is the `aquavision` conda environment, built once per machine outside the
+        checkout so it needs no ignore rule; the server environment stays light, which is ADR 11's
+        argument, and the training environment is never installed into
       - the evidence may come from any machine - the training machine already has the stack - and the
         demonstration machine gets it by following the step, which is `P3-23`'s runbook
       - the three skipped tests in `tests/test_detect_real.py` are the only evidence that inference
@@ -710,6 +711,20 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         the link is established before the demonstration and held by the existing two-second keepalive
       - the fallback is a build target, not a paragraph: `rig-serial` stays, so a misbehaving radio costs
         thirty seconds and one cable rather than the demonstration
+      - **the design is in the repository, and the decision with it (11-15):** `docs/rig-transport-en.md` and
+        `docs/rig-transport-zh.md` carry the BLE layer on both ends, both transition matrices, the timings with
+        each one marked measured or assumed, and the failure faces including **`Err4` for a radio that did not
+        start** - distinguishable from `Err0`, because a dead radio is not fixed by waiting for the link.
+        **ADR 16** records why the rig goes cable-free over BLE and why `rig-serial` is kept rather than
+        removed. The protocol layer is untouched: the seam is `transport.h`/`transport.cpp` on the firmware and
+        the `Transport` factory `rig/link.py` already declares
+      - **what remains is implementation, measurement and rehearsal, in that order.** The measurement is
+        first because it is the only number that cannot be reasoned out: **the connect time on the
+        demonstration laptop has not been measured**, and every timing in the design except the two-second
+        keepalive is a decision or a platform assumption. Then the firmware BLE layer with `Fault::Radio`,
+        the `Err4` face and the two build targets, and the PC-side BLE client; then a dry run over BLE and a
+        `rig-serial` fallback drill, which `P4-07`'s three rehearsals inherit and which the gate cannot pass
+        without
 
 ### P4 — close
 

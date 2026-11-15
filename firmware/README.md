@@ -38,12 +38,22 @@ about pixels.
 
 ## Build and flash
 
+Two environments, one per wire (`docs/rig-transport-en.md` §11): `rig-serial` is the cable and the bench,
+`rig-ble` is the finished rig and writes nothing to the UART.
+
 ```
 cd firmware/main
-pio run                 # compile
-pio run --target upload # flash
-pio device monitor      # watch the protocol
+pio run -e rig-serial                  # compile the cable build (the default)
+pio run -e rig-serial --target upload  # flash it
+pio run -e rig-ble                     # compile the Bluetooth build
+pio run -e rig-ble --target upload     # flash it
+pio device monitor                     # watch the protocol; the serial build only
 ```
+
+**The serial build survives as a target, not as a paragraph.** A radio that misbehaves must cost thirty
+seconds and one cable rather than the demonstration: flash `rig-serial`, plug the cable in, and point the
+service at a COM port. That is only true while this target keeps compiling and keeps being used, which is
+why it owns bench work.
 
 PlatformIO pulls U8g2 at the pinned version. If `pio` is not installed:
 
@@ -151,6 +161,7 @@ dash after a power-up sat on digit 2 instead of digit 1.
 | fault `Err1` | capture timeout, blinking | 1 Hz for 2 s |
 | fault `Err2` | stray result, blinking | 1 Hz for 2 s |
 | fault `Err3` | broken invariant, blinking | 1 Hz for 2 s |
+| fault `Err4` | radio dead, blinking | 1 Hz, and no window: until a power cycle or a reflash |
 
 **`READY` is a one-way marquee; `OFFLINE` is a code.** Digits 1, 2, 3, 4 and straight back to 1, half a second
 at each position: two seconds a cycle, no dark frame, and never more than one dash lit. **The wrap is
@@ -159,12 +170,20 @@ with a visible break, and `config.h` says not to "fix" it into a bounce. An earl
 dashes for a second instead; the marquee replaced it. It cannot be mistaken for `OFFLINE` either, which is a
 code now, half a second either way.
 
-**`Err0` is the `OFFLINE` screen; `Err1`-`Err3` are fault windows, and all four look the same.** Each code
+**`Err0` is the `OFFLINE` screen; `Err1`-`Err4` are fault windows, and all five look the same.** Each code
 blinks at one hertz - the code is the identifier and the rhythm carries nothing, so there is no second rate
 and no special case for the link. What differs is only how long a face stays: `Err0` has no window, because a
-lost link lasts until the link comes back, while `Err1` to `Err3` clear after two seconds. That is when it
-leaves, not how it looks. The three windows are there because those events used to produce a log line and
-nothing a person at the bench could see, which made a broken rig and an idle one look the same.
+lost link lasts until the link comes back, `Err4` has none either because a dead radio is not fixed by
+waiting, and `Err1` to `Err3` clear after two seconds. That is when it leaves, not how it looks. The three
+windows are there because those events used to produce a log line and nothing a person at the bench could
+see, which made a broken rig and an idle one look the same. **`Err4` is the `rig-ble` build's code for a
+radio that did not start, or whose link died five times in a minute while it was carrying the protocol**
+- a client that connects and leaves politely is not a drop, which is what lets a bench session of
+deliberate connect/disconnect cycles run without taking the rig off the air. It outranks `Err0`, which is
+true at the same moment but says the wrong thing - waiting is the right answer to a lost link and the
+wrong one to a dead radio. The OLED has no code face, so on `Err4` it draws `RADIO FAULT` and
+`REFLASH RIG-SERIAL` itself, and its `OFFLINE` line reads `NO LINK TO PC` instead of `CHECK USB CABLE` in
+that build.
 
 **A retake reads `F`, not `E`.** `E` begins every fault code, so ` 40E` and an `Err` face were one glance
 apart; `F` is the left column with the top and middle bars, and no code contains it.

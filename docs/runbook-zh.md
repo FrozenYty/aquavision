@@ -44,17 +44,21 @@ python -m uvicorn app.main:app --app-dir server --port 8000
 识别需要 `ultralytics` 和 torch。服务端环境**故意**不带它们——那是 ADR 11 的论证，也让"只跑 API"的克隆
 保持精简。所以一台要演示识别的机器上有**两个**环境。
 
-建第二个，每个克隆建一次，放在它自己的环境里：
+建第二个：名为 `aquavision` 的 conda 环境，用 Python 3.11——`requirements.txt` 与 CI 工作流固定的就是
+这个版本——每台机器建一次而不是每个克隆建一次，因为它在仓库之外。它装的是 `requirements.txt` 的整套依赖：
 
 ```bash
-python -m venv .venv-infer
-.venv-infer/Scripts/python -m pip install -r requirements.txt
+conda create -n aquavision python=3.11
+conda activate aquavision
+python -m pip install -r requirements.txt
 ```
 
-`.venv-infer/` 在 `.gitignore` 里，所以不会进仓库。之后凡是要加载模型的命令，都用那个解释器：
+之后凡是要加载模型的命令，都用那个环境的解释器，而不是别的环境里随便一个 `python`——它找不到
+`ultralytics`：
 
 ```bash
-.venv-infer/Scripts/python -m pytest tests/test_detect_real.py -o addopts="" -q
+conda activate aquavision
+python -m pytest tests/test_detect_real.py -o addopts="" -q
 ```
 
 那三个测试只在这里跑，在别处一律跳过，因为它们是"交付的权重确实能加载、并且产出 API 所报的那些框"的

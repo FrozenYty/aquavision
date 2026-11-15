@@ -106,7 +106,7 @@ pytest -q
 
 - **能用**：登录与角色、帧列表与详情、复核提交、统计分析、数据集导出、系统设置——都走真实数据表与真实数据库。
 - **没有硬件也能用**：以上全部；采集相关页面会退化为空列表。
-- **还不能**：批量识别尚未满足 `P3-01` 的验收（一百帧、运行中可查进度、重启后继续），但接口本身已经会建排队任务；采集页按 api-contract 第七节走 `/ws/capture` 实时流，轮询只是 socket 无法提供时的兜底。装置链路的 PC 端已经存在（`server/app/rig/`），但只有设置了 `AV_RIG_PORT` 才会启动；插上板子后第一件事是跑 `scripts/test_rig_link.py`。
+- **还不能**：批量识别尚未满足 `P3-01` 的验收（一百帧、运行中可查进度、重启后继续），但接口本身已经会建排队任务；采集页按 api-contract 第七节走 `/ws/capture` 实时流，轮询只是 socket 无法提供时的兜底。装置链路的 PC 端已经存在（`server/app/rig/`），但只有设置了 `AV_RIG_PORT` 或 `AV_RIG_TRANSPORT=ble` 才会启动；两种载体见 `docs/rig-transport-zh.md`，插上板子后第一件事是跑 `scripts/test_rig_link.py`。
 
 ### 不想起后端：原型模式
 

@@ -33,6 +33,7 @@
 | 某个词该叫什么 | `glossary-en-zh.md` |
 | 为什么当初这么定 | `adr/` |
 | 知道装置在任何情况下会做什么 | `rig-state-machine-zh.md` |
+| 知道装置怎么在无线缆的情况下抵达 PC | `rig-transport-zh.md` |
 
 ## 二、文档地图
 
@@ -49,10 +50,11 @@
 | `copy-review-en/zh.md` | 界面文案的审阅结论，按页面 | 文案重写或页面集合变化 | @FrozenYty |
 | `handover-en/zh.md` | 交接出去的工作，以及它必须达到的标准 | 有事项关闭或新增 | @FrozenYty |
 | `rig-state-machine-en/zh.md` | 每一个状态与事件组合的结果 | 新增状态或事件时 |
+| `rig-transport-en/zh.md` | 两端的 BLE 层、两张迁移矩阵、时序，以及失败时的面孔 | 新增一种传输、一个 BLE 状态或一个超时 | @FrozenYty |
 | `runbook-en/zh.md` | 启动、备份、恢复、轮换密钥、升级 schema、读日志 | 部署步骤变化，或迁移机制到位时 | @FrozenYty | @FrozenYty |
 | `test-cases-en/zh.md` | 每条验收项一条用例，以及怎么跑 | 验收项变化，或某条用例被执行 | @IkeaFyj |
 | `glossary-en-zh.md` | 每个概念的唯一叫法 | 出现新概念 | @FrozenYty |
-| `adr/01-15` | 为什么这样定、什么时候该重审 | 不改写，只被新 ADR 取代 | 该篇作者 |
+| `adr/01-16` | 为什么这样定、什么时候该重审 | 不改写，只被新 ADR 取代 | 该篇作者 |
 | `PLAN.md` | 阶段、任务、门禁 | 任务交付或重新划范围 | 全员 |
 | `PROGRESS.md` | 发生了什么、为什么动 | 持续追加，只追加 | 干活的人 |
 
@@ -79,6 +81,7 @@
 | 指标或验收项 | SRS 3.5 与 8、`test-plan`、`PLAN.md` 的 P4 |
 | 类别或类别顺序 | `glossary`、`species_dict` 种子、`prepare_dataset.CLASS_CODES`、前端配色变量 |
 | 硬件 | `procurement`、SRS 表 2-3、`PLAN.md` 的 P1-06 |
+| 装置的传输 | `rig-transport`、`rig-state-machine` 第六与第九节、做决定的那篇 ADR、`PLAN.md` 的 P3-38 |
 | 阶段边界 | `PLAN.md`、`PROGRESS.md`；若增减了文档，还有本页 |
 | 任何成对的文档 | 两种语言，同一次提交 |
 

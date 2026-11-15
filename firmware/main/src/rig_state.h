@@ -35,9 +35,14 @@ enum class Screen {
 enum class Reason { None, LowLight, Blur, ColorCast, Unknown, NoReply };
 
 //: A fault is not a screen: the rig stays in the state it was in, and the panel shows the fault over the
-//: top for `cfg::FAULT_FACE_MS`. These are the three events that used to produce a log line and nothing a
+//: top for `cfg::FAULT_FACE_MS`. These are the events that used to produce a log line and nothing a
 //: person at the bench could see, which made a broken rig and an idle one look the same.
-enum class Fault { None, Timeout, Stray, Invariant };
+//:
+//: `Radio` is the one entry a serial rig can never raise, and the one with no window: a lost link and a
+//: dead radio are both true at the same moment, and only one of them telling the operator to wait is the
+//: whole reason `Err4` exists (docs/rig-transport-en.md §10). It outranks every other fault and every
+//: screen until the rig is power-cycled or reflashed.
+enum class Fault { None, Timeout, Stray, Invariant, Radio };
 
 const char* reasonToken(Reason reason);
 Reason reasonFromToken(const char* token);

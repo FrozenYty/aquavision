@@ -64,6 +64,50 @@
   about pins. Two more things moved with the audit: the OLED footer is `v1.13` rather than a session tally
   (there is no tally left in the state), and `CAPTURING` draws a row of six dots sharing the panel's phase,
   not three.
+- **The finished rig's transport is designed, and the reason it is BLE is finally in the repository.** The
+  site's network is a campus one - WPA2-Enterprise or a browser portal - and the rig can join neither without
+  machinery it does not have, so BLE is the only one of the three that works rather than the better
+  engineering. `docs/rig-transport-{en,zh}.md` and **ADR 16** keep the two layers apart: the BLE layer owns
+  the connection and the subscription and changes at power-up and per drop, while the protocol layer keeps
+  `Alive`/`Gone` and the two-second keepalive and changes every two seconds. Merging them would force a choice
+  between "reconnect" and "resume talking" that corresponds to nothing real - a PC that stops sending commands
+  has not dropped the connection, and a drop does not mean the PC is dead. **The protocol layer is untouched:**
+  no line, no state and no timing of it moves, and the seams used are the ones already there
+  (`transport.h`/`transport.cpp`, and `rig/link.py`'s `Transport` factory).
+- **Both transition matrices are written out with every cell filled**: five firmware BLE states against seven
+  events, seven PC client states against ten. Three decisions are visible in the firmware table - one central
+  at a time, with a second connection **rejected and reported** because two carriers feed one parser; a client
+  that connects and never subscribes is dropped after ten seconds, armed by connect and disarmed by subscribe;
+  and a command in `Streaming` is handled in place and changes nothing at the BLE level. On the PC side
+  `Failed` exists after five attempts, because an unbounded reconnect loop makes a broken link look like a
+  working one.
+- **The timings say which numbers are measurements and which are not.** Scan and connect 20 s, subscription
+  5 s, backoff 1, 2, 4, 8 and 16 s, five attempts, and the protocol keepalive unchanged at 2 s. **The connect
+  time on this laptop has not been measured**, and the document says so plainly and marks it as the first
+  thing implementation measures - every other number there is a firmware rule, arithmetic, or a decision, and
+  none is reported as a stopwatch reading.
+- **A dead radio gets `Err4`, and it outranks `Err0`.** Both are true at the same moment, because a dead radio
+  loses the link in the ordinary way, and only one of them tells the operator what to do; `Err4` has no window,
+  like `Err0`, because waiting for the link is the right response to one and the wrong response to the other.
+  The panel's alphabet already covers it, and the OLED's `CHECK USB CABLE` has to become build-dependent,
+  because in `rig-ble` there is no cable to check.
+- **`rig-serial` survives as a build target, not as a paragraph.** A misbehaving radio must cost thirty
+  seconds and one cable rather than the demonstration, which is only true while the serial build keeps
+  compiling and keeps owning bench work where every wiring change is already tested.
+- Files: the two documents, ADR 16, the decision table in `docs/architecture-{en,zh}.md` with its context
+  diagram's link label, both `docs/INDEX-*` (the doc map, the language pointer, the `adr/01-16` range, and a
+  transport row in the change table), and `PLAN.md`'s `P3-38`, which now points at the design and names what
+  remains. `firmware/`, `server/` and `web/` were not touched: the implementation is a separate change.
+- **The inference environment moved out of the checkout and onto conda, on the pinned Python.**
+  `P2-20` built `.venv-infer/` inside the checkout on a Python 3.13 the machine happened to have, and the
+  model stack never loaded properly in it: the weights were delivered, tracked and registered while
+  `ultralytics` still refused to import, which is the gap the three real-inference tests exist to show.
+  The environment is now the `aquavision` conda environment on Python 3.11, holding the whole
+  `requirements.txt` stack; 3.11 is the version that file and the CI workflow pin, and it is one per
+  machine rather than one per checkout. The runbook, `scripts/demo.py`'s usage line and
+  `tests/test_demo_driver.py` name the environment instead of a path inside the repository; that test
+  locates it through conda and **skips**, with the reason in the report, where a machine has none.
+  `.venv-infer/` is left to the process that owns its deletion.
 
 ## 2026-11-14
 
