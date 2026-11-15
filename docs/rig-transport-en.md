@@ -336,6 +336,17 @@ that failed to start is **`Err4`**.
 | `Err3` invariant violated | `Err3`, 1 Hz | the screen that was up, unchanged | 2 s |
 | `Err4` radio dead | `Err4`, 1 Hz | `RADIO FAULT`, then `REFLASH RIG-SERIAL` | none |
 
+**At power-up the OLED shows neither of those, because neither would be true.** With no central attached
+there is no lost link to report and no dead radio, so the OLED shows `WAITING` - drawn by the same
+`drawStatusFace` as `OFFLINE`, with the headline changed and no animation - and the panel draws `APP` with
+its fourth digit turning through the six rim segments; that is the `Pairing` face of the presentation layer
+(`docs/rig-state-machine-en.md` §11). `OFFLINE`/`Err0` then means what it says - **a PC was here and
+left** - instead of being drawn at a rig where nothing is wrong. It is also why the first connection no
+longer flips the panel to `READY` as though a press had caused it: the panel was already showing a
+waiting rig, and what changes is the link detail on the OLED. **The serial build has no carrier signal**
+(§2) and cannot tell "nobody yet" from "somebody left", so `rig-serial` boots `Live`, goes to `Err0` after
+ten seconds of silence as it always did, and never shows `WAITING`.
+
 **`Err4` exists because `Err0` would be a lie with a plausible face.** A dead radio loses the link in the
 ordinary way: ten seconds of silence, the link goes `Gone`, the panel shows `Err0`. So both codes are true at
 the same moment, and only one of them tells the operator what to do — waiting for the link to come back is the

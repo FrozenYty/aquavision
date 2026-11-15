@@ -40,6 +40,11 @@ bool faulted() { return false; }
 //: is no window between attaching and being able to read one.
 bool subscribed() { return false; }
 
+//: Always true: a UART is open from boot, and the bridge chip cannot see whether a cable is plugged in.
+//: The serial build therefore never reaches `Pairing` - it has no carrier signal to be paired on - and
+//: that is the honest answer rather than a missing state (docs/rig-state-machine-en.md §11).
+bool attached() { return true; }
+
 void printf(const char* format, ...) {
   char buffer[BUFFER_SIZE];
   va_list arguments;

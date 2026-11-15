@@ -34,6 +34,11 @@ link is worth reporting; having no history yet is not.** The consequence is hone
 bench with no PC software goes `OFFLINE` ten seconds after power-up, because at that moment there really
 is nobody to talk to.
 
+That is the protocol layer's own screen. On `rig-ble` the panel no longer draws it when no central is
+attached: the presentation layer (§11) calls that `Pairing` and shows `APP` with a rotating fourth digit
+plus `WAITING` on the OLED, because a radio can tell "nobody has arrived" from "somebody left" and
+the protocol's `Gone` cannot.
+
 ## 3. Events
 
 | # | Event | Source |
@@ -343,3 +348,172 @@ is not one either: the number matches by coincidence, not by construction.
 | 28 | 700 ms | the whole 28-position boot sweep |
 | 40 | 1000 ms | the dark blank after the eights |
 | 80 | 2 s | one fault window, the whole `Ready` cycle |
+
+## 11. The presentation layer: a third machine, not a merge
+
+The rig now has **three** machines, and the third one exists because the first two cannot answer one
+question between them: **is a PC expected right now?** The BLE layer knows whether a central is attached
+(`docs/rig-transport-en.md` §3-§5); the protocol layer knows whether one has spoken for ten seconds (§2).
+"Attached and silent" is not the same fact as "nobody has arrived", and the protocol layer cannot tell
+them apart because `Gone` is the word it uses for both. The presentation layer reads the two and owns
+exactly one thing: which face the two screens draw. It is **not a merge** - the BLE layer and the
+protocol layer keep their own states, their own clocks and their own matrices, and nothing on the wire
+changes. It is the third reader §2 of the transport document asked for when it refused to join the first
+two.
+
+At power-up the rig has no carrier at all, and ten seconds later the protocol layer reports `Gone`.
+Before this machine those two facts drew `Err0` - a fault face, blinking - on a rig where nothing was
+wrong; then the first connection flipped the panel to `READY`, which read as the press having caused
+something. **The rig cannot know during a scan that anyone is coming, so the honest label is "waiting",
+not "broken".** `WAITING` says what is true: the rig is ready and there is no PC yet.
+
+### 11.1 States and events
+
+| State | Meaning |
+|---|---|
+| `Pairing` | No central is attached |
+| `NoLink` | A central is attached but the protocol layer is `Gone`; `B2` has not made it `Live` |
+| `Live` | A central is attached and the protocol layer is `Alive` |
+| `RadioFault` | The radio would not start, or the drop storm reached `Fault` |
+
+| # | Event | Source |
+|---|---|---|
+| B1 | A central attaches | BLE layer |
+| B2 | The notification subscription completes | BLE layer |
+| B3 | The central disconnects | BLE layer |
+| B4 | The radio would not start, or the drop storm reached `Fault` | BLE layer |
+| P1 | A command arrives | protocol layer |
+| P2 | Ten seconds of silence | protocol layer |
+
+`B1` enters `NoLink` and `B2` is what moves it to `Live`: a central that is attached but has not enabled
+notifications has not proved that anyone will talk, so it does not get the `Live` face yet. `B2` in
+`Live` is ignored - the subscription is already enabled - and `B1` there is rejected, because a second
+central must not repaint a screen.
+
+### 11.2 The transition matrix
+
+The four kinds of cell are the ones §4 of the transport document defines, and the vocabulary is shared on
+purpose: **a bold state** is a transition; `—` is **ignored**, meaning the event cannot move this layer;
+`handled in place` is consumed without a move; `rejected` keeps the state **and** reports, because the
+sender has to learn that it was refused; and `already here` is a handled-in-place cell whose whole point
+is that the state already says this.
+
+| State \ Event | B1 attached | B2 subscribed | B3 detached | B4 fault | P1 command | P2 silence |
+|---|---|---|---|---|---|---|
+| `Pairing` | **`NoLink`** | — | — | **`RadioFault`** | — | — |
+| `NoLink` | — | **`Live`** | **`Pairing`** | **`RadioFault`** | **`Live`** | already here |
+| `Live` | rejected | — | **`Pairing`** | **`RadioFault`** | handled in place | **`NoLink`** |
+| `RadioFault` | — | — | — | handled in place | — | — |
+
+### 11.3 What each state draws
+
+| State | OLED | Seven-segment panel |
+|---|---|---|
+| `Pairing` | `OFFLINE`'s face with the headline `WAITING`, no animation | `APP`, the fourth digit rotating through its six rim segments |
+| `NoLink` | the `OFFLINE` box | `Err0` |
+| `Live` | the rig's own screen | the rig's own face |
+| `RadioFault` | `RADIO FAULT` / `REFLASH RIG-SERIAL` | `Err4` |
+
+**The `Pairing` panel face is the word `APP` and a rotating fourth digit.** `A`, `P` and `P` are all in the
+character set, so the word is spelled without a new glyph, and it names the PC-side application the
+operator is about to open - the action this state is waiting for. The fourth digit turns through its six
+rim segments A-F at the same 250 ms step as `CAPTURING`, from the same `presentation::rotationStep`. Both
+halves are things this panel already draws elsewhere, and that is the point: the word says what to do, and
+the rotation says the rig is still working. It is deliberately the smaller design.
+
+**The ring is gone because its table was wrong, and the way it was tested let it stay wrong.** The ring was
+twelve (digit, segment) pairs in `RING_DIGIT`/`RING_SEGMENT`; two entries painted the fourth digit's bottom
+and none painted the first digit's, so on the glass one position never appeared and another stayed lit too
+long. The test compared the table with a transcription of the same table - a copy wrong in the same place
+agrees with itself. The replacement has **no position table at all**: the step is `1u << step`, six single
+bits, and a bit shift has no entry that can be wrong. The check now asserts the definition rather than a
+golden copy - six positions, six distinct segments, no repeats, driven by a step computed from the face's
+age.
+
+**The OLED is `OFFLINE`'s face with the words changed and no moving element.** `WAITING` is drawn by
+the same `drawStatusFace` that draws `OFFLINE` and `RADIO FAULT`: same inverted box, same `AQUAVISION`
+header, same title baseline, same body line, and the same Helvetica bold 12 title. The twelve-cell progress
+row it replaces implied an amount of progress that does not exist, and a misleading indicator is worse than
+none; this screen cannot be made as strong as the rest by animating, so it borrows the language that is
+already strong. **The title is `WAITING` and not `WAITING FOR PC` because of the character count, not the
+font**: thirteen characters do not fit bold 12 on the 128 px panel, and shrinking the type to fit them is
+what made this face read as empty beside `OFFLINE`. A seven-character title at the house size plus the body
+line `NO LINK TO PC` reads as "waiting - nothing connected yet", which is the short-title-plus-body
+structure `OFFLINE` already uses. This face and `OFFLINE` are therefore indistinguishable except for their
+words, which is the point: two different facts, told in the same voice.
+
+**The rotation is read from the face's age, never accumulated.** `presentation::rotationStep` is
+`(faceAge / cfg::DISPLAY_ROTATE_MS) % cfg::DISPLAY_ROTATE_STEPS`, computed every pass, so an iteration that
+runs long catches up instead of losing a step. It is the same function `CAPTURING` calls, so the two faces
+cannot end up on different steps or different clocks. There is no per-step work on the OLED: the waiting
+face is static and is sent once when it is entered, and the panel's mask is published from `serviceDisplay`
+as usual.
+
+`NoLink` is the old `Offline` face on both screens, because it means the old thing: **a PC was here and
+left**. That is worth reporting, and it is a different fact from `Pairing` - where no PC has ever
+attached. The second line of the `OFFLINE` box is build-dependent: `NO LINK TO PC` in `rig-ble` and
+`CHECK USB CABLE` in `rig-serial` (§10 of the transport document).
+
+### 11.4 The rules
+
+**1. The presentation layer outranks the screen.** A screen change made while it is not `Live` is
+**dropped, not deferred**: the presentation face is drawn over the rig's screen, the change never
+replays, and when `Live` returns the screens draw the rig's *current* screen - not the change that
+happened while it was away. That is the same choice §10 already makes for a verdict that lands inside a
+fault window - eaten, not deferred - and it is the honest one here too: a verdict that arrived while the
+rig had no PC did not come from the PC that is here now. In particular, a `PASS` that arrives while
+`Pairing` loses its arrival sweep and never paints a score over `WAITING`.
+
+**2. `Pairing` draws `APP` with a rotating fourth digit, and that is the fix.** The rig really is ready;
+only the link detail differs. The panel therefore no longer shows `Err0` at a rig where nothing is wrong,
+and the first connection no longer flips it to `READY` as though a press had caused it. The word says what
+the state is and the rotation says the rig is still working; both are shapes this panel already draws. The
+first version tried walking the `Ready` marquee backwards and the bench rejected it, because two dashes
+moving opposite ways are indistinguishable at a glance.
+
+**3. `NoLink` is a report, not a retry.** A central is attached but the protocol layer is `Gone`, so the
+PC is there and not talking - the old `OFFLINE`/`Err0` face is exactly right. `P2` in `NoLink` is
+"already here": the event is consumed and the face does not change. `P1` is the proof that somebody is on
+the other end, and moves it to `Live`.
+
+**4. Only `RadioFault` outranks the presentation layer.** `Err1` to `Err3` are the screen's fault windows
+and are drawn only while the face is `Live`; a dead radio (`B4`) replaces every face with `Err4`/`RADIO
+FAULT` and stays there, because waiting is the wrong response to it (§10 of the transport document).
+`B4` is applied before the `B3` edge the same fault produces, so a radio that failed cannot land the
+presentation back in `Pairing` behind its own fault.
+
+**5. `B1` in `Live` is rejected, and the refusal is the BLE layer's.** A second central must not repaint
+a live screen; the BLE layer has already disconnected it (its rule 1), and this cell is what keeps the
+presentation from following it. It is a defensive cell - the layer never sees a second attach - and it
+exists so that the rule is in the table instead of in a comment.
+
+**6. The serial build has no carrier signal, so it never shows `Pairing`.** A UART cannot see whether a
+cable is plugged in (transport §2), so `transport::attached()` answers true always: `rig-serial` starts
+`Live` (or `NoLink` when the protocol is already `Gone`), goes `NoLink` after ten seconds of silence, and
+keeps the old panel behaviour. That is the honest limit of that wire, not a missing state.
+
+**7. A press while the presentation is not `Live` is refused.** A capture needs a PC to receive it, and
+the protocol's boot grace would otherwise let a press start a frame with nobody attached and paint it on
+whichever PC arrives first. Nothing happens, and nothing is drawn - which is what "there is nowhere to
+send a trigger" should look like.
+
+**8. The wire is untouched.** No event, no command and no line format changes. In `Pairing` the protocol
+layer can still emit `EVT SCREEN OFFLINE` when its ten seconds expire; the panel draws `READY` anyway
+because the presentation layer outranks the screen. No central is attached to read that line, and the
+existing "tell the PC the current screen when it subscribes" rule is unchanged.
+
+**9. `Pairing` is a word and a rotation, and neither has a position table.** The panel draws `APP` and
+turns the fourth digit through six segments; the step is `1u << presentation::rotationStep(faceAge)`, the
+same call `CAPTURING` makes, so the two faces cannot disagree about the step or the clock. The ring this
+replaces was a twelve-entry table, and one wrong pair both duplicated a digit's bottom and dropped
+another's; **a bit shift has no entry that can be wrong**, which is why the replacement is arithmetic rather
+than a corrected table. The test asserts the definition - six positions, six distinct segments, no repeats,
+computed from the face's age - not a transcription that can agree with its own mistake.
+
+**10. Nothing else in the layer may repaint the frame.** The waiting face is static: it is drawn once when
+`Pairing` is entered and never per step, so the only thing that could repaint it is a dirty flag from
+elsewhere. The heartbeat marks the state dirty only while the presentation is `Live`, because the header
+dot exists only on the rig's own screen; a dirty flag in `Pairing` would send the whole 1184-byte frame once
+a second for a screen that has not changed. The same rule covers any future animation: if a face gains a
+moving element, it must compute its phase from the clock and say what repaints it, and it must not be the
+heartbeat.

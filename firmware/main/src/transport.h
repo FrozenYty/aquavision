@@ -60,4 +60,14 @@ bool faulted();
 //: command, which is the separation §2 of the transport document insists on.
 bool subscribed();
 
+//: True while a central is attached and has not let go - the carrier fact the presentation layer reads
+//: to tell "waiting for someone" from "someone left" (docs/rig-state-machine-en.md §11).
+//:
+//: **Serial always answers true**, and that is the honest answer rather than a shortcut: a UART is open
+//: at boot and the rig cannot see whether a cable is plugged in (§2 of the transport document), so the
+//: serial build boots `Live` or `NoLink` and never shows `WAITING`. It is not a liveness claim
+//: either: an attached central that says nothing still makes the protocol layer `Gone`, and the
+//: presentation layer is what keeps those two apart.
+bool attached();
+
 }  // namespace transport

@@ -71,8 +71,9 @@ constexpr uint32_t DISPLAY_BOOT_BLANK_MS = 40 * DISPLAY_UNIT_MS;
 constexpr uint32_t DISPLAY_READY_STEP_MS = 20 * DISPLAY_UNIT_MS;
 constexpr uint32_t DISPLAY_ROTATE_MS = 10 * DISPLAY_UNIT_MS;
 //: The rotating indicator has six steps on both screens: the panel's segment walks the digit's six rim
-//: segments A-F clockwise, and the OLED draws a six-dot ring in that same order. One constant, so the two
-//: cannot end up with different step counts.
+//: segments A-F clockwise, and the OLED fills one of six dots above the banner in that same order. One
+//: constant, so the two cannot end up with different step counts. `Pairing`'s fourth digit uses this same
+//: rotation, from the same expression `CAPTURING` uses.
 constexpr uint8_t DISPLAY_ROTATE_STEPS = 6;
 // The arrival sweep is ten units, so the score lands a quarter second after the verdict arrives.
 constexpr uint32_t DISPLAY_SWEEP_MS = 10 * DISPLAY_UNIT_MS;
@@ -163,6 +164,29 @@ constexpr uint32_t BLE_ADVERTISE_RETRY_MS = 250;
 //: splash is held until the panel's self-test has finished. The
 //: ten-lamp bar never shipped, and the display's commons are the pins the three status lamps sat on, so
 //: this build retires those as well.
-constexpr char FIRMWARE_VERSION[] = "1.13";
+//: 1.14 adds the presentation layer (docs/rig-state-machine-en.md §11): with no central attached the
+//: OLED says `WAITING FOR PC` and the panel keeps the ordinary READY marquee, instead of drawing `Err0`
+//: at a rig where nothing is wrong; `Err0` now means a PC was attached and left. The wire is unchanged.
+//: 1.15 was never flashed: on sight the bench rejected the reversed-direction marquee as too weak a
+//: distinction, because two dashes moving opposite ways look the same out of the corner of the eye.
+//: 1.16 replaced that animation and the four-dot row with one large ring around all four digits: twelve
+//: stops, 250 ms each, clockwise - the `CAPTURING` rotation at four times the scale - mirrored by a dot
+//: travelling the OLED's border, where the frame is sent once and only the two changing dots after it.
+//: 1.17 makes the cursor a snake with a body, and puts `WAITING FOR PC` in the same inverted status face
+//: as `OFFLINE` and `RADIO FAULT` instead of a third layout of its own. **1.18 was built but never
+//: flashed**: it replaced the partial tile update with a full frame per step and the border snake with a
+//: row of twelve cells.
+//: 1.19 is the fix for what the glass showed: the ring's position table had **two entries for the fourth
+//: digit's bottom and none for the first digit's**, so one position never appeared and another appeared
+//: twice - a table is a place to be wrong. The ring and everything built on it are gone; the panel draws a
+//: three-letter word with the fourth digit rotating through the same six segments `CAPTURING` turns, and
+//: the OLED draws `WAITING FOR PC` as `OFFLINE`'s face with no moving element at all.
+//: 1.20 changes that word from `PAr` to `APP` - it names the PC-side application the operator is about to
+//: open, which is the action this state waits for, where `PAr` named the act of pairing - and shortens the
+//: waiting title to `WAITING`. **The title shrank because of the character count, not the font**: thirteen
+//: characters did not fit the house's bold 12, and setting it smaller to fit is what made the face read as
+//: empty; the body line already carries `NO LINK TO PC`. The waiting face and `OFFLINE` are now the same
+//: face and the same size, and differ only in their words.
+constexpr char FIRMWARE_VERSION[] = "1.20";
 
 }  // namespace cfg

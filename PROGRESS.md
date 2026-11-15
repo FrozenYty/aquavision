@@ -109,6 +109,179 @@
   locates it through conda and **skips**, with the reason in the report, where a machine has none.
   `.venv-infer/` is left to the process that owns its deletion.
 
+- **A third machine now decides what the two screens draw, and it reads the other two rather than joining
+  them.** At power-up the rig has no central attached, the protocol layer reports `Gone` ten seconds later,
+  and the panel drew `Err0` - a blinking fault face - where nothing was wrong; the first connection then
+  flipped it to `READY`, which read as the press having caused something. The presentation layer owns
+  exactly one thing - which face each screen draws - and its four states, six events and 24 cells are a
+  table in `firmware/main/src/presentation.{h,cpp}`, compared cell by cell with the document. `Pairing` is
+  the state that removes the false fault: `WAITING FOR PC` with the six-dot row on the OLED and the
+  ordinary `Ready` marquee on the panel. `NoLink` keeps `OFFLINE`/`Err0` because a PC really was there and
+  left; `Live` hands the glass back to the rig's own screen; `RadioFault` keeps `RADIO FAULT`/`Err4`.
+- **"Waiting" is the honest label, and the alternative was a lie with a plausible face.** During a scan
+  the rig cannot know that anyone is coming, so `Err0` - which means a link was lost - is a report of
+  something that did not happen. The layer is a reader: the BLE and protocol matrices, the keepalive, the
+  four-second timeout and every wire line are untouched; `transport.h` gained one query (`attached()`) and
+  `presentation::begin` starts from the wire that actually opened. On `rig-serial` that query answers true
+  always - a UART cannot see a cable - so the serial build never shows `Pairing` and keeps its old panel
+  behaviour, which is the limit of that wire rather than a missing state.
+- **A screen change while the presentation is not `Live` is dropped, not deferred.** The face is drawn
+  over the rig's screen, the change never replays, and the transition back to `Live` paints the rig's
+  current screen - the same "eaten, not deferred" choice §10 already makes for a verdict inside a fault
+  window. A press while the presentation is not `Live` is refused too: during `Pairing` the protocol's boot
+  grace would otherwise let a capture start with nobody attached and paint it on whichever PC arrived
+  first. Nothing happens and nothing is drawn, which is what "there is nowhere to send a trigger" should
+  look like.
+- **The version is 1.14** because what the panel shows changed; `docs/rig-state-machine-{en,zh}.md` gained
+  §11 with the states, events, matrix, face table and eight rules, and the power-up face is now described
+  in `firmware/README{,-zh}.md` and `docs/rig-transport-{en,zh}.md` §10. `FIRMWARE_VERSION` carries the
+  panel change in its history comment; nothing on the wire moved, and `EVT HELLO` needed no new field.
+- **Verified without PlatformIO, which cannot run here.** All seven translation units were compiled
+  against the framework headers with the xtensa toolchain and every one exited 0 with no diagnostics:
+  `rig_state.cpp`, `presentation.cpp`, `protocol.cpp`, `screen.cpp`, `transport.cpp`, `transport_ble.cpp`,
+  `main.cpp`. `tests/test_rig_presentation.py` holds the documented matrix, the C++ table and an independent
+  transcription to each other, checks the four faces against the document, and checks that `Pairing`'s
+  face cannot reach the rig's screen; it fails on a moved cell, a swapped face or a `WAITING FOR PC` that
+  stopped outranking a verdict.
+
+- **The flashed 1.14 went to the bench, and all three findings were in the faces rather than the
+  machine.** `WAITING FOR PC` at Helvetica bold 12 measures 136 px on the 128 px panel, so it ran off the
+  screen; it is now bold 8, measured at 89 px - a 19 px margin either side. Bold 10 was measured at
+  122 px, which fits with only 3 px either side and reads as cramped against the inverted box, so the
+  smaller single line was chosen over both it and a two-line label. The sizes were measured on the host
+  through the U8g2 font tables, not estimated.
+- **`Pairing` and `Ready` are now two directions, not one face.** `Ready` walks digits 1, 2, 3, 4 and
+  wraps; `Pairing` walks 4, 3, 2, 1 and wraps, same period and same half-second step, so the panel tells
+  the two apart at a glance instead of showing one shape for two different stories. The direction is
+  written down as the whole distinction in `presentation.h`, `screen.cpp` and the state machine document,
+  so nobody "harmonises" them later.
+- **The OLED's dot row is the panel's walk rather than a fixed six.** In `CAPTURING` the panel turns
+  through six rim segments, so six dots is right; under `Pairing`'s four-position marquee it was claiming
+  two stops the panel never made. The row now takes its length and its lit position from the same walk
+  the panel is given - four in `Pairing`, `cfg::DISPLAY_ROTATE_STEPS` while capturing, and no row at all
+  where the panel is still or blinking, because dots claim a sequence. `walk` is the one value both
+  screens read, computed once per pass.
+- **A host-run behaviour test now drives the real machine.** `tests/test_rig_presentation_host.py`
+  compiles `presentation.cpp` for the host with a minimal harness and drives all 24 cells through
+  `apply()`, the four faces through `faceFor()`, and the `Pairing` walk; the source-level test could not
+  see a table lookup with swapped indices, and this can. It skips, with the reason, on a machine with no
+  `g++`, and runs on CI's Ubuntu runner. Each new test was shown failing under a targeted mutation of the
+  thing it checks.
+- **The version is 1.15, and the wire is still untouched.** The panel changed after the bench session, so
+  the version moved with it; the three face fixes are in `config.h`'s history comment, and the two
+  documents that describe the faces carry the measurements.
+- **`P3-38` is closed on the bench.** The finished rig reached the PC over BLE with the serial cable
+  pulled: twenty-five button presses with the USB unplugged each delivered a verdict, which is the
+  acceptance its plan line names, so the box is ticked. `rig-serial` stays the documented fallback.
+- **The reversed marquee and the four-dot row were superseded before 1.15 reached the bench.** The user
+  rejected the direction as too weak a distinction - two dashes moving opposite ways look the same out of
+  the corner of an eye - so the `Pairing` animation is now a **ring around the whole four-digit display**:
+  twelve stops on the outer perimeter, clockwise from digit 1's top edge (four top edges, two right edges,
+  four bottom edges, two left edges), one every `cfg::DISPLAY_ROTATE_MS`. A lap is exactly 3000 ms - 120
+  `cfg::DISPLAY_UNIT_MS` - and the step is the `CAPTURING` rotation's, because the small ring inside the
+  fourth digit and the large ring around all four are one mechanism at two scales. **The shape differs
+  from `Ready`, not the heading**, which is the point the bench was making.
+- **The OLED draws the same ring as a dot on the screen's border**, with the label inside it and one phase
+  for both screens: `presentation::ringStep` is computed once and the panel's segment table and the OLED's
+  twelve dots are both indexed by it, so they cannot disagree about the stop. `CAPTURING`'s six dots above
+  the banner stay, because they are the panel's six rim segments - the small ring, not a fixed-length row.
+- **A ring step moves one dot and does not redraw the frame.** The border and the label are sent once when
+  the face is entered; each step erases the dot that was lit, draws the one that is now, and sends two 2x2
+  tile windows. Measured on this stack with the U8g2 byte callback: **104 bytes and 12 transfers per step
+  against 1184 bytes and 64 transfers for a whole frame**. The seven-segment panel runs on its own hardware
+  timer and is not touched by the transfer; the check is that the ring step never calls `sendBuffer` or
+  `clearBuffer` and never reaches into `displayMasks`, and it fails if either is added back.
+- **The version is 1.16, because 1.15 never reached the bench** and its panel differs from this one. The
+  font work is kept (Helvetica bold 8, 89 px, 19 px margin) and so is the host-side test over all 24
+  cells; that test now also drives `ringStep` through the real code. Each new or changed test was shown
+  failing under a targeted mutation: exchanging the matrix row index, ignoring `faceFor`'s argument,
+  changing the ring step, reintroducing `sendBuffer` in the ring step, and putting the dot row back.
+- **The cursor is a snake now, not a point.** One lit segment is a moving dot with no body and it lets a
+  stop flash past; the `Pairing` face lights the current stop and the `cfg::DISPLAY_RING_BODY - 1` behind
+  it - two segments of one digit at a corner, one segment on each of two neighbouring digits along an
+  edge. The body is one named constant, not a `1` baked into the arithmetic, because the bench may ask for
+  three. Every stop now stays on the glass for two steps, and the first digit's bottom no longer goes by
+  in one.
+- **`WAITING FOR PC` now uses the house status face.** It was a thin border with text inside, a third
+  style next to `OFFLINE` and `RADIO FAULT`; it now draws the same inverted box, `AQUAVISION` on the
+  header baseline, the label on the title baseline and one hint line below (`SCAN FROM PC`), with only
+  the snake travelling the border as the thing this face adds. The title stays Helvetica bold 8 because
+  the longer label is 89 px at 8 and 136 px at 12, while the baselines and spacing are the house's.
+- **The fixed-position stall was investigated in the order asked, and both structural suspects were
+  clean.** The position is `(faceAge / cfg::DISPLAY_ROTATE_MS) % 12`, computed every pass - no accumulator,
+  so a late iteration catches up instead of losing a step. And the twelve-step cost table is flat: **every
+  one of the twelve steps is 104 bytes and 12 transfers** against 1184/64 for a full frame, and every step
+  changes the panel mask (so no stop is painted invisibly). What did turn up is a real extra full-frame
+  redraw: `serviceHeartbeat` marked the state dirty in `Pairing` for a header dot that face does not draw,
+  and because 1 s and the 3 s lap are commensurate that 1184-byte block landed on the same ring stop every
+  lap. The heartbeat now dirties only while the presentation is `Live`; the ring is the only thing that
+  repaints in `Pairing`, two small windows at a time.
+- **The lookup was not put in an interrupt, and the reason is written down.** The panel is timer-driven
+  because an OLED transfer blocks the loop; an ISR that waited on the I2C bus would stall the screen it
+  exists to protect. The answer is the bounded 104-byte write, and the docs say so next to the cost table.
+- **The version is 1.17**, because the 1.16 on the bench has the one-segment cursor and the third OLED
+  style. The changed checks were shown failing under mutation: a baked body length, a ring table where two
+  consecutive stops paint the same mask, an accumulated `ringStep`, a heartbeat that dirties in `Pairing`,
+  a `sendBuffer` put back into the ring step, and the OLED coordinates moved off the twelve stops.
+- **1.17 went to the bench and the OLED showed garbage, so the partial tile update is gone.** It was the
+  only writer in this change that addressed less than a full buffer - a tile coordinate or an erase into
+  an inverted area is exactly the class of mistake that produces this - and it is removed rather than
+  patched. Every ring step now marks the state dirty and the loop redraws and sends the whole 128x64
+  frame: 1184 bytes, 64 transfers, four steps a second. The display library sets the bus to 400 kHz (the
+  SSD1306's declared clock, not the 100 kHz `Wire` default), so a frame is about 27 ms and the duty is
+  about eleven percent. The panel is on its own hardware timer and is untouched either way, so the cost is
+  one loop block a little longer than the button's 25 ms debounce - the press level persists, so it is
+  seen one loop later rather than missed - and far inside the two-second keepalive. **A clean picture that
+  lags is acceptable; a corrupted one is not** - and if a bench session shows the loop dragging, the
+  number to lower is the ring's step interval, not the decision to send whole frames.
+- **The OLED's moving element is now a row of twelve cells filled up to the snake's stop.** A rectangle is
+  the only shape this display draws without arithmetic: the border it replaces needed corner coordinates,
+  tile maths and inverted-background erasure, and each was a place to get it wrong. The house status face
+  is unchanged - inverted box, `AQUAVISION`, the label, the hint line - and the row sits below the hint,
+  driven by the same `presentation::ringStep` the panel's snake is, so the two cannot disagree. The row
+  is kept as filled and outlined boxes only.
+- **The panel body is four stops** (`DISPLAY_RING_BODY = 4`), which is the bench's answer after two, and
+  it was one number to change because it was written as one. The OLED row does not read it: a row fills up
+  to the head, and that is a different picture from a snake body on a ring.
+- **The version is 1.18**, because the 1.17 on the bench is the corrupted one. The changed checks were
+  shown failing under mutation: a ring step that does not dirty the face, a reintroduced `updateDisplayArea`,
+  an OLED module that touches `displayMasks`, a baked body length in the panel loop, a ring table where
+  two consecutive stops paint the same mask, and an accumulated `ringStep`.
+- **The glass found a table error the test could not see.** The ring's twelve (digit, segment) pairs had
+  **two entries for the fourth digit's bottom and none for the first digit's**: on the panel one position
+  never appeared and another stayed lit too long. The test compared the table with a transcription of the
+  same table, and a copy wrong in the same place agrees with itself. So the ring is gone, and the lesson is
+  the test: for any table that survives, assert the property - twelve positions, twelve distinct pairs -
+  rather than a golden copy.
+- **`Pairing` is now `PAr` with a rotating fourth digit on the panel.** `P`, `A` and `r` are in the
+  character set, so the word reads as PAIR - the state itself - and the fourth digit turns through the same
+  six rim segments, at the same 250 ms, through the same `presentation::rotationStep` as `CAPTURING`. The
+  ring table, the body constant, the twelve-stop constants and the ring tests are removed; the position is
+  `1u << step`, and a bit shift has no entry to get wrong. The new check asserts six positions, six distinct
+  segments, no repeats, computed from the face's age - a definition, not a copy.
+- **The OLED waiting face is `OFFLINE`'s face with the words changed and no moving element.** The
+  twelve-cell progress row implied progress that does not exist, and a misleading indicator is worse than
+  none; `WAITING FOR PC` now comes from the same `drawStatusFace` as `OFFLINE` and `RADIO FAULT` - same
+  inverted box, header, baselines and body line - and the headline is the one difference. Nothing redraws
+  per step, so the only thing that could repaint it is a stray dirty flag, and the heartbeat no longer sets
+  one outside `Live`.
+- **The version is 1.19**, because 1.18 was built but never flashed. The changed checks were shown failing
+  under mutation: a repeated rotation step (the step count changed under it), a missing `PAr` letter, a
+  waiting face that draws an animation again, a rotation computed by an accumulator, and a stray panel
+  access in the OLED module.
+- **The panel word changed from `PAr` to `APP`** - one character in each of the first three digits; the
+  fourth digit still rotates through the same six segments at the same 250 ms. It now names the PC-side
+  application the operator is about to open, where `PAr` named the act of pairing. The version is **1.20**
+  so the two designs cannot share an `EVT HELLO`; the docs, both READMEs and the face-table words carry the
+  new word, and the word test asserts `A` plus two `P`s.
+- **The waiting title is `WAITING`, and the font is the house's.** `WAITING FOR PC` was thirteen characters
+  and had to be set in bold 8 to fit, so beside the seven-character `OFFLINE` at bold 12 the face read as
+  empty. The cause was the character count, not the font, so the title was shortened rather than shrunk:
+  the body line already says `NO LINK TO PC`, and a short title over that body is the structure `OFFLINE`
+  uses. `drawStatusFace` now has one title size with no per-face font argument, so the two screens are
+  identical except for their words; the check asserts the shared body line, the one font, and that every
+  headline is short enough for it.
+
 ## 2026-11-14
 
 - **The turbidity sensor is gone, and this time the decision is final.** A full sweep of all 256 register

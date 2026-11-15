@@ -18,6 +18,7 @@
 #include <cstdio>
 
 #include "config.h"
+#include "presentation.h"
 #include "transport.h"
 #include "protocol.h"
 #include "rig_state.h"
@@ -43,6 +44,13 @@ uint32_t displayStartedAt = 0;
 rig::Screen lastDisplayedScreen = rig::Screen::Ready;
 uint32_t lastDisplayChange = 0;
 
+//: The third machine's own reading of the wire (docs/rig-state-machine-en.md §11). `presentationAttached`
+//: remembers the previous loop's carrier, so a transition - not a level - becomes B1 or B3; the state
+//: painted last does the same job for the faces that the screen does for `state.screen`, so a change of
+//: face starts that face's age at zero.
+bool presentationAttached = false;
+presentation::State lastDisplayedPresentation = presentation::State::Pairing;
+
 //: The button has one meaning: a press captures. The edge is debounced here, and the capture is refused
 //: when there is nothing to receive it - no link, or a shot already in flight - so the rig has one entry
 //: point rather than a gesture to be interpreted. The release is not an event.
@@ -59,9 +67,12 @@ void serviceButton(uint32_t now) {
     return;  // only the press acts
   }
 
-  // A capture needs a PC to receive it, and the invariant already ties `Gone` to the OFFLINE screen, so
-  // there is nothing to set here - only the refusal.
-  if (state.link != rig::Link::Alive) {
+  // A capture needs a PC to receive it. `state.link` alone is not enough any more: during `Pairing` the
+  // protocol still counts boot as `Alive`, so its ten-second grace would let a press start a frame with
+  // nobody attached and then paint that capture on whichever PC arrives first. The presentation layer
+  // knows there is no PC to send a trigger to, so a press there is refused and literally nothing happens
+  // (docs/rig-state-machine-en.md §11).
+  if (state.link != rig::Link::Alive || presentation::state() != presentation::State::Live) {
     return;
   }
   if (state.screen == rig::Screen::Capturing) {
@@ -129,9 +140,14 @@ void serviceHeartbeat(uint32_t now) {
   }
   lastHeartbeat = now;
   state.heartbeatOn = !state.heartbeatOn;
-  // The dot is the only thing that moves between events, so it redraws wherever it is visible. On
-  // OFFLINE the whole screen is a filled box and the header is not drawn at all.
-  if (state.screen != rig::Screen::Offline) {
+  // The dot is part of the rig's own header, and that header exists only while the presentation is
+  // showing the rig's screen. Marking dirty in `Pairing`, `NoLink` or `RadioFault` would repaint the
+  // whole 1 kB frame once a second for a dot those faces do not draw - and because one second and the
+  // three-second ring lap are commensurate, that 25 ms block lands on the same ring stop every lap,
+  // which reads as a pause there. The ring's own step is the only thing that should animate in
+  // `Pairing`, and it moves one dot at a time.
+  if (state.screen != rig::Screen::Offline &&
+      presentation::state() == presentation::State::Live) {
     state.markDirty();
   }
 }
@@ -238,11 +254,11 @@ void screenFace(uint32_t faceAge, rig::Screen screen, int score, uint8_t mask[4]
       // out because the middle bar would read as a dropped frame in the rotation. A still fourth digit
       // would look like a character that failed to draw rather than like work in progress. It stays a dot
       // rather than becoming a count: the count is the OLED's job and a second one here would be noise.
+      // The step comes from `presentation::rotationStep`, the same call the `Pairing` face makes.
       mask[0] = segmentsFor('C');
       mask[1] = segmentsFor('A');
       mask[2] = segmentsFor('P');
-      mask[3] = static_cast<uint8_t>(
-          1u << ((faceAge / cfg::DISPLAY_ROTATE_MS) % cfg::DISPLAY_ROTATE_STEPS));
+      mask[3] = static_cast<uint8_t>(1u << presentation::rotationStep(faceAge));
       break;
     case rig::Screen::Pass:
     case rig::Screen::Retake: {
@@ -313,18 +329,31 @@ uint32_t faceAgeAt(uint32_t now, uint32_t screenAge) {
 //: The four digits' segment masks, digit 1 on the left. A face is a function of the screen and of how long
 //: that face has been up - the self-test runs once on boot, the PASS sweep once on arrival - so nothing
 //: here blocks: a slow loop slows the motion down instead of stalling the link.
-void displayMask(uint32_t now, uint32_t screenAge, uint8_t mask[4]) {
+//: The seven segment bits run in the order `segmentsFor` and `litBits` use: A is bit 0, G bit 6. That is
+//: also why the fourth digit's rotation is `1u << step` - six single bits, no table to be wrong in.
+
+//: The `Pairing` panel face: the word `APP` on the first three digits and the fourth digit turning through
+//: its six rim segments. `A`, `P`, `P` are all in the character set, so the word is doing the work and no
+//: new glyph or table is needed; it names the PC-side application the operator is about to open, which is
+//: the action this state is waiting for. The rotation is exactly `CAPTURING`'s, one segment every
+//: `DISPLAY_ROTATE_MS`, from the same `presentation::rotationStep`, so the two faces cannot drift apart.
+//: **There is no position table here on purpose.** The ring this replaces was twelve (digit, segment)
+//: pairs, and one wrong pair both duplicated the fourth digit's bottom and dropped the first digit's; a
+//: table is a place to be wrong, and the six-bit rotation below has no entry to get wrong.
+
+void displayMask(uint32_t now, uint32_t screenAge, presentation::State presentationState,
+                 uint8_t mask[4]) {
   mask[0] = mask[1] = mask[2] = mask[3] = 0;
 
-  // A fault outranks every screen. It is the one thing on this panel that must not be missed: one keepalive
-  // is long enough to read a code and short enough to be over, and no routine status change can cut it
-  // short because this is decided before any screen is looked at. `Err4` is the exception to the window,
-  // not to the ranking: a dead radio is not fixed by waiting, so it has no window at all (§10).
-  const bool faultShowing =
-      state.fault != rig::Fault::None &&
-      (state.fault == rig::Fault::Radio || now - state.faultAt < cfg::FAULT_FACE_MS);
-  if (faultShowing) {
-    faultMask(now - state.faultAt, state.fault, mask);
+  // The presentation layer outranks the screen (docs/rig-state-machine-en.md §11). `Err4` is decided
+  // first, ahead of the boot self-test as well: a radio that refused at power-up is not fixed by waiting,
+  // and the two-second test must not hide it. `Pairing` draws `APP` with a rotating fourth digit rather
+  // than any of the rig's faces. `NoLink` draws the old `Offline` face, `Err0`, because a PC was there and
+  // left. A fault window (`Err1` to `Err3`) is the screen's, so it is drawn only while the face is
+  // `RigScreen` - the presentation layer replaces it with the other two.
+  const presentation::Face& face = presentation::faceFor(presentationState);
+  if (face.panel == presentation::PanelFace::Err4) {
+    faultMask(now - state.faultAt, rig::Fault::Radio, mask);
     return;
   }
 
@@ -332,6 +361,31 @@ void displayMask(uint32_t now, uint32_t screenAge, uint8_t mask[4]) {
   const uint32_t bootAge = now - displayStartedAt;
   if (bootAge < BOOT_SEQUENCE_MS) {
     bootMask(bootAge, mask);
+    return;
+  }
+
+  if (face.panel == presentation::PanelFace::Pairing) {
+    mask[0] = segmentsFor('A');
+    mask[1] = segmentsFor('P');
+    mask[2] = segmentsFor('P');
+    mask[3] = static_cast<uint8_t>(1u << presentation::rotationStep(faceAgeAt(now, screenAge)));
+    return;
+  }
+  if (face.panel == presentation::PanelFace::Err0) {
+    screenFace(faceAgeAt(now, screenAge), rig::Screen::Offline, state.score, mask);
+    return;
+  }
+
+  // A fault outranks every screen. It is the one thing on this panel that must not be missed: one keepalive
+  // is long enough to read a code and short enough to be over, and no routine status change can cut it
+  // short because this is decided before any screen is looked at. `Err4` is the exception to the window,
+  // not to the ranking: a dead radio is not fixed by waiting, so it has no window at all (§10) - and with
+  // the presentation layer it is also the one fault that is answered before this point.
+  const bool faultShowing =
+      state.fault != rig::Fault::None &&
+      (state.fault == rig::Fault::Radio || now - state.faultAt < cfg::FAULT_FACE_MS);
+  if (faultShowing) {
+    faultMask(now - state.faultAt, state.fault, mask);
     return;
   }
 
@@ -414,19 +468,27 @@ void beginDisplay() {
 //: long as it likes. Published only when the face changes, so the handover happens at animation rate
 //: rather than at loop rate. A face is a function of the screen and of `now`, so nothing here blocks.
 void serviceDisplay(uint32_t now) {
+  const presentation::State presentationState = presentation::state();
+  // A change of face is a change of screen as far as this panel is concerned: it gets its own age, so the
+  // `Ready` marquee in `Pairing` starts at digit 1 rather than inheriting a phase, and it forces one
+  // repaint of both screens.
+  if (presentationState != lastDisplayedPresentation) {
+    lastDisplayedPresentation = presentationState;
+    lastDisplayChange = now;
+    state.markDirty();
+  }
   if (state.screen != lastDisplayedScreen) {
     lastDisplayedScreen = state.screen;
     lastDisplayChange = now;
   }
   const uint32_t screenAge = now - lastDisplayChange;
 
-  // The spinner on the OLED and the rotating segment on the panel are one animation, so they read one
-  // phase: the same step of the same clock, with the same six steps. The OLED is redrawn on the tick that
-  // turns the segment, which is what stops two indicators of one event from drifting apart - tuning two
-  // periods until they look close only hides the drift.
+  // The CAPTURING rotation owns `animPhase`: the panel turns through six rim segments and the OLED
+  // draws six dots above its banner, one phase for both. It is the same mechanism at the small scale; the
+  // `Pairing` face's fourth digit makes the same `presentation::rotationStep` call, so the two cannot
+  // drift apart.
   if (state.screen == rig::Screen::Capturing) {
-    const uint8_t phase = static_cast<uint8_t>(
-        (faceAgeAt(now, screenAge) / cfg::DISPLAY_ROTATE_MS) % cfg::DISPLAY_ROTATE_STEPS);
+    const uint8_t phase = presentation::rotationStep(faceAgeAt(now, screenAge));
     if (state.animPhase != phase) {
       state.animPhase = phase;
       state.markDirty();
@@ -434,7 +496,7 @@ void serviceDisplay(uint32_t now) {
   }
 
   uint8_t mask[4];
-  displayMask(now, screenAge, mask);
+  displayMask(now, screenAge, presentationState, mask);
 
   bool same = true;
   for (uint8_t d = 0; d < 4; ++d) {
@@ -465,6 +527,41 @@ void serviceLink(uint32_t now) {
   // command handlers, so a keepalive cannot overwrite a verdict that is still being read.
 }
 
+//: Drive the third machine from the two layers it reads (docs/rig-state-machine-en.md §11). Nothing here
+//: writes to either of them: B1-B4 are readings of the carrier, B2 is the one-shot subscription event the
+//: BLE layer already reports, P1 is `poll`'s return value and P2 is the protocol's own `Gone`. The
+//: presentation layer is a reader, and that is why the two existing matrices are untouched.
+void servicePresentation(uint32_t now) {
+  // B4 first: a radio that reaches `Fault` also detaches, and the B3 edge that produces in the same pass
+  // must not put the presentation back into `Pairing` behind the fault.
+  const bool faulty = transport::faulted();
+  if (faulty) {
+    if (state.fault != rig::Fault::Radio) {
+      // `state.fault` still carries the blink age and the panel's ranking; the presentation state is what
+      // chooses the face (`displayMask`). Both are set from this one event, so they cannot disagree.
+      state.fault = rig::Fault::Radio;
+      state.faultAt = now;
+      state.markDirty();
+    }
+    presentation::apply(presentation::Event::RadioFaulted);
+  }
+
+  const bool attached = transport::attached();
+  if (attached != presentationAttached) {
+    presentationAttached = attached;
+    presentation::apply(attached ? presentation::Event::Attached : presentation::Event::Detached);
+  }
+
+  // P2 is the protocol's ten seconds of silence, applied while the fact holds rather than only on its
+  // edge. `Subscribed` can enter `Live` after the rig has already gone `Gone` - a PC that attaches late -
+  // and that rig has to reach `NoLink` in the same pass, not sit on `Live` with a dead protocol
+  // underneath until the next command. In `Pairing` and `NoLink` the matrix consumes it, so repeating it
+  // costs nothing and cannot move the state twice.
+  if (state.link == rig::Link::Gone) {
+    presentation::apply(presentation::Event::Silence);
+  }
+}
+
 }  // namespace
 
 void setup() {
@@ -477,6 +574,14 @@ void setup() {
     state.fault = rig::Fault::Radio;
     state.faultAt = millis();
   }
+
+  // The third machine starts from the wire that actually opened: a radio with no central is `Pairing`;
+  // a UART always answers attached, so a serial rig starts `Live` and never shows `WAITING`
+  // (docs/rig-state-machine-en.md §11). Not an event and not in the matrix - a stack that starts has
+  // exactly one thing to be.
+  presentation::begin(transport::attached(), state.pcAlive());
+  presentationAttached = transport::attached();
+  lastDisplayedPresentation = presentation::state();
 
   Wire.begin(cfg::PIN_I2C_SDA, cfg::PIN_I2C_SCL);
 
@@ -521,12 +626,14 @@ void loop() {
       state.markDirty();
       protocol::emitScreen(state);
     }
+    // P1: a command is proof that somebody is on the other end, which is the only thing `NoLink` was
+    // waiting for. In `Live` the cell is handled in place - a keepalive does not repaint anything.
+    presentation::apply(presentation::Event::Command);
   }
   serviceButton(now);
   serviceHeartbeat(now);
   serviceCaptureTimeout(now);
   serviceVerdictTimeout(now);
-  serviceDisplay(now);
   serviceLink(now);
 
   // The five reachable screen/link combinations are enforced here rather than assumed. This costs a
@@ -552,23 +659,36 @@ void loop() {
   // The serial wire answers false: a port that is open reads the very next line already.
   if (transport::subscribed()) {
     protocol::emitScreen(state);
+    // B2: the subscription completed. Both screens are still on `NoLink` at this point, so the PC that
+    // just subscribed sees the link face until this event moves the presentation to `Live` - which is the
+    // honest order: attaching is not the same fact as being able to hear the rig.
+    presentation::apply(presentation::Event::Subscribed);
   }
 
-  // The carrier's own fault, and the only one no protocol event can report: a radio that kept dropping is
-  // `Err4`, and it is set after the invariant check so that it wins the frame - both codes are true at the
-  // same moment and only one of them tells the operator what to do (§10). The call is also this layer's
-  // clock for its own idle timer, which is why it is not inside a condition.
-  if (transport::faulted() && state.fault != rig::Fault::Radio) {
-    state.fault = rig::Fault::Radio;
-    state.faultAt = now;
-    state.markDirty();
-  }
+  // The presentation layer is worked out after the link, the invariant and the subscription have been
+  // read this pass, and the panel after that: a face worked out before the fact it reports would be one
+  // loop behind, and a face age that starts a pass late would inherit a phase.
+  //
+  // `transport::faulted()` is called here, once per pass and not inside a condition, because the call is
+  // also the BLE layer's clock for its own idle timer and for a refused advertisement - the one deadline
+  // there that no radio callback will ever raise on its own. It is read after the invariant check so that
+  // a dead radio wins the frame: both codes are true at the same moment and only one of them tells the
+  // operator what to do (§10).
+  servicePresentation(now);
+  serviceDisplay(now);
 
   // Both screens read the one boot clock: while the panel is still walking its self-test the OLED keeps the
   // splash card, and the moment that sequence ends they both move to READY. Nothing else decides when the
   // rig is ready, and the pending screen change is simply held until then.
   if (now - displayStartedAt >= BOOT_SEQUENCE_MS && state.dirty) {
-    screen::render(display, state);
+    // Every screen change and every ring step arrives here, and each one sends a whole frame. That is
+    // deliberate: the partial tile update was the only writer in this change that addressed something
+    // other than a full buffer, and it corrupted the glass on the bench. A frame is about 1184 bytes and
+    // 25 ms; four ring steps a second is a ten-percent duty, and the panel is on its own timer, so the
+    // only cost is up to 25 ms of loop latency - far inside the button's 25 ms debounce window and the
+    // two-second keepalive. If a bench session ever shows that dragging, the one number to lower is the
+    // ring's step interval, not this call.
+    screen::render(display, state, presentation::state());
     state.dirty = false;
   }
 }

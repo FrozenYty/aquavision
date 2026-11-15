@@ -695,7 +695,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - **lane B still owes one thing**: `turbidity_rel` is gone from the data model and the contract
         documents but the column remains in `server/app/models.py`, so `media_asset` may now carry an
         orphaned field that nothing writes
-- [ ] **P3-38** The finished rig needs no cable to the PC · @FrozenYty · the assembled rig must run from a
+- [x] **P3-38** The finished rig needs no cable to the PC · @FrozenYty · the assembled rig must run from a
       power module with only the camera's wire on the desk · done when a verdict reaches the PC
       over BLE with the serial cable unplugged, the `rig-serial` build still exists and is documented as the
       fallback, and the bench tools can reach the rig without a COM port

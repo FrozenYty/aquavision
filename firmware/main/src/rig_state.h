@@ -63,9 +63,10 @@ struct State {
   Link link = Link::Alive;
   bool heartbeatOn = true;
   //: The shared animation phase, 0 to `cfg::DISPLAY_ROTATE_STEPS` - 1: which step of the CAPTURING
-  //: rotation is current. The panel lights that rim segment and the OLED lights that dot of its ring, so
-  //: both screens read this one number. Derived by `serviceDisplay`, never advanced by a counter of its
-  //: own - two periods for one event drift, however carefully they are tuned.
+  //: rotation is current. The panel lights that rim segment and the OLED fills that dot above its banner,
+  //: so both screens read this one number. Derived by `serviceDisplay`, never advanced by a counter of its
+  //: own - two periods for one event drift, however carefully they are tuned. `Pairing` does not read this:
+  //: its panel face computes the same expression from its own face age, and its OLED face does not animate.
   uint8_t animPhase = 0;
 
   //: Set when something visible changed. The renderer clears it. A redraw per frame would flicker and

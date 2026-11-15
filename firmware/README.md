@@ -27,6 +27,7 @@ pins are declared in `config.h`; the panel is `P3-17`'s to put on the bench.
 | `src/config.h` | pins, timings, I2C addresses | a wire moves, or a period feels wrong |
 | `src/rig_state.h` | what the rig knows: screen, score, reason, frame count, fault, link | a new value has to be remembered |
 | `src/screen.cpp` | the OLED's 128×64 layout, one function per state | the screen should look different |
+| `src/presentation.cpp` | the third machine: which face both screens draw, and what "waiting for a PC" means | a state, an event or a face changes (`docs/rig-state-machine-en.md` §11) |
 | `src/protocol.cpp` | the serial grammar | the PC and the board must say something new |
 | `src/main.cpp` | the loop, the button, the display's faces, and the timer that multiplexes them | almost never |
 
@@ -104,7 +105,7 @@ y 33..53  +-----------------------------------------------------+
           |                       RETAKE                        |    filled = PASS, outline = RETAKE
           +-----------------------------------------------------+
 y 54      -------------------------------------------------------
-y 55..62  v1.13                                    FRAMES 12
+y 55..62  v1.20                                    FRAMES 12
 ```
 
 **Shape carries the verdict.** A pass fills the banner, a retake outlines it, so the two are
@@ -117,16 +118,42 @@ smudge.
 19, so at baseline 31 its digits occupy rows 12-31; the bold 7x13 label reports ascent 9, so at baseline
 26 it occupies 17-26. Both centre on 21.5. A 5x7 label at the same baseline sat 1.5 px low.
 
-**The footer is the firmware version and the frame counter.** `v1.13` on the left, built from the same
+**The footer is the firmware version and the frame counter.** `v1.20` on the left, built from the same
 constant `EVT HELLO` sends, so the panel and the log cannot disagree about which build is running;
 `FRAMES 12` on the right is a real capture count. There is no session tally any more - a count of verdicts
 is a statistic, and the PC keeps the record.
 
 **States without a score use the free band.** READY puts `PRESS TO CAPTURE` there and CAPTURING puts a row
 of six dots, one lit at a time at a quarter-second, which is one step of the same phase as the panel's
-rotating segment (`cfg::DISPLAY_ROTATE_STEPS`). At three pixels a filled and a hollow mark were
-indistinguishable; at radius 2 the animation reads. OFFLINE replaces the whole screen with three centred
-lines - the earlier single line at 12 px was wider than the panel and lost its last letters.
+rotating segment (`cfg::DISPLAY_ROTATE_STEPS`). Those six are the panel's rim segments: one per segment
+the fourth digit turns through, so the row and the segment cannot disagree. At three pixels a filled and a
+hollow mark were indistinguishable; at radius 2 the animation reads. OFFLINE replaces the whole screen with
+three centred lines - the earlier single line at 12 px was wider than the panel and lost its last letters.
+
+**At power-up, with no central attached, the OLED shows `OFFLINE`'s face with the headline changed to
+`WAITING`, and nothing moves.** That is the `Pairing` face of the presentation layer
+(`docs/rig-state-machine-en.md` §11): the rig has no PC yet and nothing is wrong, so it must not draw the
+`OFFLINE` box, which means *a PC was here and left*. `WAITING` is drawn by the same `drawStatusFace` as
+`OFFLINE` and `RADIO FAULT` - same inverted box, same `AQUAVISION` header, same baselines, same body line,
+and the same Helvetica bold 12 title - because the twelve-cell progress row it replaced implied an amount of
+progress that does not exist, and a misleading indicator is worse than none. **The title is `WAITING`, not
+`WAITING FOR PC`, because of the character count and not the font**: thirteen characters do not fit bold 12,
+and shrinking the type to fit them is what made this face look empty beside `OFFLINE`. A seven-character
+title at the house size plus the shared body line reads as "waiting - nothing connected yet", which is the
+structure `OFFLINE` already uses, so the two faces are indistinguishable except for their words. The panel
+draws `APP` with its fourth digit turning through the six rim segments at the same 250 ms step as
+`CAPTURING`, from the same `presentation::rotationStep`, so the two faces cannot disagree. **There is no
+position table anywhere**: the ring this replaces was a twelve-entry table, and one wrong pair lit the
+fourth digit's bottom twice while the first digit's never appeared; the step is now `1u << step`, and a
+shift has no entry to get wrong. On `rig-serial` this face never appears: a UART has no carrier signal, so
+the serial build cannot tell "nobody yet" from "somebody left" and uses `OFFLINE`/`Err0` for both.
+
+**The face is static and is sent once.** There is no per-step redraw and no partial tile update - that path
+was the only writer in this build that addressed less than a full buffer, and it corrupted the glass - so
+the only thing that could repaint the waiting face is a stray dirty flag, which the heartbeat no longer
+sets outside `Live`. The panel mask is published by the loop and the OLED module never touches it, and the
+rotation is **not** in an interrupt: I2C blocks, and an ISR that waits on the bus would stall the screen it
+protects.
 
 ## The four-digit display
 
@@ -153,6 +180,7 @@ dash after a power-up sat on digit 2 instead of digit 1.
 | Face | What it shows | Timing |
 |---|---|---|
 | boot | one segment at a time through all 28 positions, then `8888`, then dark | 25 ms per position (700 ms), 300 ms of eights, 1000 ms dark: two seconds, once |
+| `Pairing` | `APP`, with the fourth digit turning through its six rim segments | 250 ms per step, six-step lap |
 | `READY` | one dash, segment G alone, walking digit 1, 2, 3, 4 and starting over at 1 | 500 ms per position, 2 s a cycle |
 | `CAPTURING` | `CAP`, with one segment walking the rim of the fourth digit | 250 ms per step |
 | `PASS` | a left-to-right sweep, then the score in digits 1-3 and `P`: ` 95P` | 250 ms sweep on arrival, then steady |
@@ -162,6 +190,22 @@ dash after a power-up sat on digit 2 instead of digit 1.
 | fault `Err2` | stray result, blinking | 1 Hz for 2 s |
 | fault `Err3` | broken invariant, blinking | 1 Hz for 2 s |
 | fault `Err4` | radio dead, blinking | 1 Hz, and no window: until a power cycle or a reflash |
+
+**`Pairing` draws `APP` with a rotating fourth digit, not a code and not the `READY` marquee.** With no
+central attached there is no fault to report: the rig is ready and only the link detail differs. The word
+names the PC-side application the operator is about to open - the action this state waits for - and the
+fourth digit turns through the six rim segments at the same 250 ms step and through the same
+`presentation::rotationStep` as `CAPTURING`. Both halves are things this panel already draws, and that is
+deliberate: the same rotation the operator has already seen on a capture means "working", and the word says
+what to do. **There is no position table** - the ring this replaces was a twelve-entry table, and one
+wrong pair lit the fourth digit's bottom twice while the first digit's never appeared, so a position
+vanished and another lingered. The step is `1u << step` now, and a bit shift has no entry to get wrong; the
+check asserts the definition (six positions, six distinct segments, no repeats) rather than a copy of the
+table. **The shape is the distinction, not the direction**: the first version walked the `READY` marquee
+backwards and the bench rejected it, because two dashes moving opposite ways look the same at a glance.
+`NoLink` is the state that shows `Err0`, and it means a central attached and went silent. That separation
+is the presentation layer's (`docs/rig-state-machine-en.md` §11), and it is why a rig powered up on a bench
+no longer blinks a fault at nobody.
 
 **`READY` is a one-way marquee; `OFFLINE` is a code.** Digits 1, 2, 3, 4 and straight back to 1, half a second
 at each position: two seconds a cycle, no dark frame, and never more than one dash lit. **The wrap is
@@ -265,6 +309,12 @@ rather than as waiting. From then on the two are a pair - `OFFLINE` if and only 
 an idle rig stays `READY` only because the PC keeps saying so. A rig on a bench with no PC software goes
 `OFFLINE` ten seconds after power-up, which is correct: there is nobody on the other end. `rig::invariantHolds` checks that pairing every loop pass and reports `EVT INVARIANT` if it is ever
 broken.
+
+**`rig-ble` is the exception, and it is the presentation layer's job** (`docs/rig-state-machine-en.md`
+§11). With no central attached the panel draws `APP` with its fourth digit rotating and the OLED says
+`WAITING`, because a radio really can tell that nobody has arrived; `Err0` on that build means a
+central attached and then went silent. The pairing invariant above is the protocol layer's, and the
+presentation layer decides which face is drawn - it does not change what the protocol layer reports.
 
 **A verdict is the answer to a capture, so it is only accepted while one is in flight.** A RESULT in any
 other state is dropped, reported as `EVT STRAY RESULT` and shown as the fault window `Err2`; the PC is told
