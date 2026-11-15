@@ -47,8 +47,6 @@ struct State {
   int score = -1;      // -1 means no verdict yet; the screen leaves the number out
   Reason reason = Reason::None;
   int frames = 0;       // accepted or judged, this session
-  int passCount = 0;    // verdicts that came back PASS, this session
-  int retakeCount = 0;  // verdicts that came back RETAKE, this session
   Fault fault = Fault::None;
   uint32_t faultAt = 0;  // millis of the most recent fault; the face holds `cfg::FAULT_FACE_MS`
   //: When PASS or RETAKE was shown. The panel returns to READY after `cfg::VERDICT_FACE_MS` without a new
@@ -56,7 +54,10 @@ struct State {
   uint32_t verdictAt = 0;
   Link link = Link::Alive;
   bool heartbeatOn = true;
-  uint8_t animPhase = 0;  // which of the three spinner dots is lit, 0-2
+  //: The shared animation phase, 0-2: the CAPTURING step of the same clock the panel's rotating segment
+  //: reads. Derived by `serviceDisplay`, never advanced by a counter of its own - two periods for one event
+  //: drift, however carefully they are tuned.
+  uint8_t animPhase = 0;
 
   //: Set when something visible changed. The renderer clears it. A redraw per frame would flicker and
   //: waste the I2C bus; a redraw on change is enough.

@@ -501,8 +501,8 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         ten-lamp bar on GPIO 10-18 and 21, wired like the lamps; then **the four-digit seven-segment
         display**, which is what `config.h` and `main.cpp` implement: segments A-G on GPIO 3 and 13-18
         through 240 Ω each, digit commons 1-4 on GPIO 5, 6, 7 and 10 direct, one face per screen, the
-        faults as `E0`-`E3`, and the multiplexer in a hardware timer. The bar never shipped, and **the pins
-        the three lamps sat on are the display's commons**
+        faults as `Err0`-`Err3`, and the multiplexer in a hardware timer. The bar never shipped, and **the
+        pins the three lamps sat on are the display's commons**
       - **a third lamp, added 11-13 and retired 11-14: blue on GPIO7**, covering every screen the two
         verdict lamps did not, so
         a completely dark panel meant no power. Without it, `Ready`, `Capturing` and `Offline` had no lamp

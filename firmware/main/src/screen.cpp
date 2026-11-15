@@ -144,12 +144,11 @@ const char* reasonWords(rig::Reason reason) {
 void drawFooter(U8G2& display, const rig::State& state) {
   display.setFont(u8g2_font_5x7_tf);
 
-  // The session tally, PASS then RETAKE. A count since boot with nothing persisted: a reboot is a new
-  // session by definition. Drawn before the first capture as well, because a blank cell reads as one
-  // that failed rather than as a tally at zero.
-  char tally[16];
-  snprintf(tally, sizeof(tally), "P%d R%d", state.passCount, state.retakeCount);
-  display.drawStr(MARGIN, FOOTER_BASELINE, tally);
+  // The firmware version, built from the same constant `EVT HELLO` sends, so the panel and the log can
+  // never disagree about which build is running. `FRAMES` stays on the right: it is a real capture count.
+  char version[16];
+  snprintf(version, sizeof(version), "v%s", cfg::FIRMWARE_VERSION);
+  display.drawStr(MARGIN, FOOTER_BASELINE, version);
 
   char frames[16];
   snprintf(frames, sizeof(frames), "FRAMES %d", state.frames);

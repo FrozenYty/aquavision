@@ -46,7 +46,7 @@ is nobody to talk to.
 | E6 | Ten seconds of silence | link timer |
 | E7 | Heartbeat tick (1 s) | timer |
 | E8 | Spinner tick (250 ms) | timer |
-| E9 | Display face step (500 ms dash, 250 ms rotation, 300 ms sweep, 500 ms blink, 1 s `E0`) | timer |
+| E9 | Display face step (25 ms boot sweep, 500 ms dash, 250 ms rotation and sweep, 500 ms blink) | timer |
 | E10 | `CMD SCAN` | PC |
 | E11 | Verdict face expired (12 s with no press) | timer |
 
@@ -222,8 +222,8 @@ port is held.
 
 **The pacing is a rule rather than a set of numbers: what is working runs at a steady pace, what has failed
 blinks at a warning pace, and nothing on a desk instrument exceeds about 1 Hz.** Every speed below follows
-from it, including the one comparison that matters: `E0` at half a hertz against a `RETAKE` face at one.
-A warning should be quicker than a fault report, and the two must not read alike.
+from it: a `RETAKE` and every one of the fault codes blink at one hertz, so a code is told from a score by
+what it says rather than by its rhythm.
 
 **The panel is four digits, multiplexed, and it is where a person at the bench reads the rig without the
 OLED.** A common-anode display takes segments A-G on GPIO 3, 13, 14, 15, 16, 17 and 18, each through its own
@@ -246,29 +246,43 @@ copied under a critical section so the handler can never read a half-updated fac
 turns one mask into four GPIO register writes. Nothing the loop does can stall the panel, and a slow loop
 slows the motion down instead of freezing the face.
 
+**A face runs only on its own age.** The end of the boot sequence and any screen change both start that age
+at zero, so nothing inherits a phase from what was on the panel a moment before; a fault's age is its own
+phase too, so the blink starts with the fault. Both screens read one boot clock: the OLED holds its splash
+card until the panel's two-second self-test ends, and the two arrive at `Ready` together. That clamp is there
+because of a real defect: without it the idle cycle picked up wherever the self-test happened to stop, which
+put the first dash on digit 2 instead of digit 1 after every power-up - and every other face inherited a
+phase the same way.
+
 | Screen | Face | Timing |
 |---|---|---|
-| boot | `8888`, every segment lit, then all dark | 400 ms lit, 150 ms dark, once |
-| `Ready` | one dash (segment G alone) at digit 1, 2, 3, 4, then all four dashes held | 500 ms per position, 1 s hold |
+| boot | one segment at a time through all 28 positions, then `8888`, then dark | 25 ms per position (700 ms), 300 ms of eights, 1000 ms dark: two seconds, once |
+| `Ready` | one dash (segment G alone) at digit 1, 2, 3, 4, 3, 2 and round again | 500 ms per position, 3 s a cycle |
 | `Capturing` | `CAP`, with one segment walking the rim of the fourth digit | 250 ms per step |
-| `Pass` | a left-to-right sweep, then the score right-aligned in digits 1-3 and `P`: ` 95P` | 300 ms sweep on arrival, then steady |
-| `Retake` | the score and `E`, the whole panel blinking | 1 Hz |
-| `Offline` | the code `E0`: `E` on digit 1, `0` on digit 2 | 0.5 Hz, never expires |
-| fault `E1` | a capture timeout | one keepalive |
-| fault `E2` | a stray result | one keepalive |
-| fault `E3` | a broken invariant | one keepalive |
+| `Pass` | a left-to-right sweep, then the score right-aligned in digits 1-3 and `P`: ` 95P` | 250 ms sweep on arrival, then steady |
+| `Retake` | the score and `F`, the whole panel blinking: ` 40F` | 1 Hz |
+| `Offline` | the code `Err0`, blinking | 1 Hz, and no window: it lasts as long as the link is gone |
+| fault `Err1` | a capture timeout, blinking | 1 Hz for 2 s |
+| fault `Err2` | a stray result, blinking | 1 Hz for 2 s |
+| fault `Err3` | a broken invariant, blinking | 1 Hz for 2 s |
 
-**`Ready` fills its four positions and holds them.** The idle face adds one dash per half second and then
-sits with all four for a second before starting again - about three seconds a cycle. Filling and holding
-reads as breathing; filling and vanishing reads as a break. The hold is also what forced the `Offline` face
-to change, because four dashes held for a second and four dashes blinking look alike.
+**`Ready` walks out and comes back: digits 1, 2, 3, 4, 3, 2, then round again, half a second at each position
+and three seconds a cycle.** No frame is dark and no frame ever holds more than one dash, and that is
+structural rather than tuned. **The return path replaced an earlier held phase, and it must not be
+reinstated**: a loop has a visible break where it wraps from the fourth digit straight back to the first,
+while a there-and-back reads as breathing, which is what a waiting rig should look like. It cannot be
+mistaken for `Offline` either, because that face is a code.
 
-**`E0` is a screen's code; `E1`-`E3` are fault events.** Losing the link is a fault, so numbering the
-`Offline` screen is honest rather than a workaround: it carries `E0` for as long as the link is gone and it
-never times out. A capture timeout, a stray result and a broken invariant are events rather than screens:
-each one holds all four digits for one keepalive as `E1`, `E2` or `E3`, with the highest priority on the
-panel, the most recent winning, and no screen change underneath. They are there because those three used to
-produce a log line and nothing a person could see, which made a broken rig and an idle one look the same.
+**`Err0` is the `Offline` screen; `Err1`-`Err3` are fault windows, and all four look the same.** Each code
+blinks at one hertz - the code is the identifier and the rhythm carries nothing, so there is no second rate
+and no special case for the link. What differs is only how long a face stays: `Err0` has no window, because
+a lost link lasts until the link comes back, while `Err1` to `Err3` clear after two seconds. That is when it
+leaves, not how it looks. The three windows are there because those events used to produce a log line and
+nothing a person could see, which made a broken rig and an idle one look the same - and losing the link is a
+fault, so numbering its screen is honest rather than a workaround.
+
+**A retake reads `F`, not `E`.** `E` begins every fault code, so ` 40E` and an `Err` face were one glance
+apart; `F` is the left column with the top and middle bars, and no code contains it.
 
 **A verdict is a conclusion, not a permanent label.** `Pass` and `Retake` return to `Ready` after 12 s with
 no new press - six keepalives, which is `OFFLINE_AFTER_MS` plus one. That relationship is the point: a
@@ -276,26 +290,44 @@ verdict outlives the link-loss threshold on purpose, so a dead link is always re
 clears on its own. Nothing is lost by moving on, because the OLED tally keeps the session and the PC keeps
 the record; `Offline` is deliberately excluded, because a lost link is a fault rather than a completion.
 
-**The rehearsal exists because the fault faces are otherwise unreachable.** Holding the button for three
-keepalives (6 s) from `Ready` walks the eight faces - self-test, `Ready`, `Capturing`, `Pass`, `Retake`,
-`E1`, `E2`, `E3` - one keepalive each, and a press ends it. A release before the hold completes is still a
-capture, and the press that ends the rehearsal is spent ending it. `E0` is not among them: it belongs to the
-`Offline` screen, and the rehearsal is display-only, so the rig stays `Ready` and nothing goes on the wire.
+**The rehearsal walks all nine faces, `Err0` included.** That one otherwise needs a cable pulled, and a face
+nobody has ever seen is a face that fails on the day. Holding the button for three keepalives (6 s) from
+`Ready` shows the boot self-test, `Ready`, `Capturing`, `Pass`, `Retake`, `Err1`, `Err2`, `Err3` and `Err0`,
+one keepalive each, and each step starts its face from its own first frame rather than joining it mid-cycle.
+A press ends the rehearsal and is spent ending it; a release before the hold completes is still a capture.
+It is display-only: the rig stays `Ready` and nothing goes on the wire.
 
-**Only the digits and the letters A, C, E, F, H, L, P and U can be drawn.** Anything else either collides
-with a digit - `O` reads as `0`, `S` as `5`, `I` as `1`, `G` sits between `6` and `9` - or cannot be formed
-at all, like M, W, K, V, X, Y and Z. A word therefore becomes a code, which is how the fault faces are named
-and why a fault is `E1` rather than `TIME`. The table in `main.cpp` implements the digits, `A`, `C`, `E`,
-`P` and the dash, because a glyph nothing displays is a glyph nothing can check.
+**The alphabet is the digits, `A`, `C`, `E`, `F`, `P` and a lowercase `r`.** `r` is admitted for `Err`, the
+one word the fault codes are built from, and it is the only lowercase letter drawn; `-` is segment G alone,
+the idle dash. Every character in the table is shown by a face that exists, because an unused entry is how
+the next person concludes a character is safe to draw. Anything outside the set either collides with a digit
+- `O` is `0`, `S` is `5`, `I` is `1`, `G` resembles `6` and `9` - or cannot be formed at all, like M, W, K,
+V, X, Y and Z. Transliterate the word into a code instead: that is why a fault is `Err1` and not `TIME`.
 
-**Every interval is an integer multiple of `cfg::PC_KEEPALIVE_MS`, 2 s.** They are written as products of it
-on purpose - a keepalive that changes must move all of them with it, and that is the one number in
+**Every state interval is an integer multiple of `cfg::PC_KEEPALIVE_MS`, 2 s.** They are written as products
+of it on purpose - a keepalive that changes must move all of them with it, and that is the one number in
 `config.h` that cannot be edited alone.
 
 | Keepalives | Interval | What it times |
 |---|---|---|
-| 1 | 2 s | a fault face, one rehearsal step |
+| 1 | 2 s | a fault window, one rehearsal step |
 | 2 | 4 s | the capture timeout |
 | 3 | 6 s | the rehearsal hold |
 | 5 | 10 s | offline detection |
 | 6 | 12 s | the verdict face |
+
+**Every face interval is an integer multiple of `cfg::DISPLAY_UNIT_MS`, 25 ms**, and written as a product
+for the same reason: each of them divides by twenty-five and gives a whole number. The 250 µs digit period is
+a different domain - a hardware figure in microseconds, not a face interval - and the 25 ms button debounce
+is not one either: the number matches by coincidence, not by construction.
+
+| Units | Interval | What it times |
+|---|---|---|
+| 1 | 25 ms | one position of the boot sweep |
+| 10 | 250 ms | the `Pass` arrival sweep, one `Capturing` rotation step |
+| 12 | 300 ms | the settled `8888` |
+| 20 | 500 ms | one `Ready` dash step, one `Retake` or code half-cycle |
+| 28 | 700 ms | the whole 28-position boot sweep |
+| 40 | 1000 ms | the dark blank after the eights |
+| 80 | 2 s | one fault window |
+| 120 | 3 s | the whole `Ready` cycle |

@@ -49,13 +49,6 @@ bool handleResult(rig::State& state, char** cursor) {
   state.frames += 1;
   state.screen = (strcmp(verdict, "PASS") == 0) ? rig::Screen::Pass : rig::Screen::Retake;
   state.verdictAt = millis();
-  // The session tally, one per accepted verdict: a stray result has already returned above, and a repeated
-  // line arrives with no capture in flight, so neither can reach this line.
-  if (state.screen == rig::Screen::Pass) {
-    state.passCount += 1;
-  } else {
-    state.retakeCount += 1;
-  }
   state.markDirty();
   return true;
 }

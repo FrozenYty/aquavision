@@ -207,7 +207,7 @@ The system has three layers — capture, service and presentation — which exch
 | 1 | USB camera | 1080P, adjustable focus, manual exposure, driver-free UVC | 1 | Image capture |
 | 2 | Fill light | Existing LED study lamp, 10 W, 4000 K, Ra90, no visible flicker, USB-powered | 1 | 45° fill from above; a DC supply carries no mains ripple and the honeycomb lens spreads the light evenly |
 | 3 | Controller board | ESP32-S3, USB serial | 1 | Accepts the trigger, drives the status display and the four-digit display, reports over USB serial |
-| 4 | Four-digit display | Four-digit seven-segment display, common anode; segments A-G on GPIO 3 and 13-18, 240 Ω each; digit commons 1-4 on GPIO 5, 6, 7 and 10, direct | 1 | Shows the process state, the score with its verdict, and the fault codes `E0`-`E3` |
+| 4 | Four-digit display | Four-digit seven-segment display, common anode; segments A-G on GPIO 3 and 13-18, 240 Ω each; digit commons 1-4 on GPIO 5, 6, 7 and 10, direct | 1 | Shows the process state, the score with its verdict, and the fault codes `Err0`-`Err3` |
 | 5 | Trigger button | Tactile switch | 1 | Triggers one capture by hand |
 | 6 | Demonstration tank | Ultra-clear glass tank 300×170×200 mm, 5 mm walls | 1 | Simulates an underwater scene; glass has no stress birefringence, which cross-polarisation needs |
 | 7 | Polarising sheet | Linear polariser 200×200 mm, cut into a lamp piece and a lens piece | 1 | Cross-polarisation removes reflections from the wall and the water |

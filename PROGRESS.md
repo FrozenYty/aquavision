@@ -1,3 +1,49 @@
+## 2026-11-15
+
+- **The fault codes are `Err0`-`Err3` now, four characters to the width of the panel, and all four look
+  identical: they blink at one hertz.** The code is the identifier and the rhythm carries nothing, so there is
+  no second rate and no special case for the link. What differs is only how long a face stays - `Err0` has no
+  window, because a lost link lasts until the link comes back, while `Err1` a capture timeout, `Err2` a stray
+  result and `Err3` a broken invariant clear after two seconds - and that is when it leaves, not how it looks.
+  A four-character code is read well inside those two seconds, which is why the family is one character wider
+  than it was.
+- **A retake reads ` 40F`, not ` 40E`, and that is legibility rather than spelling.** `E` begins every fault
+  code, so a score of 40 on a retake sat one glance away from an `Err` face; `F` is the left column with the
+  top and middle bars, and no code contains it.
+- **`READY` walks one dash out to the fourth digit and back: 1, 2, 3, 4, 3, 2 and round again, 500 ms a
+  position, three seconds a cycle.** No frame is dark and no frame holds more than one dash - that is
+  structural, not tuning. **The return path replaced an earlier held phase and must not be reinstated**: a
+  loop has a visible break where it wraps from the fourth digit straight back to the first, while a
+  there-and-back reads as breathing, and a waiting rig should look like it is breathing rather than like a
+  conveyor belt. The face also cannot be taken for `OFFLINE`, which is a code.
+- **The boot self-test is two seconds: a 700 ms sweep of the 28 segment positions at 25 ms each, then `8888`
+  for 300 ms, then 1000 ms with every digit dark.** The dark phase deliberately has the largest share of the
+  three, because it was the part that went by invisibly before. Sequential rather than a static row of eights,
+  because a dead segment then shows as a gap at a known position instead of as a missing bar nobody can place.
+  The `PASS` arrival sweep shortened to 250 ms with it.
+- **Every face interval is an integer multiple of a 25 ms unit, `cfg::DISPLAY_UNIT_MS`, written as a product
+  the way the keepalive rule is.** The keepalive still governs the state intervals - fault window, capture
+  timeout, rehearsal hold, offline threshold, verdict - and the display unit governs the faces. **The 250 us
+  digit period is a different domain**, a hardware figure in microseconds, and the 25 ms button debounce is
+  not a face interval either. Two rules, two tables, and neither may drift into the other.
+- **A face runs only on its own age, and that closed a real defect.** The end of the boot sequence and any
+  screen change both start that age at zero, so no face inherits a phase from what was on the panel before; a
+  fault's age is its phase too, so the blink starts with the fault. Without the clamp the idle cycle picked up
+  wherever the self-test happened to stop, and the first dash after every power-up landed on digit 2 instead of
+  digit 1.
+- **The OLED and the panel share one boot clock.** The splash card is no longer a blocking delay - nothing that
+  blocks can be what another screen synchronises to - so the OLED holds it until the panel's two-second
+  sequence ends and the two move to `READY` together. The old 1.5 s splash number is gone with it.
+- **The alphabet gained a lowercase `r` and lost three letters.** It is the digits, `A`, `C`, `E`, `F`, `P`
+  and `r` - `r` admitted for `Err`, the one word the fault codes are built from, and the only lowercase letter
+  drawn; `H`, `L` and `U` were theoretical, and a glyph no face displays is how the next person concludes a
+  character is safe to draw. The rehearsal walks nine faces, `Err0` included, because that one otherwise needs
+  a cable pulled.
+- **Nine files moved and no pin did.** `docs/rig-state-machine-{en,zh}.md` (the E9 row and section 10),
+  `firmware/README.md` and `README-zh.md`, procurement section 4 and its acceptance table, SRS Table 2-3's
+  display row, and `P3-17` in `PLAN.md`. `scripts/draw_wiring.py` and `docs/rig-wiring.svg` did not change:
+  the segment and common pins are the same fourteen, and the drawing is about pins.
+
 ## 2026-11-14
 
 - **The turbidity sensor is gone, and this time the decision is final.** A full sweep of all 256 register

@@ -32,7 +32,6 @@ rig::State state;
 uint32_t lastPcMessage = 0;
 uint32_t lastHeartbeat = 0;
 uint32_t captureStartedAt = 0;
-uint32_t lastAnimation = 0;
 uint32_t lastButtonEdge = 0;
 bool lastButtonLevel = HIGH;
 //: The button's gesture state. The release is what tells a capture from a rehearsal, so a press has to be
@@ -48,8 +47,9 @@ struct Rehearsal {
   uint32_t startedAt = 0;
 };
 Rehearsal rehearsal;
-//: When the display's own clock starts. The loop takes over from the splash card here, so the boot
-//: self-test runs in front of an operator who is already looking at the panel rather than behind it.
+//: When the boot clock starts, and the only clock either screen reads for it. The OLED holds its splash
+//: until `BOOT_SEQUENCE_MS` has passed on this clock, so the two screens cannot disagree about whether the
+//: rig is still booting; the self-test runs in front of an operator who is already looking at the panel.
 uint32_t displayStartedAt = 0;
 //: The screen the display painted last, and when it changed. The PASS sweep is a one-shot on arrival, so
 //: the face has to know how long the verdict has been up.
@@ -114,7 +114,6 @@ void serviceButton(uint32_t now) {
   state.screen = rig::Screen::Capturing;
   state.score = -1;           // no verdict for this shot yet, so the screen shows no number
   state.reason = rig::Reason::None;
-  state.animPhase = 0;
   captureStartedAt = now;
   state.markDirty();
   // Every state change is reported, so the PC never has to infer a screen from the event that caused
@@ -135,7 +134,6 @@ void serviceCaptureTimeout(uint32_t now) {
   state.screen = rig::Screen::Retake;
   state.reason = rig::Reason::NoReply;
   state.score = -1;
-  state.animPhase = 0;
   state.fault = rig::Fault::Timeout;
   state.faultAt = now;
   state.verdictAt = now;
@@ -148,8 +146,9 @@ void serviceCaptureTimeout(uint32_t now) {
 }
 
 //: A verdict is a conclusion, not a permanent label. After `cfg::VERDICT_FACE_MS` with no new capture the
-//: panel goes back to the idle face; the score is not lost, because the OLED's session tally is where the
-//: history lives, and a panel still reading ` 95P` long after the press looks hung rather than waiting.
+//: panel goes back to the idle face; the score is not lost, because the PC keeps the record and the
+//: operator's own eyes had it for `cfg::VERDICT_FACE_MS`, and a panel still reading ` 95P` long after the
+//: press looks hung rather than waiting.
 //: OFFLINE is deliberately not covered: losing the link is a fault, not a completion, and it stays visible
 //: until the link comes back. A fault face keeps its own two seconds as well.
 void serviceVerdictTimeout(uint32_t now) {
@@ -178,26 +177,14 @@ void serviceHeartbeat(uint32_t now) {
   }
 }
 
-// Advance the CAPTURING spinner. Only that state animates: every other screen changes when something
-// happens, and a redraw every quarter second would be noise.
-void serviceAnimation(uint32_t now) {
-  if (state.screen != rig::Screen::Capturing) {
-    return;
-  }
-  if (now - lastAnimation < cfg::SPIN_PERIOD_MS) {
-    return;
-  }
-  lastAnimation = now;
-  state.animPhase = (state.animPhase + 1) % 3;
-  state.markDirty();
-}
-
-//: The alphabet this panel draws, and the rule that keeps it readable: **only the digits and the letters
-//: A, C, E, F, H, L, P and U.** Every other character either collides with a digit - `O` is `0`, `S` is
-//: `5`, `I` is `1`, `G` resembles `6` and `9` - or cannot be formed at all, like M, W, K, V, X, Y and Z.
-//: Do not add a glyph outside that set; transliterate the word into a code instead, the way the fault
-//: faces do. The table holds only what a face actually shows, because a character nothing displays is a
-//: table entry nothing can check.
+//: The alphabet this panel draws, and the rule that keeps it honest: **the digits, the letters A, C, E, F
+//: and P, and a lowercase `r`.** `r` is admitted for `Err`, the one word the fault codes are built from,
+//: and it is the only lowercase letter drawn. Every character in the table below is shown by a face that
+//: exists - `C`,`A`,`P` by CAPTURING, `E` and `r` by the codes, `F` and `P` by the verdicts, `-` by the idle
+//: dash, the digits by scores and codes - and nothing else may be added: an unused entry is how the next
+//: person concludes a character is safe to draw. Characters outside the set either collide with a digit -
+//: `O` is `0`, `S` is `5`, `I` is `1`, `G` resembles `6` and `9` - or cannot be formed at all, like M, W,
+//: K, V, X, Y and Z. Transliterate the word into a code instead.
 uint8_t segmentsFor(char c) {
   switch (c) {
     case '0': return 0x3F;
@@ -214,8 +201,8 @@ uint8_t segmentsFor(char c) {
     case 'A': return 0x77;
     case 'P': return 0x73;
     case 'E': return 0x79;
-    case 'H': return 0x76;  // both columns and the middle bar
-    case 'L': return 0x38;  // the left column and the bottom bar
+    case 'F': return 0x71;  // the left column with the top and middle bars
+    case 'r': return 0x50;  // the middle bar and the lower-left corner: the only lowercase letter drawn
     case '-': return 0x40;
   }
   return 0x00;  // blank: all seven segments off
@@ -238,52 +225,57 @@ void scoreMask(int score, char verdict, uint8_t mask[4]) {
   mask[3] = segmentsFor(verdict);
 }
 
-//: The fault codes: **E0 the link is gone** (the OFFLINE screen), `E1` a capture timeout, `E2` a stray
-//: result, `E3` a broken invariant - looked up rather than pronounced. Numbered because the alphabet above
-//: has no unambiguous `t`, `O` or `I`, and because the next fault then costs nothing: `E4` needs no glyph
-//: work. The loop below draws E1-E3; E0 belongs to the screen, not to a fault event.
-void faultMask(uint32_t now, rig::Fault fault, uint8_t mask[4]) {
-  const char* code = "E2";
+//: The fault codes: **`Err0` the link is gone** (the OFFLINE screen), `Err1` a capture timeout, `Err2` a
+//: stray result, `Err3` a broken invariant - looked up rather than pronounced, four characters to the width
+//: of the panel. Numbered because the alphabet above has no unambiguous `t`, `O` or `I`, and because the
+//: next fault then costs nothing: `Err4` needs no glyph work.
+//:
+//: **All four look the same: they blink at one hertz.** The code is the identifier and the rhythm carries
+//: nothing, so there is no special case for the link and no second rate for the others. What differs is
+//: only how long a face stays: `Err0` has no window at all, because a lost link lasts until the link comes
+//: back, while `Err1` to `Err3` clear after `cfg::FAULT_FACE_MS`. That is when it leaves, not how it looks -
+//: do not "fix" the two into agreement. The fault age is the phase, so the blink starts with the fault
+//: rather than wherever the previous face happened to be.
+void faultMask(uint32_t faultAge, rig::Fault fault, uint8_t mask[4]) {
+  if ((faultAge / cfg::DISPLAY_BLINK_MS) % 2 != 0) {
+    return;  // the dark half of the blink; every digit stays as it was left
+  }
+  const char* code = "Err2";
   if (fault == rig::Fault::Timeout) {
-    code = "E1";
+    code = "Err1";
   } else if (fault == rig::Fault::Invariant) {
-    // E3 alternates with the word at the warning pace: the code for whoever reads the log, the word for
-    // whoever is standing in the room. HELP is the only four-letter word this alphabet can spell, and a
-    // broken invariant is the one fault the person at the rig cannot clear by themselves.
-    code = ((now / cfg::DISPLAY_BLINK_MS) % 2 == 0) ? "E3" : "HELP";
+    code = "Err3";
   }
   for (uint8_t i = 0; i < 4 && code[i] != '\0'; ++i) {
     mask[i] = segmentsFor(code[i]);
   }
 }
 
-//: One face of one screen: the idle dash, `CAP`, a verdict or the link code. `screenAge` is how long
-//: that screen has been up, which is what the PASS arrival sweep needs. Parameterised rather than read
-//: from `state` because the rehearsal shows these same faces without any screen having changed.
-void screenFace(uint32_t now, uint32_t screenAge, rig::Screen screen, int score, uint8_t mask[4]) {
+//: One face of one screen: the idle dash, `CAP`, a verdict or the link code. `faceAge` is how long this
+//: face has been up, and it is the only clock any of them reads: a face always starts at the beginning of
+//: its own cycle, so the idle dash begins at position one and no face inherits a phase from the one before
+//: it. Parameterised rather than read from `state` because the rehearsal shows these same faces without
+//: any screen having changed.
+void screenFace(uint32_t faceAge, rig::Screen screen, int score, uint8_t mask[4]) {
   switch (screen) {
     case rig::Screen::Ready: {
-      // One dash filling the four positions, half a second each, then all four held for a second and round
-      // again. Slow on purpose: a waiting rig should sit quietly rather than perform, and the hold is what
-      // makes it breathe - filling and vanishing reads as a break. It cannot be mistaken for OFFLINE
-      // either, because that face is the code E0.
-      const uint32_t cycle = 4 * cfg::DISPLAY_READY_STEP_MS + cfg::DISPLAY_READY_HOLD_MS;
-      const uint32_t elapsed = now % cycle;
-      if (elapsed < 4 * cfg::DISPLAY_READY_STEP_MS) {
-        mask[elapsed / cfg::DISPLAY_READY_STEP_MS] = segmentsFor('-');
-      } else {
-        mask[0] = mask[1] = mask[2] = mask[3] = segmentsFor('-');
-      }
+      // One dash walking the four positions - 1, 2, 3, 4, then back to 1 - at half a second each, so the
+      // cycle is two seconds. The wraparound is deliberate: a conveyor with a visible break, which reads as
+      // work in progress, rather than a there-and-back that would read as a bounce. No frame is ever dark
+      // and no more than one dash is ever lit.
+      const uint32_t cycle = 4 * cfg::DISPLAY_READY_STEP_MS;
+      mask[(faceAge % cycle) / cfg::DISPLAY_READY_STEP_MS] = segmentsFor('-');
       break;
     }
     case rig::Screen::Capturing:
       // CAP, and one segment walking the rim of the fourth digit: A-B-C-D-E-F is clockwise, and G stays
       // out because the middle bar would read as a dropped frame in the rotation. A still fourth digit
-      // would look like a character that failed to draw rather than like work in progress.
+      // would look like a character that failed to draw rather than like work in progress. It stays a dot
+      // rather than becoming a count: the count is the OLED's job and a second one here would be noise.
       mask[0] = segmentsFor('C');
       mask[1] = segmentsFor('A');
       mask[2] = segmentsFor('P');
-      mask[3] = static_cast<uint8_t>(1u << ((now / cfg::DISPLAY_ROTATE_MS) % 6));
+      mask[3] = static_cast<uint8_t>(1u << ((faceAge / cfg::DISPLAY_ROTATE_MS) % 6));
       break;
     case rig::Screen::Pass:
     case rig::Screen::Retake: {
@@ -291,28 +283,32 @@ void screenFace(uint32_t now, uint32_t screenAge, rig::Screen screen, int score,
       // On arrival a PASS wipes left to right once, each digit filling with all seven segments as the wipe
       // reaches it, and then settles on the score. One shot per verdict: it marks the moment the answer
       // came back, while a loop would turn the moment into decoration.
-      if (pass && screenAge < cfg::DISPLAY_SWEEP_MS) {
-        const uint8_t reached = static_cast<uint8_t>(screenAge * 4 / cfg::DISPLAY_SWEEP_MS) + 1;
+      if (pass && faceAge < cfg::DISPLAY_SWEEP_MS) {
+        const uint8_t reached = static_cast<uint8_t>(faceAge * 4 / cfg::DISPLAY_SWEEP_MS) + 1;
         for (uint8_t d = 0; d < reached; ++d) {
           mask[d] = segmentsFor('8');
         }
         break;
       }
       // RETAKE blinks, so the warning is not mistaken for a result at a glance; PASS is steady once the
-      // sweep is over, because good news that keeps moving reads as uncertainty.
-      if (!pass && ((now / cfg::DISPLAY_BLINK_MS) % 2) != 0) {
+      // sweep is over, because good news that keeps moving reads as uncertainty. The letter is `F` and not
+      // `E`: `E` begins every fault code, and a score of 40 on a retake reading ` 40E` sat one glance away
+      // from an `Err` face.
+      if (!pass && ((faceAge / cfg::DISPLAY_BLINK_MS) % 2) != 0) {
         break;
       }
-      scoreMask(score, pass ? 'P' : 'E', mask);
+      scoreMask(score, pass ? 'P' : 'F', mask);
       break;
     }
     case rig::Screen::Offline:
-      // The link is gone: E0, the first code of the fault family, blinking at half a hertz. Losing the link
-      // is a fault, so the numbering is honest rather than a workaround - and a code cannot be mistaken for
-      // an idle panel the way four dashes can now that READY holds them for a second.
-      if ((now / cfg::DISPLAY_OFFLINE_BLINK_MS) % 2 == 0) {
+      // The link is gone: `Err0`, blinking at the same one hertz as every other code - see `faultMask`.
+      // What marks this face out is duration, not appearance: there is no window on it, so it stays until
+      // the link returns rather than clearing after two seconds like `Err1` to `Err3`.
+      if ((faceAge / cfg::DISPLAY_BLINK_MS) % 2 == 0) {
         mask[0] = segmentsFor('E');
-        mask[1] = segmentsFor('0');
+        mask[1] = segmentsFor('r');
+        mask[2] = segmentsFor('r');
+        mask[3] = segmentsFor('0');
       }
       break;
   }
@@ -341,8 +337,10 @@ void bootMask(uint32_t bootAge, uint8_t mask[4]) {
 
 //: The rehearsal's steps: the boot self-test, the idle dash, `CAP`, both verdicts, the three fault codes
 //: and the link code, in that order, `cfg::REHEARSAL_STEP_MS` each and wrapping. It exists because some of
-//: these faces are otherwise unreachable on a bench where nothing is failing - `E0` worst of all, since it
-//: needs a cable pulled - and a face nobody has ever seen is a face that fails on the day.
+//: these faces are otherwise unreachable on a bench where nothing is failing - `Err0` worst of all, since
+//: it needs a cable pulled - and a face nobody has ever seen is a face that fails on the day. Each step is
+//: also that face's own beginning: the step age is the face age, so a step shows the face from its first
+//: frame rather than joining it mid-cycle.
 void rehearsalMask(uint32_t now, uint8_t mask[4]) {
   constexpr uint8_t STEPS = 9;
   const uint32_t elapsed = now - rehearsal.startedAt;
@@ -354,43 +352,51 @@ void rehearsalMask(uint32_t now, uint8_t mask[4]) {
       bootMask(stepAge, mask);  // the real self-test: the sweep, then the settled eights
       break;
     case 1:
-      screenFace(now, stepAge, rig::Screen::Ready, -1, mask);  // the travelling dash
+      screenFace(stepAge, rig::Screen::Ready, -1, mask);  // the travelling dash
       break;
     case 2:
-      screenFace(now, stepAge, rig::Screen::Capturing, -1, mask);
+      screenFace(stepAge, rig::Screen::Capturing, -1, mask);
       break;
     case 3:
-      screenFace(now, stepAge, rig::Screen::Pass, 95, mask);  // the sweep plays, as it does on arrival
+      screenFace(stepAge, rig::Screen::Pass, 95, mask);  // the sweep plays, as it does on arrival
       break;
     case 4:
-      screenFace(now, stepAge, rig::Screen::Retake, 30, mask);
+      screenFace(stepAge, rig::Screen::Retake, 30, mask);
       break;
     case 5:
-      faultMask(now, rig::Fault::Timeout, mask);
+      faultMask(stepAge, rig::Fault::Timeout, mask);
       break;
     case 6:
-      faultMask(now, rig::Fault::Stray, mask);
+      faultMask(stepAge, rig::Fault::Stray, mask);
       break;
     case 7:
-      faultMask(now, rig::Fault::Invariant, mask);
+      faultMask(stepAge, rig::Fault::Invariant, mask);
       break;
     default:
-      screenFace(now, stepAge, rig::Screen::Offline, -1, mask);  // E0, blink and all
+      screenFace(stepAge, rig::Screen::Offline, -1, mask);  // Err0, blink and all
       break;
   }
 }
 
-//: The four digits' segment masks, digit 1 on the left. A face is a function of the screen, of `now` and
-//: of how long the current screen has been up - the self-test runs once on boot and the PASS sweep once
-//: on arrival - so nothing here blocks: a slow loop slows the motion down instead of stalling the link.
+//: How long the current face has been up: the screen's age, clamped to the end of the boot so that the
+//: first face after the self-test begins at its own start instead of picking up mid-phase. One definition,
+//: read by every face and by the spinner, because a second clock for the same event can only drift.
+uint32_t faceAgeAt(uint32_t now, uint32_t screenAge) {
+  const uint32_t sinceBoot = now - (displayStartedAt + BOOT_SEQUENCE_MS);
+  return screenAge < sinceBoot ? screenAge : sinceBoot;
+}
+
+//: The four digits' segment masks, digit 1 on the left. A face is a function of the screen and of how long
+//: that face has been up - the self-test runs once on boot, the PASS sweep once on arrival - so nothing
+//: here blocks: a slow loop slows the motion down instead of stalling the link.
 void displayMask(uint32_t now, uint32_t screenAge, uint8_t mask[4]) {
   mask[0] = mask[1] = mask[2] = mask[3] = 0;
 
   // A fault outranks everything, the rehearsal included. It is the one thing on this panel that must not
-  // be missed: two seconds is long enough to read and short enough to be over, and no routine status
-  // change can cut it short because this is decided before any screen is looked at.
+  // be missed: one keepalive is long enough to read a code and short enough to be over, and no routine
+  // status change can cut it short because this is decided before any screen is looked at.
   if (state.fault != rig::Fault::None && now - state.faultAt < cfg::FAULT_FACE_MS) {
-    faultMask(now, state.fault, mask);
+    faultMask(now - state.faultAt, state.fault, mask);
     return;
   }
 
@@ -408,7 +414,10 @@ void displayMask(uint32_t now, uint32_t screenAge, uint8_t mask[4]) {
     return;
   }
 
-  screenFace(now, screenAge, state.screen, state.score, mask);
+  // Every face runs on its own age, and the end of the boot is a face start like any other. Without this
+  // clamp the idle cycle would pick up wherever the self-test happened to stop - which put the first dash
+  // on digit 2 instead of digit 1 - and every other face would inherit a phase the same way.
+  screenFace(faceAgeAt(now, screenAge), state.screen, state.score, mask);
 }
 
 //: The segment and common pins as GPIO bitmasks, so the timer handler is four register writes instead of
@@ -488,9 +497,23 @@ void serviceDisplay(uint32_t now) {
     lastDisplayedScreen = state.screen;
     lastDisplayChange = now;
   }
+  const uint32_t screenAge = now - lastDisplayChange;
+
+  // The spinner on the OLED and the rotating segment on the panel are one animation, so they read one
+  // phase: the same step of the same clock. The OLED is redrawn on the tick that turns the segment, which is
+  // what stops two indicators of one event from drifting apart - tuning two periods until they look close
+  // only hides the drift.
+  if (state.screen == rig::Screen::Capturing) {
+    const uint8_t phase =
+        static_cast<uint8_t>((faceAgeAt(now, screenAge) / cfg::DISPLAY_ROTATE_MS) % 3);
+    if (state.animPhase != phase) {
+      state.animPhase = phase;
+      state.markDirty();
+    }
+  }
 
   uint8_t mask[4];
-  displayMask(now, now - lastDisplayChange, mask);
+  displayMask(now, screenAge, mask);
 
   bool same = true;
   for (uint8_t d = 0; d < 4; ++d) {
@@ -537,9 +560,10 @@ void setup() {
 
   display.begin();
 
+  // Drawn once and then *held* by the loop while the panel runs its self-test - there is deliberately no
+  // delay here, because a blocking delay cannot be the thing another screen synchronises to. This is where
+  // the boot clock starts.
   screen::renderSplash(display);
-  delay(cfg::SPLASH_MS);
-  // The self-test belongs to the loop, not to the splash card: this is where the display's clock starts.
   displayStartedAt = millis();
 
   protocol::emitHello();
@@ -574,7 +598,6 @@ void loop() {
   }
   serviceButton(now);
   serviceHeartbeat(now);
-  serviceAnimation(now);
   serviceCaptureTimeout(now);
   serviceVerdictTimeout(now);
   serviceDisplay(now);
@@ -590,7 +613,10 @@ void loop() {
     protocol::emitInvariant(state.screen, state.link);
   }
 
-  if (state.dirty) {
+  // Both screens read the one boot clock: while the panel is still walking its self-test the OLED keeps the
+  // splash card, and the moment that sequence ends they both move to READY. Nothing else decides when the
+  // rig is ready, and the pending screen change is simply held until then.
+  if (now - displayStartedAt >= BOOT_SEQUENCE_MS && state.dirty) {
     screen::render(display, state);
     state.dirty = false;
   }

@@ -9,7 +9,8 @@
 
 namespace screen {
 
-//: Power-on card. Shown once, for `cfg::SPLASH_MS`.
+//: Power-on card. Held until the panel's boot sequence has finished, so both screens agree on when the
+//: rig is ready; the caller draws it once and the loop keeps it on the glass.
 void renderSplash(U8G2& display);
 
 //: Whatever `state.screen` says. Does not clear `state.dirty`; the caller does that after sending.

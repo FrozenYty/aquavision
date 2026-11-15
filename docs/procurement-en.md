@@ -79,18 +79,21 @@ Assemble and power on in four steps, one at a time, so a fault is localised imme
    Set one touch-dimming level and **tape over the touch area**. Tape the polariser flat to the lamp
    head, corners taut, no warp.
 3. Display, button and panel — an I2C scan shows `0x3C` (the OLED) and nothing else; the screen boots to
-   `AQUAVISION` then settles on `READY`, and the four-digit panel runs its self-test (`8888` for 400 ms) and
-   then the idle face. **The panel answers a verdict, not the button**: a press starts a capture, and with
-   the server attached the panel shows `CAP` until `CMD RESULT` answers it. **With no PC on the link, a press
-   does nothing and the rig goes `OFFLINE` ten seconds after power-up**, and the panel reads `E0` - that is
-   not a fault.
+   `AQUAVISION` then settles on `READY`, and the four-digit panel runs its self-test: one segment at a time
+   through all 28 positions at 25 ms each, then `8888` for 300 ms, then 1000 ms dark. **A segment that never
+   lights is a gap at a known position in that sweep**, which is the reason the sweep is sequential rather
+   than a static row of eights.
+   **The panel answers a verdict, not the button**: a press starts a capture, and with the server attached
+   the panel shows `CAP` until `CMD RESULT` answers it. **With no PC on the link, a press does nothing and
+   the rig goes `OFFLINE` ten seconds after power-up**, and the panel blinks `Err0` - that is not a fault.
    **The panel is common anode, so a segment is lit by pulling its pin LOW**, and a segment that never lights
    is a reversed resistor or a wrong segment long before it is a dead pin. **A lead too short to reach is a
    mechanical problem with a mechanical fix** - a 2 cm jumper makes up the distance - and not a reason to
    rearrange the segment order, because the order is what the firmware writes.
-   **The lamps and the bar are gone**; the eight faces that matter now are the self-test, `READY`,
-   `CAPTURING`, `PASS`, `RETAKE`, `E1`, `E2` and `E3`, and **holding the button for six seconds from `READY`
-   walks all eight in order** - which is how the fault faces are seen on a bench where nothing is failing.
+   **The lamps and the bar are gone**; the nine faces that matter now are the self-test, `READY`,
+   `CAPTURING`, `PASS`, `RETAKE`, `Err1`, `Err2`, `Err3` and `Err0`, and **holding the button for six seconds
+   from `READY` walks all nine in order** - which is how the fault windows and the link code are seen on a
+   bench where nothing is failing and the cable is staying in.
 4. Camera — exposure lock, `python scripts/test_exposure.py` exits 0; then `python scripts/test_rig.py`
    exits 0, which measures the left/right brightness ratio, the 5 cm target width and the brightness
    drift of a ten-minute run under a fixed light level. **Both are required**: the first asks whether
@@ -186,5 +189,5 @@ running, four pins alternate and never two at once.
 | Light stability | Ten minutes of capture on USB: mean brightness of the first and last frame differ by < 5 % |
 | Polariser flatness | No visible warp; the lens-side sheet locked at the darkest orientation |
 | Target size | A 5 cm object ≥ 45 px wide at 640 input |
-| Display | The boot self-test lights every segment of all four digits; a six-second hold on the button from `READY` walks the eight rehearsal faces in order; and `E0` appears within ten seconds of the PC falling silent |
+| Display | The boot self-test walks all 28 segment positions and then shows `8888`; a six-second hold on the button from `READY` walks the nine rehearsal faces in order; and `Err0` blinks within ten seconds of the PC falling silent |
 | Tank | 24 h filled, no seepage, front wall without scratches or tint |
