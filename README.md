@@ -176,7 +176,7 @@ inference speed at least 90% of the baseline.
 
 | Member | Responsibility |
 |---|---|
-| Yao Tianyu | Capture pipeline, system architecture, requirements |
+| Tianyu Yao | Capture pipeline, system architecture, requirements |
 | Gao Tianxiang | Model training and improvements, inference service, backend API |
 | Sun Jianheng | Frontend pages, annotation and datasets |
 | Fu Yijia | Documentation, test cases, acceptance checks |

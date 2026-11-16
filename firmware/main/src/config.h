@@ -13,7 +13,7 @@ namespace cfg {
 
 constexpr int PIN_BUTTON = 4;      // to GND, INPUT_PULLUP: a press reads LOW
 //: The four-digit seven-segment display is **common anode**: a digit's common pin driven HIGH selects
-//: that digit, and a segment pin driven LOW lights that segment. Each segment has its own 240 ohm
+//: that digit, and a segment pin driven LOW lights that segment. Each segment has its own 330 ohm
 //: resistor between the pin and the segment; the commons have none, so a common carries the sum of its
 //: digit's segment currents and **only one common may be high at any moment**.
 constexpr uint8_t SEGMENT_PINS[7] = {3, 13, 14, 15, 16, 17, 18};  // segments A, B, C, D, E, F, G
@@ -34,8 +34,9 @@ constexpr uint32_t BUTTON_DEBOUNCE_MS = 25;
 //: face, with one for the fault face. They are written as products of it on purpose - a keepalive that
 //: changes must move all of them with it, and this is the one number that cannot be edited alone.
 constexpr uint32_t PC_KEEPALIVE_MS = 2000;
-// Silence for five keepalives is a real disconnection rather than an idle rig - enough to ride out a busy
-// PC without flashing `Offline` at a hiccup, at the cost of up to ten seconds of stale display.
+// Silence for five keepalives is a real quiet spell rather than an idle rig - enough to ride out a busy
+// PC without declaring it gone at a hiccup, at the cost of up to ten seconds of stale link state. The flag
+// no longer changes a screen: a quiet peer is still a peer, and the button keeps working.
 constexpr uint32_t OFFLINE_AFTER_MS = 5 * PC_KEEPALIVE_MS;
 // A capture that gets no verdict by then is reported as NO REPLY: the PC's answer normally lands inside a
 // second, so two keepalives leave it ample room and still tell the operator early that this shot failed.
@@ -66,8 +67,7 @@ constexpr uint32_t DISPLAY_BOOT_BLANK_MS = 40 * DISPLAY_UNIT_MS;
 // READY walks one dash along the four positions - 1, 2, 3, 4 and back to 1 - twenty units at each, so the
 // cycle is two seconds. The dash starts over at the first digit rather than turning round: **that wrap is
 // deliberate**, a conveyor with a visible break, not a defect to be "fixed" into a bounce. No frame is ever
-// dark and no more than one dash is ever lit; it cannot be mistaken for OFFLINE either, because that face
-// is the code `Err0`.
+// dark and no more than one dash is ever lit.
 constexpr uint32_t DISPLAY_READY_STEP_MS = 20 * DISPLAY_UNIT_MS;
 constexpr uint32_t DISPLAY_ROTATE_MS = 10 * DISPLAY_UNIT_MS;
 //: The rotating indicator has six steps on both screens: the panel's segment walks the digit's six rim
@@ -83,14 +83,11 @@ constexpr uint32_t DISPLAY_BLINK_MS = 20 * DISPLAY_UNIT_MS;
 // A fault takes the panel for one keepalive - two seconds, forty units: those events used to be swallowed
 // and silence looks exactly like a healthy rig, and a four-character code is read well inside two seconds.
 constexpr uint32_t FAULT_FACE_MS = 1 * PC_KEEPALIVE_MS;
-// A verdict is a conclusion, not a permanent label: six keepalives after the verdict the panel goes back to
-// the idle face. The number is `OFFLINE_AFTER_MS` plus one keepalive, and that relationship is the point:
-// **a verdict outlives the link-loss threshold on purpose**, so the link is always reported before a
-// verdict clears on its own. Were it the other way round, a dead link would first look like an ordinary
-// return to idle, and the operator would be shown a healthy panel for two seconds after the rig had
-// stopped talking. Nothing else is lost by moving on - the OLED tally keeps the session and the PC keeps
-// the record, and the panel's job is the present state. OFFLINE is deliberately excluded: a lost link is a
-// fault, not a completion, and it stays visible until the link returns.
+// A verdict is a conclusion, not a permanent label: twelve seconds after the verdict the panel goes back
+// to the idle face. Long enough for the operator to read a score, short enough that a panel still reading
+// ` 95P` does not look hung. Nothing else is lost by moving on - the PC keeps the record and the OLED tally
+// keeps the session - and the panel's job is the present state. A capture started inside this window
+// cancels the timer outright; the previous verdict must not pull a new capture back to idle.
 constexpr uint32_t VERDICT_FACE_MS = 6 * PC_KEEPALIVE_MS;
 
 // ---------------------------------------------------------------------------- ble
@@ -180,13 +177,18 @@ constexpr uint32_t BLE_ADVERTISE_RETRY_MS = 250;
 //: digit's bottom and none for the first digit's**, so one position never appeared and another appeared
 //: twice - a table is a place to be wrong. The ring and everything built on it are gone; the panel draws a
 //: three-letter word with the fourth digit rotating through the same six segments `CAPTURING` turns, and
-//: the OLED draws `WAITING FOR PC` as `OFFLINE`'s face with no moving element at all.
+//: the OLED draws the waiting face with no moving element at all.
 //: 1.20 changes that word from `PAr` to `APP` - it names the PC-side application the operator is about to
 //: open, which is the action this state waits for, where `PAr` named the act of pairing - and shortens the
 //: waiting title to `WAITING`. **The title shrank because of the character count, not the font**: thirteen
 //: characters did not fit the house's bold 12, and setting it smaller to fit is what made the face read as
-//: empty; the body line already carries `NO LINK TO PC`. The waiting face and `OFFLINE` are now the same
-//: face and the same size, and differ only in their words.
-constexpr char FIRMWARE_VERSION[] = "1.20";
+//: empty; the body line already carries `NO LINK TO PC`.
+//: 1.21 removes `OFFLINE`, `Err0` and the `NoLink` presentation state: a BLE link simply ends, and a
+//: client that stays connected but stops talking has the same remedy as one that never connected - wait -
+//: so two faces for one remedy are gone. **`Err0` is retired and its number is not reused**: the remaining
+//: faults keep `Err1`-`Err4`. A press now captures in `Live` whatever the protocol layer says (`Gone` is an
+//: attached, quiet peer, not "nobody") and is refused only while a face owns the screen; and starting a
+//: capture cancels the previous verdict's face timer, whose stale firing pulled `CAP` back to `READY`.
+constexpr char FIRMWARE_VERSION[] = "1.21";
 
 }  // namespace cfg

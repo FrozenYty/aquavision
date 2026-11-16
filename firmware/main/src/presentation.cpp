@@ -16,7 +16,6 @@ using presentation::State;
 constexpr Cell kIgnored{Outcome::Ignored, State::Pairing};
 constexpr Cell kHandled{Outcome::Handled, State::Pairing};
 constexpr Cell kToPairing{Outcome::Move, State::Pairing};
-constexpr Cell kToNoLink{Outcome::Move, State::NoLink};
 constexpr Cell kToLive{Outcome::Move, State::Live};
 constexpr Cell kToRadioFault{Outcome::Move, State::RadioFault};
 
@@ -24,27 +23,28 @@ constexpr Cell kToRadioFault{Outcome::Move, State::RadioFault};
 //: a reader - and the test - can check it against the document cell by cell, which is the whole point
 //: of a matrix with no empty cells.
 //:
-//: `NoLink`'s P2 cell is §11's "already here": the state already says this, so the event is consumed
-//: and nothing changes, which is `Handled` in the shared vocabulary. `Live`'s B1 cell is `Rejected`
-//: because a second central must not repaint a live screen; the BLE layer has already disconnected
-//: that central, and this cell is what keeps the presentation from following it.
-constexpr Cell kMatrix[4][6] = {
+//: `Live`'s P2 cell is §11's "already here": an attached client that has gone quiet has the same remedy
+//: as one that never spoke - wait - and the rig is ready either way, so nothing changes. `Live`'s B1 cell
+//: is `Rejected` because a second central must not repaint a live screen; the BLE layer has already
+//: disconnected that central, and this cell is what keeps the presentation from following it.
+//:
+//: There is no "attached but not subscribed" state: attaching is enough to hand the glass back to the
+//: rig's own screen, because the alternative - a face for a peer that is merely quiet - is the face this
+//: round retired.
+constexpr Cell kMatrix[3][6] = {
     // B1 attached, B2 subscribed, B3 detached, B4 fault, P1 command, P2 silence
-    {kToNoLink, kIgnored, kIgnored, kToRadioFault, kIgnored, kIgnored},  // Pairing
-    {kIgnored, kToLive, kToPairing, kToRadioFault, kToLive, kHandled},   // NoLink
+    {kToLive, kIgnored, kIgnored, kToRadioFault, kIgnored, kIgnored},     // Pairing
     {{Outcome::Rejected, State::Live}, kIgnored, kToPairing, kToRadioFault, kHandled,
-     kToNoLink},                                                          // Live
-    {kIgnored, kIgnored, kIgnored, kHandled, kIgnored, kIgnored},        // RadioFault
+     kHandled},                                                           // Live
+    {kIgnored, kIgnored, kIgnored, kHandled, kIgnored, kIgnored},         // RadioFault
 };
 
-//: §11's face table. `Pairing` draws `PAr` with the fourth digit rotating, because the rig really is
-//: ready and only the link detail differs; `NoLink` keeps the `OFFLINE` box and `Err0` because a PC
-//: was there and left, which is worth reporting; `RadioFault` keeps `Err4`/`RADIO FAULT` because that
-//: is the one fault no protocol event can report. `Live` is the only row that hands the glass back to
+//: §11's face table. `Pairing` draws `APP` with the fourth digit rotating, because the rig really is
+//: ready and only the link detail differs; `RadioFault` keeps `Err4`/`RADIO FAULT` because that is the
+//: one fault no protocol event can report. `Live` is the only row that hands the glass back to
 //: `state.screen`, and that is what makes the outranking rule structural.
-constexpr Face kFaces[4] = {
+constexpr Face kFaces[3] = {
     {presentation::OledFace::WaitingForPc, presentation::PanelFace::Pairing},  // Pairing
-    {presentation::OledFace::Offline, presentation::PanelFace::Err0},          // NoLink
     {presentation::OledFace::RigScreen, presentation::PanelFace::RigScreen},   // Live
     {presentation::OledFace::RadioFault, presentation::PanelFace::Err4},       // RadioFault
 };
@@ -59,12 +59,10 @@ namespace presentation {
 
 State state() { return current; }
 
-void begin(bool attached, bool protocolAlive) {
-  if (!attached) {
-    current = State::Pairing;
-  } else {
-    current = protocolAlive ? State::Live : State::NoLink;
-  }
+void begin(bool attached) {
+  // The protocol layer's `Alive`/`Gone` no longer chooses a face: a client that is attached and quiet is
+  // `Live` - the rig is ready and nothing is happening - so attaching is the only fact that matters here.
+  current = attached ? State::Live : State::Pairing;
 }
 
 Cell apply(Event event) {

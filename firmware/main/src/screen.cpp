@@ -61,16 +61,12 @@ void drawHeader(U8G2& display, const rig::State& state) {
   display.setFont(u8g2_font_5x7_tf);
   display.drawStr(MARGIN, HEADER_BASELINE, "AQUAVISION");
 
-  const char* link = state.pcAlive() ? "ONLINE" : "OFFLINE";
-  const int width = display.getStrWidth(link);
-  const int text_x = RIGHT_EDGE - width;
-
-  // The dot sits on the text's optical centre rather than on a hand-picked baseline: a disc drawn by eye
-  // landed a pixel low, which reads as "slightly wrong" without anyone being able to name the cause.
-  if (state.heartbeatOn || !state.pcAlive()) {
-    display.drawDisc(text_x - 7, dotRow(display), 1);
+  // The right of the header is the liveness dot alone. The word that used to sit there said `ONLINE` or
+  // `OFFLINE`, and the second of those is retired: a linked-but-quiet peer is no longer a fault or even a
+  // face, so the header stopped naming the link at all. The dot still blinks while the rig runs.
+  if (state.heartbeatOn) {
+    display.drawDisc(RIGHT_EDGE - 3, dotRow(display), 1);
   }
-  display.drawStr(text_x, HEADER_BASELINE, link);
 
   display.drawHLine(0, RULE_TOP, 128);
 }
@@ -158,12 +154,11 @@ void drawFooter(U8G2& display, const rig::State& state) {
 }
 
 //: The house's status face: inverted box, `AQUAVISION` on the header baseline, the headline on the title
-//: baseline and one line below. `drawOffline`, `drawRadioFault` and `drawWaitingForPc` are the same face
-//: with different words, which is the point - a state that cannot be shown as strongly as `OFFLINE`
-//: borrows `OFFLINE`'s language rather than inventing a weaker one. **There is one title size for all
-//: three**: every headline is short enough for Helvetica bold 12, so the face is identical except for its
-//: words. A longer headline must be shortened, not shrunk - a smaller title is what made the waiting face
-//: read as empty next to `OFFLINE`.
+//: baseline and one line below. `drawRadioFault` and `drawWaitingForPc` are the same face with different
+//: words, which is the point: the waiting state borrows the language of the strong face rather than
+//: inventing a weaker one. **There is one title size**: every headline is short enough for Helvetica bold
+//: 12, so the face is identical except for its words. A longer headline must be shortened, not shrunk - a
+//: smaller title is what made the waiting face read as empty.
 void drawStatusFace(U8G2& display, const char* headline, const char* body) {
   display.drawBox(0, 0, 128, 64);
   display.setDrawColor(0);
@@ -185,15 +180,10 @@ void drawStatusFace(U8G2& display, const char* headline, const char* body) {
   display.setDrawColor(1);
 }
 
-void drawOffline(U8G2& display) {
-  drawStatusFace(display, "OFFLINE", cfg::BLE_CARRIER ? "NO LINK TO PC" : "CHECK USB CABLE");
-}
-
 //: `Err4`, the face the OLED does not have today: for `Err1` to `Err3` the fault overlay is the panel's and
-//: this screen keeps drawing whatever was underneath, but a dead radio has `Offline` underneath - the wrong
-//: story, because both are true and only one of them is worth waiting for. So the OLED draws the fault
-//: itself, in the same inverted treatment as `OFFLINE`, and one line saying what to do about it: a
-//: power-cycle or `rig-serial` (§10).
+//: this screen keeps drawing whatever was underneath, but a dead radio needs its own words - waiting is the
+//: wrong thing to do about it. So the OLED draws the fault itself, in the same inverted treatment, and one
+//: line saying what to do: a power-cycle or `rig-serial` (§10).
 void drawRadioFault(U8G2& display) {
   drawStatusFace(display, "RADIO FAULT", "REFLASH RIG-SERIAL");
 }
@@ -211,7 +201,7 @@ void drawReady(U8G2& display) {
 //: three pixels each on a radius of eight, with under two pixels between them, which is not legible at
 //: arm's length; a row fits the band with room to spare. The lit dot is `animPhase`, the same phase the
 //: panel's segment reads, so the row and the segment cannot disagree. `Pairing` does not draw this row:
-//: its OLED face is `OFFLINE`'s face with the words changed and no moving element at all.
+//: its OLED face is the house status face with no moving element at all.
 void drawCapturing(U8G2& display, const rig::State& state) {
   drawBannerFrame(display, false);
 
@@ -233,14 +223,13 @@ void drawCapturing(U8G2& display, const rig::State& state) {
 }
 
 //: `Pairing`: no central has attached, so there is nothing to have gone wrong and no PC to paint a score
-//: over this. **It is `OFFLINE`'s face with the words changed and no moving element.** The twelve-cell
-//: progress row it replaces implied an amount of progress that does not exist, and a misleading indicator
-//: is worse than none; this face cannot be made as strong as the rest by animating, so it borrows the
-//: language that is already strong. The title says `WAITING` and the body says `NO LINK TO PC`, which
-//: together read as "waiting - nothing connected yet", the same short-title-plus-body structure `OFFLINE`
-//: uses. **The title is `WAITING` and not `WAITING FOR PC` because of the character count, not the font**:
-//: thirteen characters do not fit bold 12, and shrinking the type to fit them is what made this face look
-//: empty beside `OFFLINE`. Shortening the words keeps the house size.
+//: over this. **It is the house status face with no moving element.** The twelve-cell progress row it
+//: replaces implied an amount of progress that does not exist, and a misleading indicator is worse than
+//: none; this face cannot be made as strong as the rest by animating, so it uses the same face as the
+//: other status screen. The title says `WAITING` and the body says `NO LINK TO PC`, which together read as
+//: "waiting - nothing connected yet". **The title is `WAITING` and not `WAITING FOR PC` because of the
+//: character count, not the font**: thirteen characters do not fit bold 12, and shrinking the type to fit
+//: them is what made this face look empty. Shortening the words keeps the house size.
 void drawWaitingForPc(U8G2& display) {
   drawStatusFace(display, "WAITING", cfg::BLE_CARRIER ? "NO LINK TO PC" : "CHECK USB CABLE");
 }
@@ -283,8 +272,8 @@ void render(U8G2& display, const rig::State& state, presentation::State presenta
   const presentation::Face& face = presentation::faceFor(presentation);
 
   // `Err4` outranks every screen, and unlike the other faults it replaces what is underneath rather than
-  // being drawn over it: the screen underneath a dead radio is `Offline`, which says the PC is the
-  // problem.
+  // being drawn over it: the screen underneath a dead radio is the rig's own, which is the wrong story -
+  // both are true and only one of them is worth waiting for.
   if (face.oled == presentation::OledFace::RadioFault) {
     drawRadioFault(display);
     display.sendBuffer();
@@ -297,19 +286,7 @@ void render(U8G2& display, const rig::State& state, presentation::State presenta
     return;
   }
 
-  if (face.oled == presentation::OledFace::Offline) {
-    drawOffline(display);
-    display.sendBuffer();
-    return;
-  }
-
   // `Live`: the rig's own screen, exactly as it was before the presentation layer existed.
-  if (state.screen == rig::Screen::Offline) {
-    drawOffline(display);
-    display.sendBuffer();
-    return;
-  }
-
   drawHeader(display, state);
   drawFooter(display, state);
 
@@ -326,8 +303,6 @@ void render(U8G2& display, const rig::State& state, presentation::State presenta
     case rig::Screen::Retake:
       drawRetake(display, state);
       break;
-    case rig::Screen::Offline:
-      break;  // handled above
   }
 
   display.sendBuffer();

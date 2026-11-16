@@ -1,3 +1,39 @@
+## 2026-11-16
+
+- **The panel's seven segment resistors are fitted, and they are 330 Ω - the value the purchase list has held
+  since it was written.** The display had been declared against 240 Ω, a part that was never in hand: the
+  procurement row bought the LR1F330R lot and said in passing that the design wanted 240. The builder has now
+  fitted that lot, one resistor per segment, so the fitted part and the design value are finally the same
+  number. The resistor's job is now stated as what it is - holding each segment's current to what the panel
+  can take, rather than hitting a target resistance - with the arithmetic beside it: the per-segment current,
+  the worst instant on a common and the duty-averaged figure a pin's continuous rating actually applies to. **The
+  value is not a cosmetic swap**: at 3.3 V, 240 Ω would put a common at about 38 mA against the 40 mA a GPIO is
+  rated for, where 330 Ω puts it at about 28 mA - so whoever asks why 330 and not 240 finds the answer here.
+- **Every document that names the value moved with it**: the procurement table, its wiring diagram and the
+  pre-power-on check, the SRS hardware row, the state machine's wiring paragraph, the firmware README (the pin
+  table, the commons paragraph and the panel's unverified item) and the `config.h` comment, `scripts/draw_wiring.py`
+  with `docs/rig-wiring.svg` regenerated from it, and `P3-17`, where the panel's last owed part is the display
+  module alone. The older entries below still read 240 Ω, because that is what was decided on those days.
+- **Starting a capture now cancels the previous verdict's face timer.** The bench saw `CAP` appear and then snap
+  back to `READY`: pressing inside a verdict's twelve-second window moved the screen to `Capturing`, but the
+  previous verdict's timer was still counting and pulled it back. `serviceButton` clears `state.verdictAt` when a
+  capture begins, `serviceVerdictTimeout` refuses to fire while no timer is armed, and `rig::invariantHolds` now
+  states the rule from the other side - a capture in flight carries no verdict timer, a verdict face carries
+  one - so the bug's signature is an `EVT INVARIANT` rather than a silent mis-timing.
+- **`OFFLINE`, `Err0` and the `NoLink` presentation state are removed.** In BLE a link simply ends and the rig is
+  available again; a client that stays connected but stops talking has the same remedy as one that never
+  connected - wait. Two faces for one remedy made the operator think a step further for nothing, and `Err0`
+  called "waiting" a fault. The presentation layer is now three states (`Pairing`, `Live`, `RadioFault`), an
+  attached-but-silent client lands in `Live` and sees the rig's own screen, `Screen::Offline` and its drawing
+  and link transitions are gone, the OLED header no longer names the link, and the matrix is 3 × 6.
+- **The button is keyed on the presentation state alone.** A press is refused only while a face owns the screens
+  (`Pairing`, `RadioFault`); in `Live` it captures whatever the protocol layer says, because `Gone` is an
+  attached peer that has gone quiet, not "nobody". If the peer really is silent the trigger goes out and `Err1`
+  arrives four seconds later - a visible answer, where the old `Gone`-keyed refusal was a silent one.
+- **`Err1`-`Err4` keep their numbers and `Err0` is retired without reuse.** The changelog in `config.h` and
+  `docs/rig-state-machine-en.md` §11 say so, so a future fault can take the next free number without anyone
+  renumbering the faces an operator has learned. `FIRMWARE_VERSION` is `1.21` (1.20 was flashed).
+
 ## 2026-11-15
 
 - **The rehearsal is gone, and the button has one meaning again: a press captures, on the pressing edge.** The

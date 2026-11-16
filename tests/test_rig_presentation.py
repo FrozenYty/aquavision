@@ -25,21 +25,19 @@ PRESENTATION = REPO / "firmware" / "main" / "src" / "presentation.cpp"
 SCREEN = REPO / "firmware" / "main" / "src" / "screen.cpp"
 MAIN = REPO / "firmware" / "main" / "src" / "main.cpp"
 
-STATES = ["Pairing", "NoLink", "Live", "RadioFault"]
+STATES = ["Pairing", "Live", "RadioFault"]
 
 #: §11's matrix, transcribed here from the document rather than from the code. A cell is a state name, or
 #: one of `IGNORED`, `HANDLED` and `REJECTED`.
 EXPECTED = {
-    "Pairing": ["NoLink", "IGNORED", "IGNORED", "RadioFault", "IGNORED", "IGNORED"],
-    "NoLink": ["IGNORED", "Live", "Pairing", "RadioFault", "Live", "HANDLED"],
-    "Live": ["REJECTED", "IGNORED", "Pairing", "RadioFault", "HANDLED", "NoLink"],
+    "Pairing": ["Live", "IGNORED", "IGNORED", "RadioFault", "IGNORED", "IGNORED"],
+    "Live": ["REJECTED", "IGNORED", "Pairing", "RadioFault", "HANDLED", "HANDLED"],
     "RadioFault": ["IGNORED", "IGNORED", "IGNORED", "HANDLED", "IGNORED", "IGNORED"],
 }
 
 #: §11's face table: what each state draws on the OLED and on the seven-segment panel.
 EXPECTED_FACES = {
     "Pairing": ("WaitingForPc", "Pairing"),
-    "NoLink": ("Offline", "Err0"),
     "Live": ("RigScreen", "RigScreen"),
     "RadioFault": ("RadioFault", "Err4"),
 }
@@ -49,13 +47,11 @@ EXPECTED_FACES = {
 #: "the rig's own", and a check that quarrelled with the words would be switched off within a week.
 FACE_WORDS_EN = {
     "Pairing": ("WAITING", "APP"),
-    "NoLink": ("OFFLINE", "Err0"),
     "Live": ("rig's own", "rig's own"),
     "RadioFault": ("RADIO FAULT", "Err4"),
 }
 FACE_WORDS_ZH = {
     "Pairing": ("WAITING", "APP"),
-    "NoLink": ("OFFLINE", "Err0"),
     "Live": ("装置自己的", "装置自己的"),
     "RadioFault": ("RADIO FAULT", "Err4"),
 }
@@ -195,8 +191,8 @@ def split_cells(row: str) -> list[str]:
 def code_matrix() -> dict[str, list[str]]:
     """The implementation's `kMatrix`, with comments removed first."""
     text = re.sub(r"//[^\n]*", "", PRESENTATION.read_text(encoding="utf-8"))
-    rows = initializer(text, "kMatrix[4][6]")
-    assert len(rows) == 4, f"kMatrix has {len(rows)} rows, the document has 4"
+    rows = initializer(text, "kMatrix[3][6]")
+    assert len(rows) == 3, f"kMatrix has {len(rows)} rows, the document has 3"
 
     def cell(text: str) -> str:
         text = text.strip()
@@ -221,8 +217,8 @@ def code_matrix() -> dict[str, list[str]]:
 def code_faces() -> dict[str, tuple[str, str]]:
     """The implementation's `kFaces` table, as (OLED face, panel face) per state."""
     text = re.sub(r"//[^\n]*", "", PRESENTATION.read_text(encoding="utf-8"))
-    rows = initializer(text, "kFaces[4]")
-    assert len(rows) == 4, f"kFaces has {len(rows)} rows, the document has 4"
+    rows = initializer(text, "kFaces[3]")
+    assert len(rows) == 3, f"kFaces has {len(rows)} rows, the document has 3"
 
     def member(text: str) -> str:
         return text.strip().rsplit("::", 1)[-1]
@@ -254,7 +250,7 @@ def test_the_chinese_matrix_says_the_same_cells() -> None:
 
 
 def test_every_cell_is_one_of_the_four_kinds() -> None:
-    """4 states x 6 events, all filled: an unhandled pair is a cell nobody decided."""
+    """3 states x 6 events, all filled: an unhandled pair is a cell nobody decided."""
     matrix = code_matrix()
     assert list(matrix) == STATES
     assert all(len(row) == 6 for row in matrix.values())
@@ -273,13 +269,8 @@ def test_only_the_bold_cells_are_transitions() -> None:
     assert transitions == {
         ("Pairing", 0),
         ("Pairing", 3),
-        ("NoLink", 1),
-        ("NoLink", 2),
-        ("NoLink", 3),
-        ("NoLink", 4),
         ("Live", 2),
         ("Live", 3),
-        ("Live", 5),
     }
 
 
@@ -298,17 +289,19 @@ def test_the_chinese_face_table_names_the_same_two_screens() -> None:
     assert document_faces(DOC_ZH, "## 十一、", FACE_WORDS_ZH) == EXPECTED_FACES
 
 
-def test_the_four_faces_exist_in_the_drawing_code() -> None:
+def test_the_three_faces_exist_in_the_drawing_code() -> None:
     """A table that names a face the renderer cannot draw is a table that has stopped being true."""
     drawing = SCREEN.read_text(encoding="utf-8")
     assert '"WAITING"' in drawing
     assert '"RADIO FAULT"' in drawing
     assert '"REFLASH RIG-SERIAL"' in drawing
-    # `Err0` is written as four segment calls and `Err4` as a code string; both start from segments.
     loop = MAIN.read_text(encoding="utf-8")
-    assert "case '0':" in loop
     assert "case '4':" in loop
     assert '"Err4"' in loop
+    # The retired code is gone from the drawing code and stays absent from the panel masks.
+    assert "Screen::Offline" not in loop and "Screen::Offline" not in drawing
+    assert "PanelFace::Err0" not in loop
+    assert "OledFace::Offline" not in drawing
 
 
 # The rule the table alone cannot express --------------------------------------------------------
@@ -319,8 +312,11 @@ def test_pairing_cannot_paint_the_rig_screen() -> None:
     assert EXPECTED_FACES["Pairing"][0] == "WaitingForPc"
     assert code_faces()["Pairing"][0] == "WaitingForPc"
     assert all(face[0] != "RigScreen" for state, face in code_faces().items() if state != "Live")
-    # No event out of `Pairing` lands on `Live`: the next face is a link face, never the score.
-    assert all(target != "Live" for target in code_matrix()["Pairing"] if target in STATES)
+    # No *protocol* event out of `Pairing` lands on `Live`: only attaching hands the glass back.
+    assert {index for index, target in enumerate(code_matrix()["Pairing"]) if target in STATES} == {
+        0,
+        3,
+    }
 
 
 def test_the_renderer_reads_the_face_table() -> None:
@@ -335,7 +331,7 @@ def test_the_renderer_reads_the_face_table() -> None:
     panel = MAIN.read_text(encoding="utf-8")
     assert "face.panel" in panel
     assert "PanelFace::Pairing" in panel
-    assert "PanelFace::Err0" in panel
+    assert "PanelFace::Err4" in panel
 
 
 def test_the_presentation_layer_does_not_join_the_other_two() -> None:
@@ -411,8 +407,8 @@ def test_the_heartbeat_does_not_redraw_a_link_face() -> None:
     assert "state.markDirty();" in body
 
 
-def test_the_waiting_face_is_the_offline_face_without_animation() -> None:
-    """It borrows `OFFLINE`'s language: same box, same header, same body, no moving element."""
+def test_the_waiting_face_is_the_house_face_without_animation() -> None:
+    """Same box, same header, same body, no moving element."""
     drawing = SCREEN.read_text(encoding="utf-8")
     start = drawing.index("void drawWaitingForPc(")
     body = drawing[start : start + drawing[start:].index("\n}\n")]
@@ -420,8 +416,8 @@ def test_the_waiting_face_is_the_offline_face_without_animation() -> None:
     for animated in ("drawDisc", "drawCircle", "drawFrame", "drawBox"):
         assert animated not in body, f"the waiting face still animates with {animated}"
 
-    # The house face is one function; `OFFLINE`, `RADIO FAULT` and `WAITING` are its three calls.
-    for face in ("drawOffline", "drawRadioFault", "drawWaitingForPc"):
+    # The house face is one function; `RADIO FAULT` and `WAITING` are its two calls.
+    for face in ("drawRadioFault", "drawWaitingForPc"):
         call = drawing[drawing.index(f"void {face}(") :]
         call = call[: call.index("\n}\n")]
         assert "drawStatusFace(" in call, f"{face} invented its own layout"
@@ -456,9 +452,41 @@ def test_the_waiting_title_is_the_house_size_and_the_body_carries_the_rest() -> 
     for headline in re.findall(r'drawStatusFace\(display, "([^"]+)"', drawing):
         assert len(headline) <= len("RADIO FAULT"), f"{headline!r} is too long for the house size"
 
-    # The body line is the same on both screens; only the headline differs.
+    # The waiting body still says what is missing, because the title is only `WAITING`.
     line = 'cfg::BLE_CARRIER ? "NO LINK TO PC" : "CHECK USB CABLE"'
-    for face in ("drawOffline", "drawWaitingForPc"):
-        call = drawing[drawing.index(f"void {face}(") :]
-        call = call[: call.index("\n}\n")]
-        assert line in call, f"{face} does not use the shared body line"
+    call = drawing[drawing.index("void drawWaitingForPc(") :]
+    call = call[: call.index("\n}\n")]
+    assert line in call, "the body line has to carry the `NO LINK` half of the message"
+
+
+# The two rules the bench found, kept as checks on the code that implements them --------------------
+
+
+def test_a_capture_cancels_the_previous_verdict_timer() -> None:
+    """`CAP` must not be pulled back to `READY` by the verdict face timer of the shot before it."""
+    loop = MAIN.read_text(encoding="utf-8")
+    start = loop.index("void serviceButton(")
+    body = loop[start : loop.index("\n}\n", start)]
+    assert "state.verdictAt = 0;" in body, (
+        "starting a capture must disarm the previous verdict's face timer"
+    )
+    assert body.index("state.verdictAt = 0;") > body.index("state.screen = rig::Screen::Capturing;")
+
+    timeout = loop[loop.index("void serviceVerdictTimeout(") :]
+    timeout = timeout[: timeout.index("\n}\n")]
+    assert "if (state.verdictAt == 0)" in timeout, (
+        "an unarmed timer must not expire; otherwise the clear is cosmetic"
+    )
+
+
+def test_a_press_captures_in_live_and_is_refused_only_by_the_faces() -> None:
+    """`Gone` is an attached, quiet peer: a press there captures and reports `Err1` if it stays silent."""
+    loop = MAIN.read_text(encoding="utf-8")
+    start = loop.index("void serviceButton(")
+    body = loop[start : loop.index("\n}\n", start)]
+    assert "state.link" not in body, "the button must not consult the protocol layer's Gone flag"
+    assert "presentation::state() != presentation::State::Live" in body, (
+        "only a face that owns the screens may refuse the press"
+    )
+    # The refusal covers `Pairing` and `RadioFault`; `Live` always captures.
+    assert "presentation::State::Live" in body

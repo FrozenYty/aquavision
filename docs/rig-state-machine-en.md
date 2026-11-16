@@ -16,7 +16,9 @@ that recovers and quietly wipes the result off the screen.
 | `Capturing` | A capture is in flight; the verdict has not arrived |
 | `Pass` | The PC returned PASS, with a score |
 | `Retake` | The PC returned RETAKE with a reason, or the rig gave up waiting |
-| `Offline` | No keepalive from the PC |
+
+**There is no `Offline` screen.** The link flag below is not a screen: a quiet peer is still a peer, and
+the rig stays on whatever it was doing.
 
 ## 2. Link
 
@@ -28,16 +30,14 @@ Two states, and the rig boots in the first one with a ten-second grace.
 | `Gone` | Ten seconds of silence |
 
 Boot counts as `Alive`: the timer starts at power-up and a PC on the other end of the cable sends its
-first keepalive long before ten seconds are out. Booting `OFFLINE` would have the panel call itself dead
-before anything had a chance to speak, which reads as a fault rather than as "waiting". **Losing a live
-link is worth reporting; having no history yet is not.** The consequence is honest and visible: a rig on a
-bench with no PC software goes `OFFLINE` ten seconds after power-up, because at that moment there really
-is nobody to talk to.
+first keepalive long before ten seconds are out. **Losing a live link is worth reporting; having no history
+yet is not.** The consequence is honest and invisible on the glass: a rig on a bench with no PC software
+sets `Gone` ten seconds after power-up, because at that moment there really is nobody to talk to - but
+`Gone` no longer draws anything, so the rig stays on `READY` and the button still works.
 
-That is the protocol layer's own screen. On `rig-ble` the panel no longer draws it when no central is
-attached: the presentation layer (§11) calls that `Pairing` and shows `APP` with a rotating fourth digit
-plus `WAITING` on the OLED, because a radio can tell "nobody has arrived" from "somebody left" and
-the protocol's `Gone` cannot.
+That is the protocol layer's own link flag. On `rig-ble` the screens are chosen by the presentation layer
+(§11): with no central attached it shows `APP` with a rotating fourth digit plus `WAITING` on the OLED;
+with one attached - talking or quiet - it hands the glass back to the rig's own screen.
 
 ## 3. Events
 
@@ -58,67 +58,53 @@ the protocol's `Gone` cannot.
 
 Any line that starts with `CMD` and carries a word after it counts as the PC being alive, whether or not the
 firmware acts on that verb. A line that is not a `CMD` line, or a bare `CMD` with nothing after it, is
-ignored entirely: it does not refresh the link timer and cannot recover `Offline`.
+ignored entirely: it does not refresh the link timer.
 
 **`CMD SCAN` is an assembly tool, not part of a run.** It makes the firmware walk addresses 1 to 126 and
 print one `EVT I2C <address>` line for each device that answers, then stop. It has no completion marker, so
 a reader waits a fixed window rather than a terminator, and **how long it waited belongs in what it
 reports** - a short window that found nothing and a complete walk that found nothing are different facts.
-While the link is alive it changes nothing on the panel; from `Offline` it recovers the link like every
-other command, because a command *is* the PC being alive (§5, E10).
+It changes nothing on the panel, at any link state: a command is the PC being alive, and the link has no
+screen to recover (§5, E10).
 
 ## 4. Composite states
 
-Ten pairs, five of which must never exist. The right-hand column is the invariant that forbids them.
+**There are none any more.** The screen used to report the link - `Offline` if and only if `Gone` - and that
+pairing is what this section was for. The screen no longer carries the link: `Gone` is a flag on the
+protocol layer, a quiet peer is still a peer, and every screen can be up with either link value. A capture
+in flight with `Gone` is not a lie - the trigger went out and `Err1` will report the timeout.
 
-| Screen \ Link | `Alive` | `Gone` | Why the impossible one is impossible |
-|---|---|---|---|
-| `Ready` | reachable | **impossible** | `Ready` means the rig has a PC and is waiting for a button |
-| `Capturing` | reachable | **impossible** | a capture needs a receiver |
-| `Pass` | reachable | **impossible** | a verdict came from the PC, so the PC is there |
-| `Retake` | reachable | **impossible** | same, and the `NO REPLY` timeout only runs while `Alive` |
-| `Offline` | **impossible** | reachable | recovering from `Gone` raises `Ready` in the same loop |
-
-**The invariant, stated once:**
-
-```
-Offline  <=>  Gone          and          everything else  =>  Alive
-```
-
-`rig::invariantHolds` encodes it, the loop checks it once per pass and reports `EVT INVARIANT` once per
-episode, re-arming as soon as the pairing is sound again. It has never fired. Two earlier drafts got this
-wrong in opposite directions - one showed `OFFLINE` ten seconds after every power-up because it measured the
-absence of a PC nobody had promised, the other could leave the panel on `OFFLINE` while the link was alive,
-because recovery was handled in the link timer instead of where the PC actually spoke.
+The loop's invariant moved with the responsibility: it now guards the **verdict face timer**, not a
+screen/link pairing - see §11 rule 11 and `rig::invariantHolds`.
 
 ## 5. Transitions
 
-Rows are the five reachable composites. `-` means the state does not change; **rejected** means it does
-not change *and* the event is reported.
+Rows are the four screens. `-` means the state does not change; **rejected** means it does not change *and*
+the event is reported. `E6` (ten seconds of silence) changes the link flag only, so it is `-` everywhere.
 
-| Composite \ Event | E1 button | E2 PING | E3 READY | E4 RESULT | E5 unknown | E6 silence | E7 heartbeat | E8 rotation | E9 display | E10 SCAN | E11 expired | E12 timeout |
+| Screen \ Event | E1 button | E2 PING | E3 READY | E4 RESULT | E5 unknown | E6 silence | E7 heartbeat | E8 rotation | E9 display | E10 SCAN | E11 expired | E12 timeout |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Ready + Alive | Capturing | Ready | Ready | **rejected** | Ready | Offline | Ready | `-` | Ready | `-` | `-` | `-` |
-| Capturing + Alive | **ignored** | Capturing | Ready | Pass / Retake | Capturing | Offline | Capturing | Capturing | Capturing | `-` | `-` | Retake |
-| Pass + Alive | Capturing | Pass | Ready | **rejected** | Pass | Offline | Pass | `-` | `-` | `-` | Ready | `-` |
-| Retake + Alive | Capturing | Retake | Ready | **rejected** | Retake | Offline | Retake | `-` | Retake | `-` | Ready | `-` |
-| Offline + Gone | `-` | Ready | Ready | rejected, then Ready | Ready | `-` | `-` | `-` | Offline | Ready | `-` | `-` |
+| Ready | Capturing | Ready | Ready | **rejected** | Ready | `-` | Ready | `-` | Ready | `-` | `-` | `-` |
+| Capturing | **ignored** | Capturing | Ready | Pass / Retake | Capturing | `-` | Capturing | Capturing | Capturing | `-` | `-` | Retake |
+| Pass | Capturing | Pass | Ready | **rejected** | Pass | `-` | Pass | `-` | `-` | `-` | Ready | `-` |
+| Retake | Capturing | Retake | Ready | **rejected** | Retake | `-` | Retake | `-` | Retake | `-` | Ready | `-` |
 
-E7, E8, E9 and E10 never change the screen by themselves: they redraw it, or - for `CMD SCAN` while the link
-is alive - leave it exactly as it was. They are in the table because a redraw in the wrong state is itself a
-visible defect: the rotation must not advance on a result screen, the fourth digit must not turn once a
-verdict is on the panel, and a verdict's face must not appear without a capture. E10's one exception is
-`Offline`, where a command is also the PC returning. E11 and E12 are the two timers that change a live
-screen on their own, and E12 fires in `Capturing` only.
+E7, E8, E9 and E10 never change the screen by themselves: they redraw it, or - for `CMD SCAN` - leave it
+exactly as it was. They are in the table because a redraw in the wrong state is itself a visible defect:
+the rotation must not advance on a result screen, the fourth digit must not turn once a verdict is on the
+panel, and a verdict's face must not appear without a capture. E11 and E12 are the two timers that change a
+screen on their own, and E12 fires in `Capturing` only. E3 (`CMD READY`) is the one command that moves any
+screen to idle, and it clears the verdict timer with it.
 
 **The fault overlay has no column here.** It outranks every screen rather than competing with one, and what
 that costs - a verdict arriving inside a fault window loses its arrival sweep - is in §10.
 
 ## 6. The rules and why
 
-**1. A capture in flight ignores the button.** `serviceButton` returns early unless the link is `Alive`
-and the screen is not already `Capturing`. Without it, one press became two frames: the PC would shoot
-twice and the operator would see one verdict for two pictures.
+**1. A capture in flight ignores the button.** `serviceButton` returns early when the screen is already
+`Capturing`. Without it, one press became two frames: the PC would shoot twice and the operator would see
+one verdict for two pictures. The guard on the link is gone: a press in `Live` captures whatever the
+protocol layer says, because `Gone` means an attached peer that has gone quiet, not "nobody" (§11 rule 7).
 
 **2. A verdict is only accepted while a capture is in flight.** `handleResult` rejects a `RESULT` in any
 other state and reports `EVT STRAY RESULT <score>`. Accepted elsewhere it would invent a result for a
@@ -129,16 +115,16 @@ unexpected segment with a reset.
 **3. A capture that gets no verdict within four seconds becomes a retake with reason `NO REPLY`.**
 `serviceCaptureTimeout`, `cfg::CAPTURE_TIMEOUT_MS`. Without it the spinner turns forever whenever the PC
 is healthy enough to keep the link alive but too busy to answer. Two keepalives is shorter than the five
-keepalive link timeout on purpose: the operator should learn that this shot failed before the whole link is
-declared dead.
+keepalive link timeout on purpose: the operator should learn that this shot failed long before the link is
+called quiet. This is also the answer a silent peer gets: the trigger goes out, `Err1` follows.
 
-**4. A keepalive does not touch the screen.** A `CMD PING` raises `Ready` only on the transition out of
-`Gone`, and only when the screen is `Offline`. A `PING` that arrives while a verdict is being read
-refreshes the link timer and changes nothing visible.
+**4. A keepalive does not touch the screen.** A `CMD PING` refreshes the link timer and changes nothing
+visible. There is no link screen for it to recover any more, so it cannot overwrite a verdict that is
+being read.
 
-**5. Losing the PC overrides everything.** `serviceLink`. No screen can make progress without a PC, so
-silence forces `Offline` from anywhere. The recovery lives where the PC actually speaks - in `poll` - and
-resets exactly the `Offline` screen.
+**5. Silence no longer overrides anything.** `serviceLink` sets the protocol layer's `Gone` flag and stops
+there; no screen can be forced because there is no link screen. The recovery is equally invisible: `poll`
+sets `Alive`, and no screen is reset because none was taken away.
 
 **6. The PC keeps the link alive.** The serial link has no carrier signal: the rig talks UART through a
 bridge chip and cannot see whether the cable is plugged in. Liveness is therefore a protocol matter, and
@@ -162,7 +148,6 @@ quiet about the second violation. A violation is a serial line rather than a pan
 ```mermaid
 flowchart TD
     BOOT([boot]) --> READY[Ready]
-    OFFLINE[Offline] -->|any command| READY
     READY -->|button| CAPTURING[Capturing]
     CAPTURING -->|RESULT PASS| PASS[Pass]
     CAPTURING -->|RESULT RETAKE| RETAKE[Retake]
@@ -171,30 +156,27 @@ flowchart TD
     RETAKE -->|button| CAPTURING
     PASS -->|12 s, no press| READY
     RETAKE -->|12 s, no press| READY
-    READY -->|10 s silence| OFFLINE
-    CAPTURING -->|10 s silence| OFFLINE
-    PASS -->|10 s silence| OFFLINE
-    RETAKE -->|10 s silence| OFFLINE
 ```
+
+The link flag is not in the diagram: silence used to lead every screen to `Offline`, and now it changes
+nothing visible.
 
 ## 8. Serial events per transition
 
 | Transition | Events |
 |---|---|
 | boot | `EVT HELLO <version>`, ..., `EVT SCREEN READY -1` |
-| any command from `Offline` → Ready | `EVT SCREEN READY <score>` |
 | `CMD READY` from Ready, or from any other screen → Ready | `EVT SCREEN READY <score>` - emitted unconditionally, so a no-op `READY` is a broadcast of the screen the rig is already on |
 | Ready → Capturing | `EVT SCREEN CAPTURING -1` then `EVT TRIGGER <millis>` |
 | Capturing → Pass / Retake | `EVT SCREEN PASS\|RETAKE <score>` |
 | Capturing → Retake (`NO REPLY`) | `EVT TIMEOUT <millis>` then `EVT SCREEN RETAKE -1` |
 | Pass / Retake → Ready (verdict face expired) | `EVT SCREEN READY <score>` |
-| any → Offline | `EVT SCREEN OFFLINE <score>` |
 | rejected RESULT | `EVT STRAY RESULT <score>` |
 | invariant broken (reports once per episode) | `EVT INVARIANT <screen> <link>` |
 
 A score of `-1` in `EVT SCREEN` means no verdict has been received yet, so the screen has no number to
-draw. The field is not reset by a link transition or by `CMD READY`: on `READY` and `OFFLINE` it can still
-carry the last verdict's score, which those screens do not draw.
+draw. The field is not reset by a link transition or by `CMD READY`: on `READY` it can still carry the last
+verdict's score, which that screen does not draw.
 
 ## 9. The PC side of the link
 
@@ -238,13 +220,13 @@ what it says rather than by its rhythm.
 
 **The panel is four digits, multiplexed, and it is where a person at the bench reads the rig without the
 OLED.** A common-anode display takes segments A-G on GPIO 3, 13, 14, 15, 16, 17 and 18, each through its own
-240 Ω resistor, and digit commons 1-4 on GPIO 5, 6, 7 and 10 directly. The button is on GPIO 4 and the OLED
+330 Ω resistor, and digit commons 1-4 on GPIO 5, 6, 7 and 10 directly. The button is on GPIO 4 and the OLED
 on I2C GPIO 8 and 9. The ten-lamp bar and the three status lamps are gone: their pins are the commons now,
 and a bar that never shipped was not worth maintaining.
 
 **Only one common may be high at a time, and that is the whole driving rule.** A common HIGH selects its
 digit and a segment LOW lights that segment, so the current leaves the common, crosses the LED and the
-segment's own 240 Ω, and enters the segment pin. A common carries no resistor because it carries the sum of
+segment's own 330 Ω, and enters the segment pin. A common carries no resistor because it carries the sum of
 its digit's segment currents - which is also why exactly one may be selected: two commons high would light
 two digits through one resistor network at half brightness, and the panel would read as a smear rather than
 as digits.
@@ -272,7 +254,6 @@ phase the same way.
 | `Capturing` | `CAP`, with one segment walking the rim of the fourth digit | 250 ms per step |
 | `Pass` | a left-to-right sweep, then the score right-aligned in digits 1-3 and `P`: ` 95P` | 250 ms sweep on arrival, then steady |
 | `Retake` | the score and `F`, the whole panel blinking: ` 40F` | 1 Hz |
-| `Offline` | the code `Err0`, blinking | 1 Hz, and no window: it lasts as long as the link is gone |
 | fault `Err1` | a capture timeout, blinking | 1 Hz for 2 s |
 | fault `Err2` | a stray result, blinking | 1 Hz for 2 s |
 | fault `Err3` | a broken invariant, blinking | 1 Hz for 2 s |
@@ -282,31 +263,26 @@ two seconds a cycle.** No frame is dark and no frame ever holds more than one da
 rather than tuned. **The wrap is deliberate**: the dash starts over at the first digit instead of turning
 round, so the face is a conveyor with a visible break, and `config.h` carries a comment saying not to "fix"
 it into a bounce. An earlier version held all four dashes for a second instead of wrapping; the marquee
-replaced it. It cannot be mistaken for `Offline` either, because that face is a code.
+replaced it.
 
-**`Err0` is the `Offline` screen; `Err1`-`Err3` are fault windows, and all four look the same.** Each code
-blinks at one hertz - the code is the identifier and the rhythm carries nothing, so there is no second rate
-and no special case for the link. What differs is only how long a face stays: `Err0` has no window, because
-a lost link lasts until the link comes back, while `Err1` to `Err3` clear after two seconds. That is when it
-leaves, not how it looks. The three windows are there because those events used to produce a log line and
-nothing a person could see, which made a broken rig and an idle one look the same - and losing the link is a
-fault, so numbering its screen is honest rather than a workaround.
+**`Err1`-`Err3` are fault windows and all three look the same.** Each code blinks at one hertz - the code
+is the identifier and the rhythm carries nothing, so there is no second rate. What differs is only how long
+a face stays: they clear after two seconds. That is when it leaves, not how it looks. The three windows are
+there because those events used to produce a log line and nothing a person could see, which made a broken
+rig and an idle one look the same.
 
 **A retake reads `F`, not `E`.** `E` begins every fault code, so ` 40E` and an `Err` face were one glance
 apart; `F` is the left column with the top and middle bars, and no code contains it.
 
 **A verdict is a conclusion, not a permanent label.** `Pass` and `Retake` return to `Ready` after 12 s with
-no new press - six keepalives, which is `OFFLINE_AFTER_MS` plus one. That relationship is the point: a
-verdict outlives the link-loss threshold on purpose, so a dead link is always reported before a verdict
-clears on its own. Nothing is lost by moving on, because the PC keeps the record and the operator's own
-eyes had the verdict for its whole twelve seconds; `Offline` is deliberately excluded, because a lost link
-is a fault rather than a completion.
+no new press - six keepalives. Nothing is lost by moving on, because the PC keeps the record and the
+operator's own eyes had the verdict for its whole twelve seconds. A capture started inside that window
+cancels the timer outright, so the previous verdict can never pull the new capture back to idle.
 
 **There is no rehearsal; the button has one meaning.** A press captures, on the pressing edge, and the
 release is not an event at all, so a fault face appears only when its event happens: a bench where nothing
-is failing never shows `Err1` to `Err3`, and `Err0` needs the PC to fall silent for ten seconds. The serial
-log is the other place those events are visible - `EVT TIMEOUT`, `EVT STRAY RESULT`, `EVT INVARIANT` - and
-that is why they are reported as well as drawn.
+is failing never shows `Err1` to `Err3`. The serial log is the other place those events are visible -
+`EVT TIMEOUT`, `EVT STRAY RESULT`, `EVT INVARIANT` - and that is why they are reported as well as drawn.
 
 **Two things the matrix has no dimension for, both deliberate.** A fault window outranks every screen, so a
 verdict that arrives inside one moves the screen underneath while the fault is drawn over it: by the time
@@ -372,8 +348,7 @@ not "broken".** `WAITING` says what is true: the rig is ready and there is no PC
 | State | Meaning |
 |---|---|
 | `Pairing` | No central is attached |
-| `NoLink` | A central is attached but the protocol layer is `Gone`; `B2` has not made it `Live` |
-| `Live` | A central is attached and the protocol layer is `Alive` |
+| `Live` | A central is attached - whatever the protocol layer's `Alive`/`Gone` says at that moment |
 | `RadioFault` | The radio would not start, or the drop storm reached `Fault` |
 
 | # | Event | Source |
@@ -385,10 +360,10 @@ not "broken".** `WAITING` says what is true: the rig is ready and there is no PC
 | P1 | A command arrives | protocol layer |
 | P2 | Ten seconds of silence | protocol layer |
 
-`B1` enters `NoLink` and `B2` is what moves it to `Live`: a central that is attached but has not enabled
-notifications has not proved that anyone will talk, so it does not get the `Live` face yet. `B2` in
-`Live` is ignored - the subscription is already enabled - and `B1` there is rejected, because a second
-central must not repaint a screen.
+`B1` moves `Pairing` straight to `Live`: attaching is the whole fact this layer needs, because a peer that
+is quiet has the same remedy as no peer at all - wait. `B2` in `Live` is ignored (the subscription is
+already enabled) and `B1` there is rejected, because a second central must not repaint a screen. `P2` in
+`Live` is "already here": a quiet peer does not change what the rig is doing.
 
 ### 11.2 The transition matrix
 
@@ -400,17 +375,15 @@ is that the state already says this.
 
 | State \ Event | B1 attached | B2 subscribed | B3 detached | B4 fault | P1 command | P2 silence |
 |---|---|---|---|---|---|---|
-| `Pairing` | **`NoLink`** | — | — | **`RadioFault`** | — | — |
-| `NoLink` | — | **`Live`** | **`Pairing`** | **`RadioFault`** | **`Live`** | already here |
-| `Live` | rejected | — | **`Pairing`** | **`RadioFault`** | handled in place | **`NoLink`** |
+| `Pairing` | **`Live`** | — | — | **`RadioFault`** | — | — |
+| `Live` | rejected | — | **`Pairing`** | **`RadioFault`** | handled in place | already here |
 | `RadioFault` | — | — | — | handled in place | — | — |
 
 ### 11.3 What each state draws
 
 | State | OLED | Seven-segment panel |
 |---|---|---|
-| `Pairing` | `OFFLINE`'s face with the headline `WAITING`, no animation | `APP`, the fourth digit rotating through its six rim segments |
-| `NoLink` | the `OFFLINE` box | `Err0` |
+| `Pairing` | the house status face with the headline `WAITING`, no animation | `APP`, the fourth digit rotating through its six rim segments |
 | `Live` | the rig's own screen | the rig's own face |
 | `RadioFault` | `RADIO FAULT` / `REFLASH RIG-SERIAL` | `Err4` |
 
@@ -430,17 +403,16 @@ bits, and a bit shift has no entry that can be wrong. The check now asserts the 
 golden copy - six positions, six distinct segments, no repeats, driven by a step computed from the face's
 age.
 
-**The OLED is `OFFLINE`'s face with the words changed and no moving element.** `WAITING` is drawn by
-the same `drawStatusFace` that draws `OFFLINE` and `RADIO FAULT`: same inverted box, same `AQUAVISION`
-header, same title baseline, same body line, and the same Helvetica bold 12 title. The twelve-cell progress
-row it replaces implied an amount of progress that does not exist, and a misleading indicator is worse than
-none; this screen cannot be made as strong as the rest by animating, so it borrows the language that is
-already strong. **The title is `WAITING` and not `WAITING FOR PC` because of the character count, not the
-font**: thirteen characters do not fit bold 12 on the 128 px panel, and shrinking the type to fit them is
-what made this face read as empty beside `OFFLINE`. A seven-character title at the house size plus the body
-line `NO LINK TO PC` reads as "waiting - nothing connected yet", which is the short-title-plus-body
-structure `OFFLINE` already uses. This face and `OFFLINE` are therefore indistinguishable except for their
-words, which is the point: two different facts, told in the same voice.
+**The OLED is the house status face with the words changed and no moving element.** `WAITING` is drawn by
+the same `drawStatusFace` that draws `RADIO FAULT`: same inverted box, same `AQUAVISION` header, same title
+baseline, same body line, and the same Helvetica bold 12 title. The twelve-cell progress row it replaces
+implied an amount of progress that does not exist, and a misleading indicator is worse than none; this
+screen cannot be made as strong as the rest by animating, so it borrows the language that is already
+strong. **The title is `WAITING` and not `WAITING FOR PC` because of the character count, not the font**:
+thirteen characters do not fit bold 12 on the 128 px panel, and shrinking the type to fit them is what made
+this face read as empty. A seven-character title at the house size plus the body line `NO LINK TO PC` reads
+as "waiting - nothing connected yet", which is the short-title-plus-body structure the status face already
+uses.
 
 **The rotation is read from the face's age, never accumulated.** `presentation::rotationStep` is
 `(faceAge / cfg::DISPLAY_ROTATE_MS) % cfg::DISPLAY_ROTATE_STEPS`, computed every pass, so an iteration that
@@ -449,10 +421,13 @@ cannot end up on different steps or different clocks. There is no per-step work 
 face is static and is sent once when it is entered, and the panel's mask is published from `serviceDisplay`
 as usual.
 
-`NoLink` is the old `Offline` face on both screens, because it means the old thing: **a PC was here and
-left**. That is worth reporting, and it is a different fact from `Pairing` - where no PC has ever
-attached. The second line of the `OFFLINE` box is build-dependent: `NO LINK TO PC` in `rig-ble` and
-`CHECK USB CABLE` in `rig-serial` (§10 of the transport document).
+**`OFFLINE` and `Err0` are retired, and the `NoLink` state with them.** In BLE a link simply ends - the
+connection closes and the rig is available again - and a client that stays connected but stops talking has
+the same remedy as one that never connected: wait. Two faces for one remedy made the operator think a step
+further for nothing, and `Err0` called "waiting" a fault, which is exactly what this layer exists to stop
+doing. So an attached-but-silent client lands in `Live` and sees the rig's own screen, which is true: the
+rig is ready and nothing is happening. **`Err0`'s number is not reused**; the remaining codes keep
+`Err1`-`Err4`, and the gap costs nothing.
 
 ### 11.4 The rules
 
@@ -465,16 +440,17 @@ rig had no PC did not come from the PC that is here now. In particular, a `PASS`
 `Pairing` loses its arrival sweep and never paints a score over `WAITING`.
 
 **2. `Pairing` draws `APP` with a rotating fourth digit, and that is the fix.** The rig really is ready;
-only the link detail differs. The panel therefore no longer shows `Err0` at a rig where nothing is wrong,
-and the first connection no longer flips it to `READY` as though a press had caused it. The word says what
-the state is and the rotation says the rig is still working; both are shapes this panel already draws. The
-first version tried walking the `Ready` marquee backwards and the bench rejected it, because two dashes
-moving opposite ways are indistinguishable at a glance.
+only the link detail differs. The panel therefore no longer shows a fault code at a rig where nothing is
+wrong, and the first connection no longer flips it to `READY` as though a press had caused it. The word
+names what to open and the rotation says the rig is still working; both are shapes this panel already
+draws. The first version tried walking the `Ready` marquee backwards and the bench rejected it, because two
+dashes moving opposite ways are indistinguishable at a glance.
 
-**3. `NoLink` is a report, not a retry.** A central is attached but the protocol layer is `Gone`, so the
-PC is there and not talking - the old `OFFLINE`/`Err0` face is exactly right. `P2` in `NoLink` is
-"already here": the event is consumed and the face does not change. `P1` is the proof that somebody is on
-the other end, and moves it to `Live`.
+**3. A silent peer is `Live`, not a face.** A central is attached but the protocol layer is `Gone`: the
+peer is still there and has simply stopped talking, which has the same remedy as a peer that never
+connected - wait. `P2` in `Live` is therefore "already here": the event is consumed and nothing changes,
+and the rig's own screen stays up because the rig is ready and nothing is happening. `P1` is proof that
+somebody is on the other end and is handled in place for the same reason.
 
 **4. Only `RadioFault` outranks the presentation layer.** `Err1` to `Err3` are the screen's fault windows
 and are drawn only while the face is `Live`; a dead radio (`B4`) replaces every face with `Err4`/`RADIO
@@ -489,18 +465,19 @@ exists so that the rule is in the table instead of in a comment.
 
 **6. The serial build has no carrier signal, so it never shows `Pairing`.** A UART cannot see whether a
 cable is plugged in (transport §2), so `transport::attached()` answers true always: `rig-serial` starts
-`Live` (or `NoLink` when the protocol is already `Gone`), goes `NoLink` after ten seconds of silence, and
-keeps the old panel behaviour. That is the honest limit of that wire, not a missing state.
+`Live` and stays there whatever the protocol layer's link flag says. That is the honest limit of that wire,
+not a missing state.
 
-**7. A press while the presentation is not `Live` is refused.** A capture needs a PC to receive it, and
-the protocol's boot grace would otherwise let a press start a frame with nobody attached and paint it on
-whichever PC arrives first. Nothing happens, and nothing is drawn - which is what "there is nowhere to
-send a trigger" should look like.
+**7. A press is refused only while a face owns the screens.** `Pairing` means nobody is attached, so there
+is nowhere to send `EVT TRIGGER` and a capture could only time out invisibly; `RadioFault` means the radio
+is dead. In `Live` a press **always** captures - including while the protocol layer is `Gone`, because
+`Gone` is an attached peer that has gone quiet, not "nobody". If the peer really is silent the trigger goes
+out and `Err1` arrives four seconds later, which is a visible, honest answer; a silent refusal is worse.
 
-**8. The wire is untouched.** No event, no command and no line format changes. In `Pairing` the protocol
-layer can still emit `EVT SCREEN OFFLINE` when its ten seconds expire; the panel draws `READY` anyway
-because the presentation layer outranks the screen. No central is attached to read that line, and the
-existing "tell the PC the current screen when it subscribes" rule is unchanged.
+**8. The wire is untouched.** No event, no command and no line format changes. `EVT SCREEN` still names
+`READY`, `CAPTURING`, `PASS` and `RETAKE`; a PC that knows the retired `OFFLINE` name simply stopped
+receiving it, because the link no longer has a screen to report. The existing "tell the PC the current
+screen when it subscribes" rule is unchanged.
 
 **9. `Pairing` is a word and a rotation, and neither has a position table.** The panel draws `APP` and
 turns the fourth digit through six segments; the step is `1u << presentation::rotationStep(faceAge)`, the
@@ -517,3 +494,13 @@ dot exists only on the rig's own screen; a dirty flag in `Pairing` would send th
 a second for a screen that has not changed. The same rule covers any future animation: if a face gains a
 moving element, it must compute its phase from the clock and say what repaints it, and it must not be the
 heartbeat.
+
+**11. Starting a capture cancels the previous verdict's face timer.** A verdict face expires after
+`cfg::VERDICT_FACE_MS`, and that timer belongs to the verdict it was armed for. The bench saw what happens
+without the cancel: pressing inside the twelve-second window moved the panel to `CAPTURING`, the previous
+verdict's timer was still counting, and it pulled the new capture back to `READY` - `CAP` appeared and
+vanished. `serviceButton` therefore clears `state.verdictAt` when a capture begins, and
+`serviceVerdictTimeout` refuses to fire while no timer is armed. The invariant in `rig_state.h` states the
+same rule from the other side: **a capture in flight carries no verdict timer, and a verdict face carries
+one**, so an armed timer during `CAPTURING` is reported as `Err3` rather than silently mis-timing the
+screen.

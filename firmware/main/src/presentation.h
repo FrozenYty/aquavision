@@ -5,11 +5,10 @@
 // This file is **not** a merge of them. It is a third machine that reads both, because one question an
 // operator asks has no answer in either alone: "is a PC expected right now, or has nobody arrived yet?"
 // The BLE layer can say whether a central is attached; the protocol layer can say whether one has
-// spoken for ten seconds; neither can tell "nobody has arrived" from "somebody left", because `Gone`
-// already means the second thing to the protocol. Merging them would force one state to answer both,
-// which is exactly the merge the transport document forbids.
+// spoken for ten seconds; neither can tell "nobody has arrived" from "a peer that is merely quiet" -
+// and the answer to both is now the same **wait**, so this layer only distinguishes attached from not.
 //
-// The four states, six events and every cell between them are §11 of `docs/rig-state-machine-en.md`.
+// The three states, six events and every cell between them are §11 of `docs/rig-state-machine-en.md`.
 // The table itself lives once, in `presentation.cpp`, where the machine reads it; this header declares
 // the states and the events and does not repeat the cells, because two copies of one contract drift.
 //
@@ -27,12 +26,13 @@
 
 namespace presentation {
 
-//: The four states of §11. `Pairing` is the only one with no central attached, and it is the state that
-//: removes the false `Err0` at power-up: no carrier and no conversation is "waiting", not "broken".
+//: The three states of §11. `Pairing` is the only one with no central attached, and it is the state that
+//: removed the false fault at power-up: no carrier and no conversation is "waiting", not "broken".
+//: There is deliberately no "attached but quiet" state - a silent peer has the same remedy as no peer at
+//: all (wait), so both are `Live`, which is true: the rig is ready and nothing is happening.
 enum class State : uint8_t {
   Pairing,     // no central attached
-  NoLink,      // attached, but the protocol layer is `Gone` - including before `B2` completes it
-  Live,        // attached, and the protocol layer is `Alive`
+  Live,        // a central is attached; the protocol layer's `Alive`/`Gone` does not change the face
   RadioFault,  // the radio would not start, or the drop storm reached `Fault`
 };
 
@@ -61,13 +61,13 @@ struct Cell {
 };
 
 //: What each screen draws. `RigScreen` is the only face that hands the glass back to the rig's own
-//: screen; the other three replace it, which is what makes "a verdict cannot paint over `WAITING`"
-//: structural rather than a condition someone has to remember. `Pairing`'s panel face is the word `PAr`
-//: with its fourth digit rotating through the six rim segments: the word says what the state is, and the
-//: rotation says the rig is still working, both of them shapes this panel already draws elsewhere
-//: (`CAPTURING` draws `CAP` with the same rotation).
-enum class OledFace : uint8_t { WaitingForPc, Offline, RigScreen, RadioFault };
-enum class PanelFace : uint8_t { Pairing, Err0, RigScreen, Err4 };
+//: screen; the other two replace it, which is what makes "a verdict cannot paint over `WAITING`"
+//: structural rather than a condition someone has to remember. `Pairing`'s panel face is the word `APP`
+//: with its fourth digit rotating through the six rim segments: the word names the PC-side application
+//: the operator is about to open, and the rotation says the rig is still working, both of them shapes
+//: this panel already draws elsewhere (`CAPTURING` draws `CAP` with the same rotation).
+enum class OledFace : uint8_t { WaitingForPc, RigScreen, RadioFault };
+enum class PanelFace : uint8_t { Pairing, RigScreen, Err4 };
 
 struct Face {
   OledFace oled;
@@ -89,9 +89,9 @@ State state();
 //: The starting state, from the wire that actually opened. Not an event and not in the matrix: a stack
 //: that starts has exactly one thing to be, and the alternative - a `boot` column with two non-empty
 //: cells - would hide that this is the only unconditional assignment in the layer. A UART answers
-//: `attached` true always (it cannot see a cable), so `rig-serial` starts `Live` or `NoLink` and never
-//: reaches `Pairing`.
-void begin(bool attached, bool protocolAlive);
+//: `attached` true always (it cannot see a cable), so `rig-serial` starts `Live` and never `Pairing`.
+//: The protocol layer's `Alive`/`Gone` is deliberately not a parameter: a quiet peer is still a peer.
+void begin(bool attached);
 
 //: One event, one cell. Returns the cell so a caller can see what happened without reading the state.
 Cell apply(Event event);

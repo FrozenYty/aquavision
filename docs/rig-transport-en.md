@@ -5,7 +5,7 @@
 > Owner: @FrozenYty · Revisit when: a transport, a BLE state or a timeout is added
 
 The rig and the PC already agree on a language: line-oriented ASCII, `CMD` in one direction and `EVT` in the
-other, with `Alive`/`Gone` and the five screens written out in
+other, with `Alive`/`Gone` and the four screens written out in
 [rig-state-machine-en.md](rig-state-machine-en.md). This document is about the **wire** that carries that
 language, and only the wire: how the finished rig reaches the PC with no cable, what each end does when the
 wire is not there, and what a person standing in front of the rig sees when it fails.
@@ -51,7 +51,7 @@ The finished rig has **two** state machines where the serial rig has one, and th
 | Layer | Owns | Changes | Its states | It must not know |
 |---|---|---|---|---|
 | BLE | the connection and the notification subscription | once at power-up, once per drop | the five firmware states of §3, the seven PC states of §6 | what a command means |
-| protocol | the keepalive, `Alive`/`Gone`, the parser, the four-second capture timeout | constantly — every two seconds | `Alive` and `Gone` over the five screens | which wire it is on |
+| protocol | the keepalive, `Alive`/`Gone`, the parser, the four-second capture timeout | constantly — every two seconds | `Alive` and `Gone` over the four screens | which wire it is on |
 
 The BLE layer changes when the radio gains or loses a peer. The protocol layer changes every time the PC
 speaks or stops speaking. Those are different events on different clocks, and writing them as one state is not
@@ -65,8 +65,8 @@ a simplification — it is a different product, answering one of two questions w
 
 Merged into one state, a transition has to choose between "reconnect" and "resume talking", and neither
 corresponds to anything real: reconnecting to a PC that never left, or resuming a conversation with a radio
-that is not there. The rig would either flash `Err0` for a two-second radio hiccup, or keep drawing `Ready` on
-a rig nobody can reach.
+that is not there. The rig would either blink a fault code at a two-second radio hiccup, or keep drawing
+`Ready` on a rig nobody can reach.
 
 There is a second reason the two must stay apart: **the serial link never had a carrier signal.** The rig
 talks UART through a bridge chip and cannot see whether the cable is plugged in, so liveness has always been a
@@ -175,7 +175,7 @@ to start is a loop that turns a dead radio into a slow one, and it hides the fau
 `Err4` needs a person, and that person has two cheap moves — power-cycle it, or flash `rig-serial` (§11).
 
 **8. The protocol layer is untouched.** No new line, no new state, no new timing: `Alive`/`Gone`, the
-two-second keepalive, the ten-second offline threshold, the four-second capture timeout and the five screens
+two-second keepalive, the ten-second silence threshold, the four-second capture timeout and the four screens
 all stay exactly as `rig-state-machine-en.md` records them. The only seam that moves is `transport.h`, which
 has to be able to say that the radio did not start (§8) — a return value, not a new state machine.
 
@@ -325,45 +325,44 @@ finds nothing does not reach the connect phase. Both are bounds, not predictions
 ## 10. What the operator sees when it fails
 
 The rig already numbers its faults, four characters to the width of the panel, and all of them blink at one
-hertz: `Err0` a lost link, `Err1` a capture timeout, `Err2` a stray result, `Err3` a broken invariant. A radio
-that failed to start is **`Err4`**.
+hertz: `Err1` a capture timeout, `Err2` a stray result, `Err3` a broken invariant. A radio that failed to
+start is **`Err4`**. **`Err0` is retired and its number is not reused**: it named a lost link, and a link
+that is merely quiet is no longer a face.
 
 | Failure | Panel | OLED | Window |
 |---|---|---|---|
-| `Err0` link lost | `Err0`, 1 Hz | `rig-serial`: `OFFLINE` and `CHECK USB CABLE`. `rig-ble`: `OFFLINE` and `NO LINK TO PC` | none |
 | `Err1` capture timeout | `Err1`, 1 Hz | `RETAKE`, caption `NO REPLY` | 2 s |
 | `Err2` stray result | `Err2`, 1 Hz | the screen that was up, unchanged | 2 s |
 | `Err3` invariant violated | `Err3`, 1 Hz | the screen that was up, unchanged | 2 s |
 | `Err4` radio dead | `Err4`, 1 Hz | `RADIO FAULT`, then `REFLASH RIG-SERIAL` | none |
 
-**At power-up the OLED shows neither of those, because neither would be true.** With no central attached
-there is no lost link to report and no dead radio, so the OLED shows `WAITING` - drawn by the same
-`drawStatusFace` as `OFFLINE`, with the headline changed and no animation - and the panel draws `APP` with
-its fourth digit turning through the six rim segments; that is the `Pairing` face of the presentation layer
-(`docs/rig-state-machine-en.md` §11). `OFFLINE`/`Err0` then means what it says - **a PC was here and
-left** - instead of being drawn at a rig where nothing is wrong. It is also why the first connection no
-longer flips the panel to `READY` as though a press had caused it: the panel was already showing a
-waiting rig, and what changes is the link detail on the OLED. **The serial build has no carrier signal**
-(§2) and cannot tell "nobody yet" from "somebody left", so `rig-serial` boots `Live`, goes to `Err0` after
-ten seconds of silence as it always did, and never shows `WAITING`.
+**At power-up the OLED shows none of those, because none would be true.** With no central attached
+there is no fault to report, so the OLED shows `WAITING` - drawn by the same `drawStatusFace` as
+`RADIO FAULT`, with the headline changed and no animation - and the panel draws `APP` with its fourth
+digit turning through the six rim segments; that is the `Pairing` face of the presentation layer
+(`docs/rig-state-machine-en.md` §11). It is also why the first connection no longer flips the panel to
+`READY` as though a press had caused it: the panel was already showing a waiting rig, and what changes is
+the face. **A central that attaches and then goes silent is not a fault either**: it stays on the rig's
+own screen, because a quiet peer has the same remedy as no peer at all - wait. **The serial build has no
+carrier signal** (§2), so `rig-serial` boots `Live` and never shows `WAITING` or a link face.
 
-**`Err4` exists because `Err0` would be a lie with a plausible face.** A dead radio loses the link in the
-ordinary way: ten seconds of silence, the link goes `Gone`, the panel shows `Err0`. So both codes are true at
-the same moment, and only one of them tells the operator what to do — waiting for the link to come back is the
-correct response to `Err0` and the wrong one to `Err4`. The panel has four characters, so the distinction
-costs one digit and no new glyph: `Err4` is `E`, `r`, `r` and `4`, all of them already in the alphabet.
+**`Err4` exists because a link that ends is not a fault any more.** A dead radio looks, at first, exactly
+like a quiet peer: no commands arrive and the ten-second timer sets `Gone`. But a quiet peer is waiting to
+be spoken to again, while a dead radio is never going to answer - so the two must not share a face, and the
+one that needs action must say so. The panel has four characters, so the distinction costs one digit and no
+new glyph: `Err4` is `E`, `r`, `r` and `4`, all of them already in the alphabet.
 
-**Both cannot be drawn at once, so `Err4` wins.** A fault overlay outranks every screen
-(rig-state-machine-en.md §10), and `Err4` is drawn while the BLE layer is in `Fault`; `Err0` is underneath it
-and never appears. That is where the "one keepalive" fault window stops applying: a dead radio is not fixed by
-waiting, so the face has no window at all, exactly like `Err0`. `Err1` to `Err3` keep their two seconds.
+**`Err4` outranks every screen.** A fault overlay outranks the rig's screen
+(rig-state-machine-en.md §10), and `Err4` is drawn while the BLE layer is in `Fault`. That is where the
+"one keepalive" fault window stops applying: a dead radio is not fixed by waiting, so the face has no
+window at all. `Err1` to `Err3` keep their two seconds.
 
-**The OLED's offline line has to change with the build.** `CHECK USB CABLE` is true in `rig-serial` and false
+**The OLED's body line has to change with the build.** `CHECK USB CABLE` is true in `rig-serial` and false
 in `rig-ble`, and a finished rig that tells its operator to check a cable it does not have is worse than a
 blank line. `Err4` needs a face it does not have today, because the OLED has no code face: the fault overlay
-is the panel's, and for `Err1` to `Err3` the OLED keeps drawing the screen underneath. For `Err4` it cannot —
-the screen underneath is `Offline`, which is the wrong story — so the OLED draws the radio fault itself and
-one line saying what to do about it.
+is the panel's, and for `Err1` to `Err3` the OLED keeps drawing the screen underneath. For `Err4` it cannot -
+there is no right screen underneath - so the OLED draws the radio fault itself and one line saying what to
+do about it.
 
 **On the PC the same failure is a state, not a code.** The rig never sees a PC that cannot reach it, so
 `Failed` is logged and shown by the service, and there is no `EVT` line for it: the protocol layer has nothing

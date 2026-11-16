@@ -25,7 +25,7 @@ Phase status lives here. Why it moved lives in `PROGRESS.md`.
 | C — web | @chemflowers | pages, canvas review, charts |
 | D — quality | @IkeaFyj | test cases, acceptance checks, documents, demo script |
 
-Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` Sun Jianheng ·
+Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` Sun Jianheng ·
 `@IkeaFyj` Fu Yijia.
 
 ## 3. Phases
@@ -476,8 +476,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         rather than a count; the contract table, both contract documents and `/api/health`'s
         `contract_routes` moved together, 42 to 44, and that field is now tied to the table by a test
 - [ ] **P3-17** Rig assembly and its optical numbers · @FrozenYty · split out of `P1-06` on 11-11 ·
-      the parts still owed are the panel's: **seven 240 Ω segment resistors**, one per segment - the lot on
-      the purchase list is 330 Ω and does not cover that value - and the four-digit display module. The
+      the part still owed is the panel's **four-digit display module**. **The segment resistors are no
+      longer owed**: the **330 Ω** parts were fitted on 11-16, one per segment - the value the purchase
+      list has always held, which is now the design value as well. The
       button is not owed: it was on the bench on 11-13, when a miswired press reported itself as a
       brownout. A 12 V adapter with a buck module
       was procured 11-11 and replaces the earlier dead end - the board has no 5 V output - but it is
@@ -501,7 +502,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - **the sensor's replacement changed twice on 11-14, and the second one is the panel.** First a
         ten-lamp bar on GPIO 10-18 and 21, wired like the lamps; then **the four-digit seven-segment
         display**, which is what `config.h` and `main.cpp` implement: segments A-G on GPIO 3 and 13-18
-        through 240 Ω each, digit commons 1-4 on GPIO 5, 6, 7 and 10 direct, one face per screen, the
+        through 330 Ω each, digit commons 1-4 on GPIO 5, 6, 7 and 10 direct, one face per screen, the
         faults as `Err0`-`Err3`, and the multiplexer in a hardware timer. The bar never shipped, and **the
         pins the three lamps sat on are the display's commons**
       - **a third lamp, added 11-13 and retired 11-14: blue on GPIO7**, covering every screen the two

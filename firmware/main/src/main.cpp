@@ -67,12 +67,13 @@ void serviceButton(uint32_t now) {
     return;  // only the press acts
   }
 
-  // A capture needs a PC to receive it. `state.link` alone is not enough any more: during `Pairing` the
-  // protocol still counts boot as `Alive`, so its ten-second grace would let a press start a frame with
-  // nobody attached and then paint that capture on whichever PC arrives first. The presentation layer
-  // knows there is no PC to send a trigger to, so a press there is refused and literally nothing happens
-  // (docs/rig-state-machine-en.md §11).
-  if (state.link != rig::Link::Alive || presentation::state() != presentation::State::Live) {
+  // A capture needs a PC to receive it, and only the presentation layer knows whether one is there. A
+  // press is refused only while a face owns the glass: `Pairing` (nobody attached, so there is nowhere to
+  // send the trigger and a timeout would be invisible) and `RadioFault` (the radio is dead). **`Gone` is
+  // not "nobody"** - it is an attached client that has been quiet for ten seconds - so a press in `Live`
+  // captures whatever the protocol layer says; if the peer really is silent, `Err1` reports the timeout
+  // four seconds later, which is a visible answer (docs/rig-state-machine-en.md §11).
+  if (presentation::state() != presentation::State::Live) {
     return;
   }
   if (state.screen == rig::Screen::Capturing) {
@@ -84,6 +85,11 @@ void serviceButton(uint32_t now) {
   state.screen = rig::Screen::Capturing;
   state.score = -1;           // no verdict for this shot yet, so the screen shows no number
   state.reason = rig::Reason::None;
+  // **Cancel the previous verdict's face timer.** Without this, a press inside the twelve-second verdict
+  // window left the old timer counting; the screen moved to `Capturing` and the stale timer could pull it
+  // back to `READY`, which is the flash the bench saw. A new capture must never be interrupted by the
+  // display timer of the one before it.
+  state.verdictAt = 0;
   captureStartedAt = now;
   state.markDirty();
   // Every state change is reported, so the PC never has to infer a screen from the event that caused
@@ -119,9 +125,12 @@ void serviceCaptureTimeout(uint32_t now) {
 //: panel goes back to the idle face; the score is not lost, because the PC keeps the record and the
 //: operator's own eyes had it for `cfg::VERDICT_FACE_MS`, and a panel still reading ` 95P` long after the
 //: press looks hung rather than waiting.
-//: OFFLINE is deliberately not covered: losing the link is a fault, not a completion, and it stays visible
-//: until the link comes back. A fault face keeps its own two seconds as well.
+//: A verdict face is only expirable while one is armed (`verdictAt != 0`): starting a capture clears the
+//: date, so the previous verdict's timer cannot fire against the new capture.
 void serviceVerdictTimeout(uint32_t now) {
+  if (state.verdictAt == 0) {
+    return;  // no verdict face is armed, or a capture has just cancelled one
+  }
   if (state.screen != rig::Screen::Pass && state.screen != rig::Screen::Retake) {
     return;
   }
@@ -141,13 +150,9 @@ void serviceHeartbeat(uint32_t now) {
   lastHeartbeat = now;
   state.heartbeatOn = !state.heartbeatOn;
   // The dot is part of the rig's own header, and that header exists only while the presentation is
-  // showing the rig's screen. Marking dirty in `Pairing`, `NoLink` or `RadioFault` would repaint the
-  // whole 1 kB frame once a second for a dot those faces do not draw - and because one second and the
-  // three-second ring lap are commensurate, that 25 ms block lands on the same ring stop every lap,
-  // which reads as a pause there. The ring's own step is the only thing that should animate in
-  // `Pairing`, and it moves one dot at a time.
-  if (state.screen != rig::Screen::Offline &&
-      presentation::state() == presentation::State::Live) {
+  // showing the rig's screen. Marking dirty in `Pairing` or `RadioFault` would repaint the whole 1 kB
+  // frame once a second for a dot those faces do not draw.
+  if (presentation::state() == presentation::State::Live) {
     state.markDirty();
   }
 }
@@ -204,19 +209,18 @@ void scoreMask(int score, char verdict, uint8_t mask[4]) {
   mask[3] = segmentsFor(verdict);
 }
 
-//: The fault codes: **`Err0` the link is gone** (the OFFLINE screen), `Err1` a capture timeout, `Err2` a
-//: stray result, `Err3` a broken invariant - looked up rather than pronounced, four characters to the width
-//: of the panel. Numbered because the alphabet above has no unambiguous `t`, `O` or `I`, and because the
-//: next fault then costs nothing: `Err4` needs no glyph work.
+//: The fault codes: `Err1` a capture timeout, `Err2` a stray result, `Err3` a broken invariant, `Err4` a
+//: dead radio - looked up rather than pronounced, four characters to the width of the panel. Numbered
+//: because the alphabet above has no unambiguous `t`, `O` or `I`, and because the next fault then costs
+//: nothing: `Err4` needed no glyph work. **`Err0` is retired and its number is not reused**: it named a
+//: lost link, and a link that is merely quiet is no longer a face (docs/rig-state-machine-en.md §11).
 //:
-//: **All five look the same: they blink at one hertz.** The code is the identifier and the rhythm carries
-//: nothing, so there is no special case for the link and no second rate for the others. What differs is
-//: only how long a face stays: `Err0` has no window at all, because a lost link lasts until the link comes
-//: back, and `Err4` - a radio that did not start, or has dropped five times in a minute - has none either,
-//: because waiting is what an operator does about `Err0` and the wrong thing to do about `Err4`. `Err1` to
-//: `Err3` clear after `cfg::FAULT_FACE_MS`. That is when it leaves, not how it looks - do not "fix" the
-//: two into agreement. The fault age is the phase, so the blink starts with the fault rather than wherever
-//: the previous face happened to be.
+//: **All four look the same: they blink at one hertz.** The code is the identifier and the rhythm carries
+//: nothing, so there is no special case for any of them. What differs is only how long a face stays:
+//: `Err4` - a radio that did not start, or has dropped five times in a minute - has no window, because
+//: waiting is the wrong thing to do about it. `Err1` to `Err3` clear after `cfg::FAULT_FACE_MS`. That is
+//: when it leaves, not how it looks - do not "fix" the two into agreement. The fault age is the phase, so
+//: the blink starts with the fault rather than wherever the previous face happened to be.
 void faultMask(uint32_t faultAge, rig::Fault fault, uint8_t mask[4]) {
   if ((faultAge / cfg::DISPLAY_BLINK_MS) % 2 != 0) {
     return;  // the dark half of the blink; every digit stays as it was left
@@ -283,17 +287,6 @@ void screenFace(uint32_t faceAge, rig::Screen screen, int score, uint8_t mask[4]
       scoreMask(score, pass ? 'P' : 'F', mask);
       break;
     }
-    case rig::Screen::Offline:
-      // The link is gone: `Err0`, blinking at the same one hertz as every other code - see `faultMask`.
-      // What marks this face out is duration, not appearance: there is no window on it, so it stays until
-      // the link returns rather than clearing after two seconds like `Err1` to `Err3`.
-      if ((faceAge / cfg::DISPLAY_BLINK_MS) % 2 == 0) {
-        mask[0] = segmentsFor('E');
-        mask[1] = segmentsFor('r');
-        mask[2] = segmentsFor('r');
-        mask[3] = segmentsFor('0');
-      }
-      break;
   }
 }
 
@@ -348,9 +341,8 @@ void displayMask(uint32_t now, uint32_t screenAge, presentation::State presentat
   // The presentation layer outranks the screen (docs/rig-state-machine-en.md §11). `Err4` is decided
   // first, ahead of the boot self-test as well: a radio that refused at power-up is not fixed by waiting,
   // and the two-second test must not hide it. `Pairing` draws `APP` with a rotating fourth digit rather
-  // than any of the rig's faces. `NoLink` draws the old `Offline` face, `Err0`, because a PC was there and
-  // left. A fault window (`Err1` to `Err3`) is the screen's, so it is drawn only while the face is
-  // `RigScreen` - the presentation layer replaces it with the other two.
+  // than any of the rig's faces. A fault window (`Err1` to `Err3`) is the screen's, so it is drawn only
+  // while the face is `RigScreen` - the presentation layer replaces it with the other one.
   const presentation::Face& face = presentation::faceFor(presentationState);
   if (face.panel == presentation::PanelFace::Err4) {
     faultMask(now - state.faultAt, rig::Fault::Radio, mask);
@@ -369,10 +361,6 @@ void displayMask(uint32_t now, uint32_t screenAge, presentation::State presentat
     mask[1] = segmentsFor('P');
     mask[2] = segmentsFor('P');
     mask[3] = static_cast<uint8_t>(1u << presentation::rotationStep(faceAgeAt(now, screenAge)));
-    return;
-  }
-  if (face.panel == presentation::PanelFace::Err0) {
-    screenFace(faceAgeAt(now, screenAge), rig::Screen::Offline, state.score, mask);
     return;
   }
 
@@ -518,13 +506,14 @@ void serviceDisplay(uint32_t now) {
 void serviceLink(uint32_t now) {
   const bool alive = (now - lastPcMessage) < cfg::OFFLINE_AFTER_MS;
   if (!alive && state.link == rig::Link::Alive) {
+    // The link is the protocol layer's own fact now. It no longer chooses a screen: a client that is
+    // attached and quiet is still attached, and the rig is ready either way, so there is nothing to
+    // repaint and no `EVT SCREEN` to send. The button still works while `Gone` (it keys on the
+    // presentation state), and a verdict that never comes reports itself as `Err1`.
     state.link = rig::Link::Gone;
-    state.screen = rig::Screen::Offline;  // invariant: Offline if and only if Gone
-    state.markDirty();
-    protocol::emitScreen(state);
   }
-  // Recovery is handled where it happens - by `poll` setting `Alive` - and the screen reset lives in the
-  // command handlers, so a keepalive cannot overwrite a verdict that is still being read.
+  // Recovery is handled where it happens - by `poll` setting `Alive` - and no screen is reset here, so a
+  // keepalive cannot overwrite a verdict that is still being read.
 }
 
 //: Drive the third machine from the two layers it reads (docs/rig-state-machine-en.md §11). Nothing here
@@ -553,10 +542,8 @@ void servicePresentation(uint32_t now) {
   }
 
   // P2 is the protocol's ten seconds of silence, applied while the fact holds rather than only on its
-  // edge. `Subscribed` can enter `Live` after the rig has already gone `Gone` - a PC that attaches late -
-  // and that rig has to reach `NoLink` in the same pass, not sit on `Live` with a dead protocol
-  // underneath until the next command. In `Pairing` and `NoLink` the matrix consumes it, so repeating it
-  // costs nothing and cannot move the state twice.
+  // edge. In `Live` the matrix consumes it - a quiet peer is still a peer, so nothing moves - and in
+  // `Pairing` and `RadioFault` it is ignored. Repeating it costs nothing and cannot move the state twice.
   if (state.link == rig::Link::Gone) {
     presentation::apply(presentation::Event::Silence);
   }
@@ -579,7 +566,7 @@ void setup() {
   // a UART always answers attached, so a serial rig starts `Live` and never shows `WAITING`
   // (docs/rig-state-machine-en.md §11). Not an event and not in the matrix - a stack that starts has
   // exactly one thing to be.
-  presentation::begin(transport::attached(), state.pcAlive());
+  presentation::begin(transport::attached());
   presentationAttached = transport::attached();
   lastDisplayedPresentation = presentation::state();
 
@@ -599,9 +586,8 @@ void setup() {
 
   protocol::emitHello();
   // The rig starts READY with a ten-second grace: a PC on the other end of the cable sends its first
-  // keepalive long before it expires. Booting OFFLINE would show the panel calling itself dead before
-  // anything has had a chance to speak, and the operator would be looking at a screen that reads like a
-  // fault. Losing a live link is worth reporting; having no history yet is not.
+  // keepalive long before it expires. A fresh rig is waiting, not broken, and the ten seconds only set
+  // the protocol's own `link` flag now - there is no screen that calls the rig dead.
   lastPcMessage = millis();
   state.link = rig::Link::Alive;
   state.screen = rig::Screen::Ready;
@@ -613,21 +599,14 @@ void loop() {
   const uint32_t now = millis();
 
   // A command from the PC *is* the PC being alive. The return value used to be discarded, so the link
-  // timer only ever started at boot and the rig declared OFFLINE ten seconds later however much it was
-  // talking to the PC.
+  // timer only ever started at boot and the rig counted ten seconds however much it was talking to the PC.
   if (protocol::poll(state)) {
     lastPcMessage = now;
-    const bool wasGone = (state.link == rig::Link::Gone);
     state.link = rig::Link::Alive;
-    // A command is the PC's return, so the link failure screen gives way. It is the *only* screen this
-    // resets: a verdict or a capture belongs to the rig and a keepalive must not clear it.
-    if (wasGone && state.screen == rig::Screen::Offline) {
-      state.screen = rig::Screen::Ready;
-      state.markDirty();
-      protocol::emitScreen(state);
-    }
-    // P1: a command is proof that somebody is on the other end, which is the only thing `NoLink` was
-    // waiting for. In `Live` the cell is handled in place - a keepalive does not repaint anything.
+    // A command is the PC's return. It does not reset a screen any more: the link has no face, and a
+    // verdict or a capture belongs to the rig - a keepalive must not clear it.
+    // P1: a command proves somebody is on the other end; in `Live` the cell is handled in place, so a
+    // keepalive does not repaint anything.
     presentation::apply(presentation::Event::Command);
   }
   serviceButton(now);
@@ -636,12 +615,13 @@ void loop() {
   serviceVerdictTimeout(now);
   serviceLink(now);
 
-  // The five reachable screen/link combinations are enforced here rather than assumed. This costs a
-  // comparison per loop and turns a state bug into a serial line instead of a panel that quietly lies.
+  // The two rules that separate a working rig from a lying one are enforced here rather than assumed: a
+  // capture in flight carries no verdict timer, and a verdict face carries one. This costs a comparison
+  // per loop and turns a state bug into a serial line instead of a panel that quietly lies.
   //
-  // One report per episode, re-armed as soon as the pairing is sound again: the check keeps watching after
-  // it fires. A latch that reported once and then stayed quiet looked like a monitor while saying nothing at
-  // all about the second violation.
+  // One report per episode, re-armed as soon as the state is sound again: the check keeps watching after
+  // it fires. A latch that reported once and then stayed quiet looked like a monitor while saying nothing
+  // at all about the second violation.
   static bool invariantReported = false;
   if (rig::invariantHolds(state)) {
     invariantReported = false;
@@ -659,9 +639,8 @@ void loop() {
   // The serial wire answers false: a port that is open reads the very next line already.
   if (transport::subscribed()) {
     protocol::emitScreen(state);
-    // B2: the subscription completed. Both screens are still on `NoLink` at this point, so the PC that
-    // just subscribed sees the link face until this event moves the presentation to `Live` - which is the
-    // honest order: attaching is not the same fact as being able to hear the rig.
+    // B2: the subscription completed. The presentation is already `Live` (B1 attached), so this is the
+    // handled-in-place case; the emit above is what the freshly subscribed PC needs.
     presentation::apply(presentation::Event::Subscribed);
   }
 

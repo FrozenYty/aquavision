@@ -34,7 +34,7 @@ one here — stale summaries are worse than none.
 
 | User | Lane | Default: read-only |
 |---|---|---|
-| Yao Tianyu | A — capture, architecture, documents | B, C |
+| Tianyu Yao | A — capture, architecture, documents | B, C |
 | Gao Tianxiang | B — data, model, backend | A, C |
 | Sun Jianheng | C — frontend, annotation | A, B |
 | Fu Yijia | D — test cases, acceptance, demo material | everything else |

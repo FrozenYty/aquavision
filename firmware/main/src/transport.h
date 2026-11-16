@@ -16,9 +16,8 @@
 namespace transport {
 
 //: What `begin` reports. A radio that will not start has to be **reportable rather than fatal**: the rig
-//: still runs, still draws its panel, and shows `Err4` - a dead radio is `Err0`'s lie with a plausible
-//: face, because a rig nobody can reach looks exactly like a PC that stopped talking
-//: (docs/rig-transport-en.md §8, §10).
+//: still runs, still draws its panel, and shows `Err4` - a dead radio has to say so, because a rig nobody
+//: can reach otherwise looks exactly like a PC that stopped talking (docs/rig-transport-en.md §8, §10).
 enum class Result { Ok, Failed };
 
 //: Opens the wire. Serial at the baud in `config.h` for now, and always `Ok`: a UART that is there at
@@ -65,9 +64,8 @@ bool subscribed();
 //:
 //: **Serial always answers true**, and that is the honest answer rather than a shortcut: a UART is open
 //: at boot and the rig cannot see whether a cable is plugged in (§2 of the transport document), so the
-//: serial build boots `Live` or `NoLink` and never shows `WAITING`. It is not a liveness claim
-//: either: an attached central that says nothing still makes the protocol layer `Gone`, and the
-//: presentation layer is what keeps those two apart.
+//: serial build boots `Live` and never shows `WAITING`. It is not a liveness claim either: an attached
+//: central that says nothing still makes the protocol layer `Gone`, which no longer chooses a face.
 bool attached();
 
 }  // namespace transport

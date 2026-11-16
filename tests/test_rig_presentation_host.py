@@ -22,26 +22,24 @@ import pytest
 REPO = Path(__file__).resolve().parent.parent
 SRC = REPO / "firmware" / "main" / "src"
 
-STATES = ["Pairing", "NoLink", "Live", "RadioFault"]
+STATES = ["Pairing", "Live", "RadioFault"]
 EVENTS = ["Attached", "Subscribed", "Detached", "RadioFaulted", "Command", "Silence"]
 
 #: The same independent transcription the source-level test carries.
 EXPECTED = {
-    "Pairing": ["NoLink", "IGNORED", "IGNORED", "RadioFault", "IGNORED", "IGNORED"],
-    "NoLink": ["IGNORED", "Live", "Pairing", "RadioFault", "Live", "HANDLED"],
-    "Live": ["REJECTED", "IGNORED", "Pairing", "RadioFault", "HANDLED", "NoLink"],
+    "Pairing": ["Live", "IGNORED", "IGNORED", "RadioFault", "IGNORED", "IGNORED"],
+    "Live": ["REJECTED", "IGNORED", "Pairing", "RadioFault", "HANDLED", "HANDLED"],
     "RadioFault": ["IGNORED", "IGNORED", "IGNORED", "HANDLED", "IGNORED", "IGNORED"],
 }
 
 EXPECTED_FACES = {
     "Pairing": ("WaitingForPc", "Pairing"),
-    "NoLink": ("Offline", "Err0"),
     "Live": ("RigScreen", "RigScreen"),
     "RadioFault": ("RadioFault", "Err4"),
 }
 
-OLED = ["WaitingForPc", "Offline", "RigScreen", "RadioFault"]
-PANEL = ["Pairing", "Err0", "RigScreen", "Err4"]
+OLED = ["WaitingForPc", "RigScreen", "RadioFault"]
+PANEL = ["Pairing", "RigScreen", "Err4"]
 
 HARNESS = r"""
 #include <cstdint>
@@ -49,6 +47,7 @@ HARNESS = r"""
 
 #include "config.h"
 #include "presentation.h"
+#include "rig_state.h"
 
 using presentation::Cell;
 using presentation::Event;
@@ -59,24 +58,21 @@ static const Event kEvents[] = {Event::Attached, Event::Subscribed, Event::Detac
                                 Event::RadioFaulted, Event::Command, Event::Silence};
 static const char* kEventNames[] = {"Attached", "Subscribed", "Detached", "RadioFaulted",
                                     "Command", "Silence"};
-static const State kStates[] = {State::Pairing, State::NoLink, State::Live, State::RadioFault};
-static const char* kStateNames[] = {"Pairing", "NoLink", "Live", "RadioFault"};
+static const State kStates[] = {State::Pairing, State::Live, State::RadioFault};
+static const char* kStateNames[] = {"Pairing", "Live", "RadioFault"};
 
 // Enter a state through the machine's own entry points, so a state the harness cannot reach is a
 // failure rather than a silently skipped row.
 static void setState(State state) {
   switch (state) {
     case State::Pairing:
-      presentation::begin(false, false);
-      break;
-    case State::NoLink:
-      presentation::begin(true, false);
+      presentation::begin(false);
       break;
     case State::Live:
-      presentation::begin(true, true);
+      presentation::begin(true);
       break;
     case State::RadioFault:
-      presentation::begin(false, false);
+      presentation::begin(false);
       presentation::apply(Event::RadioFaulted);
       break;
   }
@@ -97,13 +93,13 @@ static const char* outcomeName(Outcome outcome) {
 }
 
 int main() {
-  for (unsigned s = 0; s < 4; ++s) {
+  for (unsigned s = 0; s < 3; ++s) {
     for (unsigned e = 0; e < 6; ++e) {
       setState(kStates[s]);
       const Cell cell = presentation::apply(kEvents[e]);
       const char* target = "-";
       if (cell.outcome == Outcome::Move || cell.outcome == Outcome::Rejected) {
-        for (unsigned t = 0; t < 4; ++t) {
+        for (unsigned t = 0; t < 3; ++t) {
           if (kStates[t] == cell.target) {
             target = kStateNames[t];
           }
@@ -113,7 +109,7 @@ int main() {
              target);
     }
   }
-  for (unsigned s = 0; s < 4; ++s) {
+  for (unsigned s = 0; s < 3; ++s) {
     const presentation::Face& face = presentation::faceFor(static_cast<State>(s));
     printf("face %s %u %u\n", kStateNames[s], static_cast<unsigned>(face.oled),
            static_cast<unsigned>(face.panel));
@@ -123,6 +119,19 @@ int main() {
   for (unsigned k = 0; k < 8; ++k) {
     const unsigned age = k * cfg::DISPLAY_ROTATE_MS;
     printf("rotation %u %u\n", age, static_cast<unsigned>(presentation::rotationStep(age)));
+  }
+  // The invariant, through the real predicate: a capture in flight must not carry a verdict timer.
+  const rig::Screen screens[] = {rig::Screen::Ready, rig::Screen::Capturing, rig::Screen::Pass,
+                                 rig::Screen::Retake};
+  const char* screenNames[] = {"Ready", "Capturing", "Pass", "Retake"};
+  for (unsigned s = 0; s < 4; ++s) {
+    for (unsigned armed = 0; armed < 2; ++armed) {
+      rig::State sample;
+      sample.screen = screens[s];
+      sample.verdictAt = armed ? 1000u : 0u;
+      printf("invariant %s %u %u\n", screenNames[s], armed,
+             static_cast<unsigned>(rig::invariantHolds(sample)));
+    }
   }
   return 0;
 }
@@ -195,9 +204,9 @@ def expected_cell(state: str, event_index: int) -> tuple[str, str]:
 
 
 def test_the_real_machine_moves_every_cell_as_the_matrix_says(tmp_path: Path) -> None:
-    """4 x 6, driven through `apply()` itself - a table read with the wrong indices fails here."""
+    """3 x 6, driven through `apply()` itself - a table read with the wrong indices fails here."""
     found = cells(run_harness(tmp_path))
-    assert len(found) == 24, f"the harness reported {len(found)} cells, not 24"
+    assert len(found) == 18, f"the harness reported {len(found)} cells, not 18"
     for state in STATES:
         for index, event in enumerate(EVENTS):
             assert found[(state, event)] == expected_cell(state, index), (
@@ -205,7 +214,7 @@ def test_the_real_machine_moves_every_cell_as_the_matrix_says(tmp_path: Path) ->
             )
 
 
-def test_the_real_machine_reports_the_four_faces(tmp_path: Path) -> None:
+def test_the_real_machine_reports_the_three_faces(tmp_path: Path) -> None:
     """The face table through `faceFor()`, so a swapped row cannot hide behind a correct document."""
     faces = {}
     for line in run_harness(tmp_path):
@@ -214,6 +223,25 @@ def test_the_real_machine_reports_the_four_faces(tmp_path: Path) -> None:
         _, state, oled, panel = line.split()
         faces[state] = (OLED[int(oled)], PANEL[int(panel)])
     assert faces == EXPECTED_FACES
+
+
+def test_the_real_invariant_catches_an_armed_capture_timer(tmp_path: Path) -> None:
+    """The flash's signature: a capture in flight with the previous verdict's timer still armed."""
+    lines = run_harness(tmp_path)
+    held = {
+        (parts[1], parts[2] == "1"): parts[3] == "1"
+        for parts in (line.split() for line in lines)
+        if parts[0] == "invariant"
+    }
+    assert held[("Capturing", False)] is True, (
+        "a capture with no verdict timer is the healthy state"
+    )
+    assert held[("Capturing", True)] is False, (
+        "an armed verdict timer during a capture is the bug the bench saw"
+    )
+    assert held[("Pass", True)] is True, "a verdict face must carry its timer"
+    assert held[("Pass", False)] is False, "a verdict face with no timer would never expire"
+    assert held[("Retake", True)] is True and held[("Retake", False)] is False
 
 
 def test_the_rotation_is_six_distinct_steps_on_the_clock(tmp_path: Path) -> None:

@@ -70,6 +70,7 @@ void handleLine(rig::State& state, char* text) {
     protocol::emitPong();
   } else if (strcmp(command, "READY") == 0) {
     state.screen = rig::Screen::Ready;
+    state.verdictAt = 0;  // the verdict face is over, so its timer is not left armed
     state.markDirty();
     protocol::emitScreen(state);
   } else if (strcmp(command, "SCAN") == 0) {
@@ -120,8 +121,6 @@ const char* screenName(rig::Screen screen) {
       return "PASS";
     case rig::Screen::Retake:
       return "RETAKE";
-    case rig::Screen::Offline:
-      return "OFFLINE";
   }
   return "UNKNOWN";
 }

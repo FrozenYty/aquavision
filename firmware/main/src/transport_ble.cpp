@@ -569,10 +569,10 @@ bool subscribed() {
 }
 
 //: True while a central holds the link: `Connected` before it subscribes and `Streaming` after. This is
-//: the carrier fact the presentation layer reads to separate `Pairing` from `NoLink`
+//: the carrier fact the presentation layer reads to separate `Pairing` from `Live`
 //: (docs/rig-state-machine-en.md §11); `Advertising` and `Fault` answer false, because there is nobody
 //: attached in either. It is not a liveness claim: the protocol layer still calls a silent central
-//: `Gone`, and the presentation layer is what keeps the two apart.
+//: `Gone`, which no longer chooses a face.
 bool attached() {
   const State state = currentState();
   return state == State::Connected || state == State::Streaming;

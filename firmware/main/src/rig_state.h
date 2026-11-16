@@ -25,7 +25,6 @@ enum class Screen {
   Capturing,  // the button was pressed, the frame is on its way to the PC
   Pass,       // the PC returned PASS
   Retake,     // the PC returned RETAKE, with a reason
-  Offline,    // the PC has said nothing for `cfg::OFFLINE_AFTER_MS`
 };
 
 // Why a frame failed the quality gate. The strings are what the protocol carries; the display maps
@@ -57,8 +56,10 @@ struct State {
   int frames = 0;       // accepted or judged, this session
   Fault fault = Fault::None;
   uint32_t faultAt = 0;  // millis of the most recent fault; the face holds `cfg::FAULT_FACE_MS`
-  //: When PASS or RETAKE was shown. The panel returns to READY after `cfg::VERDICT_FACE_MS` without a new
-  //: capture, so a conclusion does not stay up forever with no date on it.
+  //: When PASS or RETAKE was shown, and **0 when no verdict face is armed**. The panel returns to READY
+  //: after `cfg::VERDICT_FACE_MS` without a new capture, so a conclusion does not stay up forever with no
+  //: date on it. Starting a capture clears it: the previous verdict's timer must not be able to pull the
+  //: new capture back, which is the flash the bench saw (`CAP` appearing and then snapping to `READY`).
   uint32_t verdictAt = 0;
   Link link = Link::Alive;
   bool heartbeatOn = true;
@@ -73,20 +74,21 @@ struct State {
   //: waste the I2C bus; a redraw on change is enough.
   bool dirty = true;
 
-  bool pcAlive() const { return link == Link::Alive; }
-
   void markDirty() { dirty = true; }
 };
 
-//: The three facts that separate a working rig from a lying one. Of the ten screen/link combinations
-//: five are reachable; these are the lines between them.
+//: The line between a working rig and a lying one, now that the link no longer has a screen: **a capture
+//: in flight carries no verdict face's timer, and a verdict face carries one**. The first half is the
+//: flash this round fixes - an armed timer during `CAPTURING` is the previous verdict's, and it used to
+//: be able to pull the new capture back to `READY`. The second half keeps every verdict face expirable.
 inline bool invariantHolds(const State& state) {
-  // OFFLINE if and only if the link is gone. Everything else requires a live PC: a capture, a verdict
-  // and an idle-but-ready rig all mean somebody is on the other end of the cable.
-  if (state.screen == Screen::Offline) {
-    return state.link == Link::Gone;
+  if (state.screen == Screen::Capturing) {
+    return state.verdictAt == 0;
   }
-  return state.link == Link::Alive;
+  if (state.screen == Screen::Pass || state.screen == Screen::Retake) {
+    return state.verdictAt != 0;
+  }
+  return true;
 }
 
 inline const char* linkName(Link link) { return link == Link::Alive ? "ALIVE" : "GONE"; }

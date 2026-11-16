@@ -19,7 +19,7 @@ in English.
 | 4 | MCU board | DZYJ ESP32-S3 N16R8 DevKitC, headers pre-soldered | 1 | 26.60 | JD | Trigger, panel, I2C master |
 | 5 | Jumper wires | DZYJ 40-pin ribbon, male-male / male-female / female-female, 120 pcs | 1 | 8.26 | JD | All wiring |
 | 6 | Breadboard | DZYJ MB-102, 1660 tie points, with power rails | 1 | 23.70 | JD | Solderless assembly; the 405-hole board is too small once the ESP32 is seated |
-| 7 | Resistors | LR1F330R metal film 330 Ω ±1% 600 mW, through-hole, 10 pieces | 1 | 5.10 | LCSC | Segment current limiting on the display. Seven 240 Ω are needed, one per segment, and this lot's value is 330 Ω |
+| 7 | Resistors | LR1F330R metal film 330 Ω ±1% 600 mW, through-hole, 10 pieces | 1 | 5.10 | LCSC | Segment current limiting on the display: seven 330 Ω, one per segment, hold each segment's current to what the panel can take, and this lot is that value |
 | 8 | Trigger button | XKB8080-W 8×8 through-hole **momentary** switch, blue cap, 13.65 mm tall, 5 pieces | 1 | 5.80 | LCSC | Panel mount; the larger cap and height fix the kit's hard-to-hit small switch |
 
 **Total ¥354.56.** The status display (0.96" OLED) comes from the STM32 kit on hand and is not bought, and
@@ -84,17 +84,17 @@ Assemble and power on in four steps, one at a time, so a fault is localised imme
    lights is a gap at a known position in that sweep**, which is the reason the sweep is sequential rather
    than a static row of eights.
    **The panel answers a verdict, not the button**: a press starts a capture, and with the server attached
-   the panel shows `CAP` until `CMD RESULT` answers it. **With no PC on the link, a press does nothing and
-   the rig goes `OFFLINE` ten seconds after power-up**, and the panel blinks `Err0` - that is not a fault.
+   the panel shows `CAP` until `CMD RESULT` answers it. **A press is refused only while a face owns the
+   screens** (`WAITING` with nobody attached, or a dead radio), and with no PC on the link the rig keeps
+   showing its own screen - a quiet peer is not a fault.
    **The panel is common anode, so a segment is lit by pulling its pin LOW**, and a segment that never lights
    is a reversed resistor or a wrong segment long before it is a dead pin. **A lead too short to reach is a
    mechanical problem with a mechanical fix** - a 2 cm jumper makes up the distance - and not a reason to
    rearrange the segment order, because the order is what the firmware writes.
    **The lamps and the bar are gone**; what the panel can show now is the self-test, `READY`, `CAPTURING`,
-   `PASS`, `RETAKE`, `Err0` and the three fault windows `Err1`-`Err3`. **The button has one meaning - a press
-   captures - so the fault windows cannot be performed on demand**: they appear when their event happens, and
-   on a bench where nothing is failing the serial log is where they are seen. `Err0` needs only the PC to fall
-   silent for ten seconds.
+   `PASS`, `RETAKE` and the fault windows `Err1`-`Err4` (`Err0` is retired and not reused). **The button has
+   one meaning - a press captures - so the fault windows cannot be performed on demand**: they appear when
+   their event happens, and on a bench where nothing is failing the serial log is where they are seen.
 4. Camera — exposure lock, `python scripts/test_exposure.py` exits 0; then `python scripts/test_rig.py`
    exits 0, which measures the left/right brightness ratio, the 5 cm target width and the brightness
    drift of a ten-minute run under a fixed light level. **Both are required**: the first asks whether
@@ -124,7 +124,7 @@ flowchart LR
   ESP -->|"3V3"| OLED["OLED, 0x3C"]
   ESP -->|"GPIO8 / GPIO9"| OLED
   ESP --> B["button, GPIO4"]
-  ESP -->|"GPIO3, 13-18, 240 Ω each"| SEG["display segments A-G"]
+  ESP -->|"GPIO3, 13-18, 330 Ω each"| SEG["display segments A-G"]
   ESP -->|"GPIO5, 6, 7, 10, direct"| COM["display digit commons"]
   GND["one ground"] --- ESP
   GND --- OLED
@@ -138,13 +138,13 @@ the firmware is built with `ARDUINO_USB_CDC_ON_BOOT=0` and sends `Serial` to UAR
 
 | From | To | Colour | Why |
 |---|---|---|---|
-| ESP32 `3` | 240 Ω to display segment A | brown | a segment is lit by pulling its pin LOW, so a dark segment is a HIGH pin |
-| ESP32 `13` | 240 Ω to display segment B | brown | the same, one segment along |
-| ESP32 `14` | 240 Ω to display segment C | brown | the same |
-| ESP32 `15` | 240 Ω to display segment D | brown | the same |
-| ESP32 `16` | 240 Ω to display segment E | brown | the same |
-| ESP32 `17` | 240 Ω to display segment F | brown | the same |
-| ESP32 `18` | 240 Ω to display segment G | brown | the middle bar: the one segment `READY` lights, alone |
+| ESP32 `3` | 330 Ω to display segment A | brown | a segment is lit by pulling its pin LOW, so a dark segment is a HIGH pin |
+| ESP32 `13` | 330 Ω to display segment B | brown | the same, one segment along |
+| ESP32 `14` | 330 Ω to display segment C | brown | the same |
+| ESP32 `15` | 330 Ω to display segment D | brown | the same |
+| ESP32 `16` | 330 Ω to display segment E | brown | the same |
+| ESP32 `17` | 330 Ω to display segment F | brown | the same |
+| ESP32 `18` | 330 Ω to display segment G | brown | the middle bar: the one segment `READY` lights, alone |
 | ESP32 `5` | display digit 1 common (left) | blue | a common is driven HIGH to select its digit, and carries the sum of that digit's segments: **no resistor** |
 | ESP32 `6` | display digit 2 common | blue | the same |
 | ESP32 `7` | display digit 3 common | blue | the same |
@@ -169,7 +169,7 @@ the power off, SDA to `3V3` should read a few kOhm; well under 1 kOhm means too 
 no longer has another board to blame: if the scan finds nothing, the module, its four wires and the header
 are the whole list.
 
-**Check the panel's resistors before the first power-on.** Seven of them, one per segment, each 240 Ω and
+**Check the panel's resistors before the first power-on.** Seven of them, one per segment, each 330 Ω and
 each between the pin and its segment - none shared, and **none on a common**. A common with a resistor on
 it, or two commons joined, is a panel that lights two digits dimly and reads as a smear. Then confirm the
 commons are on the four pins the table names, because a common swapped with a segment is a digit that never
@@ -178,6 +178,14 @@ lights rather than a segment that is wrong.
 **A common carries a digit's whole segment current, so only one may be high at a time.** That is the
 multiplexer's job, and it is the one rule of this panel a person can check with a meter: with the firmware
 running, four pins alternate and never two at once.
+
+**330 Ω is the value this panel is built to, and the current it sets is the reason.** A segment pin pulled
+LOW sits at about 0 V and the common at 3.3 V, so with an LED forward voltage near 2 V - the one assumption in
+this arithmetic, because no display datasheet is in hand - a segment draws about 4 mA. A common with all seven
+of its segments lit carries seven of those at once, about 28 mA, but the multiplexer leaves each digit on for
+a quarter of the time, so the average on a common is about 7 mA. **The 40 mA a GPIO is rated for is a
+continuous figure**, so 7 mA is what the part carries all day and 28 mA is its worst instant; both are inside
+the rating.
 
 ## 6. Acceptance numbers
 
@@ -190,5 +198,5 @@ running, four pins alternate and never two at once.
 | Light stability | Ten minutes of capture on USB: mean brightness of the first and last frame differ by < 5 % |
 | Polariser flatness | No visible warp; the lens-side sheet locked at the darkest orientation |
 | Target size | A 5 cm object ≥ 45 px wide at 640 input |
-| Display | The boot self-test walks all 28 segment positions and then shows `8888`; a press from `READY` starts a capture and the panel shows `CAPTURING`; and `Err0` blinks within ten seconds of the PC falling silent |
+| Display | The boot self-test walks all 28 segment positions and then shows `8888`; a press from `READY` starts a capture and the panel shows `CAPTURING`; with nothing attached the panel draws `APP` with the fourth digit turning and the OLED says `WAITING` |
 | Tank | 24 h filled, no seepage, front wall without scratches or tint |

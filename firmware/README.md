@@ -67,7 +67,7 @@ python -m pip install platformio
 | Signal | ESP32-S3 | Note |
 |---|---|---|
 | Button | GPIO 4 | to GND; `INPUT_PULLUP`, so a press reads LOW |
-| Display segment A | GPIO 3 | 240 Ω between the pin and the segment |
+| Display segment A | GPIO 3 | 330 Ω between the pin and the segment |
 | Display segment B | GPIO 13 | the same |
 | Display segment C | GPIO 14 | the same |
 | Display segment D | GPIO 15 | the same |
@@ -85,7 +85,7 @@ python -m pip install platformio
 that digit, and a segment pin driven LOW lights that segment, so a dark segment is a HIGH pin - the
 opposite of the obvious wiring. Check that before wondering why nothing lights.
 
-Each segment has its own 240 Ω resistor between the pin and the segment, and the commons have none. A
+Each segment has its own 330 Ω resistor between the pin and the segment, and the commons have none. A
 common therefore carries the sum of its digit's segment currents, and **only one common may be high at
 any moment** - which is what the multiplexer in `main.cpp` guarantees.
 
@@ -97,7 +97,7 @@ supply pin on the display and no 5 V rail in this wiring.
 128 x 64, monochrome, five bands whose baselines are named constants so nothing shifts between states:
 
 ```
-y 1..7    AQUAVISION                                  ONLINE        disc on the caps' centre row
+y 1..7    AQUAVISION                                      ●              liveness dot only
 y 8       -------------------------------------------------------
 y 12..31                              94                            18 px score, right-aligned
           QUALITY                                                   7x13 bold label, rows 17-26
@@ -105,7 +105,7 @@ y 33..53  +-----------------------------------------------------+
           |                       RETAKE                        |    filled = PASS, outline = RETAKE
           +-----------------------------------------------------+
 y 54      -------------------------------------------------------
-y 55..62  v1.20                                    FRAMES 12
+y 55..62  v1.21                                    FRAMES 12
 ```
 
 **Shape carries the verdict.** A pass fills the banner, a retake outlines it, so the two are
@@ -118,7 +118,7 @@ smudge.
 19, so at baseline 31 its digits occupy rows 12-31; the bold 7x13 label reports ascent 9, so at baseline
 26 it occupies 17-26. Both centre on 21.5. A 5x7 label at the same baseline sat 1.5 px low.
 
-**The footer is the firmware version and the frame counter.** `v1.20` on the left, built from the same
+**The footer is the firmware version and the frame counter.** `v1.21` on the left, built from the same
 constant `EVT HELLO` sends, so the panel and the log cannot disagree about which build is running;
 `FRAMES 12` on the right is a real capture count. There is no session tally any more - a count of verdicts
 is a statistic, and the PC keeps the record.
@@ -127,26 +127,31 @@ is a statistic, and the PC keeps the record.
 of six dots, one lit at a time at a quarter-second, which is one step of the same phase as the panel's
 rotating segment (`cfg::DISPLAY_ROTATE_STEPS`). Those six are the panel's rim segments: one per segment
 the fourth digit turns through, so the row and the segment cannot disagree. At three pixels a filled and a
-hollow mark were indistinguishable; at radius 2 the animation reads. OFFLINE replaces the whole screen with
-three centred lines - the earlier single line at 12 px was wider than the panel and lost its last letters.
+hollow mark were indistinguishable; at radius 2 the animation reads.
 
-**At power-up, with no central attached, the OLED shows `OFFLINE`'s face with the headline changed to
-`WAITING`, and nothing moves.** That is the `Pairing` face of the presentation layer
-(`docs/rig-state-machine-en.md` §11): the rig has no PC yet and nothing is wrong, so it must not draw the
-`OFFLINE` box, which means *a PC was here and left*. `WAITING` is drawn by the same `drawStatusFace` as
-`OFFLINE` and `RADIO FAULT` - same inverted box, same `AQUAVISION` header, same baselines, same body line,
-and the same Helvetica bold 12 title - because the twelve-cell progress row it replaced implied an amount of
-progress that does not exist, and a misleading indicator is worse than none. **The title is `WAITING`, not
-`WAITING FOR PC`, because of the character count and not the font**: thirteen characters do not fit bold 12,
-and shrinking the type to fit them is what made this face look empty beside `OFFLINE`. A seven-character
-title at the house size plus the shared body line reads as "waiting - nothing connected yet", which is the
-structure `OFFLINE` already uses, so the two faces are indistinguishable except for their words. The panel
-draws `APP` with its fourth digit turning through the six rim segments at the same 250 ms step as
+**At power-up, with no central attached, the OLED shows the house status face with the headline `WAITING`,
+and nothing moves.** That is the `Pairing` face of the presentation layer
+(`docs/rig-state-machine-en.md` §11): the rig has no PC yet and nothing is wrong. `WAITING` is drawn by the
+same `drawStatusFace` as `RADIO FAULT` - same inverted box, same `AQUAVISION` header, same baselines, same
+body line, and the same Helvetica bold 12 title - because the twelve-cell progress row it replaced implied an
+amount of progress that does not exist, and a misleading indicator is worse than none. **The title is
+`WAITING`, not `WAITING FOR PC`, because of the character count and not the font**: thirteen characters do
+not fit bold 12, and shrinking the type to fit them is what made this face look empty. A seven-character
+title at the house size plus the body line `NO LINK TO PC` reads as "waiting - nothing connected yet". The
+panel draws `APP` with its fourth digit turning through the six rim segments at the same 250 ms step as
 `CAPTURING`, from the same `presentation::rotationStep`, so the two faces cannot disagree. **There is no
 position table anywhere**: the ring this replaces was a twelve-entry table, and one wrong pair lit the
 fourth digit's bottom twice while the first digit's never appeared; the step is now `1u << step`, and a
-shift has no entry to get wrong. On `rig-serial` this face never appears: a UART has no carrier signal, so
-the serial build cannot tell "nobody yet" from "somebody left" and uses `OFFLINE`/`Err0` for both.
+shift has no entry to get wrong.
+
+**`OFFLINE`, `Err0` and the `NoLink` state are retired.** In BLE a link simply ends and the rig is available
+again; a client that stays connected but stops talking has the same remedy as one that never connected -
+wait. Two faces for one remedy made the operator think a step further for nothing, and `Err0` called
+"waiting" a fault. So an attached-but-silent client lands in `Live` and sees the rig's own screen. **`Err0`'s
+number is not reused**: the remaining codes keep `Err1`-`Err4`, and the gap costs nothing. The OLED header
+no longer names the link either: a silent peer is not a fault, so the right-hand side is the liveness dot
+alone. On `rig-serial` the `Pairing` face never appears: a UART has no carrier signal and always answers
+attached, so the serial build starts and stays `Live`.
 
 **The face is static and is sent once.** There is no per-step redraw and no partial tile update - that path
 was the only writer in this build that addressed less than a full buffer, and it corrupted the glass - so
@@ -185,7 +190,6 @@ dash after a power-up sat on digit 2 instead of digit 1.
 | `CAPTURING` | `CAP`, with one segment walking the rim of the fourth digit | 250 ms per step |
 | `PASS` | a left-to-right sweep, then the score in digits 1-3 and `P`: ` 95P` | 250 ms sweep on arrival, then steady |
 | `RETAKE` | the score and `F`, the whole panel blinking: ` 40F` | 1 Hz |
-| `OFFLINE` | the code `Err0`, blinking | 1 Hz, and no window: it lasts as long as the link is gone |
 | fault `Err1` | capture timeout, blinking | 1 Hz for 2 s |
 | fault `Err2` | stray result, blinking | 1 Hz for 2 s |
 | fault `Err3` | broken invariant, blinking | 1 Hz for 2 s |
@@ -203,45 +207,42 @@ vanished and another lingered. The step is `1u << step` now, and a bit shift has
 check asserts the definition (six positions, six distinct segments, no repeats) rather than a copy of the
 table. **The shape is the distinction, not the direction**: the first version walked the `READY` marquee
 backwards and the bench rejected it, because two dashes moving opposite ways look the same at a glance.
-`NoLink` is the state that shows `Err0`, and it means a central attached and went silent. That separation
-is the presentation layer's (`docs/rig-state-machine-en.md` §11), and it is why a rig powered up on a bench
-no longer blinks a fault at nobody.
+A central that attaches and then goes silent is not a third face: the rig stays on its own screen, which is
+the presentation layer's decision (`docs/rig-state-machine-en.md` §11), and it is why a rig powered up on a
+bench no longer blinks a fault at nobody.
 
-**`READY` is a one-way marquee; `OFFLINE` is a code.** Digits 1, 2, 3, 4 and straight back to 1, half a second
-at each position: two seconds a cycle, no dark frame, and never more than one dash lit. **The wrap is
-deliberate** - the dash starts over at the first digit instead of turning round, so the face is a conveyor
-with a visible break, and `config.h` says not to "fix" it into a bounce. An earlier version held all four
-dashes for a second instead; the marquee replaced it. It cannot be mistaken for `OFFLINE` either, which is a
-code now, half a second either way.
+**`READY` is a one-way marquee.** Digits 1, 2, 3, 4 and straight back to 1, half a second at each position:
+two seconds a cycle, no dark frame, and never more than one dash lit. **The wrap is deliberate** - the dash
+starts over at the first digit instead of turning round, so the face is a conveyor with a visible break, and
+`config.h` says not to "fix" it into a bounce. An earlier version held all four dashes for a second instead;
+the marquee replaced it.
 
-**`Err0` is the `OFFLINE` screen; `Err1`-`Err4` are fault windows, and all five look the same.** Each code
-blinks at one hertz - the code is the identifier and the rhythm carries nothing, so there is no second rate
-and no special case for the link. What differs is only how long a face stays: `Err0` has no window, because a
-lost link lasts until the link comes back, `Err4` has none either because a dead radio is not fixed by
-waiting, and `Err1` to `Err3` clear after two seconds. That is when it leaves, not how it looks. The three
-windows are there because those events used to produce a log line and nothing a person at the bench could
-see, which made a broken rig and an idle one look the same. **`Err4` is the `rig-ble` build's code for a
-radio that did not start, or whose link died five times in a minute while it was carrying the protocol**
-- a client that connects and leaves politely is not a drop, which is what lets a bench session of
-deliberate connect/disconnect cycles run without taking the rig off the air. It outranks `Err0`, which is
-true at the same moment but says the wrong thing - waiting is the right answer to a lost link and the
-wrong one to a dead radio. The OLED has no code face, so on `Err4` it draws `RADIO FAULT` and
-`REFLASH RIG-SERIAL` itself, and its `OFFLINE` line reads `NO LINK TO PC` instead of `CHECK USB CABLE` in
-that build.
+**`Err1`-`Err4` are fault windows and they look the same.** Each code blinks at one hertz - the code is the
+identifier and the rhythm carries nothing, so there is no second rate. What differs is only how long a face
+stays: `Err4` has no window because a dead radio is not fixed by waiting, and `Err1` to `Err3` clear after
+two seconds. That is when it leaves, not how it looks. The three windows are there because those events used
+to produce a log line and nothing a person at the bench could see, which made a broken rig and an idle one
+look the same. **`Err4` is the `rig-ble` build's code for a radio that did not start, or whose link died
+five times in a minute while it was carrying the protocol** - a client that connects and leaves politely is
+not a drop, which is what lets a bench session of deliberate connect/disconnect cycles run without taking
+the rig off the air. The OLED has no code face, so on `Err4` it draws `RADIO FAULT` and `REFLASH RIG-SERIAL`
+itself, and its body line reads `NO LINK TO PC` instead of `CHECK USB CABLE` in that build. **The retired
+`Err0` keeps its number free**: the remaining codes are not renumbered.
 
 **A retake reads `F`, not `E`.** `E` begins every fault code, so ` 40E` and an `Err` face were one glance
 apart; `F` is the left column with the top and middle bars, and no code contains it.
 
 **A verdict is a conclusion, not a label.** `PASS` and `RETAKE` go back to `READY` after 12 s with no new
-press. The score is not lost - the PC keeps the record - and a
-panel still reading ` 95P` long after the press looks hung rather than waiting. `OFFLINE` is deliberately
-excluded: a lost link is a fault, not a completion, and it stays until the link returns.
+press. The score is not lost - the PC keeps the record - and a panel still reading ` 95P` long after the
+press looks hung rather than waiting. A capture started inside that window cancels the timer outright: the
+previous verdict's timer must never pull the new capture back to `READY`.
 
 **There is no rehearsal; the button has one meaning.** A press captures, on the pressing edge, and the release
 is not an event at all, so a fault face appears only when its event happens: a bench where nothing is failing
-never shows `Err1` to `Err3`, and `Err0` needs the PC to fall silent for ten seconds. That is why those events
-are reported on the wire as well as drawn - `EVT TIMEOUT`, `EVT STRAY RESULT`, `EVT INVARIANT` are the other
-place a fault is visible.
+never shows `Err1` to `Err3`. A press is refused only while a face owns the screens (`Pairing`,
+`RadioFault`); in `Live` it captures even when the protocol layer has gone `Gone`, because a quiet peer is
+not "nobody". That is why those events are reported on the wire as well as drawn - `EVT TIMEOUT`,
+`EVT STRAY RESULT`, `EVT INVARIANT` are the other place a fault is visible.
 
 **A fault outranks the screen, and an unknown score is never a zero.** A fault window covers the panel while
 the screen underneath moves, so a verdict that arrives inside one loses its arrival sweep - the 250 ms has
@@ -278,7 +279,7 @@ anything it does not understand, so a garbled byte cannot brick the rig.
 |---|---|---|
 | → PC | `EVT HELLO <version>` | the board is up |
 | → PC | `EVT I2C <addr>` | one line per device that answered the boot scan |
-| → PC | `EVT SCREEN <name> <score>` | a screen change: READY, CAPTURING, PASS, RETAKE, OFFLINE. A capture timeout sends `EVT TIMEOUT` first and this second |
+| → PC | `EVT SCREEN <name> <score>` | a screen change: READY, CAPTURING, PASS, RETAKE. A capture timeout sends `EVT TIMEOUT` first and this second |
 | → PC | `EVT TRIGGER <millis>` | the button was pressed and a capture started |
 | → PC | `EVT TIMEOUT <millis>` | no verdict arrived within 4 s; the screen changes to RETAKE, and `EVT SCREEN RETAKE -1` follows |
 | → PC | `EVT STRAY RESULT <score>` | a verdict arrived with no capture in flight; it was **not** applied |
@@ -298,23 +299,22 @@ every two seconds, turns `EVT TRIGGER` into a capture and a `CMD RESULT`, and lo
 rig reports. Its own state machine and the reason a failed capture sends *nothing* - the rig's timeout
 then says `NO REPLY`, which is true - are in `docs/rig-state-machine-en.md` §9.
 
-**The PC owns the link, and silence means it is gone.** The rig cannot see whether the USB cable is
+**The PC owns the link, and silence means it is quiet.** The rig cannot see whether the USB cable is
 plugged in - it talks UART through a bridge chip and has no carrier signal - so liveness is a protocol
-matter: **the PC must send `CMD PING` at least every two seconds on an open link**, and the rig declares
-`OFFLINE` after ten seconds without a command (five missed keepalives).
+matter: **the PC must send `CMD PING` at least every two seconds on an open link**, and the rig sets its
+own `Gone` flag after ten seconds without a command (five missed keepalives).
 
 The rig boots on `READY` with a ten-second grace, which is far longer than the PC needs to send its first
-keepalive. A panel that calls itself dead before anything has had a chance to speak reads as a fault
-rather than as waiting. From then on the two are a pair - `OFFLINE` if and only if the link is gone - and
-an idle rig stays `READY` only because the PC keeps saying so. A rig on a bench with no PC software goes
-`OFFLINE` ten seconds after power-up, which is correct: there is nobody on the other end. `rig::invariantHolds` checks that pairing every loop pass and reports `EVT INVARIANT` if it is ever
+keepalive. `Gone` no longer changes a screen: a quiet peer is still a peer, the rig stays on whatever screen
+it was on, and the button keeps working. `rig::invariantHolds` watches the verdict-face timer instead - a
+capture in flight carries none, a verdict face carries one - and reports `EVT INVARIANT` if that is ever
 broken.
 
 **`rig-ble` is the exception, and it is the presentation layer's job** (`docs/rig-state-machine-en.md`
 §11). With no central attached the panel draws `APP` with its fourth digit rotating and the OLED says
-`WAITING`, because a radio really can tell that nobody has arrived; `Err0` on that build means a
-central attached and then went silent. The pairing invariant above is the protocol layer's, and the
-presentation layer decides which face is drawn - it does not change what the protocol layer reports.
+`WAITING`, because a radio really can tell that nobody has arrived. A central that attaches and then goes
+silent stays on the rig's own screen: a quiet peer is not a fault, so there is no link face left to draw.
+The presentation layer decides which face is shown; it does not change what the protocol layer reports.
 
 **A verdict is the answer to a capture, so it is only accepted while one is in flight.** A RESULT in any
 other state is dropped, reported as `EVT STRAY RESULT` and shown as the fault window `Err2`; the PC is told
@@ -343,9 +343,9 @@ wire.
 **Opening the serial port resets the board.** The bridge chip's DTR and RTS lines feed the auto-reset
 circuit, so the sketch restarts whenever a program opens `COM5` — the log begins with the ROM boot banner
 and a fresh `EVT SCREEN READY`. That is the board behaving correctly, and it is worth knowing before
-debugging: a reader that connects and then waits eleven seconds will watch the rig go `OFFLINE`, because
-the boot happens first and the ten-second link timer starts at the same moment. Test the keepalive on a
-port held open, not by reconnecting.
+debugging: a reader that connects and then waits eleven seconds will watch the rig set its `Gone` flag,
+because the boot happens first and the ten-second link timer starts at the same moment. Test the keepalive
+on a port held open, not by reconnecting.
 
 Two consequences for tooling. A bench check that opens the port and exits leaves the rig freshly booted,
 not in whatever state it was in. And a server restart is a board restart: the link does not "reconnect",
@@ -353,10 +353,10 @@ it starts over.
 
 **The OLED is verified.** Wired directly to the ESP32 - `VCC` to `3V3`, `SDA` to `GPIO8`, `SCL` to
 `GPIO9` - the scan reports `EVT I2C 3C`, the splash draws, and `CMD PING` answers `EVT PONG`, so the
-PC-to-board command path works as well as the display. The five screens were then driven from the
-serial port without a button: `CMD RESULT 94 PASS OK`, `CMD RESULT 30 RETAKE LOW_LIGHT`,
-`CMD RESULT 55 RETAKE COLOR_CAST`, `CMD RESULT 20 RETAKE UNKNOWN`, and `OFFLINE` by simply staying
-silent for the ten-second timeout.
+PC-to-board command path works as well as the display. The screens were then driven from the serial port
+without a button: `CMD RESULT 94 PASS OK`, `CMD RESULT 30 RETAKE LOW_LIGHT`,
+`CMD RESULT 55 RETAKE COLOR_CAST`, `CMD RESULT 20 RETAKE UNKNOWN`, and the idle screen by simply staying
+silent past the ten-second link threshold - which now changes the flag and nothing on the glass.
 
 **Not yet verified: the four-digit display**, which has not been wired. Everything the panel does on the
 bench is `P3-17`'s acceptance, not a measurement.
@@ -379,7 +379,7 @@ path**, and a reader who cannot open the file gains nothing from knowing what it
 
 ## Still not verified
 
-1. **The panel has not been on the bench.** The four digits, their seven 240 Ω segment resistors and the
-   four commons are declared in `config.h` and driven by `main.cpp`, and nothing has been wired yet:
-   `P3-17` is the assembly task. Until that session, which physical segment a pin lands on is the
-   firmware's declaration rather than a measurement.
+1. **The panel has not been checked on the bench.** The four digits, their seven 330 Ω segment resistors and
+   the four commons are declared in `config.h` and driven by `main.cpp`, and the resistors are fitted:
+   `P3-17` is the bench session that checks the rest. Until that session, which physical segment a pin lands
+   on is the firmware's declaration rather than a measurement.

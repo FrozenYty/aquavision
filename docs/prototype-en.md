@@ -118,7 +118,7 @@ over empty water and give the whole thing away.
 | Sun Jianheng | screens 3, 4, 5 | frames with boxes, detail, canvas review |
 | Gao Tianxiang | screen 6, mock data | four charts, plausible box positions |
 | Fu Yijia | demo script, six screenshots, one page of notes | script and images |
-| Yao Tianyu | screen 2, visual consistency, walkthrough | the line runs end to end |
+| Tianyu Yao | screen 2, visual consistency, walkthrough | the line runs end to end |
 
 ## 8. Timebox
 

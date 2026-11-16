@@ -290,7 +290,7 @@ box(
     DW,
     DH,
     "four-digit seven-segment display",
-    "common anode · 240 Ω per segment · the four commons are direct",
+    "common anode · 330 Ω per segment · the four commons are direct",
 )
 # Four digits, left to right, the order the firmware calls 1-4.
 for index in range(4):
@@ -325,7 +325,7 @@ wire([(DX, 4.95), (DX + 1.20, 4.95), (DX + 1.20, 5.60), (DX + 1.40, 5.60)], "seg
 ax.text(
     DX + DW / 2 + 0.35,
     5.15,
-    "240 Ω ×7, one per segment",
+    "330 Ω ×7, one per segment",
     ha="center",
     va="center",
     fontsize=6.8,
@@ -409,7 +409,7 @@ ground(BX + BW - 0.10, B_Y, 12.60)
 ax.text(13.30, 10.60, "Before the first power-on", fontsize=10.0, fontweight="bold", va="center")
 for i, line in enumerate(
     [
-        "1.  240 Ω between each pin and",
+        "1.  330 Ω between each pin and",
         "    its own segment.",
         "2.  No resistor on a common.",
         "3.  Never two commons high.",
@@ -449,7 +449,7 @@ rows = [
     ("sda", "SDA"),
     ("scl", "SCL"),
     ("btn", "GPIO4"),
-    ("seg", "segment, 240 Ω"),
+    ("seg", "segment, 330 Ω"),
     ("com", "common, direct"),
 ]
 for i, (key, name) in enumerate(rows):
