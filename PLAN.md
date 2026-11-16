@@ -633,7 +633,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       shows the numbers the report will carry before it is generated, and the preview and the file
       agree in a test
       - generating a report to discover it covers the wrong week is this page's ordinary failure
-- [ ] **P3-32** The canvas keeps its place across a reload · @chemflowers · done when the selection,
+- [x] **P3-32** The canvas keeps its place across a reload · @chemflowers · done when the selection,
       zoom and page survive a refresh, asserted as a pure function that serialises and restores them
       - a reviewer interrupted mid-set currently starts again from the first frame
 - [x] **P3-33** The acceptance matrix cannot go quiet · @IkeaFyj · **delivered 11-12**:

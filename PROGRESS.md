@@ -1,5 +1,7 @@
 ## 2026-11-16
 
+- **P3-32: review resumes its navigation state per tab.** Selection and zoom are restored only for the same frame and surviving object ids; the image browser resumes its page. Corrupt or obsolete saved state is discarded; unavailable browser storage shows an actionable warning. Annotation drafts are not stored. `tests/test_review_place.py` asserts the serialization round trip, frame isolation, stale ids and storage refusal under Node.
+
 - **P3-28: keyboard review uses original-image pixels.** Tab/Enter selects targets, N/P cycles them, arrows move one pixel, Shift+arrows resize, and Delete removes; keyboard edits enter the same undo stack. Focus is visible and preserved across redraws, and shortcuts are printed beside the canvas. `tests/test_review_keyboard.py` runs geometry and selection assertions under Node; the real page-handler test also exercises move, resize and delete.
 
 - **P3-27: pre-submit review undo is a stack.** Drag, draw, delete, relabel and confirmation keep isolated snapshots; cancelling a gesture preserves earlier history, and a server reload clears it. Node executes the pure functions and the real page handlers in `tests/review_history.mjs`, invoked by `tests/test_review_history.py`. Replacing the stack with one-step storage was demonstrated to fail.

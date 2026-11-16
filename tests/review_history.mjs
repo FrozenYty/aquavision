@@ -27,6 +27,8 @@ console.log("Review history: drag, draw, delete, selection and isolation passed"
 const { readFileSync } = await import("node:fs");
 const { runInNewContext } = await import("node:vm");
 const geometry = await import("../web/static/js/canvas.js");
+const placeFns = await import("../web/static/js/place.js");
+globalThis.sessionStorage = { getItem() { return null; }, setItem() {} };
 const historyFns = await import("../web/static/js/history.js");
 const elements = new Map();
 function element(id) {
@@ -41,7 +43,7 @@ function element(id) {
   return elements.get(id);
 }
 const document = { getElementById: element, addEventListener(type, fn) { this[type] = fn; } };
-const context = { ...geometry, ...historyFns, document, structuredClone, Element: class {},
+const context = { ...geometry, ...historyFns, ...placeFns, document, structuredClone, Element: class {},
   renderShell() {}, CLASSES: { holothurian: "Sea cucumber" },
   boxHtml: () => "", statusBadge: () => "", confirmAction: () => true,
   loadInto() {}, api: { getObjects: async () => ({ items: [] }) },

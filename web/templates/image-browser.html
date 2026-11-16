@@ -58,11 +58,14 @@
     import * as api from "../static/js/api.js";
     import { esc, fmtTime, loadInto, qualityBadge, renderPager, toast } from "../static/js/ui.js";
 
+    import { placeStore, restorePlace } from "../static/js/place.js";
+
     renderShell();
 
     const $ = (id) => document.getElementById(id);
     const selected = new Set();
-    let page = 1;
+    const place = placeStore("av_browser_place", () => toast("浏览器未允许保存浏览页码，刷新后需重新翻页。请允许此站点使用存储。", "warning"));
+    let page = restorePlace(place.read()).page;
 
     function updateBatchButton() {
       $("btn-batch").textContent = `批量识别（${selected.size}）`;
@@ -73,6 +76,8 @@
     const thumbStyle = (f) => (f.image_url ? ` style="background: center / cover no-repeat url('${esc(f.image_url)}')"` : "");
 
     function render(data) {
+      page = data.page;
+      place.write({ page });
       $("grid").innerHTML = data.items.map((f) => `
         <div class="col-6 col-md-4 col-xl-3">
           <label class="av-thumb${f.quality.verdict === "ok" ? "" : " is-retake"}">
