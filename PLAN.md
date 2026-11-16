@@ -611,7 +611,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       and not a 500
       - the capture route writes whatever bytes arrive into a path built partly from request values,
         and no maximum is stated anywhere
-- [ ] **P3-27** Undo on the review canvas · @chemflowers · done when a mistaken drag, draw or delete
+- [x] **P3-27** Undo on the review canvas · @chemflowers · done when a mistaken drag, draw or delete
       can be undone before submit, and the undo stack is asserted as a pure function under Node
       - today a wrong drag is unrecoverable until the version panel is used *after* submitting, which
         is too late for a reviewer working through forty frames
