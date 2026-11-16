@@ -637,7 +637,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       page
       - the core interaction of the product is mouse-only, and a nudge of one pixel is the correction a
         reviewer needs most often
-- [ ] **P3-29** Every page survives a failed request · @chemflowers · done when each of the thirteen
+- [x] **P3-29** Every page survives a failed request · @chemflowers · done when each of the thirteen
       pages, given a 500, a timeout and a 401, shows a sentence the operator can act on and leaves no
       spinner running - asserted as a table of (page, failure, expected state)
       - `P2-12` brought those states to the pages that existed then; the assertion was per page and the
