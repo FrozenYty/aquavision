@@ -461,6 +461,8 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         a new mechanism, and refusing a class code that disagrees with `labels.txt` is one comparison
         against the delivered file
 
+      - C-lane frontend delivered separately: four-class ordering, API-aligned 0..1/two-decimal validation, and unknown-code refusal are exercised by `tests/test_species_threshold_ui.py`. The task stays open: lane B owns per-job threshold application and labels validation, as agreed with the user.
+
 - [x] **P3-16** Review versions and rollback · @Gtechson · **unblocks `P3-05`** · delivered 11-11 (#148)
       - `GET /api/review/frames/{frame_id}/versions` lists each entry newest first with its action, time,
         author, and the box count before and after, read from the JSON `sys_log` recorded rather than
