@@ -10,7 +10,7 @@ The row is what makes the history queryable by period, template and basis; the f
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -40,8 +40,8 @@ BASES = ("reviewed", "raw")
 
 
 class ReportBody(BaseModel):
-    period_start: datetime
-    period_end: datetime
+    period_start: date | datetime
+    period_end: date | datetime
     template: str = Field(default="standard", pattern="^(standard|brief)$")
     basis: str = Field(default="reviewed", pattern="^(reviewed|raw)$")
 
@@ -63,11 +63,13 @@ def list_reports(
 def create_report(
     body: ReportBody, request: Request, db: SessionDep, user: UserDep, settings: SettingsDep
 ) -> dict[str, object]:
-    # ADR 14: the period arrives with its offset; storage keeps the instant as naive UTC.
-    start = timebase.as_utc(body.period_start)
-    end = timebase.as_utc(body.period_end)
+    # Calendar dates use the operating zone; existing offset-aware clients keep their instants.
+    start, end = timebase.report_bounds(body.period_start, body.period_end)
     if end <= start:
         raise ApiError(BAD_PARAM, "结束日期不能早于开始日期")
+    body = body.model_copy(
+        update={"period_start": timebase.to_zone(start), "period_end": timebase.to_zone(end)}
+    )
 
     serial = (db.scalar(select(func.count(Report.report_id))) or 0) + 1
     code = f"RP{timebase.now().strftime('%y%m%d')}-{serial:03d}"

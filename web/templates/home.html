@@ -65,7 +65,7 @@
 
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
-    import { DASHBOARD } from "../static/mock/fixtures.js";
+    import { DASHBOARD, STATS_TREND } from "../static/mock/fixtures.js";
     import * as api from "../static/js/api.js";
     import { esc, fmtTime, loadInto, showLoading } from "../static/js/ui.js";
 
@@ -99,19 +99,15 @@
     }
 
     // Hand-drawn SVG: one file, no chart library, and it stays crisp at any width.
-    function renderTrend(values) {
+    function renderTrend(values, dates) {
       const W = 720, H = 200, padL = 34, padR = 16, padT = 18, padB = 26;
       const max = Math.max(...values, 1) * 1.18; // a week of zeros still draws a flat line
       const innerW = W - padL - padR;
       const innerH = H - padT - padB;
-      const x = (i) => padL + (innerW * i) / (values.length - 1);
+      const x = (i) => padL + (innerW * i) / Math.max(1, values.length - 1);
       const y = (v) => padT + innerH * (1 - v / max);
 
-      const labels = values.map((_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (values.length - 1 - i));
-        return `${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      });
+      const labels = dates.map((date) => date.slice(5));
 
       // Three horizontal guides, the top one labelled with a round number.
       const grid = [0, 0.5, 1].map((t) => {
@@ -154,13 +150,14 @@
 
     // The fixture is the prototype's dashboard; with a server the same cards come from the API.
     async function fetchDashboard() {
-      if (api.USE_MOCK) return DASHBOARD;
+      if (api.USE_MOCK) return { ...DASHBOARD, dates: STATS_TREND.map((item) => item.date) };
       const [trend, quality, models] = await Promise.all([api.statsTrend(), api.statsQuality(), api.listModels()]);
       const online = models.items.find((m) => m.is_online);
       const daily = trend.items.map((item) => item.frames);
       return {
         frames_today: daily.at(-1) ?? 0,
         daily,
+        dates: trend.items.map((item) => item.date),
         to_review: null,
         quality,
         model_version: online?.version_name ?? "无",
@@ -174,7 +171,7 @@
       empty: "",
       render: (d) => {
         renderKpis(d);
-        renderTrend(d.daily.length > 1 ? d.daily : [0, 0]);
+        renderTrend(d.daily, d.dates);
       },
     }).then((d) => {
       if (!d) $("trend").innerHTML = "";

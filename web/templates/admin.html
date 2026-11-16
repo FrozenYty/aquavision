@@ -123,7 +123,7 @@
     const ROLE = { admin: "管理员", analyst: "分析员", algo: "算法员", observer: "采集员" };
     const MSG = { capture_fail: ["采集失败", "danger"], task_fail: ["任务失败", "warning"], report_done: ["报告完成", "success"] };
     const MONITOR_MS = 30000; // FR-M8-01: the panel refreshes every 30 s
-    const time = (iso) => (iso ? fmtTime(iso).slice(0, -3) : "—");
+    const time = (iso) => (iso ? fmtTime(iso) : "—");
     const fail = (err) => toast(err.message, "danger");
 
     bindTabs($("tabs"));
