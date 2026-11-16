@@ -26,7 +26,7 @@
               <button class="btn btn-outline-primary active" id="tool-select" type="button" title="选择并拖动框（V）">选择</button>
               <button class="btn btn-outline-primary" id="tool-draw" type="button" title="在画面上拖出新框（B）">画框</button>
               <button class="btn btn-outline-primary" id="tool-delete" type="button" title="删除选中的框（Delete）">删除</button>
-              <button class="btn btn-outline-primary" id="tool-undo" type="button" title="撤销上一步" disabled>撤销</button>
+              <button class="btn btn-outline-primary" id="tool-undo" type="button" title="撤销上一步（Ctrl＋Z）" disabled>撤销</button>
             </div>
             <select class="form-select form-select-sm w-auto" id="class-select" aria-label="类别"></select>
             <div class="btn-group btn-group-sm" role="group" aria-label="缩放">
@@ -37,7 +37,7 @@
             <span class="ms-auto small">计数 <strong class="av-mono" id="count-change">—</strong></span>
           </div>
           <div id="viewport" class="av-empty">正在载入…</div>
-          <div class="small text-secondary mt-2">选中框后拖动可移动，拖四角手柄可调整大小；改类别用上方下拉框。按住 Ctrl 滚动滚轮缩放；拖动中按 Esc 撤回这一次拖动。</div>
+          <div class="small text-secondary mt-2">选中框后拖动可移动，拖四角手柄可调整大小；改类别用上方下拉框。按住 Ctrl 滚动滚轮缩放；拖动中按 Esc 撤回这一次拖动；Ctrl＋Z（Mac 为 ⌘＋Z）依次撤销提交前的修改。</div>
         </section>
       </div>
       <div class="col-xl-4">
@@ -75,6 +75,8 @@
     import { actionLabel, actionTone, authorText, restoreState, restoreText, rollbackPlan, versionText }
       from "../static/js/versions.js";
 
+    import { rememberEdit, undoEdit } from "../static/js/history.js";
+
     renderShell();
 
     const $ = (id) => document.getElementById(id);
@@ -88,7 +90,7 @@
     let initialCount = 0;
     let selected = null;
     let mode = "select";
-    let previous = null; // one step of undo, not a stack (prototype §3)
+    let history = [];
     let zoom = 1;
     // The gesture in progress: { id, kind: "draw" | "move" | a corner, start, from, undoBefore, moved }.
     let drag = null;
@@ -105,7 +107,7 @@
     const stage = () => $("canvas");
 
     function remember() {
-      previous = structuredClone(objects);
+      history = rememberEdit(history, objects, selected);
       $("tool-undo").disabled = false;
     }
 
@@ -203,12 +205,13 @@
     function cancelDrag() {
       if (!drag) return;
       const kind = drag.kind;
-      objects = previous;
-      previous = drag.undoBefore;
-      $("tool-undo").disabled = !previous;
+      const before = undoEdit(history);
+      objects = before.objects;
+      selected = before.selected;
+      history = drag.undoBefore;
+      $("tool-undo").disabled = history.length === 0;
       drag = null;
       if (kind === "draw") {
-        selected = null;
         return setMode("select");
       }
       render();
@@ -218,7 +221,7 @@
       if (drag || event.button !== 0) return; // one gesture at a time
       const p = point(event);
       if (!frameId || !p) return; // nothing loaded yet: ignore rather than guess
-      const undoBefore = previous;
+      const undoBefore = history;
       if (mode === "draw") {
         if (!event.target.closest("#canvas")) return; // a new box starts on the picture, not beside it
         remember();
@@ -263,9 +266,9 @@
       }
       // A click on a box selects it; that is not an edit, so it does not spend the undo step.
       if (!drag.moved) {
-        objects = previous;
-        previous = drag.undoBefore;
-        $("tool-undo").disabled = !previous;
+        objects = undoEdit(history).objects;
+        history = drag.undoBefore;
+        $("tool-undo").disabled = history.length === 0;
       }
       drag = null;
       render();
@@ -295,12 +298,14 @@
     $("btn-add").onclick = $("tool-draw").onclick;
     $("tool-delete").onclick = removeSelected;
     $("tool-undo").onclick = () => {
-      if (drag || !previous) return;
-      objects = previous;
-      previous = null;
-      selected = null;
-      $("tool-undo").disabled = true;
-      render();
+      if (drag || restoring) return;
+      const before = undoEdit(history);
+      if (!before) return;
+      objects = before.objects;
+      selected = before.selected;
+      history = before.history;
+      $("tool-undo").disabled = history.length === 0;
+      select(selected);
     };
 
     document.addEventListener("keydown", (event) => {
@@ -314,6 +319,10 @@
         return select(null);
       }
       if (drag) return; // every other key waits until the gesture ends
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+        event.preventDefault();
+        return $("tool-undo").click();
+      }
       if (event.key === "Delete" || event.key === "Backspace") removeSelected();
       if (event.key === "v") setMode("select");
       if (event.key === "b") { selected = null; setMode("draw"); }
@@ -329,7 +338,7 @@
       const data = await api.getObjects(frameId);
       objects = data.items.filter((box) => box.review_status !== 3);
       selected = null;
-      previous = null;
+      history = [];
       $("tool-undo").disabled = true;
     }
 

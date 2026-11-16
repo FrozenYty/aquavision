@@ -1,5 +1,6 @@
 ## 2026-11-16
 
+- **P3-27: pre-submit review undo is a stack.** Drag, draw, delete, relabel and confirmation keep isolated snapshots; cancelling a gesture preserves earlier history, and a server reload clears it. Node executes the pure functions and the real page handlers in `tests/review_history.mjs`, invoked by `tests/test_review_history.py`. Replacing the stack with one-step storage was demonstrated to fail.
 - **Defect: the capture API accepted and echoed a sensor reading that no client sent, and stored it
   in a column nobody read.** Trigger: any authenticated client posting
   `POST /api/capture/sessions/{id}/frames` with `turbidity_rel` in the body, or reading a frame
