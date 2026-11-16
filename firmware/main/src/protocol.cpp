@@ -38,8 +38,7 @@ bool handleResult(rig::State& state, char** cursor, uint32_t now) {
   if (state.screen != rig::Screen::Capturing) {
     // A stray result is a fault, not just a log line: the panel has to say something the operator can
     // see, or a PC sending out of turn looks exactly like a rig with nothing to report.
-    state.fault = rig::Fault::Stray;
-    state.faultAt = now;
+    rig::raiseFault(state, rig::Fault::Stray, now);
     protocol::emitStrayResult(score);
     return false;
   }
@@ -112,6 +111,13 @@ bool poll(rig::State& state, uint32_t now) {
   }
 
   return sawCommand;
+}
+
+void flushInput() {
+  // A new subscription is a new conversation. A partial line has no terminator, so leaving it would let the
+  // next session's first bytes complete a command the previous session never finished sending.
+  length = 0;
+  line[0] = '\0';
 }
 
 const char* screenName(rig::Screen screen) {

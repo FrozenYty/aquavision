@@ -222,7 +222,7 @@ void drawCapturing(U8G2& display, const rig::State& state) {
   }
 }
 
-//: `Pairing`: no central has attached, so there is nothing to have gone wrong and no PC to paint a score
+//: `Pairing`: nobody is listening, so there is nothing to have gone wrong and no PC to paint a score
 //: over this. **It is the house status face with no moving element.** The twelve-cell progress row it
 //: replaces implied an amount of progress that does not exist, and a misleading indicator is worse than
 //: none; this face cannot be made as strong as the rest by animating, so it uses the same face as the

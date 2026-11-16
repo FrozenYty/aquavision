@@ -59,13 +59,21 @@ bool faulted();
 //: command, which is the separation §2 of the transport document insists on.
 bool subscribed();
 
-//: True while a central is attached and has not let go - the carrier fact the presentation layer reads
-//: to tell "waiting for someone" from "someone left" (docs/rig-state-machine-en.md §11).
+//: True **while** a central has notifications enabled - the BLE layer's `Streaming`. This is the carrier
+//: fact the presentation layer reads to tell "waiting for someone" from "a subscriber is listening".
 //:
-//: **Serial always answers true**, and that is the honest answer rather than a shortcut: a UART is open
-//: at boot and the rig cannot see whether a cable is plugged in (§2 of the transport document), so the
-//: serial build boots `Live` and never shows `WAITING`. It is not a liveness claim either: an attached
-//: central that says nothing still makes the protocol layer `Gone`, which no longer chooses a face.
-bool attached();
+//: **It is deliberately `Streaming` and not `Connected`.** A central that has attached but not subscribed
+//: cannot hear `EVT TRIGGER`; a press there would start a capture the PC never receives and report `NO
+//: REPLY` four seconds later, which is a lie about the PC. Keying `Live` on the same fact the button
+//: reads makes that window `Pairing`, where the refusal is visible (`WAITING` / `APP`).
+//:
+//: **Serial always answers true**: a UART is open from boot and a PC that opens the port reads the very
+//: next line, so there is no attach-to-subscribe window to be honest about.
+bool listening();
+
+//: Ends a conversation's input: the rx ring and any half-received line are dropped. Called when a central
+//: subscribes, because bytes left by the previous session - especially a partial line with no terminator -
+//: must not be completed by the next one's first write.
+void flushRx();
 
 }  // namespace transport

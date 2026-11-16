@@ -32,6 +32,26 @@
   the only clear. The check measures the lifetime on a virtual clock through the real predicate: 12 000 ms
   for the loop's stamp, 12 001 ms for a stamp one millisecond ahead under the signed comparison (0 ms under
   the old unsigned one), still up at 11 s and gone by 13 s. `FIRMWARE_VERSION` is `1.22`.
+- **`Live` now means "a subscriber is listening", and the button reads that same condition.** A press in the
+  attach-to-subscribe window used to start a capture the PC could not hear (the transport discards a write
+  with no subscriber), and four seconds later the rig reported `NO REPLY` about a PC that never received
+  `EVT TRIGGER` - the same species of lie as calling waiting a fault. `Live` keys on the BLE layer's
+  `Streaming` (`transport::listening()`), so that window is `Pairing`: the panel draws `APP` with the
+  rotation and a refused press is **visible**, which is what makes the refusal acceptable there. The rule
+  written down is the one that makes it safe: **the condition that decides whether a press is accepted and
+  the condition that decides which face is drawn are the same condition**, `presentation::state() == Live`.
+- **A new subscription flushes the input.** The BLE layer drops its rx ring when notifications are enabled
+  and the parser drops any half-received line (`protocol::flushInput()`), because a partial line left by the
+  previous session must not be completed by the next session's first write into a command nobody sent.
+- **`Err4` now owns `faultAt`.** `raiseFault` is the single writer of (fault, faultAt) and refuses to
+  overwrite a dead radio with a later timeout, stray result or broken invariant, which used to restart the
+  `Err4` blink mid-warning. The only timing in the firmware that had two writers now has one.
+- **Seven documentation holes closed with the audit**: the `CMD READY` sentence no longer claims it clears
+  the verdict timer; "five screens" became four in `rig-state-machine-{en,zh}.md`, `rig/link.py` and
+  `AGENTS.md`; `EVT INVARIANT` is described as the verdict-timer monitor rather than a screen/link pair;
+  the READMEs no longer name a version literal; `presentation.h` says `Rejected` reports nothing because the
+  layer has no wire; and `Err3` is stated to be a monitor no event can reach. Also written down: a rig that
+  cannot advertise stays `WAITING` rather than faulting, and the one-pass button latency is accepted.
 - **`OFFLINE`, `Err0` and the `NoLink` presentation state are removed.** In BLE a link simply ends and the rig is
   available again; a client that stays connected but stops talking has the same remedy as one that never
   connected - wait. Two faces for one remedy made the operator think a step further for nothing, and `Err0`

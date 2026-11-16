@@ -19,6 +19,10 @@ namespace protocol {
 //: face, the stray-fault age - is stamped with it, so no event carries two clock readings.
 bool poll(rig::State& state, uint32_t now);
 
+//: Drops a half-received line. Called when a central subscribes: the previous session may have left bytes
+//: with no terminator, and the next session's first write must not be appended to them as one command.
+void flushInput();
+
 //: Outgoing events. Each writes one line to the transport, whichever wire that is.
 void emitHello();
 // Reports every address that answers on the I2C bus, one EVT line each.
@@ -34,8 +38,10 @@ void emitTimeout(uint32_t millisNow);
 //: dropped message leaves the PC believing the rig accepted it, which is why TCP answers an unexpected
 //: segment with a reset instead of ignoring it.
 void emitStrayResult(int score);
-//: A screen/link combination that should be impossible. Never expected on the wire; if it appears, the
-//: state machine has a hole and the panel is showing something it should not.
+//: A state the firmware should never be in - a capture carrying a verdict timer, or a verdict face without
+//: one. **A monitor, not a face an event can reach**: nothing an operator or the PC does raises it, so there
+//: is no input to hunt for. Never expected on the wire; if it appears, the loop has a hole and the panel is
+//: showing something it should not.
 void emitInvariant(rig::Screen screen, rig::Link link);
 
 void emitPong();

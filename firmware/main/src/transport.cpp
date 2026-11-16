@@ -40,10 +40,15 @@ bool faulted() { return false; }
 //: is no window between attaching and being able to read one.
 bool subscribed() { return false; }
 
-//: Always true: a UART is open from boot, and the bridge chip cannot see whether a cable is plugged in.
-//: The serial build therefore never reaches `Pairing` - it has no carrier signal to be paired on - and
-//: that is the honest answer rather than a missing state (docs/rig-state-machine-en.md §11).
-bool attached() { return true; }
+//: Always true: a UART is open from boot, and a PC that opens the port can read the very next line, so
+//: there is no attach-to-subscribe window to report. The serial build therefore never reaches `Pairing` -
+//: it has no carrier signal to be paired on - and that is the honest answer rather than a missing state
+//: (docs/rig-state-machine-en.md §11).
+bool listening() { return true; }
+
+//: Nothing to flush: the port is the ring, and a new reader starts at whatever byte is next. The board is
+//: reset whenever the port is opened, so there is no previous session's partial line to inherit.
+void flushRx() {}
 
 void printf(const char* format, ...) {
   char buffer[BUFFER_SIZE];

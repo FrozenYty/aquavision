@@ -438,7 +438,7 @@ def test_the_oled_path_never_touches_the_panel() -> None:
 def test_the_waiting_title_is_the_house_size_and_the_body_carries_the_rest() -> None:
     """The character count was the cause, not the font: a short title keeps the one house size."""
     drawing = SCREEN.read_text(encoding="utf-8")
-    start = drawing.index("//: `Pairing`: no central")
+    start = drawing.index("//: `Pairing`:")
     body = drawing[start : start + drawing[start:].index("\n}\n")]
     assert '"WAITING"' in body, "the title must be the short word, not a sentence"
     assert "drawStatusFace(" in body
@@ -517,6 +517,59 @@ def test_nothing_else_writes_the_verdict_timer() -> None:
     assert "state.verdictAt = now;" not in loop
     parser = PROTOCOL.read_text(encoding="utf-8")
     assert parser.count("rig::armVerdictFace(state, now)") == 1
+
+
+def test_live_is_a_subscriber_listening_not_an_attachment() -> None:
+    """`Live` and the button must be the same condition, and that condition is `Streaming`."""
+    ble = (REPO / "firmware" / "main" / "src" / "transport_ble.cpp").read_text(encoding="utf-8")
+    listening = ble[ble.index("bool listening()") :]
+    listening = listening[: listening.index("\n}\n")]
+    assert "State::Streaming" in listening, "`Live` must key on the subscriber, not the connection"
+    assert "State::Connected" not in listening, (
+        "an attached central that has not subscribed cannot hear EVT TRIGGER"
+    )
+
+    loop = MAIN.read_text(encoding="utf-8")
+    presentation_service = loop[loop.index("void servicePresentation(") :]
+    presentation_service = presentation_service[: presentation_service.index("\n}\n")]
+    assert "transport::listening()" in presentation_service
+    assert "transport::attached()" not in loop, "the old attachment fact must be gone"
+    assert "presentation::begin(transport::listening());" in loop
+
+    # And the press reads the same state the face table is indexed by - one condition, not two.
+    button = loop[loop.index("void serviceButton(") :]
+    button = button[: button.index("\n}\n")]
+    assert "presentation::state() != presentation::State::Live" in button
+
+
+def test_a_new_subscription_flushes_the_input() -> None:
+    """A half-received line must not be completed by the next session's first write."""
+    ble = (REPO / "firmware" / "main" / "src" / "transport_ble.cpp").read_text(encoding="utf-8")
+    assert "transport::flushRx();" in ble, "the carrier must drop its rx ring on subscribe"
+    assert "Event::Subscribe" in ble
+
+    parser = PROTOCOL.read_text(encoding="utf-8")
+    flush = parser[parser.index("void flushInput()") :]
+    flush = flush[: flush.index("\n}\n")]
+    assert "length = 0;" in flush, "the parser must drop a partial line"
+
+    loop = MAIN.read_text(encoding="utf-8")
+    subscribed = loop[loop.index("if (transport::subscribed())") :]
+    assert "protocol::flushInput();" in subscribed[: subscribed.index("\n  }")]
+
+
+def test_the_radio_fault_owns_the_blink_clock() -> None:
+    """One writer for (fault, faultAt), and `Err4` outranks: a later fault must not restart its blink."""
+    for rel in ("firmware/main/src/main.cpp", "firmware/main/src/protocol.cpp"):
+        code = re.sub(r"//[^\n]*", "", (REPO / rel).read_text(encoding="utf-8"))
+        assert "faultAt =" not in code, f"{rel} writes faultAt outside the one helper"
+        assert "fault = rig::Fault::" not in code, f"{rel} writes fault outside the one helper"
+    state = (REPO / "firmware" / "main" / "src" / "rig_state.h").read_text(encoding="utf-8")
+    raise_fault = state[state.index("inline void raiseFault(") :]
+    raise_fault = raise_fault[: raise_fault.index("\n}\n")]
+    assert "state.fault == Fault::Radio && fault != Fault::Radio" in raise_fault, (
+        "a dead radio must keep its stamp against every later fault"
+    )
 
 
 def test_a_press_captures_in_live_and_is_refused_only_by_the_faces() -> None:

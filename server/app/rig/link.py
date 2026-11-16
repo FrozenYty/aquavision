@@ -1,6 +1,6 @@
 """The PC end of the rig link: a small state machine around one serial port (P2-17).
 
-The rig has its own state machine - five screens, two link states, documented in
+The rig has its own state machine - four screens, two link states, documented in
 `docs/rig-state-machine-en.md` - and this is the other half of the same conversation. Its job is narrow:
 hold the port open, send `CMD PING` every two seconds because the rig's liveness rule requires it, hand
 every received event to a callback, and get out of the way.

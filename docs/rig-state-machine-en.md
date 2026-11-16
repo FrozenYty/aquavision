@@ -3,7 +3,7 @@
 > Chinese version: [rig-state-machine-zh.md](rig-state-machine-zh.md). This file is the source of truth.
 > Owner: @FrozenYty · Revisit when: a screen, a link state or an event is added
 
-The rig controller has five screens and two link states. Every combination of them against every event
+The rig controller has four screens and two link states. Every combination of them against every event
 has a defined answer, because the combinations nobody wrote down are where a demo fails: a second button
 press that shoots twice, a verdict that arrives after the operator has been told the shot failed, a link
 that recovers and quietly wipes the result off the screen.
@@ -36,8 +36,8 @@ sets `Gone` ten seconds after power-up, because at that moment there really is n
 `Gone` no longer draws anything, so the rig stays on `READY` and the button still works.
 
 That is the protocol layer's own link flag. On `rig-ble` the screens are chosen by the presentation layer
-(§11): with no central attached it shows `APP` with a rotating fourth digit plus `WAITING` on the OLED;
-with one attached - talking or quiet - it hands the glass back to the rig's own screen.
+(§11): with nobody listening it shows `APP` with a rotating fourth digit plus `WAITING` on the OLED; with a
+subscriber listening - talking or quiet - it hands the glass back to the rig's own screen.
 
 ## 3. Events
 
@@ -94,7 +94,7 @@ exactly as it was. They are in the table because a redraw in the wrong state is 
 the rotation must not advance on a result screen, the fourth digit must not turn once a verdict is on the
 panel, and a verdict's face must not appear without a capture. E11 and E12 are the two timers that change a
 screen on their own, and E12 fires in `Capturing` only. E3 (`CMD READY`) is the one command that moves any
-screen to idle, and it clears the verdict timer with it.
+screen to idle; **it does not touch the verdict timer**, which the capture start alone clears.
 
 **The fault overlay has no column here.** It outranks every screen rather than competing with one, and what
 that costs - a verdict arriving inside a fault window loses its arrival sweep - is in §10.
@@ -328,11 +328,11 @@ is not one either: the number matches by coincidence, not by construction.
 ## 11. The presentation layer: a third machine, not a merge
 
 The rig now has **three** machines, and the third one exists because the first two cannot answer one
-question between them: **is a PC expected right now?** The BLE layer knows whether a central is attached
+question between them: **is a PC expected right now?** The BLE layer knows whether a subscriber is listening
 (`docs/rig-transport-en.md` §3-§5); the protocol layer knows whether one has spoken for ten seconds (§2).
-"Attached and silent" is not the same fact as "nobody has arrived", and the protocol layer cannot tell
-them apart because `Gone` is the word it uses for both. The presentation layer reads the two and owns
-exactly one thing: which face the two screens draw. It is **not a merge** - the BLE layer and the
+"A subscriber that has gone quiet" is not the same fact as "nobody has arrived", and the protocol layer
+cannot tell them apart because `Gone` is the word it uses for both. The presentation layer reads the two and
+owns exactly one thing: which face the two screens draw. It is **not a merge** - the BLE layer and the
 protocol layer keep their own states, their own clocks and their own matrices, and nothing on the wire
 changes. It is the third reader §2 of the transport document asked for when it refused to join the first
 two.
@@ -347,23 +347,26 @@ not "broken".** `WAITING` says what is true: the rig is ready and there is no PC
 
 | State | Meaning |
 |---|---|
-| `Pairing` | No central is attached |
-| `Live` | A central is attached - whatever the protocol layer's `Alive`/`Gone` says at that moment |
+| `Pairing` | Nobody is listening: no central, or a central that has not enabled notifications |
+| `Live` | A subscriber is listening - whatever the protocol layer's `Alive`/`Gone` says at that moment |
 | `RadioFault` | The radio would not start, or the drop storm reached `Fault` |
 
 | # | Event | Source |
 |---|---|---|
-| B1 | A central attaches | BLE layer |
-| B2 | The notification subscription completes | BLE layer |
-| B3 | The central disconnects | BLE layer |
+| B1 | A subscriber starts listening (BLE `Streaming`; the serial wire always is) | BLE layer |
+| B2 | The notification subscription completes - the same edge as B1 on BLE | BLE layer |
+| B3 | The subscriber stops listening | BLE layer |
 | B4 | The radio would not start, or the drop storm reached `Fault` | BLE layer |
 | P1 | A command arrives | protocol layer |
 | P2 | Ten seconds of silence | protocol layer |
 
-`B1` moves `Pairing` straight to `Live`: attaching is the whole fact this layer needs, because a peer that
-is quiet has the same remedy as no peer at all - wait. `B2` in `Live` is ignored (the subscription is
-already enabled) and `B1` there is rejected, because a second central must not repaint a screen. `P2` in
-`Live` is "already here": a quiet peer does not change what the rig is doing.
+`B1` moves `Pairing` straight to `Live`, and **the fact it reads is `Streaming`, not "attached"**: a central
+that has connected but not enabled notifications cannot hear `EVT TRIGGER`, so a press there would start a
+capture nobody receives and report `NO REPLY` four seconds later about a PC that never heard it. Keying
+`Live` on the same condition the button reads puts that window in `Pairing`, where the refusal is visible.
+`B2` is that same edge on this wire and in `Live` is ignored; `B1` there is rejected, because a second
+subscriber must not repaint a screen. `P2` in `Live` is "already here": a subscriber that has gone quiet
+does not change what the rig is doing.
 
 ### 11.2 The transition matrix
 
@@ -373,7 +376,7 @@ purpose: **a bold state** is a transition; `—` is **ignored**, meaning the eve
 sender has to learn that it was refused; and `already here` is a handled-in-place cell whose whole point
 is that the state already says this.
 
-| State \ Event | B1 attached | B2 subscribed | B3 detached | B4 fault | P1 command | P2 silence |
+| State \ Event | B1 listening | B2 subscribed | B3 stopped | B4 fault | P1 command | P2 silence |
 |---|---|---|---|---|---|---|
 | `Pairing` | **`Live`** | — | — | **`RadioFault`** | — | — |
 | `Live` | rejected | — | **`Pairing`** | **`RadioFault`** | handled in place | already here |
@@ -422,11 +425,11 @@ face is static and is sent once when it is entered, and the panel's mask is publ
 as usual.
 
 **`OFFLINE` and `Err0` are retired, and the `NoLink` state with them.** In BLE a link simply ends - the
-connection closes and the rig is available again - and a client that stays connected but stops talking has
-the same remedy as one that never connected: wait. Two faces for one remedy made the operator think a step
-further for nothing, and `Err0` called "waiting" a fault, which is exactly what this layer exists to stop
-doing. So an attached-but-silent client lands in `Live` and sees the rig's own screen, which is true: the
-rig is ready and nothing is happening. **`Err0`'s number is not reused**; the remaining codes keep
+connection closes and the rig is available again - and a subscriber that stays connected but stops talking
+has the same remedy as one that never connected: wait. Two faces for one remedy made the operator think a
+step further for nothing, and `Err0` called "waiting" a fault, which is exactly what this layer exists to
+stop doing. So a listening-but-silent subscriber stays in `Live` and sees the rig's own screen, which is
+true: the rig is ready and nothing is happening. **`Err0`'s number is not reused**; the remaining codes keep
 `Err1`-`Err4`, and the gap costs nothing.
 
 ### 11.4 The rules
@@ -446,8 +449,8 @@ names what to open and the rotation says the rig is still working; both are shap
 draws. The first version tried walking the `Ready` marquee backwards and the bench rejected it, because two
 dashes moving opposite ways are indistinguishable at a glance.
 
-**3. A silent peer is `Live`, not a face.** A central is attached but the protocol layer is `Gone`: the
-peer is still there and has simply stopped talking, which has the same remedy as a peer that never
+**3. A quiet subscriber is `Live`, not a face.** A subscriber is listening but the protocol layer is `Gone`:
+the peer is still there and has simply stopped talking, which has the same remedy as a peer that never
 connected - wait. `P2` in `Live` is therefore "already here": the event is consumed and nothing changes,
 and the rig's own screen stays up because the rig is ready and nothing is happening. `P1` is proof that
 somebody is on the other end and is handled in place for the same reason.
@@ -458,26 +461,34 @@ FAULT` and stays there, because waiting is the wrong response to it (§10 of the
 `B4` is applied before the `B3` edge the same fault produces, so a radio that failed cannot land the
 presentation back in `Pairing` behind its own fault.
 
-**5. `B1` in `Live` is rejected, and the refusal is the BLE layer's.** A second central must not repaint
+**5. `B1` in `Live` is rejected, and the refusal is the BLE layer's.** A second subscriber must not repaint
 a live screen; the BLE layer has already disconnected it (its rule 1), and this cell is what keeps the
 presentation from following it. It is a defensive cell - the layer never sees a second attach - and it
-exists so that the rule is in the table instead of in a comment.
+exists so that the rule is in the table instead of in a comment. **The layer itself reports nothing**: it
+has no wire, and the cell's `Rejected` records a refusal that happened one layer down.
 
 **6. The serial build has no carrier signal, so it never shows `Pairing`.** A UART cannot see whether a
-cable is plugged in (transport §2), so `transport::attached()` answers true always: `rig-serial` starts
+cable is plugged in (transport §2), so `transport::listening()` answers true always: `rig-serial` starts
 `Live` and stays there whatever the protocol layer's link flag says. That is the honest limit of that wire,
 not a missing state.
 
-**7. A press is refused only while a face owns the screens.** `Pairing` means nobody is attached, so there
-is nowhere to send `EVT TRIGGER` and a capture could only time out invisibly; `RadioFault` means the radio
-is dead. In `Live` a press **always** captures - including while the protocol layer is `Gone`, because
-`Gone` is an attached peer that has gone quiet, not "nobody". If the peer really is silent the trigger goes
-out and `Err1` arrives four seconds later, which is a visible, honest answer; a silent refusal is worse.
+**7. A press is refused only while a face owns the screens, and the face is the condition.** `Pairing`
+means nobody is listening: `EVT TRIGGER` would go nowhere, so the refusal is right - and it is **visible**,
+because the same `Pairing` is what draws `WAITING` / `APP`. `RadioFault` means the radio is dead. In `Live`
+a press **always** captures - including while the protocol layer is `Gone`, because `Gone` is a subscriber
+that has gone quiet, not "nobody". If it really is silent the trigger goes out and `Err1` arrives four
+seconds later, which is a visible, honest answer. **The same condition decides whether a press is accepted
+and which face is drawn** - both read `presentation::state() == Live` - because two conditions is what
+produced the two failures this rule exists to prevent: a capture reported `NO REPLY` about a PC that never
+heard the trigger, and a refusal the operator could not see.
 
 **8. The wire is untouched.** No event, no command and no line format changes. `EVT SCREEN` still names
 `READY`, `CAPTURING`, `PASS` and `RETAKE`; a PC that knows the retired `OFFLINE` name simply stopped
 receiving it, because the link no longer has a screen to report. The existing "tell the PC the current
-screen when it subscribes" rule is unchanged.
+screen when it subscribes" rule is unchanged, and it now has one more job: **a new subscription flushes the
+input**. The carrier drops its rx ring and the parser drops any half-received line, because a partial line
+left by the previous session must not be completed by the next session's first write into a command nobody
+sent.
 
 **9. `Pairing` is a word and a rotation, and neither has a position table.** The panel draws `APP` and
 turns the fourth digit through six segments; the step is `1u << presentation::rotationStep(faceAge)`, the
@@ -511,3 +522,21 @@ appeared. `CAP` appearing and snapping to `READY` is that wrap. The age is now c
 difference, so a stamp even a millisecond ahead costs a millisecond instead of the whole face, and the check
 measures the lifetime on a virtual clock (still up at eleven seconds, gone by thirteen) rather than only
 asserting the boundary.
+
+**13. `Err3` is a monitor, not a face an event can reach.** Nothing an operator or the PC does raises
+`Err3` directly: it reports a state the firmware should never be in (a capture carrying a verdict timer, or
+a verdict face without one), and the loop emits `EVT INVARIANT` once per episode. If you are looking for
+the input that produces it, there is none - look for the state bug instead.
+
+**14. A radio that cannot advertise is `Pairing`, not `RadioFault`.** `Advertising` retries forever, so a
+rig that has not managed to advertise simply sits on `WAITING` with `APP` turning. That is honest - nobody
+is listening yet - and it is why the face is a wait rather than a fault: the radio stack is alive, it just
+has not got a message out. `Err4` is reserved for a stack that refused to start or that reached the drop
+storm, where waiting will not fix it. The cost is that a permanently mute radio is invisible on the glass,
+which is acceptable only because it is written down here.
+
+**15. A press is acted on in the next loop pass, and that latency is accepted.** The button is read once
+per iteration, after a possible full-frame OLED send of about 25 ms; the press lands in the following pass.
+Reordering the loop to shave that would put the button ahead of the link and the verdict timer, and the
+25 ms is far inside the debounce window and invisible to a person. It is written down so the next reader
+does not "fix" the ordering.

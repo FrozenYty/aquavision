@@ -336,15 +336,20 @@ that is merely quiet is no longer a face.
 | `Err3` invariant violated | `Err3`, 1 Hz | the screen that was up, unchanged | 2 s |
 | `Err4` radio dead | `Err4`, 1 Hz | `RADIO FAULT`, then `REFLASH RIG-SERIAL` | none |
 
-**At power-up the OLED shows none of those, because none would be true.** With no central attached
+**At power-up the OLED shows none of those, because none would be true.** With nobody listening
 there is no fault to report, so the OLED shows `WAITING` - drawn by the same `drawStatusFace` as
 `RADIO FAULT`, with the headline changed and no animation - and the panel draws `APP` with its fourth
 digit turning through the six rim segments; that is the `Pairing` face of the presentation layer
 (`docs/rig-state-machine-en.md` §11). It is also why the first connection no longer flips the panel to
 `READY` as though a press had caused it: the panel was already showing a waiting rig, and what changes is
-the face. **A central that attaches and then goes silent is not a fault either**: it stays on the rig's
-own screen, because a quiet peer has the same remedy as no peer at all - wait. **The serial build has no
-carrier signal** (§2), so `rig-serial` boots `Live` and never shows `WAITING` or a link face.
+the face. **`Pairing` covers the attach-to-subscribe window too**, because `Live` keys on the BLE layer's
+`Streaming` and not on the connection: a central that has connected but not enabled notifications cannot
+hear `EVT TRIGGER`, so a press there would start a capture nobody receives and report `NO REPLY` about a PC
+that never heard the trigger. In that window the refusal is visible - `WAITING` and `APP` are on the glass -
+which is exactly what makes the refusal acceptable. **A subscriber that then goes silent is a different
+fact**: it is `Live`, it stays on the rig's own screen, and a press captures and reports `Err1` if the
+silence lasts. **The serial build has no carrier signal** (§2), so `rig-serial` boots `Live` and never shows
+`WAITING` or a link face.
 
 **`Err4` exists because a link that ends is not a fault any more.** A dead radio looks, at first, exactly
 like a quiet peer: no commands arrive and the ten-second timer sets `Gone`. But a quiet peer is waiting to

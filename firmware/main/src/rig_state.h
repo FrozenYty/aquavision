@@ -86,6 +86,18 @@ struct State {
 //: enough to look like a timer of its own.
 inline void armVerdictFace(State& state, uint32_t now) { state.verdictAt = now; }
 
+//: Raise a fault, unless the radio is already dead. `Err4` outranks every other code and **owns
+//: `faultAt`**: a timeout, a stray result or a broken invariant that re-stamped it would restart the blink
+//: mid-warning and make a dead radio look like a radio that is still being tried. One writer per pair, or
+//: the blink has a phase nobody owns.
+inline void raiseFault(State& state, Fault fault, uint32_t now) {
+  if (state.fault == Fault::Radio && fault != Fault::Radio) {
+    return;
+  }
+  state.fault = fault;
+  state.faultAt = now;
+}
+
 //: True once the verdict face's window has run out. The age is a **signed** difference on purpose: a stamp
 //: even one millisecond ahead of `now` makes an unsigned subtraction wrap to the largest 32-bit value, so the
 //: face would expire immediately. `armVerdictFace` stamps from the same reading, so in production the age is

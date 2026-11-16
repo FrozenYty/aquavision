@@ -258,7 +258,10 @@ void dispatch(Event event, uint16_t handle) {
   }
   if (event == Event::Subscribe && from == State::Connected) {
     // F3: tell the protocol layer, once, that somebody is listening. The panel's screen is the loop's to
-    // report, and this layer does not know what a screen is.
+    // report, and this layer does not know what a screen is. The rx ring is emptied in the same breath:
+    // this is a new conversation, and bytes the previous peer left - a partial line above all - must not
+    // be completed by this one's first write.
+    transport::flushRx();
     portENTER_CRITICAL(&layerMux);
     layer.subscriptionPending = true;
     portEXIT_CRITICAL(&layerMux);
@@ -568,14 +571,20 @@ bool subscribed() {
   return pending;
 }
 
-//: True while a central holds the link: `Connected` before it subscribes and `Streaming` after. This is
-//: the carrier fact the presentation layer reads to separate `Pairing` from `Live`
-//: (docs/rig-state-machine-en.md §11); `Advertising` and `Fault` answer false, because there is nobody
-//: attached in either. It is not a liveness claim: the protocol layer still calls a silent central
-//: `Gone`, which no longer chooses a face.
-bool attached() {
-  const State state = currentState();
-  return state == State::Connected || state == State::Streaming;
+//: True only while a central has notifications enabled (`Streaming`). `Connected` answers false on
+//: purpose: a central that has attached but not subscribed cannot hear `EVT TRIGGER`, so the presentation
+//: stays `Pairing` there and a press is visibly refused instead of becoming a capture nobody answers.
+bool listening() {
+  return currentState() == State::Streaming;
+}
+
+//: Drops the rx ring. Called when a central subscribes: a half-received line from the previous session
+//: must not be completed by the new one's first write, because that would apply a command nobody sent.
+void flushRx() {
+  portENTER_CRITICAL(&rxMux);
+  rxHead = 0;
+  rxTail = 0;
+  portEXIT_CRITICAL(&rxMux);
 }
 
 }  // namespace transport

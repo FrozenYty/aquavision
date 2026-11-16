@@ -44,16 +44,22 @@ uint32_t displayStartedAt = 0;
 rig::Screen lastDisplayedScreen = rig::Screen::Ready;
 uint32_t lastDisplayChange = 0;
 
-//: The third machine's own reading of the wire (docs/rig-state-machine-en.md §11). `presentationAttached`
+//: The third machine's own reading of the wire (docs/rig-state-machine-en.md §11). `presentationListening`
 //: remembers the previous loop's carrier, so a transition - not a level - becomes B1 or B3; the state
 //: painted last does the same job for the faces that the screen does for `state.screen`, so a change of
 //: face starts that face's age at zero.
-bool presentationAttached = false;
+bool presentationListening = false;
 presentation::State lastDisplayedPresentation = presentation::State::Pairing;
 
 //: The button has one meaning: a press captures. The edge is debounced here, and the capture is refused
-//: when there is nothing to receive it - no link, or a shot already in flight - so the rig has one entry
-//: point rather than a gesture to be interpreted. The release is not an event.
+//: only while a face owns the screens - nobody listening, or a dead radio - so the rig has one entry point
+//: rather than a gesture to be interpreted. The release is not an event.
+//:
+//: **The acceptance condition and the face condition are the same condition.** Both read
+//: `presentation::state() == Live`, and `Live` means a subscriber is listening (`transport::listening()`,
+//: the BLE layer's `Streaming`). Two different conditions is what produced the two failures this rule
+//: exists to prevent: a press that fired into the attach-to-subscribe window and reported `NO REPLY` about
+//: a PC that never heard the trigger, and a refusal the operator could not see.
 void serviceButton(uint32_t now) {
   const bool level = digitalRead(cfg::PIN_BUTTON);
   if (level == lastButtonLevel || now - lastButtonEdge < cfg::BUTTON_DEBOUNCE_MS) {
@@ -67,12 +73,12 @@ void serviceButton(uint32_t now) {
     return;  // only the press acts
   }
 
-  // A capture needs a PC to receive it, and only the presentation layer knows whether one is there. A
-  // press is refused only while a face owns the glass: `Pairing` (nobody attached, so there is nowhere to
-  // send the trigger and a timeout would be invisible) and `RadioFault` (the radio is dead). **`Gone` is
-  // not "nobody"** - it is an attached client that has been quiet for ten seconds - so a press in `Live`
-  // captures whatever the protocol layer says; if the peer really is silent, `Err1` reports the timeout
-  // four seconds later, which is a visible answer (docs/rig-state-machine-en.md §11).
+  // A capture needs a PC to hear it, and only the presentation layer knows whether anyone is listening. A
+  // press is refused only while a face owns the glass: `Pairing` (nobody listening - the refusal is visible
+  // there, which is what makes it acceptable) and `RadioFault` (the radio is dead). **`Gone` is not
+  // "nobody"** - it is a subscriber that has gone quiet for ten seconds - so a press in `Live` captures
+  // whatever the protocol layer says; if the peer really is silent, `Err1` reports the timeout four seconds
+  // later, which is a visible answer (docs/rig-state-machine-en.md §11).
   if (presentation::state() != presentation::State::Live) {
     return;
   }
@@ -110,8 +116,7 @@ void serviceCaptureTimeout(uint32_t now) {
   state.screen = rig::Screen::Retake;
   state.reason = rig::Reason::NoReply;
   state.score = -1;
-  state.fault = rig::Fault::Timeout;
-  state.faultAt = now;
+  rig::raiseFault(state, rig::Fault::Timeout, now);
   rig::armVerdictFace(state, now);
   state.markDirty();
   // Both events, in this order: TIMEOUT says why the screen moved, SCREEN says where it moved to. Emitting
@@ -503,10 +508,10 @@ void serviceDisplay(uint32_t now) {
 void serviceLink(uint32_t now) {
   const bool alive = (now - lastPcMessage) < cfg::OFFLINE_AFTER_MS;
   if (!alive && state.link == rig::Link::Alive) {
-    // The link is the protocol layer's own fact now. It no longer chooses a screen: a client that is
-    // attached and quiet is still attached, and the rig is ready either way, so there is nothing to
-    // repaint and no `EVT SCREEN` to send. The button still works while `Gone` (it keys on the
-    // presentation state), and a verdict that never comes reports itself as `Err1`.
+    // The link is the protocol layer's own fact now. It no longer chooses a screen: a subscriber that is
+    // quiet is still a subscriber, and the rig is ready either way, so there is nothing to repaint and no
+    // `EVT SCREEN` to send. The button still works while `Gone` (it keys on the presentation state), and a
+    // verdict that never comes reports itself as `Err1`.
     state.link = rig::Link::Gone;
   }
   // Recovery is handled where it happens - by `poll` setting `Alive` - and no screen is reset here, so a
@@ -524,18 +529,21 @@ void servicePresentation(uint32_t now) {
   if (faulty) {
     if (state.fault != rig::Fault::Radio) {
       // `state.fault` still carries the blink age and the panel's ranking; the presentation state is what
-      // chooses the face (`displayMask`). Both are set from this one event, so they cannot disagree.
-      state.fault = rig::Fault::Radio;
-      state.faultAt = now;
+      // chooses the face (`displayMask`). Both are set from this one event, so they cannot disagree - and
+      // `raiseFault` is what keeps a timeout or an invariant from re-stamping the blink underneath it.
+      rig::raiseFault(state, rig::Fault::Radio, now);
       state.markDirty();
     }
     presentation::apply(presentation::Event::RadioFaulted);
   }
 
-  const bool attached = transport::attached();
-  if (attached != presentationAttached) {
-    presentationAttached = attached;
-    presentation::apply(attached ? presentation::Event::Attached : presentation::Event::Detached);
+  // `listening`, not "attached": a central that has not enabled notifications cannot hear `EVT TRIGGER`,
+  // so it must not count as a PC. The presentation stays `Pairing` in that window and a press is visibly
+  // refused there - the same condition the button reads (`presentation::state() == Live`).
+  const bool listening = transport::listening();
+  if (listening != presentationListening) {
+    presentationListening = listening;
+    presentation::apply(listening ? presentation::Event::Attached : presentation::Event::Detached);
   }
 
   // P2 is the protocol's ten seconds of silence, applied while the fact holds rather than only on its
@@ -553,18 +561,18 @@ void setup() {
   beginDisplay();
 
   // The wire: a UART always opens, and a radio can refuse. A refusal is not fatal - the rig keeps drawing
-  // its panel - but it is `Err4` rather than a rig that looks merely unreachable (§8, §10).
+  // its panel - but it is `Err4` rather than a rig that looks merely unreachable (§8, §10), and it wins
+  // `faultAt` over every later fault.
   if (transport::begin() != transport::Result::Ok) {
-    state.fault = rig::Fault::Radio;
-    state.faultAt = millis();
+    rig::raiseFault(state, rig::Fault::Radio, millis());
   }
 
-  // The third machine starts from the wire that actually opened: a radio with no central is `Pairing`;
-  // a UART always answers attached, so a serial rig starts `Live` and never shows `WAITING`
+  // The third machine starts from the wire that actually opened: a radio with no subscriber yet is
+  // `Pairing`; a UART always answers listening, so a serial rig starts `Live` and never shows `WAITING`
   // (docs/rig-state-machine-en.md §11). Not an event and not in the matrix - a stack that starts has
   // exactly one thing to be.
-  presentation::begin(transport::attached());
-  presentationAttached = transport::attached();
+  presentation::begin(transport::listening());
+  presentationListening = transport::listening();
   lastDisplayedPresentation = presentation::state();
 
   Wire.begin(cfg::PIN_I2C_SDA, cfg::PIN_I2C_SCL);
@@ -618,14 +626,15 @@ void loop() {
   //
   // One report per episode, re-armed as soon as the state is sound again: the check keeps watching after
   // it fires. A latch that reported once and then stayed quiet looked like a monitor while saying nothing
-  // at all about the second violation.
+  // at all about the second violation. This is a monitor rather than a face an event can reach: nothing an
+  // operator or the PC does raises `Err3` directly, it only reports a state the firmware should never be
+  // in.
   static bool invariantReported = false;
   if (rig::invariantHolds(state)) {
     invariantReported = false;
   } else if (!invariantReported) {
     invariantReported = true;
-    state.fault = rig::Fault::Invariant;
-    state.faultAt = now;
+    rig::raiseFault(state, rig::Fault::Invariant, now);
     protocol::emitInvariant(state.screen, state.link);
   }
 
@@ -635,9 +644,13 @@ void loop() {
   // below is untouched, so a client that subscribes and then says nothing still makes the rig `Gone`.
   // The serial wire answers false: a port that is open reads the very next line already.
   if (transport::subscribed()) {
+    // A subscription is a new conversation, so the input side starts clean: the rx ring is dropped by the
+    // carrier when notifications are enabled, and a partial line the previous session left is dropped here.
+    // Without it, the first bytes of this session could complete a command nobody sent.
+    protocol::flushInput();
     protocol::emitScreen(state);
-    // B2: the subscription completed. The presentation is already `Live` (B1 attached), so this is the
-    // handled-in-place case; the emit above is what the freshly subscribed PC needs.
+    // B2: the subscription completed. `Live` is already the state B1 put it in, because B1 is the same
+    // edge on this wire; the emit above is what the freshly subscribed PC needs.
     presentation::apply(presentation::Event::Subscribed);
   }
 

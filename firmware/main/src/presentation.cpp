@@ -23,16 +23,15 @@ constexpr Cell kToRadioFault{Outcome::Move, State::RadioFault};
 //: a reader - and the test - can check it against the document cell by cell, which is the whole point
 //: of a matrix with no empty cells.
 //:
-//: `Live`'s P2 cell is §11's "already here": an attached client that has gone quiet has the same remedy
-//: as one that never spoke - wait - and the rig is ready either way, so nothing changes. `Live`'s B1 cell
-//: is `Rejected` because a second central must not repaint a live screen; the BLE layer has already
-//: disconnected that central, and this cell is what keeps the presentation from following it.
+//: `Live`'s P2 cell is §11's "already here": a subscriber that has gone quiet has the same remedy as one
+//: that never spoke - wait - and the rig is ready either way, so nothing changes. `Live`'s B1 cell is
+//: `Rejected` because a second subscriber must not repaint a live screen; the BLE layer has already
+//: disconnected it, and this cell is what keeps the presentation from following it.
 //:
-//: There is no "attached but not subscribed" state: attaching is enough to hand the glass back to the
-//: rig's own screen, because the alternative - a face for a peer that is merely quiet - is the face this
-//: round retired.
+//: There is no "attached but not listening" state: only `Streaming` counts as `Live`, because a central
+//: that has not enabled notifications cannot hear `EVT TRIGGER` (see `State` in the header).
 constexpr Cell kMatrix[3][6] = {
-    // B1 attached, B2 subscribed, B3 detached, B4 fault, P1 command, P2 silence
+    // B1 listening, B2 subscribed, B3 stopped, B4 fault, P1 command, P2 silence
     {kToLive, kIgnored, kIgnored, kToRadioFault, kIgnored, kIgnored},     // Pairing
     {{Outcome::Rejected, State::Live}, kIgnored, kToPairing, kToRadioFault, kHandled,
      kHandled},                                                           // Live
@@ -59,10 +58,10 @@ namespace presentation {
 
 State state() { return current; }
 
-void begin(bool attached) {
-  // The protocol layer's `Alive`/`Gone` no longer chooses a face: a client that is attached and quiet is
-  // `Live` - the rig is ready and nothing is happening - so attaching is the only fact that matters here.
-  current = attached ? State::Live : State::Pairing;
+void begin(bool listening) {
+  // The protocol layer's `Alive`/`Gone` does not choose a face: a subscriber that is quiet is `Live` - the
+  // rig is ready and nothing is happening - so whether anyone is listening is the only fact that matters.
+  current = listening ? State::Live : State::Pairing;
 }
 
 Cell apply(Event event) {

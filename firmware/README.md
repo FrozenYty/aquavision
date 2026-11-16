@@ -105,7 +105,7 @@ y 33..53  +-----------------------------------------------------+
           |                       RETAKE                        |    filled = PASS, outline = RETAKE
           +-----------------------------------------------------+
 y 54      -------------------------------------------------------
-y 55..62  v1.21                                    FRAMES 12
+y 55..62  version                                   FRAMES 12
 ```
 
 **Shape carries the verdict.** A pass fills the banner, a retake outlines it, so the two are
@@ -118,10 +118,10 @@ smudge.
 19, so at baseline 31 its digits occupy rows 12-31; the bold 7x13 label reports ascent 9, so at baseline
 26 it occupies 17-26. Both centre on 21.5. A 5x7 label at the same baseline sat 1.5 px low.
 
-**The footer is the firmware version and the frame counter.** `v1.21` on the left, built from the same
-constant `EVT HELLO` sends, so the panel and the log cannot disagree about which build is running;
-`FRAMES 12` on the right is a real capture count. There is no session tally any more - a count of verdicts
-is a statistic, and the PC keeps the record.
+**The footer is the firmware version and the frame counter.** The version on the left is built from the same
+constant `EVT HELLO` sends, so the panel and the log cannot disagree about which build is running; `FRAMES 12`
+on the right is a real capture count. There is no session tally any more - a count of verdicts is a statistic,
+and the PC keeps the record.
 
 **States without a score use the free band.** READY puts `PRESS TO CAPTURE` there and CAPTURING puts a row
 of six dots, one lit at a time at a quarter-second, which is one step of the same phase as the panel's
@@ -195,8 +195,8 @@ dash after a power-up sat on digit 2 instead of digit 1.
 | fault `Err3` | broken invariant, blinking | 1 Hz for 2 s |
 | fault `Err4` | radio dead, blinking | 1 Hz, and no window: until a power cycle or a reflash |
 
-**`Pairing` draws `APP` with a rotating fourth digit, not a code and not the `READY` marquee.** With no
-central attached there is no fault to report: the rig is ready and only the link detail differs. The word
+**`Pairing` draws `APP` with a rotating fourth digit, not a code and not the `READY` marquee.** With nobody
+listening there is no fault to report: the rig is ready and only the link detail differs. The word
 names the PC-side application the operator is about to open - the action this state waits for - and the
 fourth digit turns through the six rim segments at the same 250 ms step and through the same
 `presentation::rotationStep` as `CAPTURING`. Both halves are things this panel already draws, and that is
@@ -207,9 +207,22 @@ vanished and another lingered. The step is `1u << step` now, and a bit shift has
 check asserts the definition (six positions, six distinct segments, no repeats) rather than a copy of the
 table. **The shape is the distinction, not the direction**: the first version walked the `READY` marquee
 backwards and the bench rejected it, because two dashes moving opposite ways look the same at a glance.
-A central that attaches and then goes silent is not a third face: the rig stays on its own screen, which is
-the presentation layer's decision (`docs/rig-state-machine-en.md` §11), and it is why a rig powered up on a
-bench no longer blinks a fault at nobody.
+
+**`Pairing` means nobody is listening, and the button reads the same fact.** `transport::listening()` is the
+BLE layer's `Streaming`, not "a central is connected": a central that has attached but not enabled
+notifications cannot hear `EVT TRIGGER`, so treating it as a PC would let a press start a capture nobody
+receives and report `NO REPLY` four seconds later about a PC that never heard the trigger. Keying `Live` on
+`Streaming` puts that window in `Pairing`, where the refusal is **visible** - `WAITING` and `APP` are what
+the operator is looking at - and it is why the acceptance condition and the face condition are deliberately
+one condition, `presentation::state() == Live` (`docs/rig-state-machine-en.md` §11 rule 7). A subscriber
+that has gone quiet is a different fact: it is `Live` and captures, and `Err1` reports a silence that has
+lasted four seconds.
+
+**A radio that cannot advertise is `Pairing`, not `Err4`.** `Advertising` retries forever, so a rig that has
+not got a message out simply sits on `WAITING` with `APP` turning. That is honest - nobody is listening yet -
+and `Err4` is reserved for a stack that refused to start or reached the drop storm, where waiting will not
+fix it. The cost is that a permanently mute radio is invisible on the glass, which is acceptable only
+because it is written down (`docs/rig-state-machine-en.md` §11 rule 14).
 
 **`READY` is a one-way marquee.** Digits 1, 2, 3, 4 and straight back to 1, half a second at each position:
 two seconds a cycle, no dark frame, and never more than one dash lit. **The wrap is deliberate** - the dash
@@ -222,12 +235,15 @@ identifier and the rhythm carries nothing, so there is no second rate. What diff
 stays: `Err4` has no window because a dead radio is not fixed by waiting, and `Err1` to `Err3` clear after
 two seconds. That is when it leaves, not how it looks. The three windows are there because those events used
 to produce a log line and nothing a person at the bench could see, which made a broken rig and an idle one
-look the same. **`Err4` is the `rig-ble` build's code for a radio that did not start, or whose link died
-five times in a minute while it was carrying the protocol** - a client that connects and leaves politely is
-not a drop, which is what lets a bench session of deliberate connect/disconnect cycles run without taking
-the rig off the air. The OLED has no code face, so on `Err4` it draws `RADIO FAULT` and `REFLASH RIG-SERIAL`
-itself, and its body line reads `NO LINK TO PC` instead of `CHECK USB CABLE` in that build. **The retired
-`Err0` keeps its number free**: the remaining codes are not renumbered.
+look the same. **`Err3` is a monitor, not a face an event can reach**: it reports a state the firmware should
+never be in (a capture carrying a verdict timer, or a verdict face without one), so there is no input to hunt
+for if you see it - look for the state bug. **`Err4` is the `rig-ble` build's code for a radio that did not
+start, or whose link died five times in a minute while it was carrying the protocol** - a client that
+connects and leaves politely is not a drop, which is what lets a bench session of deliberate
+connect/disconnect cycles run without taking the rig off the air. The OLED has no code face, so on `Err4` it
+draws `RADIO FAULT` and `REFLASH RIG-SERIAL` itself, and its body line reads `NO LINK TO PC` instead of
+`CHECK USB CABLE` in that build. **The retired `Err0` keeps its number free**: the remaining codes are not
+renumbered, and `Err4` owns `faultAt` so nothing re-stamps its blink mid-warning.
 
 **A retake reads `F`, not `E`.** `E` begins every fault code, so ` 40E` and an `Err` face were one glance
 apart; `F` is the left column with the top and middle bars, and no code contains it.
@@ -243,9 +259,13 @@ appears (`CAP` flashing back to `READY`, the 1.22 defect).
 **There is no rehearsal; the button has one meaning.** A press captures, on the pressing edge, and the release
 is not an event at all, so a fault face appears only when its event happens: a bench where nothing is failing
 never shows `Err1` to `Err3`. A press is refused only while a face owns the screens (`Pairing`,
-`RadioFault`); in `Live` it captures even when the protocol layer has gone `Gone`, because a quiet peer is
-not "nobody". That is why those events are reported on the wire as well as drawn - `EVT TIMEOUT`,
-`EVT STRAY RESULT`, `EVT INVARIANT` are the other place a fault is visible.
+`RadioFault`); in `Live` it captures even when the protocol layer has gone `Gone`, because a subscriber that
+has gone quiet is not "nobody". That is why those events are reported on the wire as well as drawn -
+`EVT TIMEOUT`, `EVT STRAY RESULT`, `EVT INVARIANT` are the other place a fault is visible. **The press is
+acted on in the next loop pass**, after a possible full-frame OLED send of about 25 ms; that latency is
+accepted and the loop is not reordered for it, because 25 ms is far inside the debounce window and moving the
+button ahead of the link and the verdict timer would trade a visible delay for a real ordering bug
+(`docs/rig-state-machine-en.md` §11 rule 15).
 
 **A fault outranks the screen, and an unknown score is never a zero.** A fault window covers the panel while
 the screen underneath moves, so a verdict that arrives inside one loses its arrival sweep - the 250 ms has
@@ -286,7 +306,7 @@ anything it does not understand, so a garbled byte cannot brick the rig.
 | → PC | `EVT TRIGGER <millis>` | the button was pressed and a capture started |
 | → PC | `EVT TIMEOUT <millis>` | no verdict arrived within 4 s; the screen changes to RETAKE, and `EVT SCREEN RETAKE -1` follows |
 | → PC | `EVT STRAY RESULT <score>` | a verdict arrived with no capture in flight; it was **not** applied |
-| → PC | `EVT INVARIANT <screen> <link>` | a screen/link pair that should be impossible; never expected on the wire |
+| → PC | `EVT INVARIANT <screen> <link>` | a state the firmware should never be in - a capture carrying a verdict timer, or a verdict face without one; a monitor, never expected on the wire |
 | → PC | `EVT PONG` | answer to `CMD PING` |
 | PC → | `CMD RESULT <score> <PASS\|RETAKE> <REASON>` | what to display, valid only in CAPTURING; the score is clamped to 0-100 |
 | PC → | `CMD READY` | back to the idle screen |
@@ -296,6 +316,11 @@ anything it does not understand, so a garbled byte cannot brick the rig.
 `REASON` is one token: `LOW_LIGHT`, `BLUR`, `COLOR_CAST`, `NONE`, `UNKNOWN` or `NO_REPLY`. `NO_REPLY` is
 generated by the rig and never sent to it; `UNKNOWN` is what the server sends when no sub-score names a
 cause (`server/app/rig/protocol.py`), and the rig also stores it for any token it does not recognise.
+
+**A new subscription is a new conversation, so the input is flushed.** On BLE the carrier drops its rx ring
+when notifications are enabled and the parser drops any half-received line, because a partial line left by
+the previous session must not be completed by the next session's first write into a command nobody sent
+(`docs/rig-state-machine-en.md` §11 rule 8).
 
 **The PC half now exists** (`server/app/rig/`, P2-17): the server opens the port, sends `CMD PING`
 every two seconds, turns `EVT TRIGGER` into a capture and a `CMD RESULT`, and logs every screen change the

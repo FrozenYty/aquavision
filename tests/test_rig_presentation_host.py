@@ -170,6 +170,29 @@ int main() {
          static_cast<unsigned>(rig::verdictFaceExpired(t0 + 11000u, t0, cfg::VERDICT_FACE_MS)));
   printf("edge 13000 %u\n",
          static_cast<unsigned>(rig::verdictFaceExpired(t0 + 13000u, t0, cfg::VERDICT_FACE_MS)));
+
+  // The condition that decides a press and the condition that decides a face must be one condition: the
+  // harness prints both readings from the real entry point, so they cannot be checked apart.
+  for (unsigned listening = 0; listening < 2; ++listening) {
+    presentation::begin(listening != 0);
+    const State current = presentation::state();
+    const presentation::Face& drawn = presentation::faceFor(current);
+    const unsigned accepted = current == State::Live ? 1u : 0u;
+    printf("signal %u %u %u %u %u\n", listening, static_cast<unsigned>(current),
+           static_cast<unsigned>(drawn.oled), static_cast<unsigned>(drawn.panel), accepted);
+  }
+
+  // `Err4` owns the blink: a later timeout must not re-stamp it, and a timeout raised first is upgraded.
+  rig::State dead;
+  rig::raiseFault(dead, rig::Fault::Radio, 1000u);
+  rig::raiseFault(dead, rig::Fault::Timeout, 5000u);
+  printf("fault held %u %u %u\n", static_cast<unsigned>(dead.fault == rig::Fault::Radio),
+         dead.faultAt, static_cast<unsigned>(dead.faultAt == 1000u));
+  rig::State timedOut;
+  rig::raiseFault(timedOut, rig::Fault::Timeout, 100u);
+  rig::raiseFault(timedOut, rig::Fault::Radio, 200u);
+  printf("fault upgrade %u %u\n", static_cast<unsigned>(timedOut.fault == rig::Fault::Radio),
+         timedOut.faultAt);
   return 0;
 }
 """
@@ -279,6 +302,41 @@ def test_the_real_invariant_catches_an_armed_capture_timer(tmp_path: Path) -> No
     assert held[("Pass", True)] is True, "a verdict face must carry its timer"
     assert held[("Pass", False)] is False, "a verdict face with no timer would never expire"
     assert held[("Retake", True)] is True and held[("Retake", False)] is False
+
+
+def test_attached_but_not_listening_is_pairing_with_a_visible_refusal(tmp_path: Path) -> None:
+    """`Live` is a subscriber, not an attachment; the face and the press read that one fact.
+
+    The harness prints the state, both faces and the button's acceptance from the real entry point, so a
+    future split into two conditions fails here rather than at the bench.
+    """
+    lines = run_harness(tmp_path)
+    signal = {
+        int(parts[1]): parts[2:]
+        for parts in (line.split() for line in lines)
+        if parts[0] == "signal"
+    }
+    # Not listening: Pairing (0), WaitingForPc (0), Pairing (0), press refused (0).
+    assert signal[0] == ["0", "0", "0", "0"], (
+        f"not listening drew state/face/accepted {signal[0]}, not Pairing / WAITING / refused"
+    )
+    # Listening: Live (1), RigScreen (1), RigScreen (1), press accepted (1).
+    assert signal[1] == ["1", "1", "1", "1"], (
+        f"listening drew state/face/accepted {signal[1]}, not Live / the rig's own / accepted"
+    )
+
+
+def test_err4_owns_the_blink_clock(tmp_path: Path) -> None:
+    """A timeout raised under a dead radio must not restart the blink; a timeout is upgraded by `Err4`."""
+    lines = run_harness(tmp_path)
+    held = [line for line in lines if line.startswith("fault held ")][0].split()
+    assert held[2:] == ["1", "1000", "1"], (
+        "a later timeout replaced the dead-radio fault or re-stamped its blink"
+    )
+    upgrade = [line for line in lines if line.startswith("fault upgrade ")][0].split()
+    assert upgrade[2:] == ["1", "200"], (
+        "a dead radio must upgrade an earlier timeout and own the stamp"
+    )
 
 
 def test_the_verdict_face_lives_twelve_seconds_on_the_loop_clock(tmp_path: Path) -> None:

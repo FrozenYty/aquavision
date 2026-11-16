@@ -194,6 +194,11 @@ constexpr uint32_t BLE_ADVERTISE_RETRY_MS = 250;
 //: wrap to about 4.29e9 and expire the face on the pass it appeared - `CAP` flashing back to `READY`. The
 //: parser now takes the loop's own reading, `armVerdictFace` is the only stamp, and `verdictFaceExpired`
 //: compares a signed age so a stamp a millisecond ahead costs a millisecond instead of the whole face.
-constexpr char FIRMWARE_VERSION[] = "1.22";
+//: 1.23 makes `Live` mean "a subscriber is listening" (`Streaming`), not "something is attached": a press in
+//: the attach-to-subscribe window used to start a capture the PC could not hear and report `NO REPLY` four
+//: seconds later. The button reads the same condition the face does. A new subscription also flushes the rx
+//: ring and any half-received line, and `Err4` now owns `faultAt` so a later timeout cannot restart its
+//: blink.
+constexpr char FIRMWARE_VERSION[] = "1.23";
 
 }  // namespace cfg
