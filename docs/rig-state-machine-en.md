@@ -496,11 +496,18 @@ moving element, it must compute its phase from the clock and say what repaints i
 heartbeat.
 
 **11. Starting a capture cancels the previous verdict's face timer.** A verdict face expires after
-`cfg::VERDICT_FACE_MS`, and that timer belongs to the verdict it was armed for. The bench saw what happens
-without the cancel: pressing inside the twelve-second window moved the panel to `CAPTURING`, the previous
-verdict's timer was still counting, and it pulled the new capture back to `READY` - `CAP` appeared and
-vanished. `serviceButton` therefore clears `state.verdictAt` when a capture begins, and
-`serviceVerdictTimeout` refuses to fire while no timer is armed. The invariant in `rig_state.h` states the
-same rule from the other side: **a capture in flight carries no verdict timer, and a verdict face carries
-one**, so an armed timer during `CAPTURING` is reported as `Err3` rather than silently mis-timing the
-screen.
+`cfg::VERDICT_FACE_MS`, and that timer belongs to the verdict it was armed for. `serviceButton` therefore
+clears `state.verdictAt` when a capture begins, and `rig::verdictFaceExpired` refuses to fire while no timer
+is armed. The invariant in `rig_state.h` states the same rule from the other side: **a capture in flight
+carries no verdict timer, and a verdict face carries one**, so an armed timer during `CAPTURING` is reported
+as `Err3` rather than silently mis-timing the screen.
+
+**12. One event, one clock reading.** A verdict is stamped with the loop's own `now` - the same reading the
+expiry compares against - and `rig::armVerdictFace` is the only writer. Two readings of one clock is not a
+detail: on the bench a face promised twelve seconds lived about one, because the verdict was stamped with a
+second `millis()` taken after the loop's reading, a millisecond boundary fell between them, and the unsigned
+age `now - verdictAt` wrapped to about 4.29e9 - larger than any window, so the face expired on the pass it
+appeared. `CAP` appearing and snapping to `READY` is that wrap. The age is now compared as a signed
+difference, so a stamp even a millisecond ahead costs a millisecond instead of the whole face, and the check
+measures the lifetime on a virtual clock (still up at eleven seconds, gone by thirteen) rather than only
+asserting the boundary.

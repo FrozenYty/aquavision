@@ -21,7 +21,7 @@ size_t length = 0;
 //: Set by `handleLine` when a command was applied; cleared by `poll`.
 bool sawCommand = false;
 
-bool handleResult(rig::State& state, char** cursor) {
+bool handleResult(rig::State& state, char** cursor, uint32_t now) {
   const char* scoreText = strtok_r(nullptr, " ", cursor);
   const char* verdict = strtok_r(nullptr, " ", cursor);
   const char* reason = strtok_r(nullptr, " ", cursor);
@@ -39,7 +39,7 @@ bool handleResult(rig::State& state, char** cursor) {
     // A stray result is a fault, not just a log line: the panel has to say something the operator can
     // see, or a PC sending out of turn looks exactly like a rig with nothing to report.
     state.fault = rig::Fault::Stray;
-    state.faultAt = millis();
+    state.faultAt = now;
     protocol::emitStrayResult(score);
     return false;
   }
@@ -48,12 +48,14 @@ bool handleResult(rig::State& state, char** cursor) {
   state.reason = rig::reasonFromToken(reason);
   state.frames += 1;
   state.screen = (strcmp(verdict, "PASS") == 0) ? rig::Screen::Pass : rig::Screen::Retake;
-  state.verdictAt = millis();
+  // The loop's own reading, not a fresh `millis()`: the expiry compares against that reading, and a stamp
+  // one millisecond past it wraps the unsigned age, expiring the face on the pass it appears.
+  rig::armVerdictFace(state, now);
   state.markDirty();
   return true;
 }
 
-void handleLine(rig::State& state, char* text) {
+void handleLine(rig::State& state, char* text, uint32_t now) {
   char* cursor = nullptr;
   char* verb = strtok_r(text, " ", &cursor);
   if (verb == nullptr || strcmp(verb, "CMD") != 0) {
@@ -69,8 +71,9 @@ void handleLine(rig::State& state, char* text) {
   if (strcmp(command, "PING") == 0) {
     protocol::emitPong();
   } else if (strcmp(command, "READY") == 0) {
+    // The PC ends the verdict face. `verdictAt` is deliberately not cleared here: a capture start is the
+    // only clear, and the expiry ignores a screen that is not PASS or RETAKE anyway.
     state.screen = rig::Screen::Ready;
-    state.verdictAt = 0;  // the verdict face is over, so its timer is not left armed
     state.markDirty();
     protocol::emitScreen(state);
   } else if (strcmp(command, "SCAN") == 0) {
@@ -78,7 +81,7 @@ void handleLine(rig::State& state, char* text) {
     // had a chance to move a wire: without this, every wiring change costs a power cycle to test.
     protocol::emitI2CScan();
   } else if (strcmp(command, "RESULT") == 0) {
-    if (handleResult(state, &cursor)) {
+    if (handleResult(state, &cursor, now)) {
       protocol::emitScreen(state);
     }
   }
@@ -88,7 +91,7 @@ void handleLine(rig::State& state, char* text) {
 
 namespace protocol {
 
-bool poll(rig::State& state) {
+bool poll(rig::State& state, uint32_t now) {
   sawCommand = false;
 
   while (transport::available() > 0) {
@@ -96,7 +99,7 @@ bool poll(rig::State& state) {
     if (c == '\n' || c == '\r') {
       if (length > 0) {
         line[length] = '\0';
-        handleLine(state, line);
+        handleLine(state, line, now);
         length = 0;
       }
       continue;

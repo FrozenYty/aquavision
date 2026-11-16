@@ -24,6 +24,7 @@ DOC_ZH = REPO / "docs" / "rig-state-machine-zh.md"
 PRESENTATION = REPO / "firmware" / "main" / "src" / "presentation.cpp"
 SCREEN = REPO / "firmware" / "main" / "src" / "screen.cpp"
 MAIN = REPO / "firmware" / "main" / "src" / "main.cpp"
+PROTOCOL = REPO / "firmware" / "main" / "src" / "protocol.cpp"
 
 STATES = ["Pairing", "Live", "RadioFault"]
 
@@ -474,9 +475,48 @@ def test_a_capture_cancels_the_previous_verdict_timer() -> None:
 
     timeout = loop[loop.index("void serviceVerdictTimeout(") :]
     timeout = timeout[: timeout.index("\n}\n")]
-    assert "if (state.verdictAt == 0)" in timeout, (
-        "an unarmed timer must not expire; otherwise the clear is cosmetic"
+    assert "rig::verdictFaceExpired(" in timeout, (
+        "the window has to come from the shared predicate, which refuses an unarmed timer too"
     )
+    assert "cfg::VERDICT_FACE_MS" in timeout
+
+
+def test_the_verdict_face_is_stamped_with_the_loops_clock() -> None:
+    """One event, one clock. A second `millis()` here is the flashback: the stamp lands one millisecond
+    past the loop's reading, the unsigned age wraps, and the face expires the instant it appears."""
+    parser = PROTOCOL.read_text(encoding="utf-8")
+    code = re.sub(r"//[^\n]*", "", parser)
+    assert "millis()" not in code, (
+        "the parser must take the loop's clock reading, not a second one of its own"
+    )
+    assert "rig::armVerdictFace(state, now)" in parser
+    assert "bool poll(rig::State& state, uint32_t now)" in parser
+    assert "handleResult(state, &cursor, now)" in parser
+    # And the expiry, which is the only reader that matters, is the shared predicate.
+    state = (REPO / "firmware" / "main" / "src" / "rig_state.h").read_text(encoding="utf-8")
+    assert "inline void armVerdictFace(State& state, uint32_t now)" in state
+    assert "static_cast<int32_t>(now - verdictAt)" in state, (
+        "a signed age, so a stamp a millisecond ahead cannot invert the comparison"
+    )
+
+
+def test_nothing_else_writes_the_verdict_timer() -> None:
+    """Set when a verdict arrives, cleared when a capture starts, written by nothing else."""
+    writers: list[str] = []
+    for rel in ("firmware/main/src/main.cpp", "firmware/main/src/protocol.cpp"):
+        for line in (REPO / rel).read_text(encoding="utf-8").splitlines():
+            code = line.split("//")[0].strip()
+            if "verdictAt =" in code:
+                writers.append(f"{rel}: {code}")
+    assert writers == ["firmware/main/src/main.cpp: state.verdictAt = 0;"], (
+        f"the verdict timer has more writers than the capture-start clear: {writers}"
+    )
+    # The stamp itself lives in the one helper, and both arming sites go through it.
+    loop = MAIN.read_text(encoding="utf-8")
+    assert loop.count("rig::armVerdictFace(state, now)") == 1
+    assert "state.verdictAt = now;" not in loop
+    parser = PROTOCOL.read_text(encoding="utf-8")
+    assert parser.count("rig::armVerdictFace(state, now)") == 1
 
 
 def test_a_press_captures_in_live_and_is_refused_only_by_the_faces() -> None:

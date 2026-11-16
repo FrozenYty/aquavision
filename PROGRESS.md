@@ -20,6 +20,18 @@
   capture begins, `serviceVerdictTimeout` refuses to fire while no timer is armed, and `rig::invariantHolds` now
   states the rule from the other side - a capture in flight carries no verdict timer, a verdict face carries
   one - so the bug's signature is an `EVT INVARIANT` rather than a silent mis-timing.
+- **A verdict face lived about one second instead of twelve, and the cause was two readings of one clock.**
+  The 114-press log showed every capture completing (`CAPTURING` → `TRIGGER` → `RESULT` → `PASS`/`RETAKE` →
+  `READY`) with the `READY` only ~1.4 s after the trigger. The verdict was stamped with a second `millis()`
+  taken *after* the loop had already sampled `now` for the pass; when a millisecond boundary fell between the
+  two, `now - verdictAt` wrapped to ~4.29e9, which is larger than any window, so `serviceVerdictTimeout`
+  expired the face on the same pass it appeared. That is `CAP` appearing and snapping to `READY`, and because
+  it depended on a boundary tick it clustered at some frames and not others. `protocol::poll` now takes the
+  loop's own `now`, `rig::armVerdictFace` is the only stamp, `rig::verdictFaceExpired` compares a **signed**
+  age (so a stamp a millisecond ahead costs a millisecond, not the whole face), and `serviceButton` remains
+  the only clear. The check measures the lifetime on a virtual clock through the real predicate: 12 000 ms
+  for the loop's stamp, 12 001 ms for a stamp one millisecond ahead under the signed comparison (0 ms under
+  the old unsigned one), still up at 11 s and gone by 13 s. `FIRMWARE_VERSION` is `1.22`.
 - **`OFFLINE`, `Err0` and the `NoLink` presentation state are removed.** In BLE a link simply ends and the rig is
   available again; a client that stays connected but stops talking has the same remedy as one that never
   connected - wait. Two faces for one remedy made the operator think a step further for nothing, and `Err0`

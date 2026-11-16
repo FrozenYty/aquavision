@@ -133,6 +133,43 @@ int main() {
              static_cast<unsigned>(rig::invariantHolds(sample)));
     }
   }
+
+  // The face's lifetime, measured on a virtual clock through the real predicate. The bench saw a face
+  // that lived about 1.4 s instead of 12 s; these lines state what the code actually does.
+  const uint32_t t0 = 100000u;
+  rig::State face;
+  face.screen = rig::Screen::Pass;
+  rig::armVerdictFace(face, t0);
+  unsigned lifetime = 0;
+  while (lifetime <= 20000u &&
+         !rig::verdictFaceExpired(t0 + lifetime, face.verdictAt, cfg::VERDICT_FACE_MS)) {
+    ++lifetime;
+  }
+  printf("lifetime same-clock %u\n", lifetime);
+
+  // The old shape: a second clock reading, one millisecond after the loop took `now`.
+  face.verdictAt = t0 + 1u;
+  lifetime = 0;
+  while (lifetime <= 20000u &&
+         !rig::verdictFaceExpired(t0 + lifetime, face.verdictAt, cfg::VERDICT_FACE_MS)) {
+    ++lifetime;
+  }
+  printf("lifetime one-ms-ahead %u\n", lifetime);
+
+  // An unarmed face never expires, however far the clock runs.
+  face.verdictAt = 0u;
+  lifetime = 0;
+  while (lifetime <= 20000u &&
+         !rig::verdictFaceExpired(t0 + lifetime, face.verdictAt, cfg::VERDICT_FACE_MS)) {
+    ++lifetime;
+  }
+  printf("lifetime unarmed %d\n", lifetime > 20000u ? -1 : static_cast<int>(lifetime));
+
+  // The two readings the operator's complaint names: still up at eleven seconds, gone by thirteen.
+  printf("edge 11000 %u\n",
+         static_cast<unsigned>(rig::verdictFaceExpired(t0 + 11000u, t0, cfg::VERDICT_FACE_MS)));
+  printf("edge 13000 %u\n",
+         static_cast<unsigned>(rig::verdictFaceExpired(t0 + 13000u, t0, cfg::VERDICT_FACE_MS)));
   return 0;
 }
 """
@@ -242,6 +279,40 @@ def test_the_real_invariant_catches_an_armed_capture_timer(tmp_path: Path) -> No
     assert held[("Pass", True)] is True, "a verdict face must carry its timer"
     assert held[("Pass", False)] is False, "a verdict face with no timer would never expire"
     assert held[("Retake", True)] is True and held[("Retake", False)] is False
+
+
+def test_the_verdict_face_lives_twelve_seconds_on_the_loop_clock(tmp_path: Path) -> None:
+    """Measured on a virtual clock through the real predicate, not asserted at the boundary.
+
+    The bench measured about 1 434 ms between one trigger and the next and read the face as dying in
+    that time; the face the operator is promised is `cfg::VERDICT_FACE_MS`, twelve seconds. The second
+    case is the defect's own shape: a verdict stamped with a second clock reading, one millisecond past
+    the loop's. An unsigned age then wraps to 4 294 967 295 and the face expires on the pass it appears.
+    """
+    lines = run_harness(tmp_path)
+    measured = {
+        parts[1]: int(parts[2])
+        for parts in (line.split() for line in lines)
+        if parts[0] == "lifetime"
+    }
+    assert measured["same-clock"] == 12000, (
+        f"the verdict face measured {measured['same-clock']} ms, not 12 000"
+    )
+    # A stamp one millisecond ahead is the old shape. It costs one millisecond, not the whole face: the
+    # unsigned version measured 0 ms, which is the flashback.
+    assert 12000 <= measured["one-ms-ahead"] <= 12001, (
+        "a stamp one millisecond past the loop's reading wrapped the age and the face measured "
+        f"{measured['one-ms-ahead']} ms instead of about 12 000"
+    )
+    assert measured["unarmed"] == -1, "an unarmed face must never expire on its own"
+
+    edges = {
+        int(parts[1]): parts[2] == "1"
+        for parts in (line.split() for line in lines)
+        if parts[0] == "edge"
+    }
+    assert edges[11000] is False, "the face must still be up at eleven seconds"
+    assert edges[13000] is True, "the face must be gone by thirteen seconds"
 
 
 def test_the_rotation_is_six_distinct_steps_on_the_clock(tmp_path: Path) -> None:

@@ -188,7 +188,12 @@ constexpr uint32_t BLE_ADVERTISE_RETRY_MS = 250;
 //: so two faces for one remedy are gone. **`Err0` is retired and its number is not reused**: the remaining
 //: faults keep `Err1`-`Err4`. A press now captures in `Live` whatever the protocol layer says (`Gone` is an
 //: attached, quiet peer, not "nobody") and is refused only while a face owns the screen; and starting a
-//: capture cancels the previous verdict's face timer, whose stale firing pulled `CAP` back to `READY`.
-constexpr char FIRMWARE_VERSION[] = "1.21";
+//: capture cancels the previous verdict's face timer.
+//: 1.22 fixes the face that lived about one second instead of twelve: the verdict was stamped with a second
+//: `millis()` reading taken after the loop's, so a boundary tick between the two made `now - verdictAt`
+//: wrap to about 4.29e9 and expire the face on the pass it appeared - `CAP` flashing back to `READY`. The
+//: parser now takes the loop's own reading, `armVerdictFace` is the only stamp, and `verdictFaceExpired`
+//: compares a signed age so a stamp a millisecond ahead costs a millisecond instead of the whole face.
+constexpr char FIRMWARE_VERSION[] = "1.22";
 
 }  // namespace cfg

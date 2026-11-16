@@ -112,7 +112,7 @@ void serviceCaptureTimeout(uint32_t now) {
   state.score = -1;
   state.fault = rig::Fault::Timeout;
   state.faultAt = now;
-  state.verdictAt = now;
+  rig::armVerdictFace(state, now);
   state.markDirty();
   // Both events, in this order: TIMEOUT says why the screen moved, SCREEN says where it moved to. Emitting
   // only the first made this the one transition a PC could not observe as a screen change, and the
@@ -125,16 +125,13 @@ void serviceCaptureTimeout(uint32_t now) {
 //: panel goes back to the idle face; the score is not lost, because the PC keeps the record and the
 //: operator's own eyes had it for `cfg::VERDICT_FACE_MS`, and a panel still reading ` 95P` long after the
 //: press looks hung rather than waiting.
-//: A verdict face is only expirable while one is armed (`verdictAt != 0`): starting a capture clears the
-//: date, so the previous verdict's timer cannot fire against the new capture.
+//: The screen test comes first because only a verdict face expires; the window itself is the shared
+//: `rig::verdictFaceExpired`, which also refuses an unarmed timer.
 void serviceVerdictTimeout(uint32_t now) {
-  if (state.verdictAt == 0) {
-    return;  // no verdict face is armed, or a capture has just cancelled one
-  }
   if (state.screen != rig::Screen::Pass && state.screen != rig::Screen::Retake) {
     return;
   }
-  if (now - state.verdictAt < cfg::VERDICT_FACE_MS) {
+  if (!rig::verdictFaceExpired(now, state.verdictAt, cfg::VERDICT_FACE_MS)) {
     return;
   }
   state.screen = rig::Screen::Ready;
@@ -600,7 +597,7 @@ void loop() {
 
   // A command from the PC *is* the PC being alive. The return value used to be discarded, so the link
   // timer only ever started at boot and the rig counted ten seconds however much it was talking to the PC.
-  if (protocol::poll(state)) {
+  if (protocol::poll(state, now)) {
     lastPcMessage = now;
     state.link = rig::Link::Alive;
     // A command is the PC's return. It does not reset a screen any more: the link has no face, and a

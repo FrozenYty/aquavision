@@ -235,7 +235,10 @@ apart; `F` is the left column with the top and middle bars, and no code contains
 **A verdict is a conclusion, not a label.** `PASS` and `RETAKE` go back to `READY` after 12 s with no new
 press. The score is not lost - the PC keeps the record - and a panel still reading ` 95P` long after the
 press looks hung rather than waiting. A capture started inside that window cancels the timer outright: the
-previous verdict's timer must never pull the new capture back to `READY`.
+previous verdict's timer must never pull the new capture back to `READY`. **The verdict is stamped with the
+loop's own clock reading** - the same one the expiry compares against - because a second `millis()` taken
+just after it can land a millisecond ahead and wrap the unsigned age, which expires the face on the pass it
+appears (`CAP` flashing back to `READY`, the 1.22 defect).
 
 **There is no rehearsal; the button has one meaning.** A press captures, on the pressing edge, and the release
 is not an event at all, so a fault face appears only when its event happens: a bench where nothing is failing

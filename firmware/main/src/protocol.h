@@ -15,7 +15,9 @@ namespace protocol {
 
 //: Reads whatever is available and applies complete lines to `state`. Never blocks.
 //: Returns true if a command arrived, which is what keeps the link watchdog alive.
-bool poll(rig::State& state);
+//: `now` is the loop's own clock reading for this pass. Everything this function timestamps - the verdict
+//: face, the stray-fault age - is stamped with it, so no event carries two clock readings.
+bool poll(rig::State& state, uint32_t now);
 
 //: Outgoing events. Each writes one line to the transport, whichever wire that is.
 void emitHello();

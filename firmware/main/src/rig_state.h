@@ -58,8 +58,9 @@ struct State {
   uint32_t faultAt = 0;  // millis of the most recent fault; the face holds `cfg::FAULT_FACE_MS`
   //: When PASS or RETAKE was shown, and **0 when no verdict face is armed**. The panel returns to READY
   //: after `cfg::VERDICT_FACE_MS` without a new capture, so a conclusion does not stay up forever with no
-  //: date on it. Starting a capture clears it: the previous verdict's timer must not be able to pull the
-  //: new capture back, which is the flash the bench saw (`CAP` appearing and then snapping to `READY`).
+  //: date on it. **Only `armVerdictFace` stamps it and only `serviceButton` clears it** - a third writer is
+  //: how one event ends up with two clocks. Starting a capture clears it: the previous verdict's timer must
+  //: not be able to pull the new capture back, which is the flash the bench saw.
   uint32_t verdictAt = 0;
   Link link = Link::Alive;
   bool heartbeatOn = true;
@@ -77,10 +78,26 @@ struct State {
   void markDirty() { dirty = true; }
 };
 
+//: Arm the verdict face at **this pass's clock reading**. `now` is the loop's own reading - the one the
+//: expiry compares against - so the age starts at exactly zero and advances with real time. A second
+//: `millis()` call here is one clock reading too many: when the millisecond boundary falls between the
+//: loop's reading and the verdict's, the stamp is one ahead, `now - verdictAt` wraps to ~4.29e9, and the
+//: face expires on the pass it appeared. That is `CAP` flashing back to `READY`, and it was systematic
+//: enough to look like a timer of its own.
+inline void armVerdictFace(State& state, uint32_t now) { state.verdictAt = now; }
+
+//: True once the verdict face's window has run out. The age is a **signed** difference on purpose: a stamp
+//: even one millisecond ahead of `now` makes an unsigned subtraction wrap to the largest 32-bit value, so the
+//: face would expire immediately. `armVerdictFace` stamps from the same reading, so in production the age is
+//: never negative; the cast keeps a boundary tick from inverting the comparison if one ever slips through.
+inline bool verdictFaceExpired(uint32_t now, uint32_t verdictAt, uint32_t window) {
+  return verdictAt != 0 && static_cast<int32_t>(now - verdictAt) >= static_cast<int32_t>(window);
+}
+
 //: The line between a working rig and a lying one, now that the link no longer has a screen: **a capture
-//: in flight carries no verdict face's timer, and a verdict face carries one**. The first half is the
-//: flash this round fixes - an armed timer during `CAPTURING` is the previous verdict's, and it used to
-//: be able to pull the new capture back to `READY`. The second half keeps every verdict face expirable.
+//: in flight carries no verdict face's timer, and a verdict face carries one**. The first half is the older
+//: flash - an armed timer during `CAPTURING` is the previous verdict's, and it could pull the new capture
+//: back to `READY`. The second half keeps every verdict face expirable.
 inline bool invariantHolds(const State& state) {
   if (state.screen == Screen::Capturing) {
     return state.verdictAt == 0;
