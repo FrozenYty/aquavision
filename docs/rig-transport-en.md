@@ -100,7 +100,7 @@ recover on its own.
 | `Advertising` | the stack is up and offering the service; no central is attached |
 | `Connected` | a central is attached and has not enabled notifications |
 | `Streaming` | notifications are enabled; the protocol rides here |
-| `Fault` | the radio did not start, or it has dropped repeatedly; nothing is retried inside this layer |
+| `Fault` | the radio did not start; nothing is retried inside this layer |
 
 | # | Event | Source |
 |---|---|---|
@@ -158,11 +158,18 @@ commands would be dropped, which is rule 3 contradicted by a timer. A PC that ac
 the stack's own link supervision timeout, which runs whether or not this layer watches it; the idle timer
 exists for the other case — a peer that attached and then did nothing.
 
-**5. A drop storm is a fault, not a retry — but only a drop that interrupts a conversation.** A disconnect **from `Streaming`** lands in `Advertising`, five times. A disconnect from `Connected` is a polite goodbye — the client unsubscribes before it leaves — and is not counted: five ordinary sessions of a person plugging a script in and out must not fault the rig. The fifth such disconnect
-inside sixty seconds (thirty keepalives) moves the layer to `Fault` instead. The cell stays `Advertising` and
-this rule carries the count, because a state × event table with a counter in every cell stops being readable.
-A radio that drops five times a minute is not a link that a sixth attempt will fix, and the PC's own attempt
-budget (§7) is the same decision taken from the other end.
+**5. There is no drop-storm rule, and its absence is a decision.** A disconnect **from `Streaming`** lands in
+`Advertising`, and so does every other disconnect: the rig goes back to `WAITING`, offers the service and
+keeps trying. A storm rule used to count five rude disconnects inside a minute and turn the fifth into
+`Fault`, and it could not fire - noticing a rude disconnect takes the link supervision timeout (about twenty
+seconds), so five of them never fit a minute, while the polite disconnects that do arrive instantly are the
+ones the rule deliberately excluded. **Widening the window was rejected, not overlooked:** a repeated drop is
+almost always the far end's radio or the distance, while `Fault` means `RADIO FAULT` and is left only by a
+power cycle, so the rule promoted a transient problem at the PC into a permanent fault on the rig - at the
+moment the rig was already handling it correctly. "This link is not working" belongs to the PC, whose client
+has an attempt budget ending in `Failed` (§7), because only the PC can tell "I cannot reach it" from "it
+stopped answering". `Err4` therefore has exactly one cause: a radio that would not start. **Do not
+reintroduce the rule** without a cause that only the rig can see.
 
 **6. `Idle` becomes `Advertising` once, at boot.** It is not in the matrix because it is not an event: nothing
 else causes it, no other state can be entered from `Idle`, and a stack that starts successfully has exactly
@@ -351,11 +358,15 @@ fact**: it is `Live`, it stays on the rig's own screen, and a press captures and
 silence lasts. **The serial build has no carrier signal** (§2), so `rig-serial` boots `Live` and never shows
 `WAITING` or a link face.
 
-**`Err4` exists because a link that ends is not a fault any more.** A dead radio looks, at first, exactly
-like a quiet peer: no commands arrive and the ten-second timer sets `Gone`. But a quiet peer is waiting to
-be spoken to again, while a dead radio is never going to answer - so the two must not share a face, and the
-one that needs action must say so. The panel has four characters, so the distinction costs one digit and no
-new glyph: `Err4` is `E`, `r`, `r` and `4`, all of them already in the alphabet.
+**`Err4` has exactly one cause: a radio that would not start.** It used to have a second - five rude
+disconnects inside a minute - and that second cause is deleted (§5 rule 5): it could not fire, and its remedy
+was wrong for the cause. A dead radio is distinguishable from a quiet peer even though both go silent: a
+quiet peer is waiting to be spoken to again and the rig keeps trying, while a radio that refused to start will
+never answer, so the one that needs a person must say so. The panel has four characters, so the distinction
+costs one digit and no new glyph: `Err4` is `E`, `r`, `r` and `4`, all of them already in the alphabet.
+**A link that keeps dropping is handled by the state the rig already has** - back to `Advertising`, `WAITING`
+on the glass, keep trying - and the judgement that a particular link is not working belongs to the PC, which
+has the attempt budget and the only view of why.
 
 **`Err4` outranks every screen.** A fault overlay outranks the rig's screen
 (rig-state-machine-en.md §10), and `Err4` is drawn while the BLE layer is in `Fault`. That is where the

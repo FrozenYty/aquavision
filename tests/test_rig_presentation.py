@@ -25,6 +25,8 @@ PRESENTATION = REPO / "firmware" / "main" / "src" / "presentation.cpp"
 SCREEN = REPO / "firmware" / "main" / "src" / "screen.cpp"
 MAIN = REPO / "firmware" / "main" / "src" / "main.cpp"
 PROTOCOL = REPO / "firmware" / "main" / "src" / "protocol.cpp"
+CONFIG = REPO / "firmware" / "main" / "src" / "config.h"
+BLE = REPO / "firmware" / "main" / "src" / "transport_ble.cpp"
 
 STATES = ["Pairing", "Live", "RadioFault"]
 
@@ -556,6 +558,29 @@ def test_a_new_subscription_flushes_the_input() -> None:
     loop = MAIN.read_text(encoding="utf-8")
     subscribed = loop[loop.index("if (transport::subscribed())") :]
     assert "protocol::flushInput();" in subscribed[: subscribed.index("\n  }")]
+
+
+def test_there_is_no_drop_storm_rule() -> None:
+    """`Err4` has one cause. A storm rule could not fire, and its remedy was wrong for the cause."""
+    config = CONFIG.read_text(encoding="utf-8")
+    ble = BLE.read_text(encoding="utf-8")
+    for gone in ("BLE_DROP_STORM_WINDOW_MS", "BLE_DROP_STORM_LIMIT", "dropTimes", "dropIndex"):
+        assert gone not in config + ble, f"{gone} is back; the drop-storm rule has no reader"
+    assert "cell = kToFault" not in ble, (
+        "the only route to Fault is F7 (the radio failed to start), not a disconnect counter"
+    )
+    # A disconnect from `Streaming` (F2) lands in `Advertising` like every other disconnect, not in `Fault`.
+    block = ble[ble.index("constexpr Cell kMatrix") :]
+    flat = " ".join(block[: block.index("};")].split())
+    streaming_row = (
+        "{Outcome::Rejected, State::Streaming}, kToAdvertising, kHandled, "
+        "{Outcome::Move, State::Connected}, kHandled, kIgnored, kToFault}"
+    )
+    assert streaming_row in flat, "the Streaming row's disconnect cell is no longer kToAdvertising"
+    # And the absence is written down, so the next reader does not reintroduce it.
+    transport = (REPO / "docs" / "rig-transport-en.md").read_text(encoding="utf-8")
+    assert "There is no drop-storm rule" in transport
+    assert "Do not\nreintroduce the rule" in transport or "Do not reintroduce" in transport
 
 
 def test_the_radio_fault_owns_the_blink_clock() -> None:

@@ -117,10 +117,13 @@ constexpr char BLE_TX_UUID[] = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E";
 //: ordinary failure the PC's timer fires first and the operator reads a PC-side timeout rather than a
 //: rig-side eviction.
 constexpr uint32_t BLE_SUBSCRIBE_GRACE_MS = 5 * PC_KEEPALIVE_MS;
-//: Five disconnects inside sixty seconds - thirty keepalives - is a fault, not a link a sixth attempt
-//: will fix (§5 rule 5). The state stays `Advertising` and this count carries the decision.
-constexpr uint32_t BLE_DROP_STORM_WINDOW_MS = 30 * PC_KEEPALIVE_MS;
-constexpr uint8_t BLE_DROP_STORM_LIMIT = 5;
+//: **There is no drop-storm constant, and that is deliberate** (§5 rule 5). A repeated drop used to count
+//: towards `Fault`, but noticing a rude disconnect takes the link supervision timeout - about twenty
+//: seconds - so five of them could not fit a one-minute window, and the rule had no reachable path. Worse,
+//: the cause is usually the PC's radio or the distance, while `Fault` says `RADIO FAULT` and is left only by
+//: a power cycle: a transient problem at the far end was promoted to a permanent fault at this one. The rig
+//: already answers a drop correctly - back to `Advertising`, `WAITING`, and it keeps trying - and "this link
+//: is not working" is the PC's judgement to make, because only the PC knows why.
 
 //: The MTU this end asks for. A protocol line is under forty bytes, so any MTU above 43 - forty plus the
 //: three-byte notification header - carries one in a single notification; 247 is what most stacks accept
@@ -199,6 +202,10 @@ constexpr uint32_t BLE_ADVERTISE_RETRY_MS = 250;
 //: seconds later. The button reads the same condition the face does. A new subscription also flushes the rx
 //: ring and any half-received line, and `Err4` now owns `faultAt` so a later timeout cannot restart its
 //: blink.
-constexpr char FIRMWARE_VERSION[] = "1.23";
+//: 1.24 deletes the drop-storm rule: it could not fire (noticing a rude disconnect takes the ~20 s link
+//: supervision timeout, so five never fit the one-minute window) and its remedy was wrong (the cause is
+//: usually the far end's radio, while `Fault` is left only by a power cycle). A disconnect goes back to
+//: `Advertising` like any other. **`Err4` has exactly one cause: the radio would not start.**
+constexpr char FIRMWARE_VERSION[] = "1.24";
 
 }  // namespace cfg

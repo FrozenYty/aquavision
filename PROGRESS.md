@@ -32,6 +32,17 @@
   the only clear. The check measures the lifetime on a virtual clock through the real predicate: 12 000 ms
   for the loop's stamp, 12 001 ms for a stamp one millisecond ahead under the signed comparison (0 ms under
   the old unsigned one), still up at 11 s and gone by 13 s. `FIRMWARE_VERSION` is `1.22`.
+- **The drop-storm rule is deleted, and `Err4` now has exactly one cause: the radio would not start.** The
+  rule could not fire - noticing a rude disconnect takes the link supervision timeout, about twenty seconds,
+  so five never fit the one-minute window - and the polite disconnects that do arrive instantly were the ones
+  the rule deliberately excluded. Widening the window was rejected for a better reason than arithmetic: a
+  repeated drop is almost always the far end's radio or the distance, while `Fault` says `RADIO FAULT` and is
+  left only by a power cycle, so the rule promoted a transient problem at the PC into a permanent fault on
+  the rig, at the moment the rig was already handling it correctly. A disconnect now returns to `Advertising`
+  like any other, the panel says `WAITING`, and the judgement that a particular link is not working stays
+  with the PC, which has the attempt budget and the only view of why. `dropTimes`, `dropIndex`, both
+  `BLE_DROP_STORM_*` constants and the `Fault` target they reached are gone; the absence is written down in
+  `docs/rig-transport-en.md` §5 rule 5 so it is not reintroduced.
 - **`Live` now means "a subscriber is listening", and the button reads that same condition.** A press in the
   attach-to-subscribe window used to start a capture the PC could not hear (the transport discards a write
   with no subscriber), and four seconds later the rig reported `NO REPLY` about a PC that never received

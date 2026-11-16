@@ -349,14 +349,14 @@ not "broken".** `WAITING` says what is true: the rig is ready and there is no PC
 |---|---|
 | `Pairing` | Nobody is listening: no central, or a central that has not enabled notifications |
 | `Live` | A subscriber is listening - whatever the protocol layer's `Alive`/`Gone` says at that moment |
-| `RadioFault` | The radio would not start, or the drop storm reached `Fault` |
+| `RadioFault` | The radio would not start - its only cause (`docs/rig-transport-en.md` §5 rule 5) |
 
 | # | Event | Source |
 |---|---|---|
 | B1 | A subscriber starts listening (BLE `Streaming`; the serial wire always is) | BLE layer |
 | B2 | The notification subscription completes - the same edge as B1 on BLE | BLE layer |
 | B3 | The subscriber stops listening | BLE layer |
-| B4 | The radio would not start, or the drop storm reached `Fault` | BLE layer |
+| B4 | The radio would not start - its only cause | BLE layer |
 | P1 | A command arrives | protocol layer |
 | P2 | Ten seconds of silence | protocol layer |
 
@@ -531,9 +531,10 @@ the input that produces it, there is none - look for the state bug instead.
 **14. A radio that cannot advertise is `Pairing`, not `RadioFault`.** `Advertising` retries forever, so a
 rig that has not managed to advertise simply sits on `WAITING` with `APP` turning. That is honest - nobody
 is listening yet - and it is why the face is a wait rather than a fault: the radio stack is alive, it just
-has not got a message out. `Err4` is reserved for a stack that refused to start or that reached the drop
-storm, where waiting will not fix it. The cost is that a permanently mute radio is invisible on the glass,
-which is acceptable only because it is written down here.
+has not got a message out. `Err4` is reserved for a stack that refused to start, which is its only cause
+(`docs/rig-transport-en.md` §5 rule 5); a link that keeps dropping is answered by `Advertising` and
+`WAITING`, not by a fault. The cost is that a permanently mute radio is invisible on the glass, which is
+acceptable only because it is written down here.
 
 **15. A press is acted on in the next loop pass, and that latency is accepted.** The button is read once
 per iteration, after a possible full-frame OLED send of about 25 ms; the press lands in the following pass.

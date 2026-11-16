@@ -219,10 +219,10 @@ void scoreMask(int score, char verdict, uint8_t mask[4]) {
 //:
 //: **All four look the same: they blink at one hertz.** The code is the identifier and the rhythm carries
 //: nothing, so there is no special case for any of them. What differs is only how long a face stays:
-//: `Err4` - a radio that did not start, or has dropped five times in a minute - has no window, because
-//: waiting is the wrong thing to do about it. `Err1` to `Err3` clear after `cfg::FAULT_FACE_MS`. That is
-//: when it leaves, not how it looks - do not "fix" the two into agreement. The fault age is the phase, so
-//: the blink starts with the fault rather than wherever the previous face happened to be.
+//: `Err4` - the radio did not start, and that is its only cause - has no window, because waiting is the
+//: wrong thing to do about it. `Err1` to `Err3` clear after `cfg::FAULT_FACE_MS`. That is when it leaves,
+//: not how it looks - do not "fix" the two into agreement. The fault age is the phase, so the blink starts
+//: with the fault rather than wherever the previous face happened to be.
 void faultMask(uint32_t faultAge, rig::Fault fault, uint8_t mask[4]) {
   if ((faultAge / cfg::DISPLAY_BLINK_MS) % 2 != 0) {
     return;  // the dark half of the blink; every digit stays as it was left

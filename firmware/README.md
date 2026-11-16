@@ -220,9 +220,9 @@ lasted four seconds.
 
 **A radio that cannot advertise is `Pairing`, not `Err4`.** `Advertising` retries forever, so a rig that has
 not got a message out simply sits on `WAITING` with `APP` turning. That is honest - nobody is listening yet -
-and `Err4` is reserved for a stack that refused to start or reached the drop storm, where waiting will not
-fix it. The cost is that a permanently mute radio is invisible on the glass, which is acceptable only
-because it is written down (`docs/rig-state-machine-en.md` §11 rule 14).
+and `Err4` is reserved for a stack that refused to start, which is its only cause. The cost is that a
+permanently mute radio is invisible on the glass, which is acceptable only because it is written down
+(`docs/rig-state-machine-en.md` §11 rule 14).
 
 **`READY` is a one-way marquee.** Digits 1, 2, 3, 4 and straight back to 1, half a second at each position:
 two seconds a cycle, no dark frame, and never more than one dash lit. **The wrap is deliberate** - the dash
@@ -238,9 +238,12 @@ to produce a log line and nothing a person at the bench could see, which made a 
 look the same. **`Err3` is a monitor, not a face an event can reach**: it reports a state the firmware should
 never be in (a capture carrying a verdict timer, or a verdict face without one), so there is no input to hunt
 for if you see it - look for the state bug. **`Err4` is the `rig-ble` build's code for a radio that did not
-start, or whose link died five times in a minute while it was carrying the protocol** - a client that
-connects and leaves politely is not a drop, which is what lets a bench session of deliberate
-connect/disconnect cycles run without taking the rig off the air. The OLED has no code face, so on `Err4` it
+start, and that is its only cause**: the old second cause - five rude disconnects inside a minute - is
+deleted, because noticing a rude disconnect takes the link supervision timeout (about twenty seconds) so
+five never fit the window, and because the cause is usually the far end's radio or the distance while `Fault`
+is left only by a power cycle (`docs/rig-transport-en.md` §5 rule 5). A link that keeps dropping is answered
+by `Advertising` and `WAITING` - the rig keeps trying - and the judgement that a particular link is not
+working belongs to the PC, which has an attempt budget. The OLED has no code face, so on `Err4` it
 draws `RADIO FAULT` and `REFLASH RIG-SERIAL` itself, and its body line reads `NO LINK TO PC` instead of
 `CHECK USB CABLE` in that build. **The retired `Err0` keeps its number free**: the remaining codes are not
 renumbered, and `Err4` owns `faultAt` so nothing re-stamps its blink mid-warning.

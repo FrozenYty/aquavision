@@ -100,9 +100,6 @@ struct Layer {
   //: that is switched off - the failure the bench report of 2026-11-15 came from.
   bool advertisingWanted = false;
   uint32_t advertisingAskedAt = 0;
-  //: The drop-storm window (§5 rule 5): the last `BLE_DROP_STORM_LIMIT` disconnect times.
-  uint32_t dropTimes[cfg::BLE_DROP_STORM_LIMIT] = {0};
-  uint8_t dropIndex = 0;
   //: The negotiated ATT MTU, or zero while nothing is negotiated.
   uint16_t mtu = 0;
 };
@@ -174,31 +171,16 @@ void dispatch(Event event, uint16_t handle) {
 
   Cell cell = kMatrix[static_cast<uint8_t>(from)][static_cast<uint8_t>(event)];
 
-  // §5 rule 5, which the table deliberately does not carry: a counter in every cell would stop the matrix
-  // being readable. **Only a disconnect from `Streaming` counts**, and that narrowing is the fix for the
-  // bench report of 2026-11-15: five deliberate connects - connect, subscribe, stop - each end in a
-  // disconnect, and the unqualified rule turned the fifth of them into `Fault`, stopped the advertisement
-  // and left a running rig that could not be found. What the rule is for is a link that vanishes while it
-  // is carrying the protocol: that is a radio failing, and five of those inside the window turn the cell
-  // that said `Advertising` into `Fault`. A peer that never became the PC, or one that said goodbye by
-  // unsubscribing first (F4, which lands it in `Connected`), is not evidence against the radio.
-  if (event == Event::Disconnect && from == State::Streaming) {
-    const uint32_t now = millis();
-    portENTER_CRITICAL(&layerMux);
-    layer.dropTimes[layer.dropIndex] = now;
-    layer.dropIndex = static_cast<uint8_t>((layer.dropIndex + 1) % cfg::BLE_DROP_STORM_LIMIT);
-    uint8_t recent = 0;
-    for (uint8_t i = 0; i < cfg::BLE_DROP_STORM_LIMIT; ++i) {
-      const uint32_t at = layer.dropTimes[i];
-      if (at != 0 && now - at < cfg::BLE_DROP_STORM_WINDOW_MS) {
-        ++recent;
-      }
-    }
-    portEXIT_CRITICAL(&layerMux);
-    if (recent >= cfg::BLE_DROP_STORM_LIMIT) {
-      cell = kToFault;
-    }
-  }
+  // §5 rule 5, which the table deliberately does not carry: **a disconnect is not a fault, however many of
+  // them there are.** A storm rule used to count rude disconnects and turn the fifth inside a minute into
+  // `Fault`, and it could not fire: noticing a rude disconnect takes the link supervision timeout - about
+  // twenty seconds - so five of them never fit the window, and the polite disconnects that do arrive at
+  // once are the ones we deliberately excluded. Widening the window was not the answer either: a repeated
+  // drop is usually the far end's radio or the distance, while `Fault` says `RADIO FAULT` and is left only
+  // by a power cycle, so a transient problem would be promoted to a permanent one. The rig already answers
+  // a drop correctly - `Advertising`, `WAITING`, keep trying - and "this link is not working" is the PC's
+  // judgement, because only the PC knows why. `Err4` therefore has exactly one cause: a radio that would
+  // not start. **Do not reintroduce a storm rule here** without a cause that only this end can see.
 
   switch (cell.outcome) {
     case Outcome::Move:

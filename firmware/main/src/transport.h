@@ -41,12 +41,13 @@ void printf(const char* format, ...);
 //: strips both, so this writes `\r\n` too rather than quietly changing what is on the wire.
 void newline();
 
-//: True when the carrier itself is dead and waiting will not fix it: the radio did not start, or it has
-//: dropped `cfg::BLE_DROP_STORM_LIMIT` times inside `cfg::BLE_DROP_STORM_WINDOW_MS` (§3 `Fault`).
-//: **Serial always answers false** - a cable has no radio to fail, and a carry that cannot drop cannot
-//: fault. The loop calls this once per iteration, so the BLE layer reads its own timers here instead of
-//: running a second task for two deadlines; that is why this is the one accessor that is not a query
-//: alone, and a carrier with no timers ignores it entirely.
+//: True when the carrier itself is dead and waiting will not fix it: **the radio did not start**. That is
+//: the only cause. A link that keeps dropping is not one: the rig already answers a drop by going back to
+//: `Advertising` and waiting, and "this link is not working" is the PC's judgement, because only the PC
+//: knows why (docs/rig-transport-en.md §5 rule 5).
+//: **Serial always answers false** - a cable has no radio to fail. The loop calls this once per iteration,
+//: so the BLE layer reads its own timers here instead of running a second task for two deadlines; that is
+//: why this is the one accessor that is not a query alone, and a carrier with no timers ignores it entirely.
 bool faulted();
 
 //: True **once** for each central that enables notifications, and cleared by the question; false on the
