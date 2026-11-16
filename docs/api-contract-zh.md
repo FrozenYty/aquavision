@@ -217,6 +217,8 @@ POST /api/review/frames/{frame_id}/rollback
 
 ### 巡检报告
 
+`POST /api/reports` 的 `period_start`、`period_end` 接受 `YYYY-MM-DD` 日期（按 `AV_TIMEZONE` 解释为完整日，首尾包含），也兼容带偏移的 ISO 时间戳（精确时刻）。响应仍返回带偏移的时间戳。
+
 ```json
 {
   "report_id": 12,

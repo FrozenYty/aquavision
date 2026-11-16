@@ -78,7 +78,7 @@
         <td class="av-mono">${num(m.map50)}</td><td class="av-mono">${num(m.map50_95)}</td>
         <td class="av-mono">${num(m.recall_avg)}</td><td class="av-mono">${num(m.fps, 0)}</td>
         <td class="av-mono">${m.params_m == null ? "—" : `${m.params_m} M`}</td>
-        <td>${fmtTime(m.created_at).slice(0, -3)}</td>
+        <td>${fmtTime(m.created_at)}</td>
         <td>${m.is_online ? '<span class="badge text-bg-success">在线</span>' : '<span class="badge text-bg-secondary">离线</span>'}</td>
         <td>${m.is_online ? "" : `<button class="btn btn-sm btn-outline-primary" data-model="${m.model_id}" data-name="${esc(m.version_name)}" type="button">${online && m.model_id < online.model_id ? "回滚到此版本" : "上线"}</button>`}</td></tr>`).join("");
     }

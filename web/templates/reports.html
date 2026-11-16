@@ -68,6 +68,8 @@
     import { esc, fmtTime, loadInto, toast } from "../static/js/ui.js";
     import { CLASSES } from "../static/js/boxes.js";
 
+    import { reportPeriod } from "../static/js/time.js";
+
     renderShell();
 
     const $ = (id) => document.getElementById(id);
@@ -77,24 +79,11 @@
     const STATUS = { ready: ["已生成", "success"], generating: ["生成中", "info"], failed: ["失败", "danger"] };
     let stats = null;
 
-    const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
-    // Returns { label, from, to } for the chosen period, or null when a custom range is invalid.
+    let today = null;
     function period() {
-      const today = new Date();
-      if ($("period").value === "week") {
-        const monday = new Date(today);
-        monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
-        return { label: "本周", from: iso(monday), to: iso(today) };
-      }
-      if ($("period").value === "month") {
-        return { label: `${today.getMonth() + 1} 月`, from: iso(new Date(today.getFullYear(), today.getMonth(), 1)), to: iso(today) };
-      }
-      const from = $("from").value;
-      const to = $("to").value;
-      const ok = from && to && from <= to;
-      $("to").classList.toggle("is-invalid", Boolean(from && to) && !ok);
-      return ok ? { label: `${from} 至 ${to} `, from, to } : null;
+      const result = reportPeriod(today, $("period").value, $("from").value, $("to").value);
+      $("to").classList.toggle("is-invalid", $("period").value === "custom" && !result);
+      return result;
     }
 
     // The server answers /stats/species with { items: [{ class_code, count, share }] } and
@@ -146,7 +135,7 @@
         $("history").innerHTML = items.map((r) => `<tr>
           <td class="av-mono">${esc(r.report_code)}</td><td class="av-mono">${day(r.period_start)} ~ ${day(r.period_end)}</td>
           <td>${TEMPLATE[r.template] ?? esc(r.template)}</td><td>${BASIS[r.basis] ?? esc(r.basis)}</td>
-          <td class="av-mono">${r.model_version_id == null ? "—" : `#${r.model_version_id}`}</td><td>${fmtTime(r.created_at).slice(0, -3)}</td>
+          <td class="av-mono">${r.model_version_id == null ? "—" : `#${r.model_version_id}`}</td><td>${fmtTime(r.created_at)}</td>
           <td>${statusCell(r)}</td>
           <td>${r.status === "ready" ? `<div class="d-flex gap-1" title="${esc(r.file_path ?? "")}"><button class="btn btn-sm btn-outline-secondary" data-format="Word" type="button">Word</button><button class="btn btn-sm btn-outline-secondary" data-format="PDF" type="button">PDF</button></div>` : ""}</td></tr>`).join("");
       },
@@ -165,8 +154,8 @@
       $("btn-generate").disabled = true;
       try {
         const report = await api.createReport({
-          period_start: `${p.from}T00:00:00+08:00`,
-          period_end: `${p.to}T23:59:59+08:00`,
+          period_start: p.from,
+          period_end: p.to,
           template: $("template").value,
           basis: $("basis").value,
         });
@@ -184,10 +173,12 @@
       if (format) toast(`报告文件已在服务端生成；${format} 格式的下载还没有接口`, "info");
     });
 
-    loadInto($("preview"), () => Promise.all([api.statsSpecies(), api.statsQuality()]), {
+    loadInto($("preview"), () => Promise.all([api.statsSpecies(), api.statsQuality(), api.statsTrend()]), {
       isEmpty: () => false,
       empty: "",
       render: (data) => {
+        const trend = data[2];
+        today = (Array.isArray(trend) ? trend : trend.items).at(-1)?.date ?? null;
         stats = adapt(data);
         renderPreview();
       },

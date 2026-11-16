@@ -103,7 +103,7 @@
         const [label, kind] = STATUS[d.status] ?? [d.status, "secondary"];
         return `<tr>
           <td class="av-mono fw-bold">${esc(d.snapshot_name)}</td>
-          <td>${fmtTime(d.created_at).slice(0, -3)}</td>
+          <td>${fmtTime(d.created_at)}</td>
           <td class="av-mono">${d.frame_count}</td>
           <td>${splitCell(d)}</td>
           <td class="av-mono">${esc(d.split_ratio)}</td>

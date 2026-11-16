@@ -549,7 +549,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         and `POST /api/users/{id}/reset-password` bumps it. `tests/test_token_epoch.py` shows the old
         token answering `40101` after the reset while the administrator's own session keeps working. The
         SRS records the column at V1.14 and the data-model tables follow in both languages
-- [ ] **P3-21** The interface reads time the way ADR 14 says · @chemflowers · follows **ADR 14** · done
+- [x] **P3-21** The interface reads time the way ADR 14 says · @chemflowers · follows **ADR 14** · done
       when no page re-derives a date from the browser's zone, and a report period is not a hardcoded offset
       - `web/static/js/ui.js`'s formatter rebuilds every timestamp in the **browser's** zone, so a reviewer
         outside UTC+8 reads one date on the dashboard and another in a filtered list, each correct by its

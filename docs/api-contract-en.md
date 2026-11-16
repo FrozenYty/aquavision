@@ -237,6 +237,8 @@ also carry `splits` with the per-split frame counts; the export response adds `g
 
 ### Report
 
+`POST /api/reports` accepts `period_start` and `period_end` as `YYYY-MM-DD` dates (whole days in `AV_TIMEZONE`, inclusive), or existing offset-aware ISO timestamps (exact instants). The response remains offset-aware timestamps.
+
 ```json
 {
   "report_id": 12,
