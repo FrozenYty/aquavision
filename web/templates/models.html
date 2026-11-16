@@ -63,12 +63,12 @@
     import { bindTabs, confirmAction, esc, fmtTime, loadInto, toast } from "../static/js/ui.js";
     import { CLASSES } from "../static/js/boxes.js";
 
+    import { speciesPatch, speciesTable } from "../static/js/species-table.js";
+
     renderShell();
     bindTabs($("tabs"));
 
     function $(id) { return document.getElementById(id); }
-    // data model §3.6
-    const CATEGORY = { 1: "经济种", 2: "敌害种", 3: "环境物" };
     const num = (v, digits = 2) => (v == null ? "—" : Number(v).toFixed(digits));
 
     function renderVersions({ items }) {
@@ -94,22 +94,11 @@
       }).join("");
     }
 
-    // The four classes this page and the boxes know how to draw. A code outside them is refused, not
-    // shown with a save button: saving it would be a silent change to a class the model may not have.
     function renderSpecies({ items }) {
-      const known = items.filter((s) => s.class_code in CLASSES);
-      const unknown = items.filter((s) => !(s.class_code in CLASSES)).map((s) => s.class_code);
-      $("species-refused").innerHTML = unknown.length
-        ? `<div class="alert alert-danger small mt-2 mb-0">已拒绝显示类别码 ${unknown.map(esc).join("、")}：它们不在前端识别的四类中，请对照模型的 labels.txt 与物种字典。</div>`
-        : "";
-      $("species").innerHTML = known.map((s) => `<tr data-code="${s.class_code}">
-        <td class="av-mono">${s.class_code}</td>
-        <td><span class="av-class av-class-${s.class_code}">${esc(s.cn_name)}</span></td>
-        <td>${CATEGORY[s.category] ?? s.category}</td>
-        <td><input class="form-control form-control-sm w-auto" type="number" step="0.05" min="0.05" max="0.95" value="${s.conf_thr}" aria-label="${esc(s.cn_name)}阈值">
-          <div class="invalid-feedback">0.05 到 0.95 之间</div></td>
-        <td><input class="form-check-input" type="checkbox" ${s.in_stat ? "checked" : ""} aria-label="${esc(s.cn_name)}计入统计"></td>
-        <td><button class="btn btn-sm btn-outline-primary" data-save type="button">保存</button></td></tr>`).join("");
+      const table = speciesTable(items);
+      $("species-refused").innerHTML = table.warning
+        ? `<div class="alert alert-danger small mt-2 mb-0">${esc(table.warning)}</div>` : "";
+      $("species").innerHTML = table.html;
     }
 
     const isEmpty = (d) => d.items.length === 0;
@@ -138,14 +127,13 @@
       if (!event.target.closest("[data-save]")) return;
       const row = event.target.closest("tr");
       const input = row.querySelector('input[type="number"]');
-      const thr = Number(input.value);
-      const ok = thr >= 0.05 && thr <= 0.95;
-      input.classList.toggle("is-invalid", !ok);
-      if (!ok) return;
+      const patch = speciesPatch(row.dataset.code, input.value, row.querySelector('input[type="checkbox"]').checked);
+      input.classList.toggle("is-invalid", !patch.valid);
+      if (!patch.valid) { toast(patch.error, "warning"); return; }
       const button = event.target.closest("[data-save]");
       button.disabled = true;
       try {
-        await api.updateSpecies(row.dataset.code, { conf_thr: thr, in_stat: row.querySelector('input[type="checkbox"]').checked });
+        await api.updateSpecies(row.dataset.code, patch.body);
         toast(`${CLASSES[row.dataset.code]} 的阈值已保存（识别任务暂未读取，见页面说明）`, "warning");
         await loadSpecies();
       } catch (err) {
