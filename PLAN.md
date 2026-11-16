@@ -448,9 +448,17 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - an empty result says so **instead of downloading an empty file**
       - the filename carries the frame id and a timestamp, so two exports are distinguishable
       - **evidence:** `tests/test_result_csv.py` covers the escaping round trip, the row count and the empty result (AC-14).
-- [ ] **P3-15** Species dictionary and per-class thresholds · @chemflowers · closes AC-26 · done when the
-      four classes and their thresholds can be viewed and edited on P-12, a threshold change applies to
-      new jobs and not to finished ones, and a class code that disagrees with `labels.txt` is refused
+- [x] **P3-15** Species dictionary and per-class thresholds · @chemflowers (page) + @Gtechson (server) ·
+      closes AC-26 · **server half delivered 11-16**: `species_dict.conf_thr` is read now. Both detection
+      entries take the floors in force when the job starts - the worker for a batch task and
+      `/api/detect/frames/{frame_id}` for a single frame - the model is asked for the lowest of them (a
+      detector never returns a box it was not asked about, so a floor *below* the job's own value has to
+      lower the ask to mean anything), and each box is then held to its own class's floor.
+      `tests/test_class_thresholds.py` holds AC-26's two sentences: a class floor raised to 0.80 costs a
+      new job that class while the finished job's rows are untouched, a floor lowered to 0.20 is what the
+      model is asked for, and the single-frame route applies the same values. `PATCH /api/species/{code}`
+      refuses an edit the labels contradict (`40901`, naming the disagreement), which is the other half
+      of AC-26
       - **spans two lanes as written.** The page is lane C's; applying a threshold to new jobs and
         refusing a class code that disagrees with `labels.txt` are both in `server/`, which is lane B's
         and read-only for C. Agree the split with lane B before starting, rather than in review

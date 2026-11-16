@@ -7,13 +7,14 @@ here would silently desynchronise the index a detection result uses as a class.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app import serializers
 from app.deps import SessionDep, UserDep, get_current_user, require
-from app.envelope import NOT_FOUND, ApiError, ok
+from app.detector import labels_disagreement
+from app.envelope import CONFLICT, NOT_FOUND, ApiError, ok
 from app.models import SpeciesDict, SysLog
 
 router = APIRouter(
@@ -34,11 +35,17 @@ def list_species(db: SessionDep) -> dict[str, object]:
 
 
 @router.patch("/{class_code}", dependencies=[Depends(require("analyst", "algo", "admin"))])
-def update(class_code: str, body: PatchBody, db: SessionDep, user: UserDep) -> dict[str, object]:
+def update(
+    class_code: str, body: PatchBody, request: Request, db: SessionDep, user: UserDep
+) -> dict[str, object]:
     row = db.scalar(select(SpeciesDict).where(SpeciesDict.class_code == class_code))
     if row is None:
         raise ApiError(NOT_FOUND, "类别不存在")
 
+    # AC-26: a code that disagrees with the online model's labels.txt is refused rather than stored.
+    problem = labels_disagreement(request.app.state.session_factory, class_code)
+    if problem is not None:
+        raise ApiError(CONFLICT, problem)
     before = serializers.species(row)
     if body.conf_thr is not None:
         row.conf_thr = body.conf_thr

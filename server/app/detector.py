@@ -156,6 +156,74 @@ def load_online(session_factory, settings) -> tuple[Detector | None, str | None]
     return detector, None
 
 
+def class_thresholds(session_factory) -> dict[str, float]:
+    """The per-class confidence floors in force (FR-M6-04, AC-26), read from `species_dict`.
+
+    Read at the moment a job starts, not cached at start-up: an operator's edit has to bind the next
+    job, which is the same rule ADR 15 states for the system parameters.
+    """
+    with session_factory() as session:
+        rows = session.execute(select(SpeciesDict.class_code, SpeciesDict.conf_thr)).all()
+    return {str(code): float(threshold) for code, threshold in rows}
+
+
+def job_thresholds(session_factory, task_conf: float) -> tuple[float, dict[str, float]]:
+    """The confidence the model is asked for, and the per-class floors its boxes are held to.
+
+    A class floor below the job's own threshold only matters if the model is asked for the lower
+    number - a detector never returns a box it was not asked about - so the floor handed to inference
+    is the minimum of the task's value and the class floors.
+    """
+    floors = class_thresholds(session_factory)
+    lowest = min([float(task_conf), *floors.values()]) if floors else float(task_conf)
+    return lowest, floors
+
+
+def keep_above_class_floors(
+    boxes: list[dict[str, Any]], floors: dict[str, float], fallback: float
+) -> list[dict[str, Any]]:
+    """Drop the boxes that do not clear their own class's floor."""
+    return [
+        box
+        for box in boxes
+        if float(box["confidence"]) >= floors.get(str(box["class_code"]), fallback)
+    ]
+
+
+def labels_codes(session_factory) -> list[str] | None:
+    """The codes the online model's `labels.txt` declares, or None when there is none to read."""
+    with session_factory() as session:
+        row = session.scalar(select(ModelVersion).where(ModelVersion.is_online == 1))
+        path = resolve_weight_path(row.labels_path) if row is not None and row.labels_path else None
+    if path is None or not path.is_file():
+        return None
+    return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def labels_disagreement(session_factory, class_code: str) -> str | None:
+    """A sentence when `class_code` or the dictionary disagrees with the model's labels, else None.
+
+    Data model §3.6 makes the order a contract, and AC-26 asks for the disagreement to be refused
+    rather than stored: one position out of order mislabels every result. With no online model there is
+    nothing to disagree with, so the edit is allowed.
+    """
+    codes = labels_codes(session_factory)
+    if codes is None:
+        return None
+    with session_factory() as session:
+        dictionary = list(
+            session.scalars(select(SpeciesDict.class_code).order_by(SpeciesDict.species_id))
+        )
+    if class_code not in codes:
+        return f"类别 {class_code} 不在在线模型的 labels.txt 中（{', '.join(codes)}），拒绝保存"
+    if dictionary != codes:
+        return (
+            f"物种字典的顺序与在线模型的 labels.txt 不一致：字典 {dictionary}，"
+            f"labels {codes} - 拒绝保存，否则每条结果都会错位"
+        )
+    return None
+
+
 def resolve_weight_path(weight_path: str) -> Path:
     """Resolve a registered weight path: a relative path means the repository root.
 

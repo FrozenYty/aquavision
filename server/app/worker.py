@@ -22,6 +22,7 @@ from typing import Any
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.detector import job_thresholds, keep_above_class_floors
 from app.models import DetectObject, DetectTask, DetectTaskItem, MediaAsset
 from app.notify import LEVEL_WARN, notify
 
@@ -114,7 +115,7 @@ def process_task(
             _finish(session, task, DONE, None, session_factory)
             return
 
-        run = _runner(detector, task)
+        run = _runner(detector, task, session_factory)
         task.status = RUNNING
         session.commit()
 
@@ -311,7 +312,9 @@ class Worker:
                 self._stop.wait(self._poll_seconds)
 
 
-def _runner(detector: Detector, task: DetectTask) -> Detector:
+def _runner(
+    detector: Detector, task: DetectTask, session_factory: sessionmaker | None = None
+) -> Detector:
     """Bind the task's own inference parameters when the detector accepts them.
 
     A test injects a plain callable and gets it back unchanged; the real `Detector` gets the row's
@@ -319,14 +322,23 @@ def _runner(detector: Detector, task: DetectTask) -> Detector:
     running at the module defaults.
     """
     predict = getattr(detector, "predict", None)
-    if callable(predict):
-        return partial(
-            predict,
-            conf_thr=float(task.conf_thr),
-            iou_thr=float(task.iou_thr),
-            max_det=int(task.max_det),
-        )
-    return detector
+    if not callable(predict):
+        return detector
+    floor = float(task.conf_thr)
+    floors: dict[str, float] = {}
+    if session_factory is not None:
+        # FR-M6-04/AC-26: the per-class floors in force when this job started. A change made after
+        # this point binds the next job, which is what "applies to new jobs" means.
+        floor, floors = job_thresholds(session_factory, floor)
+    bound = partial(
+        predict,
+        conf_thr=floor,
+        iou_thr=float(task.iou_thr),
+        max_det=int(task.max_det),
+    )
+    if not floors:
+        return bound
+    return lambda asset: keep_above_class_floors(bound(asset), floors, floor)
 
 
 def _item_count(session: Session, task_id: int) -> int:

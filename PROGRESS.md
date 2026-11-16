@@ -47,6 +47,21 @@
   `cfg::CAPTURE_TIMEOUT_MS = 5000`, the state-machine document says five seconds, and the diagram
   says `5 s` - so the comment is correct and was left alone. A wrong correction is a change that
   has to be undone by someone else later.
+- **Defect: a class threshold the operator could edit and nothing read.** Trigger: `PATCH
+  /api/species/{class_code}` with a new `conf_thr`, then any detection. Symptom: the number was
+  stored, audited and shown on P-12, and **no detection path consulted it** - both the worker and the
+  single-frame route passed the caller's global `conf_thr` straight to the model, so AC-26's "a new
+  threshold applies to new jobs" could not hold, and the page's promise was decoration of the same
+  kind `P3-19` had closed for the system parameters. Found by the 11-12 audit and carried in `P4-05`
+  as a major defect; the tests that prove the fix were run red first. The second half of AC-26 -
+  a code that disagrees with the online model's `labels.txt` - is refused at the edit now, instead of
+  being discovered when the model refuses to load.
+- **The detection floor is a minimum, not the task's value, and that is deliberate.** A class floor
+  below the job's own confidence can only matter if the model is asked for the lower number:
+  ultralytics never returns a box it was not asked about, so asking for the task's 0.5 and filtering
+  at 0.2 would have been a filter that never fired. The plain consequence is that a per-class floor
+  *raises* what a job keeps and can *lower* what inference is asked for; the worker's own test now
+  states that in one line, and `tests/test_class_thresholds.py` holds both directions.
 - **Defect: the capture route built a file path from request values and took any size of body.**
   Trigger: `POST /api/capture/sessions/{id}/frames` with `point_code` or a session id carrying `..`,
   a slash, a backslash or a percent-encoded dot-dot - or with any body at all, however large. Symptom:
