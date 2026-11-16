@@ -1,19 +1,452 @@
 ## 2026-11-16
 
+- **The panel's seven segment resistors are fitted, and they are 330 Ω - the value the purchase list has held
+  since it was written.** The display had been declared against 240 Ω, a part that was never in hand: the
+  procurement row bought the LR1F330R lot and said in passing that the design wanted 240. The builder has now
+  fitted that lot, one resistor per segment, so the fitted part and the design value are finally the same
+  number. The resistor's job is now stated as what it is - holding each segment's current to what the panel
+  can take, rather than hitting a target resistance - with the arithmetic beside it: the per-segment current,
+  the worst instant on a common and the duty-averaged figure a pin's continuous rating actually applies to. **The
+  value is not a cosmetic swap**: at 3.3 V, 240 Ω would put a common at about 38 mA against the 40 mA a GPIO is
+  rated for, where 330 Ω puts it at about 28 mA - so whoever asks why 330 and not 240 finds the answer here.
+- **Every document that names the value moved with it**: the procurement table, its wiring diagram and the
+  pre-power-on check, the SRS hardware row, the state machine's wiring paragraph, the firmware README (the pin
+  table, the commons paragraph and the panel's unverified item) and the `config.h` comment, `scripts/draw_wiring.py`
+  with `docs/rig-wiring.svg` regenerated from it, and `P3-17`, where the panel's last owed part is the display
+  module alone. The older entries below still read 240 Ω, because that is what was decided on those days.
+- **Starting a capture now cancels the previous verdict's face timer.** The bench saw `CAP` appear and then snap
+  back to `READY`: pressing inside a verdict's twelve-second window moved the screen to `Capturing`, but the
+  previous verdict's timer was still counting and pulled it back. `serviceButton` clears `state.verdictAt` when a
+  capture begins, `serviceVerdictTimeout` refuses to fire while no timer is armed, and `rig::invariantHolds` now
+  states the rule from the other side - a capture in flight carries no verdict timer, a verdict face carries
+  one - so the bug's signature is an `EVT INVARIANT` rather than a silent mis-timing.
+- **A verdict face lived about one second instead of twelve, and the cause was two readings of one clock.**
+  The 114-press log showed every capture completing (`CAPTURING` → `TRIGGER` → `RESULT` → `PASS`/`RETAKE` →
+  `READY`) with the `READY` only ~1.4 s after the trigger. The verdict was stamped with a second `millis()`
+  taken *after* the loop had already sampled `now` for the pass; when a millisecond boundary fell between the
+  two, `now - verdictAt` wrapped to ~4.29e9, which is larger than any window, so `serviceVerdictTimeout`
+  expired the face on the same pass it appeared. That is `CAP` appearing and snapping to `READY`, and because
+  it depended on a boundary tick it clustered at some frames and not others. `protocol::poll` now takes the
+  loop's own `now`, `rig::armVerdictFace` is the only stamp, `rig::verdictFaceExpired` compares a **signed**
+  age (so a stamp a millisecond ahead costs a millisecond, not the whole face), and `serviceButton` remains
+  the only clear. The check measures the lifetime on a virtual clock through the real predicate: 12 000 ms
+  for the loop's stamp, 12 001 ms for a stamp one millisecond ahead under the signed comparison (0 ms under
+  the old unsigned one), still up at 11 s and gone by 13 s. `FIRMWARE_VERSION` is `1.22`.
+- **The drop-storm rule is deleted, and `Err4` now has exactly one cause: the radio would not start.** The
+  rule could not fire - noticing a rude disconnect takes the link supervision timeout, about twenty seconds,
+  so five never fit the one-minute window - and the polite disconnects that do arrive instantly were the ones
+  the rule deliberately excluded. Widening the window was rejected for a better reason than arithmetic: a
+  repeated drop is almost always the far end's radio or the distance, while `Fault` says `RADIO FAULT` and is
+  left only by a power cycle, so the rule promoted a transient problem at the PC into a permanent fault on
+  the rig, at the moment the rig was already handling it correctly. A disconnect now returns to `Advertising`
+  like any other, the panel says `WAITING`, and the judgement that a particular link is not working stays
+  with the PC, which has the attempt budget and the only view of why. `dropTimes`, `dropIndex`, both
+  `BLE_DROP_STORM_*` constants and the `Fault` target they reached are gone; the absence is written down in
+  `docs/rig-transport-en.md` §5 rule 5 so it is not reintroduced.
+- **`Live` now means "a subscriber is listening", and the button reads that same condition.** A press in the
+  attach-to-subscribe window used to start a capture the PC could not hear (the transport discards a write
+  with no subscriber), and four seconds later the rig reported `NO REPLY` about a PC that never received
+  `EVT TRIGGER` - the same species of lie as calling waiting a fault. `Live` keys on the BLE layer's
+  `Streaming` (`transport::listening()`), so that window is `Pairing`: the panel draws `APP` with the
+  rotation and a refused press is **visible**, which is what makes the refusal acceptable there. The rule
+  written down is the one that makes it safe: **the condition that decides whether a press is accepted and
+  the condition that decides which face is drawn are the same condition**, `presentation::state() == Live`.
+- **A new subscription flushes the input.** The BLE layer drops its rx ring when notifications are enabled
+  and the parser drops any half-received line (`protocol::flushInput()`), because a partial line left by the
+  previous session must not be completed by the next session's first write into a command nobody sent.
+- **`Err4` now owns `faultAt`.** `raiseFault` is the single writer of (fault, faultAt) and refuses to
+  overwrite a dead radio with a later timeout, stray result or broken invariant, which used to restart the
+  `Err4` blink mid-warning. The only timing in the firmware that had two writers now has one.
+- **Seven documentation holes closed with the audit**: the `CMD READY` sentence no longer claims it clears
+  the verdict timer; "five screens" became four in `rig-state-machine-{en,zh}.md`, `rig/link.py` and
+  `AGENTS.md`; `EVT INVARIANT` is described as the verdict-timer monitor rather than a screen/link pair;
+  the READMEs no longer name a version literal; `presentation.h` says `Rejected` reports nothing because the
+  layer has no wire; and `Err3` is stated to be a monitor no event can reach. Also written down: a rig that
+  cannot advertise stays `WAITING` rather than faulting, and the one-pass button latency is accepted.
+- **`OFFLINE`, `Err0` and the `NoLink` presentation state are removed.** In BLE a link simply ends and the rig is
+  available again; a client that stays connected but stops talking has the same remedy as one that never
+  connected - wait. Two faces for one remedy made the operator think a step further for nothing, and `Err0`
+  called "waiting" a fault. The presentation layer is now three states (`Pairing`, `Live`, `RadioFault`), an
+  attached-but-silent client lands in `Live` and sees the rig's own screen, `Screen::Offline` and its drawing
+  and link transitions are gone, the OLED header no longer names the link, and the matrix is 3 × 6.
+- **The button is keyed on the presentation state alone.** A press is refused only while a face owns the screens
+  (`Pairing`, `RadioFault`); in `Live` it captures whatever the protocol layer says, because `Gone` is an
+  attached peer that has gone quiet, not "nobody". If the peer really is silent the trigger goes out and `Err1`
+  arrives four seconds later - a visible answer, where the old `Gone`-keyed refusal was a silent one.
+- **`Err1`-`Err4` keep their numbers and `Err0` is retired without reuse.** The changelog in `config.h` and
+  `docs/rig-state-machine-en.md` §11 say so, so a future fault can take the next free number without anyone
+  renumbering the faces an operator has learned. `FIRMWARE_VERSION` is `1.21` (1.20 was flashed).
+
+## 2026-11-15
+- **The rehearsal is gone, and the button has one meaning again: a press captures, on the pressing edge.** The
+  six-second hold, the two-second step and the nine-face walk were a second meaning for one control, and the
+  press that ended a rehearsal was consumed rather than capturing - the exact ambiguity the matrix exists to
+  catch. The fault faces stay; they are simply no longer performed on demand, so a bench where nothing is
+  failing sees them in the serial log (`EVT TIMEOUT`, `EVT STRAY RESULT`, `EVT INVARIANT`) and `Err0` after ten
+  seconds of silence. The release is not an event at all.
+- **A full state × event audit then walked every cell of the matrix and found the documents wrong in four
+  places.** `Ready` is a **one-way marquee** - digits 1, 2, 3, 4 and straight back to 1, 500 ms each, two
+  seconds a cycle - and the wrap is deliberate, not a defect to "fix" into a bounce; four documents plus this
+  log had said there-and-back. The matrix had no column for `CMD SCAN` or for the four-second capture timeout,
+  which left `Capturing` with no cell for the one transition that does not need the PC. §3's claim that `SCAN`
+  leaves the panel untouched was false from `Offline`, where a command is also the PC returning.
+- **A no-op `CMD READY` is a broadcast, not a transition.** The firmware emits `EVT SCREEN READY`
+  unconditionally, so `§8` now says "from `Ready`, or from any other screen" instead of "from any other
+  screen", and the event list says so too.
+- **Two behaviours the matrix has no dimension for are now written down rather than left silent.** A fault
+  window outranks every screen, so a verdict arriving inside one loses its arrival sweep - eaten, not deferred;
+  and a score of `-1` draws blanks and the verdict letter, never a zero, because a zero beside a timeout
+  invents the number the timeout says is missing.
+- **The fault codes are `Err0`-`Err3` now, four characters to the width of the panel, and all four look
+  identical: they blink at one hertz.** The code is the identifier and the rhythm carries nothing, so there is
+  no second rate and no special case for the link. What differs is only how long a face stays - `Err0` has no
+  window, because a lost link lasts until the link comes back, while `Err1` a capture timeout, `Err2` a stray
+  result and `Err3` a broken invariant clear after two seconds - and that is when it leaves, not how it looks.
+  A four-character code is read well inside those two seconds, which is why the family is one character wider
+  than it was.
+- **A retake reads ` 40F`, not ` 40E`, and that is legibility rather than spelling.** `E` begins every fault
+  code, so a score of 40 on a retake sat one glance away from an `Err` face; `F` is the left column with the
+  top and middle bars, and no code contains it.
+- **`READY` is a one-way marquee: 1, 2, 3, 4 and straight back to 1, 500 ms a position, two seconds a
+  cycle.** No frame is dark and no frame holds more than one dash - that is structural, not tuning. **The wrap
+  is deliberate**: the dash starts over at the first digit instead of turning round, so the face is a conveyor
+  with a visible break, and `config.h` says not to "fix" it into a bounce. An earlier version held all four
+  dashes for a second instead; the marquee replaced it. The face also cannot be taken for `OFFLINE`, which is
+  a code.
+- **The boot self-test is two seconds: a 700 ms sweep of the 28 segment positions at 25 ms each, then `8888`
+  for 300 ms, then 1000 ms with every digit dark.** The dark phase deliberately has the largest share of the
+  three, because it was the part that went by invisibly before. Sequential rather than a static row of eights,
+  because a dead segment then shows as a gap at a known position instead of as a missing bar nobody can place.
+  The `PASS` arrival sweep shortened to 250 ms with it.
+- **Every face interval is an integer multiple of a 25 ms unit, `cfg::DISPLAY_UNIT_MS`, written as a product
+  the way the keepalive rule is.** The keepalive still governs the state intervals - fault window, capture
+  timeout, offline threshold, verdict - and the display unit governs the faces. **The 250 us digit period is a
+  different domain**, a hardware figure in microseconds, and the 25 ms button debounce is not a face interval
+  either. Two rules, two tables, and neither may drift into the other.
+- **A face runs only on its own age, and that closed a real defect.** The end of the boot sequence and any
+  screen change both start that age at zero, so no face inherits a phase from what was on the panel before; a
+  fault's age is its phase too, so the blink starts with the fault. Without the clamp the idle cycle picked up
+  wherever the self-test happened to stop, and the first dash after every power-up landed on digit 2 instead of
+  digit 1.
+- **The OLED and the panel share one boot clock.** The splash card is no longer a blocking delay - nothing that
+  blocks can be what another screen synchronises to - so the OLED holds it until the panel's two-second
+  sequence ends and the two move to `READY` together. The old 1.5 s splash number is gone with it.
+- **The alphabet gained a lowercase `r` and lost three letters.** It is the digits, `A`, `C`, `E`, `F`, `P`
+  and `r` - `r` admitted for `Err`, the one word the fault codes are built from, and the only lowercase letter
+  drawn; `H`, `L` and `U` were theoretical, and a glyph no face displays is how the next person concludes a
+  character is safe to draw.
+- **Nine files moved and no pin did.** `docs/rig-state-machine-{en,zh}.md` (the event table, the matrix, the
+  rules, the event list and section 10), `firmware/README.md` and `README-zh.md`, procurement section 4 and its
+  acceptance table, SRS Table 2-3's display row, and `P3-17` in `PLAN.md`. `scripts/draw_wiring.py` and
+  `docs/rig-wiring.svg` did not change: the segment and common pins are the same fourteen, and the drawing is
+  about pins. Two more things moved with the audit: the OLED footer is `v1.13` rather than a session tally
+  (there is no tally left in the state), and `CAPTURING` draws a row of six dots sharing the panel's phase,
+  not three.
+- **The finished rig's transport is designed, and the reason it is BLE is finally in the repository.** The
+  site's network is a campus one - WPA2-Enterprise or a browser portal - and the rig can join neither without
+  machinery it does not have, so BLE is the only one of the three that works rather than the better
+  engineering. `docs/rig-transport-{en,zh}.md` and **ADR 16** keep the two layers apart: the BLE layer owns
+  the connection and the subscription and changes at power-up and per drop, while the protocol layer keeps
+  `Alive`/`Gone` and the two-second keepalive and changes every two seconds. Merging them would force a choice
+  between "reconnect" and "resume talking" that corresponds to nothing real - a PC that stops sending commands
+  has not dropped the connection, and a drop does not mean the PC is dead. **The protocol layer is untouched:**
+  no line, no state and no timing of it moves, and the seams used are the ones already there
+  (`transport.h`/`transport.cpp`, and `rig/link.py`'s `Transport` factory).
+- **Both transition matrices are written out with every cell filled**: five firmware BLE states against seven
+  events, seven PC client states against ten. Three decisions are visible in the firmware table - one central
+  at a time, with a second connection **rejected and reported** because two carriers feed one parser; a client
+  that connects and never subscribes is dropped after ten seconds, armed by connect and disarmed by subscribe;
+  and a command in `Streaming` is handled in place and changes nothing at the BLE level. On the PC side
+  `Failed` exists after five attempts, because an unbounded reconnect loop makes a broken link look like a
+  working one.
+- **The timings say which numbers are measurements and which are not.** Scan and connect 20 s, subscription
+  5 s, backoff 1, 2, 4, 8 and 16 s, five attempts, and the protocol keepalive unchanged at 2 s. **The connect
+  time on this laptop has not been measured**, and the document says so plainly and marks it as the first
+  thing implementation measures - every other number there is a firmware rule, arithmetic, or a decision, and
+  none is reported as a stopwatch reading.
+- **A dead radio gets `Err4`, and it outranks `Err0`.** Both are true at the same moment, because a dead radio
+  loses the link in the ordinary way, and only one of them tells the operator what to do; `Err4` has no window,
+  like `Err0`, because waiting for the link is the right response to one and the wrong response to the other.
+  The panel's alphabet already covers it, and the OLED's `CHECK USB CABLE` has to become build-dependent,
+  because in `rig-ble` there is no cable to check.
+- **`rig-serial` survives as a build target, not as a paragraph.** A misbehaving radio must cost thirty
+  seconds and one cable rather than the demonstration, which is only true while the serial build keeps
+  compiling and keeps owning bench work where every wiring change is already tested.
+- Files: the two documents, ADR 16, the decision table in `docs/architecture-{en,zh}.md` with its context
+  diagram's link label, both `docs/INDEX-*` (the doc map, the language pointer, the `adr/01-16` range, and a
+  transport row in the change table), and `PLAN.md`'s `P3-38`, which now points at the design and names what
+  remains. `firmware/`, `server/` and `web/` were not touched: the implementation is a separate change.
+- **The inference environment moved out of the checkout and onto conda, on the pinned Python.**
+  `P2-20` built `.venv-infer/` inside the checkout on a Python 3.13 the machine happened to have, and the
+  model stack never loaded properly in it: the weights were delivered, tracked and registered while
+  `ultralytics` still refused to import, which is the gap the three real-inference tests exist to show.
+  The environment is now the `aquavision` conda environment on Python 3.11, holding the whole
+  `requirements.txt` stack; 3.11 is the version that file and the CI workflow pin, and it is one per
+  machine rather than one per checkout. The runbook, `scripts/demo.py`'s usage line and
+  `tests/test_demo_driver.py` name the environment instead of a path inside the repository; that test
+  locates it through conda and **skips**, with the reason in the report, where a machine has none.
+  `.venv-infer/` is left to the process that owns its deletion.
+- **A third machine now decides what the two screens draw, and it reads the other two rather than joining
+  them.** At power-up the rig has no central attached, the protocol layer reports `Gone` ten seconds later,
+  and the panel drew `Err0` - a blinking fault face - where nothing was wrong; the first connection then
+  flipped it to `READY`, which read as the press having caused something. The presentation layer owns
+  exactly one thing - which face each screen draws - and its four states, six events and 24 cells are a
+  table in `firmware/main/src/presentation.{h,cpp}`, compared cell by cell with the document. `Pairing` is
+  the state that removes the false fault: `WAITING FOR PC` with the six-dot row on the OLED and the
+  ordinary `Ready` marquee on the panel. `NoLink` keeps `OFFLINE`/`Err0` because a PC really was there and
+  left; `Live` hands the glass back to the rig's own screen; `RadioFault` keeps `RADIO FAULT`/`Err4`.
+- **"Waiting" is the honest label, and the alternative was a lie with a plausible face.** During a scan
+  the rig cannot know that anyone is coming, so `Err0` - which means a link was lost - is a report of
+  something that did not happen. The layer is a reader: the BLE and protocol matrices, the keepalive, the
+  four-second timeout and every wire line are untouched; `transport.h` gained one query (`attached()`) and
+  `presentation::begin` starts from the wire that actually opened. On `rig-serial` that query answers true
+  always - a UART cannot see a cable - so the serial build never shows `Pairing` and keeps its old panel
+  behaviour, which is the limit of that wire rather than a missing state.
+- **A screen change while the presentation is not `Live` is dropped, not deferred.** The face is drawn
+  over the rig's screen, the change never replays, and the transition back to `Live` paints the rig's
+  current screen - the same "eaten, not deferred" choice §10 already makes for a verdict inside a fault
+  window. A press while the presentation is not `Live` is refused too: during `Pairing` the protocol's boot
+  grace would otherwise let a capture start with nobody attached and paint it on whichever PC arrived
+  first. Nothing happens and nothing is drawn, which is what "there is nowhere to send a trigger" should
+  look like.
+- **The version is 1.14** because what the panel shows changed; `docs/rig-state-machine-{en,zh}.md` gained
+  §11 with the states, events, matrix, face table and eight rules, and the power-up face is now described
+  in `firmware/README{,-zh}.md` and `docs/rig-transport-{en,zh}.md` §10. `FIRMWARE_VERSION` carries the
+  panel change in its history comment; nothing on the wire moved, and `EVT HELLO` needed no new field.
+- **Verified without PlatformIO, which cannot run here.** All seven translation units were compiled
+  against the framework headers with the xtensa toolchain and every one exited 0 with no diagnostics:
+  `rig_state.cpp`, `presentation.cpp`, `protocol.cpp`, `screen.cpp`, `transport.cpp`, `transport_ble.cpp`,
+  `main.cpp`. `tests/test_rig_presentation.py` holds the documented matrix, the C++ table and an independent
+  transcription to each other, checks the four faces against the document, and checks that `Pairing`'s
+  face cannot reach the rig's screen; it fails on a moved cell, a swapped face or a `WAITING FOR PC` that
+  stopped outranking a verdict.
+- **The flashed 1.14 went to the bench, and all three findings were in the faces rather than the
+  machine.** `WAITING FOR PC` at Helvetica bold 12 measures 136 px on the 128 px panel, so it ran off the
+  screen; it is now bold 8, measured at 89 px - a 19 px margin either side. Bold 10 was measured at
+  122 px, which fits with only 3 px either side and reads as cramped against the inverted box, so the
+  smaller single line was chosen over both it and a two-line label. The sizes were measured on the host
+  through the U8g2 font tables, not estimated.
+- **`Pairing` and `Ready` are now two directions, not one face.** `Ready` walks digits 1, 2, 3, 4 and
+  wraps; `Pairing` walks 4, 3, 2, 1 and wraps, same period and same half-second step, so the panel tells
+  the two apart at a glance instead of showing one shape for two different stories. The direction is
+  written down as the whole distinction in `presentation.h`, `screen.cpp` and the state machine document,
+  so nobody "harmonises" them later.
+- **The OLED's dot row is the panel's walk rather than a fixed six.** In `CAPTURING` the panel turns
+  through six rim segments, so six dots is right; under `Pairing`'s four-position marquee it was claiming
+  two stops the panel never made. The row now takes its length and its lit position from the same walk
+  the panel is given - four in `Pairing`, `cfg::DISPLAY_ROTATE_STEPS` while capturing, and no row at all
+  where the panel is still or blinking, because dots claim a sequence. `walk` is the one value both
+  screens read, computed once per pass.
+- **A host-run behaviour test now drives the real machine.** `tests/test_rig_presentation_host.py`
+  compiles `presentation.cpp` for the host with a minimal harness and drives all 24 cells through
+  `apply()`, the four faces through `faceFor()`, and the `Pairing` walk; the source-level test could not
+  see a table lookup with swapped indices, and this can. It skips, with the reason, on a machine with no
+  `g++`, and runs on CI's Ubuntu runner. Each new test was shown failing under a targeted mutation of the
+  thing it checks.
+- **The version is 1.15, and the wire is still untouched.** The panel changed after the bench session, so
+  the version moved with it; the three face fixes are in `config.h`'s history comment, and the two
+  documents that describe the faces carry the measurements.
+- **`P3-38` is closed on the bench.** The finished rig reached the PC over BLE with the serial cable
+  pulled: twenty-five button presses with the USB unplugged each delivered a verdict, which is the
+  acceptance its plan line names, so the box is ticked. `rig-serial` stays the documented fallback.
+- **The reversed marquee and the four-dot row were superseded before 1.15 reached the bench.** The user
+  rejected the direction as too weak a distinction - two dashes moving opposite ways look the same out of
+  the corner of an eye - so the `Pairing` animation is now a **ring around the whole four-digit display**:
+  twelve stops on the outer perimeter, clockwise from digit 1's top edge (four top edges, two right edges,
+  four bottom edges, two left edges), one every `cfg::DISPLAY_ROTATE_MS`. A lap is exactly 3000 ms - 120
+  `cfg::DISPLAY_UNIT_MS` - and the step is the `CAPTURING` rotation's, because the small ring inside the
+  fourth digit and the large ring around all four are one mechanism at two scales. **The shape differs
+  from `Ready`, not the heading**, which is the point the bench was making.
+- **The OLED draws the same ring as a dot on the screen's border**, with the label inside it and one phase
+  for both screens: `presentation::ringStep` is computed once and the panel's segment table and the OLED's
+  twelve dots are both indexed by it, so they cannot disagree about the stop. `CAPTURING`'s six dots above
+  the banner stay, because they are the panel's six rim segments - the small ring, not a fixed-length row.
+- **A ring step moves one dot and does not redraw the frame.** The border and the label are sent once when
+  the face is entered; each step erases the dot that was lit, draws the one that is now, and sends two 2x2
+  tile windows. Measured on this stack with the U8g2 byte callback: **104 bytes and 12 transfers per step
+  against 1184 bytes and 64 transfers for a whole frame**. The seven-segment panel runs on its own hardware
+  timer and is not touched by the transfer; the check is that the ring step never calls `sendBuffer` or
+  `clearBuffer` and never reaches into `displayMasks`, and it fails if either is added back.
+- **The version is 1.16, because 1.15 never reached the bench** and its panel differs from this one. The
+  font work is kept (Helvetica bold 8, 89 px, 19 px margin) and so is the host-side test over all 24
+  cells; that test now also drives `ringStep` through the real code. Each new or changed test was shown
+  failing under a targeted mutation: exchanging the matrix row index, ignoring `faceFor`'s argument,
+  changing the ring step, reintroducing `sendBuffer` in the ring step, and putting the dot row back.
+- **The cursor is a snake now, not a point.** One lit segment is a moving dot with no body and it lets a
+  stop flash past; the `Pairing` face lights the current stop and the `cfg::DISPLAY_RING_BODY - 1` behind
+  it - two segments of one digit at a corner, one segment on each of two neighbouring digits along an
+  edge. The body is one named constant, not a `1` baked into the arithmetic, because the bench may ask for
+  three. Every stop now stays on the glass for two steps, and the first digit's bottom no longer goes by
+  in one.
+- **`WAITING FOR PC` now uses the house status face.** It was a thin border with text inside, a third
+  style next to `OFFLINE` and `RADIO FAULT`; it now draws the same inverted box, `AQUAVISION` on the
+  header baseline, the label on the title baseline and one hint line below (`SCAN FROM PC`), with only
+  the snake travelling the border as the thing this face adds. The title stays Helvetica bold 8 because
+  the longer label is 89 px at 8 and 136 px at 12, while the baselines and spacing are the house's.
+- **The fixed-position stall was investigated in the order asked, and both structural suspects were
+  clean.** The position is `(faceAge / cfg::DISPLAY_ROTATE_MS) % 12`, computed every pass - no accumulator,
+  so a late iteration catches up instead of losing a step. And the twelve-step cost table is flat: **every
+  one of the twelve steps is 104 bytes and 12 transfers** against 1184/64 for a full frame, and every step
+  changes the panel mask (so no stop is painted invisibly). What did turn up is a real extra full-frame
+  redraw: `serviceHeartbeat` marked the state dirty in `Pairing` for a header dot that face does not draw,
+  and because 1 s and the 3 s lap are commensurate that 1184-byte block landed on the same ring stop every
+  lap. The heartbeat now dirties only while the presentation is `Live`; the ring is the only thing that
+  repaints in `Pairing`, two small windows at a time.
+- **The lookup was not put in an interrupt, and the reason is written down.** The panel is timer-driven
+  because an OLED transfer blocks the loop; an ISR that waited on the I2C bus would stall the screen it
+  exists to protect. The answer is the bounded 104-byte write, and the docs say so next to the cost table.
+- **The version is 1.17**, because the 1.16 on the bench has the one-segment cursor and the third OLED
+  style. The changed checks were shown failing under mutation: a baked body length, a ring table where two
+  consecutive stops paint the same mask, an accumulated `ringStep`, a heartbeat that dirties in `Pairing`,
+  a `sendBuffer` put back into the ring step, and the OLED coordinates moved off the twelve stops.
+- **1.17 went to the bench and the OLED showed garbage, so the partial tile update is gone.** It was the
+  only writer in this change that addressed less than a full buffer - a tile coordinate or an erase into
+  an inverted area is exactly the class of mistake that produces this - and it is removed rather than
+  patched. Every ring step now marks the state dirty and the loop redraws and sends the whole 128x64
+  frame: 1184 bytes, 64 transfers, four steps a second. The display library sets the bus to 400 kHz (the
+  SSD1306's declared clock, not the 100 kHz `Wire` default), so a frame is about 27 ms and the duty is
+  about eleven percent. The panel is on its own hardware timer and is untouched either way, so the cost is
+  one loop block a little longer than the button's 25 ms debounce - the press level persists, so it is
+  seen one loop later rather than missed - and far inside the two-second keepalive. **A clean picture that
+  lags is acceptable; a corrupted one is not** - and if a bench session shows the loop dragging, the
+  number to lower is the ring's step interval, not the decision to send whole frames.
+- **The OLED's moving element is now a row of twelve cells filled up to the snake's stop.** A rectangle is
+  the only shape this display draws without arithmetic: the border it replaces needed corner coordinates,
+  tile maths and inverted-background erasure, and each was a place to get it wrong. The house status face
+  is unchanged - inverted box, `AQUAVISION`, the label, the hint line - and the row sits below the hint,
+  driven by the same `presentation::ringStep` the panel's snake is, so the two cannot disagree. The row
+  is kept as filled and outlined boxes only.
+- **The panel body is four stops** (`DISPLAY_RING_BODY = 4`), which is the bench's answer after two, and
+  it was one number to change because it was written as one. The OLED row does not read it: a row fills up
+  to the head, and that is a different picture from a snake body on a ring.
+- **The version is 1.18**, because the 1.17 on the bench is the corrupted one. The changed checks were
+  shown failing under mutation: a ring step that does not dirty the face, a reintroduced `updateDisplayArea`,
+  an OLED module that touches `displayMasks`, a baked body length in the panel loop, a ring table where
+  two consecutive stops paint the same mask, and an accumulated `ringStep`.
+- **The glass found a table error the test could not see.** The ring's twelve (digit, segment) pairs had
+  **two entries for the fourth digit's bottom and none for the first digit's**: on the panel one position
+  never appeared and another stayed lit too long. The test compared the table with a transcription of the
+  same table, and a copy wrong in the same place agrees with itself. So the ring is gone, and the lesson is
+  the test: for any table that survives, assert the property - twelve positions, twelve distinct pairs -
+  rather than a golden copy.
+- **`Pairing` is now `PAr` with a rotating fourth digit on the panel.** `P`, `A` and `r` are in the
+  character set, so the word reads as PAIR - the state itself - and the fourth digit turns through the same
+  six rim segments, at the same 250 ms, through the same `presentation::rotationStep` as `CAPTURING`. The
+  ring table, the body constant, the twelve-stop constants and the ring tests are removed; the position is
+  `1u << step`, and a bit shift has no entry to get wrong. The new check asserts six positions, six distinct
+  segments, no repeats, computed from the face's age - a definition, not a copy.
+- **The OLED waiting face is `OFFLINE`'s face with the words changed and no moving element.** The
+  twelve-cell progress row implied progress that does not exist, and a misleading indicator is worse than
+  none; `WAITING FOR PC` now comes from the same `drawStatusFace` as `OFFLINE` and `RADIO FAULT` - same
+  inverted box, header, baselines and body line - and the headline is the one difference. Nothing redraws
+  per step, so the only thing that could repaint it is a stray dirty flag, and the heartbeat no longer sets
+  one outside `Live`.
+- **The version is 1.19**, because 1.18 was built but never flashed. The changed checks were shown failing
+  under mutation: a repeated rotation step (the step count changed under it), a missing `PAr` letter, a
+  waiting face that draws an animation again, a rotation computed by an accumulator, and a stray panel
+  access in the OLED module.
+- **The panel word changed from `PAr` to `APP`** - one character in each of the first three digits; the
+  fourth digit still rotates through the same six segments at the same 250 ms. It now names the PC-side
+  application the operator is about to open, where `PAr` named the act of pairing. The version is **1.20**
+  so the two designs cannot share an `EVT HELLO`; the docs, both READMEs and the face-table words carry the
+  new word, and the word test asserts `A` plus two `P`s.
+- **The waiting title is `WAITING`, and the font is the house's.** `WAITING FOR PC` was thirteen characters
+  and had to be set in bold 8 to fit, so beside the seven-character `OFFLINE` at bold 12 the face read as
+  empty. The cause was the character count, not the font, so the title was shortened rather than shrunk:
+  the body line already says `NO LINK TO PC`, and a short title over that body is the structure `OFFLINE`
+  uses. `drawStatusFace` now has one title size with no per-face font argument, so the two screens are
+  identical except for their words; the check asserts the shared body line, the one font, and that every
+  headline is short enough for it.
+## 2026-11-14
+- **The turbidity sensor is gone, and this time the decision is final.** A full sweep of all 256 register
+  addresses, on the bus that removing the shifter had just proven clean, found only configuration registers
+  and **not one of them changed value in response to light** - hand, white paper at 2 cm, a dark corner, air
+  and water all read the same - while the vendor states the part has no register map and published none.
+  `P3-37` is closed by the removal rather than by a measurement; `EVT TURBIDITY`, `CMD TREAD` and `CMD TDUMP`
+  left the firmware with the sensor in 1.12, and so did the two probe scripts whose only job was to keep the
+  hunt repeatable.
+- **What replaced it is ten lamps on GPIO 10-18 and 21 - the score bar.** One dot sweeping out and back on
+  `READY`, a bar filling one lamp at a time on `CAPTURING`, the score as a level on `PASS`/`RETAKE` (one
+  lamp per ten percent; yellow up to 70, white for the top band), all ten dark on `OFFLINE`. Wired exactly
+  like the three lamps - 5 V rail, its own 330 Ω, cathode on the pin, so `LOW` lights it. **The pins are not
+  contiguous because 19 and 20 are the USB pair**, so `config.h` declares an explicit `PIN_BAR` array and
+  the last lamp leaves from the right header.
+- **Removing the BSS138 shifter took the bus from seventeen-of-twenty reads answering to twenty-of-twenty.**
+  The shifter was not protecting the bus, it was corrupting it: the same twenty reads of the same register
+  answered seventeen times with it in circuit and twenty times without it, and that is what the sensor's last
+  weeks were spent measuring - a device that answered most of the time.
+- **An I2C device with no supply still acknowledges its address.** The sensor answered `0x49` through a whole
+  session in which its emitter was dark, because an unpowered part is phantom-powered through the bus
+  pull-ups and its own protection diodes: enough to acknowledge, nowhere near enough to measure. So **"the
+  scan found it" never proved it was powered**, and an address in a scan is not evidence that the part can do
+  anything. Only a reading that moves is.
+- **Both languages moved in the same commit, and the wiring picture was regenerated rather than edited.**
+  The sensor and the shifter left the SRS, the data model, the procurement list, the architecture diagrams,
+  the API contract, the prototype notes and the state machine together; section 5 of `procurement` now
+  carries ten bar rows and section 10 of the state machine carries what each screen's bar does.
+  `docs/rig-wiring.svg` was rewritten by `scripts/draw_wiring.py`, and the wiring test now holds the table,
+  the drawing and `config.h` to each other for the bar's ten pins as well.
+- **`EVT TURBIDITY` was `E7`, and removing it moved the two timers up one number.** `CMD SCAN` is still
+  `E10` - it was `E10` when it was added and it keeps that number - and the bar's own step is `E9`, because a
+  redraw in the wrong state is a visible defect and the event table is where that is written down.
+- **The bench scan tool now expects one address, not two.** `scripts/test_rig_link.py --scan` reports `3C`
+  as the OLED and anything else as a part this rig does not have, which is what a bus with one device on it
+  should say.
+- **`turbidity_rel` left the documents but not yet the database.** It is gone from the data model, the API
+  contract and the SRS field dictionary, and `server/app/models.py` still declares the column - **lane B's
+  to remove**, and until then `media_asset` may carry a field nothing writes.
+- **Named here so it is not mistaken for done:** `firmware/README.md` and `firmware/README-zh.md` still
+  describe the turbidity sensor, `EVT TURBIDITY`, `CMD TREAD` and a three-lamp panel with no bar. They
+  belong to the firmware lane and were left untouched on purpose.
+- **The bar never shipped; the panel is a four-digit seven-segment display, and it took the lamps' pins.**
+  Segments A-G on GPIO 3 and 13-18 through 240 ohm each, digit commons 1-4 on GPIO 5, 6, 7 and 10 direct,
+  button on GPIO 4, OLED unchanged on GPIO 8/9. The ten-lamp bar and the three status lamps are both gone,
+  and **the lamps' three pins are the display's commons** - keeping them would have meant two panels fighting
+  for one header. `config.h` is still the only place a pin is written, and the firmware is 1.13.
+- **The multiplexer moved into a hardware timer, because the loop-driven one flickered.** One digit every
+  250 us, about 1 kHz for the whole face. The loop only publishes which mask each digit should show, copied
+  under a critical section; the handler turns one mask into GPIO register writes. The flicker was measured in
+  the mechanism rather than argued about: an OLED transfer blocks the loop for 20-25 ms, and in that window a
+  loop-driven panel held one digit at full duty while the other three were dark. A panel that stutters is a
+  panel whose faces cannot be read, so the display no longer depends on the loop keeping up.
+- **The faces are a pacing rule, not a list of numbers: what works runs steadily, what failed blinks, and
+  nothing on a desk instrument exceeds about 1 Hz.** `READY` fills its four positions with one dash at 500 ms
+  a step and **holds all four for a second** - filling and holding reads as breathing, filling and vanishing
+  reads as a break. `CAPTURING` turns the fourth digit one segment per 250 ms, `PASS` wipes left to right
+  once and then holds the score with `P`, and `RETAKE` blinks the same at 1 Hz. **`OFFLINE` is the code
+  `E0`**, blinking at 0.5 Hz: losing the link is a fault, so numbering the screen is honest rather than a
+  workaround, and it is deliberately slower than a retake - a warning should be quicker than a fault report.
+  `E1`, `E2` and `E3` stay the three events that used to be swallowed, one keepalive each.
+- **Only nine characters can be drawn: the digits and A, C, E, F, H, L, P, U.** `O` reads as `0`, `S` as
+  `5`, `I` as `1`, `G` sits between `6` and `9`, and M, W, K, V, X, Y and Z cannot be formed at all - so a
+  word becomes a code, which is exactly why the faults are numbered. The table in `main.cpp` holds only the
+  glyphs a face actually shows, because a character nothing displays is an entry nothing can check.
+- **Every interval is an integer multiple of the 2 s PC keepalive.** One keepalive is a fault face and one
+  rehearsal step, two the capture timeout (**4 s, down from 5**), three the rehearsal hold, five offline
+  detection, six the verdict face. They are written as products of `cfg::PC_KEEPALIVE_MS` so a keepalive
+  change moves all of them together, and **a verdict outliving the link-loss threshold is the point of the
+  six**: the dead link is reported before a verdict clears itself. A rehearsal makes the fault faces
+  reachable at all - six seconds held from `READY` walks the eight faces at 2 s each, display-only, nothing
+  on the wire - because a face nobody has ever seen is a face that fails on the day.
+- **Every document that described the bar or the lamps now describes the display, in both languages.**
+  `docs/rig-state-machine-{en,zh}.md` gained the faces, the pacing rule, the character rule and a timing
+  table, and its transition matrix gained an `E11 verdict expired` column because a verdict clears on its
+  own; `firmware/README.md` and `README-zh.md` were rewritten to the panel and to the OLED footer that
+  actually exists; SRS Table 2-3's display row is the four-digit module and the status-LED row is gone;
+  procurement section 5 carries the fourteen panel pins. `scripts/draw_wiring.py` was rewritten and
+  `docs/rig-wiring.svg` regenerated from it rather than edited, and `tests/test_wiring_document.py` now
+  reads `SEGMENT_PINS` and `DIGIT_PINS` instead of the names that no longer exist.
+- **The 5 V rail now has no load, and that is a consequence worth writing down.** The lamps and the bar were
+  its only loads; every pin the display uses is a GPIO and the segment resistors go to those pins, so the
+  controller's USB cable is the only supply the panel needs. The 12 V adapter and the MB-102 stay on the
+  parts list, and the rail is measured once and then left alone.
 - **P3-15 frontend half: species edits are validated and executable.** The user assigned the page and frontend validation to lane C and left job-level threshold application and labels validation with lane B. P-12 orders the real four classes, reports missing/unknown codes, and accepts 0..1 with two decimal places, matching the existing API/storage. `tests/test_species_threshold_ui.py` runs validation, table rendering and the real save handler under Node; a rejected save retains input and re-enables the button. A prototype-key regression was shown red. P3-15 remains open and the interface still states that detection does not read these thresholds yet.
-
 - **P3-30: every page has a measured asset ceiling.** `scripts/check-frontend-budget.py` prints raw JS/CSS bytes for all thirteen pages, including inline code and deduplicated transitive literal imports (optional mocks included), and fails above 128 KiB JS or 320 KiB CSS. CI runs the gate. `tests/test_frontend_budget.py` proves import cycles do not double-count and that both limits and the command failure path turn red on oversized assets; shrinking the asset restores success. Fonts and images are outside the stated budget.
-
 - **P3-31: the report previews the chosen period before generation.** With explicit authorization for the backend addition, `GET /api/reports/preview` reuses the exact generation query without writing a file or history row. The page refreshes on period/basis changes, ignores stale answers and disables generation until the current preview succeeds. Contract pairs, mock, REST client, health route count and permission inventory moved together. `tests/test_report_preview.py` compares displayed numbers with the generated Markdown in both bases, and executes delayed/failing page requests under Node. The missing route was shown red first.
-
 - **P3-21: business dates keep the server basis.** Formatting preserves the supplied wall clock, milliseconds and offset in every host zone; home trend labels use returned dates. Report presets use the operating date from the trend endpoint and submit calendar dates. With explicit cross-lane authorization, the report parser accepts whole operating dates alongside existing timestamp clients; `timebase.report_bounds` owns conversion, including daylight-saving transitions. `tests/test_operating_time.py` checks three host zones, the whole-day API and a 23-hour day. Reverting report parsing was shown to fail the date test.
-
 - **P3-29: every page is exercised against three failures.** A 15-second request deadline covers both headers and body, aborts the fetch and clears its timer. Server errors name retry and administrator escalation; expired authentication directs the operator back to sign-in. `tests/test_page_failures.py` executes the actual thirteen page scripts, REST client and UI loader for 500, timeout and 401, checking an actionable message and no remaining spinner. The original login 500 path failed the matrix.
-
 - **P3-32: review resumes its navigation state per tab.** Selection and zoom are restored only for the same frame and surviving object ids; the image browser resumes its page. Corrupt or obsolete saved state is discarded; unavailable browser storage shows an actionable warning. Annotation drafts are not stored. `tests/test_review_place.py` asserts the serialization round trip, frame isolation, stale ids and storage refusal under Node.
-
 - **P3-28: keyboard review uses original-image pixels.** Tab/Enter selects targets, N/P cycles them, arrows move one pixel, Shift+arrows resize, and Delete removes; keyboard edits enter the same undo stack. Focus is visible and preserved across redraws, and shortcuts are printed beside the canvas. `tests/test_review_keyboard.py` runs geometry and selection assertions under Node; the real page-handler test also exercises move, resize and delete.
-
 - **P3-27: pre-submit review undo is a stack.** Drag, draw, delete, relabel and confirmation keep isolated snapshots; cancelling a gesture preserves earlier history, and a server reload clears it. Node executes the pure functions and the real page handlers in `tests/review_history.mjs`, invoked by `tests/test_review_history.py`. Replacing the stack with one-step storage was demonstrated to fail.
 - **Defect: the capture API accepted and echoed a sensor reading that no client sent, and stored it
   in a column nobody read.** Trigger: any authenticated client posting
@@ -29,7 +462,6 @@
   line advised activating one, while `model_version.is_online = 1` was true in the same database.
   The state was read from this run's intention instead of from the database; it is now read back
   after registration, which is what the operator sees.
-
 - **The turbidity sensor is not, in fact, gone from the repository - and the sweep says so**
   (task ① of 11-16). The firmware lights it every five seconds and still answers `CMD TREAD`; the
   SRS still lists it in Table 2-3 and §2.4; the contract and the prototype still show the field;
@@ -275,6 +707,109 @@
 - **`CMD TDUMP` exists because two bytes were the wrong question.** Reading eight raw bytes is what showed the
   frame shape (`<one byte> 00 00 ...`) that no amount of guessing at a 16-bit value would have revealed.
 
+- **Writing to the sensor changes nothing.** `CMD TWRITE` landed and six candidate control slots (the ones
+  that read back zero: `0x60`, `0x61`, `0x62`, `0x71`, `0x72`, `0x73`) were each written `0x01`. Every write
+  was acknowledged (`ack=0`) and **not one register moved**. The "write a value to start a conversion" theory
+  is closed.
+- **The first attempt at that measurement was wrong and looked right.** The probe cleared its input buffer
+  before every request, which discarded replies that arrived quickly; the baseline then held five unread
+  registers, and the diff reported those unreadings as changes. Re-run with a self-checking baseline - two
+  consecutive dumps compared before anything is written - the answer was "no change" and the tool could say
+  why. Second time today that a plausible table came from a broken instrument rather than from the sensor.
+- **A ten-times slower clock did not produce the missing second byte**, so weak 3.3 V pull-ups do not explain
+  the zero tail. It did expose something else: register `0x64` reads `0xDF` at 100 kHz and `0x00` at 10 kHz.
+  Either that register is live - it is the only value ever observed to differ between two readings - or the
+  faster clock corrupted it, which would mean the rising edges are marginal after all and the fault shows up
+  as a wrong byte rather than a missing one. Both readings point at the same repair: **4.7 kOhm pull-ups on
+  the 3.3 V side**, which the bus has never had.
+- **`PLAN.md` gained `P3-37`** (the turbidity sensor either measures or says it cannot) **and `P3-38`** (the
+  finished rig needs no cable to the PC, over BLE, because the site's network is a campus one that an ESP32
+  cannot join). Both carry their own "done when", so neither can be closed on a feeling.
+
+- **A white surface at 20 mm changed nothing.** The manual calibrates at `L=20mm` against a white board
+  (14000 typical), so the working distance looked like the explanation for a part that ignored air, water and
+  a hand alike. Twelve implemented registers, the same paper at the documented distance, **byte for byte
+  identical**. The distance theory is closed with it.
+- **The manual has no command table, and that is now a reading rather than a suspicion.** Its timing and
+  protocol sections are figures, not text: they were extracted from the PDF and read. One is generic I2C bit
+  timing (`tSU;STO`, `tHD;STA`), the other names its fields plainly - `Device (Slave) Address (7bits)`,
+  `Register Address N (8bits)` - and gives no value for N. So the sweep was the only way to learn the map,
+  and no further sweep will produce a command byte the document never had.
+- **The manual did settle the direction I had guessed wrong.** Page 4: clear liquid reads **maximum**, and
+  the value falls as turbidity rises. My "a reflective sensor must read higher with more particles" was
+  wrong; the procurement document's sentence was right. Corrected in `P3-37` so the raw-to-relative mapping
+  cannot be built on the wrong polarity.
+- **A claim was made before it was true, and the user paid for it.** The message said a sampler had been
+  started; no job had been launched, so the white paper was placed in front of a measurement that was not
+  running. The re-run took two seconds. Saying "running" is a claim like any other, and this one was not
+  checked.
+- **The transport seam is in, and the wire did not move.** `protocol.cpp` no longer names `Serial`: every one
+  of its sixteen touch points goes through `transport::`, which `transport.cpp` implements on the UART today
+  and a Bluetooth service will implement later. The check that matters is that nothing observable changed -
+  `EVT HELLO`, `EVT SCREEN READY`, `EVT PONG` and both `EVT I2C` addresses are byte-for-byte what they were,
+  which is the only acceptance this step can have. `P3-38`'s first step is done; the radio is now a file.
+- **The I2C layer is not trustworthy, and that reframes the whole turbidity hunt.** Three separate readings
+  now disagree with themselves: `0x14` failed to answer three times in twenty consecutive reads; register
+  `0x64` reads `0xDF` at 100 kHz and `0x00` at 10 kHz; and the periodic turbidity read reported `65280`
+  before and **`512` after the same firmware was flashed at a different clock**. A value that changes with
+  the clock and sometimes does not arrive at all is a physical-layer symptom, not a register-map one.
+- **What that means for the conclusion drawn earlier:** "the measurement is not in the visible register map"
+  was read from a bus that drops answers. It may still be true, but it is no longer **proven**, and the
+  register hunt stops here until the wiring is fixed. The named defect is unchanged and specific: the BSS138
+  shifter needs a pull-up on each side, and the 3.3 V side has only the ESP32's internal ~45 kOhm.
+- **`I2C_CLOCK_HZ` is a config constant rather than a literal**, so the next measurement of this kind costs an
+  edit instead of a search.
+- **The level shifter was corrupting the bus, and removing it fixed that.** With the BSS138 in circuit,
+  twenty consecutive reads of `0x14` produced **seventeen answers and three silences**, and the same register
+  read `0xDF` at 100 kHz and `0x00` at 10 kHz. Wired straight to the ESP32 - sensor on 5 V, no shifter, not
+  even an external pull-up - the same twenty reads answer **twenty times with one value**. The user proposed
+  the shifter as the suspect; the measurement agrees with them.
+- **A device that answers is not a device that is powered.** The sensor acknowledged at `0x49` throughout a
+  period in which **its emitter LED was dark**. An I2C part with no supply is phantom-powered through the bus
+  pull-ups and its own protection diodes: enough to acknowledge an address, nowhere near enough to drive an
+  LED or take a measurement. Every "the scan found `49`, so the sensor works" in this project's history rests
+  on that unstated assumption, and it is wrong.
+- **The register map read on the clean bus is not the map read on the broken one**, which is the clearest
+  demonstration yet that the earlier sweeps were measuring the wire: `0x00` answered `0xFF00` before and
+  `512` now, `0x65` was `256` and is `0`, `0x64` was `57088` and is `0`, and **`0x70` moved from 1280 to 2560**
+  - the first register ever observed to change value. Whether `0x70` is the measurement or a gain setting is
+  the next question, and it can only be asked of a sensor whose emitter is actually lit.
+- **Three conclusions were withdrawn in one day, all for the same reason**: the instrument was not trusted
+  before the result was believed. The zero tail, the "no measurement in the register map", and the write
+  probe's "no effect" were each read from a bus that dropped answers or a sensor that was not powered.
+- **Register `0x00` is an echo, and the firmware had been reading it as the measurement since day one.** It
+  returns whatever register was addressed before it: the periodic `EVT TURBIDITY` tracked this session's sweeps
+  (`65280`, then `512`, then `2560`) instead of tracking water, and a one-off `0x00 = 15 00` in a long run was
+  exactly the `0x15` read that preceded it. Read `0x70` *then* `0x00` and both answer `0A 00`. **`TURBIDITY_CMD`
+  is now `0x70`** (firmware 1.11) - the only register that has held two different values across sessions
+  (1280, then 2560) and whose magnitude lands inside the documented 700-16000 range.
+- **`0x70` still does not answer light, and its stillness is itself evidence.** A hundred-second watch through
+  four deliberate changes - hand over the probe, uncovered, a white surface at 2 cm, a dark corner - left it at
+  exactly `0A 00` in all 367 samples. The manual promises repeatability within ±2 %, which at 2560 is ±51
+  counts: **a real measurement cannot be bit-exact across 367 reads**, so `0x70` behaves like a latched value
+  rather than a live one.
+- **The bus itself is now trustworthy, which is what makes those two findings worth stating.** 3471 reads
+  across thirteen registers with **zero failures** once the BSS138 shifter was out of the circuit, against
+  seventeen-of-twenty successes with it in. Everything concluded before that repair was concluded about the
+  wire; everything after it is about the sensor.
+- **What the next measurement must settle, and it needs a meter rather than more code:** whether the module is
+  powered in its own right or only phantom-powered through the bus. An I2C part with no supply still
+  acknowledges its address - enough to look healthy in every scan this project has ever run - while drawing
+  nowhere near the 10 mA the datasheet calls for, and driving no emitter. VCC at the pin, or the current in
+  series, separates the two in thirty seconds.
+- **`0x70` is latched, not live, and the last test settles it.** A white surface at the 2 cm the manual
+  calibrates at, held for ten seconds inside a 150-second watch, moved nothing: `00 00` in every sample. Yet
+  that same register has held **three** values across boots - 1280, 2560, and 0 - so it is written at start-up
+  and never again. A measurement that only updates when the board is reset is not a measurement.
+- **Everything the readable map can tell us has now been asked.** Full sweep on a corrupt bus and again on a
+  clean one; writes to six zero slots; 10 kHz and 100 kHz; eight, four and two byte reads; a STOP-then-START
+  sequence; hand, white paper, dark corner, air and water. The map answers and does not move. **The turbidity
+  question is now the vendor's**, and the letter to `karen@e-light.com.cn` carries a much stronger case than
+  it would have yesterday, because the bus it was measured on is provably clean.
+- **This does not block the project, and the SRS already said so.** "When the sensor is absent the field is
+  left empty, and it is excluded from statistics rather than estimated" is the specified behaviour for a sensor
+  that cannot be read, and it is exactly the state this one is in. The rig computes, shows `--` on the panel
+  and reports nothing, which is honest, rather than reporting a register that only updates on boot.
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict

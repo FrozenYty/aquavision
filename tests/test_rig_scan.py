@@ -19,8 +19,8 @@ from app.rig import protocol
 REPO = Path(__file__).resolve().parent.parent
 TOOL = REPO / "scripts" / "test_rig_link.py"
 
-#: The two devices this rig is built to have on the bus, from `firmware/main/src/config.h`.
-EXPECTED = {"3C": "OLED", "49": "turbidity sensor"}
+#: The one device this rig is built to have on the bus, from `firmware/main/src/config.h`.
+EXPECTED = {"3C": "OLED"}
 
 
 def _load_tool() -> object:
@@ -56,18 +56,15 @@ def test_the_verdicts_the_tool_sends_are_the_ones_the_server_would_write() -> No
     assert len(sent) == 2
 
 
-def test_the_tool_expects_the_two_addresses_the_rig_actually_has() -> None:
+def test_the_tool_expects_the_address_the_rig_actually_has() -> None:
     assert _load_tool().EXPECTED == EXPECTED
 
 
-def test_a_scan_reports_what_answered_and_names_the_ones_the_rig_expects() -> None:
+def test_a_scan_reports_what_answered_and_names_the_one_the_rig_expects() -> None:
     tool = _load_tool()
-    found = tool.scan_addresses(
-        ["EVT PONG", "EVT I2C 3C", "EVT I2C 49", "EVT I2C 68", "something else"]
-    )
+    found = tool.scan_addresses(["EVT PONG", "EVT I2C 3C", "EVT I2C 68", "something else"])
     assert found == {
         "3C": "OLED",
-        "49": "turbidity sensor",
         "68": "something the rig does not expect",
     }
 

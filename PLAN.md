@@ -25,7 +25,7 @@ Phase status lives here. Why it moved lives in `PROGRESS.md`.
 | C — web | @chemflowers | pages, canvas review, charts |
 | D — quality | @IkeaFyj | test cases, acceptance checks, documents, demo script |
 
-Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` Sun Jianheng ·
+Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` Sun Jianheng ·
 `@IkeaFyj` Fu Yijia.
 
 ## 3. Phases
@@ -283,8 +283,9 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - `requirements.txt` already pins `ultralytics`; **no new dependency file is needed** - the path
         existed and nobody had walked it, which is why the weights could be delivered, tracked and
         registered while the machine still refused to load them
-      - the environment is per checkout and git-ignored (`.venv-infer/`); the server environment stays
-        light, which is ADR 11's argument, and the training environment is never installed into
+      - the environment is the `aquavision` conda environment, built once per machine outside the
+        checkout so it needs no ignore rule; the server environment stays light, which is ADR 11's
+        argument, and the training environment is never installed into
       - the evidence may come from any machine - the training machine already has the stack - and the
         demonstration machine gets it by following the step, which is `P3-23`'s runbook
       - the three skipped tests in `tests/test_detect_real.py` are the only evidence that inference
@@ -485,35 +486,54 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         rather than a count; the contract table, both contract documents and `/api/health`'s
         `contract_routes` moved together, 42 to 44, and that field is now tied to the table by a test
 - [ ] **P3-17** Rig assembly and its optical numbers · @FrozenYty · split out of `P1-06` on 11-11 ·
-      the parts still owed: resistors for the two LEDs, the button (not arrived), the turbidity sensor's
-      level shifter, and **5 V for the sensor**. A 12 V adapter with a buck module was procured 11-11
-      and replaces the earlier dead end - the board has no 5 V output - but it is untested until the
-      bench session
+      the part still owed is the panel's **four-digit display module**. **The segment resistors are no
+      longer owed**: the **330 Ω** parts were fitted on 11-16, one per segment - the value the purchase
+      list has always held, which is now the design value as well. The
+      button is not owed: it was on the bench on 11-13, when a miswired press reported itself as a
+      brownout. A 12 V adapter with a buck module
+      was procured 11-11 and replaces the earlier dead end - the board has no 5 V output - but it is
+      untested until the bench session
       - **power settled 11-13, against the boards that actually arrived: one 12 V adapter into the MB-102
-        with one rail jumper on 5 V and the other on OFF, feeding only the 5 V side** - sensor VCC and
-        shifter VCCB. The controller stays on its USB cable, which is also the serial link, and its own
-        `3V3` pin feeds the shifter's VCCA and the OLED, so there is one 5 V domain, one 3.3 V domain and
+        with one rail jumper on 5 V and the other on OFF, feeding only the 5 V side** - which was the LED
+        anodes, and which since 11-14 **has no load at all**: every pin the four-digit display uses is a
+        GPIO, so the controller's USB cable is the only supply the panel needs and the 5 V rail is measured
+        once and then left alone.
+        The controller stays on its USB cable, which is also the serial link, and its own
+        `3V3` pin feeds the OLED, so there is one 5 V domain, one 3.3 V domain and
         one ground. The buck module bought on 11-11 is a spare rather than the plan. The module carries its
         own 5 V regulator, so the pass-through risk is smaller than feared, but the rail still gets measured
         before anything is plugged into it
       - the board is an **ESP32-S3-N16R8**: 8 MB of octal PSRAM takes **GPIO33 to GPIO37**, none of which
         this project uses, and the serial link comes from the **COM** USB-C port because the firmware sends
         `Serial` to UART0 (`ARDUINO_USB_CDC_ON_BOOT=0`)
-      - the BSS138 level shifter runs VCCA 3V3, VCCB 5 V, A0 to B0 on GPIO8/SDA, A1 to B1 on GPIO9/SCL
-      - **a third lamp, added 11-13: blue on GPIO7**, covering every screen the two verdict lamps do not, so
-        a completely dark panel now means no power. Without it, `Ready`, `Capturing` and `Offline` had no lamp
-        at all and a healthy idle rig looked exactly like a dead one. Blue is steady when idle, blinks slowly
-        (500 ms) while a capture is in flight and fast (150 ms) when the link is gone, because "busy" and
-        "broken" are different questions. The verdict lamps are **white for `Pass` and red for `Retake`**,
-        both steady while their screen is shown, and they are lit by the pin sinking them rather than by the
-        pin driving them.
+      - **the BSS138 level shifter was removed on 11-14**: with it in circuit 3 of 20 register reads
+        failed, without it 20 of 20 answered, so the bus runs straight from GPIO8/9 to the OLED and nothing
+        on it is a 5 V part
+      - **the sensor's replacement changed twice on 11-14, and the second one is the panel.** First a
+        ten-lamp bar on GPIO 10-18 and 21, wired like the lamps; then **the four-digit seven-segment
+        display**, which is what `config.h` and `main.cpp` implement: segments A-G on GPIO 3 and 13-18
+        through 330 Ω each, digit commons 1-4 on GPIO 5, 6, 7 and 10 direct, one face per screen, the
+        faults as `Err0`-`Err3`, and the multiplexer in a hardware timer. The bar never shipped, and **the
+        pins the three lamps sat on are the display's commons**
+      - **a third lamp, added 11-13 and retired 11-14: blue on GPIO7**, covering every screen the two
+        verdict lamps did not, so
+        a completely dark panel meant no power. Without it, `Ready`, `Capturing` and `Offline` had no lamp
+        at all and a healthy idle rig looked exactly like a dead one. Blue was steady when idle, blinked
+        slowly (500 ms) while a capture was in flight and fast (150 ms) when the link was gone, because
+        "busy" and
+        "broken" are different questions. The verdict lamps were **white for `Pass` and red for `Retake`**,
+        both steady while their screen was shown, and they were lit by the pin sinking them rather than by the
+        pin driving them. **All three went with the display**, whose commons are those pins; what the change
+        left behind is the rule they were built on - **every screen has a face, `OFFLINE` included**.
         Firmware, SRS table 2-3, the wiring table, the firmware README and a new section 10 of the state
-        machine all moved together, and **the firmware compiles** under the pinned toolchain
+        machine all moved together for the lamps, and for the display again, and **the firmware compiles**
+        under the pinned toolchain
       - done when `python scripts/test_rig.py` reports the three numbers the design fixed - left/right
         brightness ratio >= 0.7, a 5 cm target >= 45 px at 640 input, no flicker - and
-        `python scripts/test_rig_link.py --port COM<n> --scan` finds `49` with the sensor powered and
-        `3C` for the OLED. **The scan tool was added 11-13**: until then `CMD SCAN` existed in the
-        firmware and nothing on the PC could send it, so that half of the acceptance had no way to run
+        `python scripts/test_rig_link.py --port COM<n> --scan` finds `3C` for the OLED. **The scan tool
+        was added 11-13**: until then `CMD SCAN` existed in the
+        firmware and nothing on the PC could send it, so that half of the acceptance had no way to run.
+        It expected `49` beside `3C` until 11-14, when the sensor left and the expectation went with it
       - **optical half measured 11-13, ahead of assembly**: on the camera alone, 2 minutes, no rig
         lamp - brightness ratio 0.809 (floor 0.70) and frame-to-frame drift 2.2 % (ceiling 5 %) pass;
         the 5 cm target reads 0 px because it is not in the water yet. The official numbers still
@@ -693,6 +713,52 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **GATE P3** — all 36 acceptance items demonstrated live, one after another, no manual database
       edits in between, and every item traceable to the task that closed it · **checked by @IkeaFyj**, not the
       lane owner (§5.3)
+
+- [x] **P3-37** The turbidity sensor either measures or says it cannot · @FrozenYty · **closed 11-14 by
+      removing the sensor**, because it could not measure and could not say anything else: a full sweep of
+      all 256 register addresses, on a bus that removing the BSS138 shifter had just taken from 17-of-20
+      reads answering to 20-of-20, found only configuration registers, and **not one of them changed value
+      in response to light** - hand, white paper at 2 cm, a dark corner, air and water all read the same -
+      while the vendor states the part has no register map and published none. What replaced it is the panel
+      feature it never was: **the four-digit seven-segment display**, segments A-G on GPIO 3 and 13-18 with
+      its commons on 5, 6, 7 and 10 (`config.h`, `docs/rig-state-machine-en.md` §10); the ten-lamp bar that
+      stood in for it earlier the same day never shipped.
+      - `EVT TURBIDITY`, `CMD TREAD` and `CMD TDUMP` left the firmware with the sensor in 1.12, along with
+        the two probe scripts (`scripts/test_turbidity.py`, `tests/test_turbidity_probe.py`), and both
+        wiring and state-machine documents were rewritten rather than trimmed
+      - **lane B still owes one thing**: `turbidity_rel` is gone from the data model and the contract
+        documents but the column remains in `server/app/models.py`, so `media_asset` may now carry an
+        orphaned field that nothing writes
+- [x] **P3-38** The finished rig needs no cable to the PC · @FrozenYty · the assembled rig must run from a
+      power module with only the camera's wire on the desk · done when a verdict reaches the PC
+      over BLE with the serial cable unplugged, the `rig-serial` build still exists and is documented as the
+      fallback, and the bench tools can reach the rig without a COM port
+      - **BLE rather than WiFi, and the reason is not preference:** the network available at this site is a
+        campus one - WPA2-Enterprise or a browser portal - and an ESP32 can join neither without extra
+        machinery. BLE needs no network, no SSID, no password and no adapter
+      - the order is fixed by what each step can prove: extract the firmware's in/out seam first (no
+        behaviour change, serial untouched), then a twenty-minute spike measuring connect time, the
+        integrity of a forty-byte message and recovery after a three-second disconnect, and only then the
+        real service and the PC-side `Transport` - which `rig/link.py` already declares as a `Protocol`
+      - **the risk is time, not success.** A Windows BLE connection takes anything from one to twenty
+        seconds and a reconnect can take longer; both happen during setup, because debugging stays wired and
+        the link is established before the demonstration and held by the existing two-second keepalive
+      - the fallback is a build target, not a paragraph: `rig-serial` stays, so a misbehaving radio costs
+        thirty seconds and one cable rather than the demonstration
+      - **the design is in the repository, and the decision with it (11-15):** `docs/rig-transport-en.md` and
+        `docs/rig-transport-zh.md` carry the BLE layer on both ends, both transition matrices, the timings with
+        each one marked measured or assumed, and the failure faces including **`Err4` for a radio that did not
+        start** - distinguishable from `Err0`, because a dead radio is not fixed by waiting for the link.
+        **ADR 16** records why the rig goes cable-free over BLE and why `rig-serial` is kept rather than
+        removed. The protocol layer is untouched: the seam is `transport.h`/`transport.cpp` on the firmware and
+        the `Transport` factory `rig/link.py` already declares
+      - **what remains is implementation, measurement and rehearsal, in that order.** The measurement is
+        first because it is the only number that cannot be reasoned out: **the connect time on the
+        demonstration laptop has not been measured**, and every timing in the design except the two-second
+        keepalive is a decision or a platform assumption. Then the firmware BLE layer with `Fault::Radio`,
+        the `Err4` face and the two build targets, and the PC-side BLE client; then a dry run over BLE and a
+        `rig-serial` fallback drill, which `P4-07`'s three rehearsals inherit and which the gate cannot pass
+        without
 
 ### P4 — close
 

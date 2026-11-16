@@ -2,6 +2,8 @@
 
 #include "protocol.h"
 
+#include "transport.h"
+
 #include <Arduino.h>
 #include <cstdlib>
 #include <cstring>
@@ -19,7 +21,7 @@ size_t length = 0;
 //: Set by `handleLine` when a command was applied; cleared by `poll`.
 bool sawCommand = false;
 
-bool handleResult(rig::State& state, char** cursor) {
+bool handleResult(rig::State& state, char** cursor, uint32_t now) {
   const char* scoreText = strtok_r(nullptr, " ", cursor);
   const char* verdict = strtok_r(nullptr, " ", cursor);
   const char* reason = strtok_r(nullptr, " ", cursor);
@@ -34,6 +36,9 @@ bool handleResult(rig::State& state, char** cursor) {
   // operator has already read. Dropped silently it would leave the PC believing the rig took it, so it
   // is dropped loudly - the same reason TCP answers an unexpected segment with a reset.
   if (state.screen != rig::Screen::Capturing) {
+    // A stray result is a fault, not just a log line: the panel has to say something the operator can
+    // see, or a PC sending out of turn looks exactly like a rig with nothing to report.
+    rig::raiseFault(state, rig::Fault::Stray, now);
     protocol::emitStrayResult(score);
     return false;
   }
@@ -42,11 +47,14 @@ bool handleResult(rig::State& state, char** cursor) {
   state.reason = rig::reasonFromToken(reason);
   state.frames += 1;
   state.screen = (strcmp(verdict, "PASS") == 0) ? rig::Screen::Pass : rig::Screen::Retake;
+  // The loop's own reading, not a fresh `millis()`: the expiry compares against that reading, and a stamp
+  // one millisecond past it wraps the unsigned age, expiring the face on the pass it appears.
+  rig::armVerdictFace(state, now);
   state.markDirty();
   return true;
 }
 
-void handleLine(rig::State& state, char* text) {
+void handleLine(rig::State& state, char* text, uint32_t now) {
   char* cursor = nullptr;
   char* verb = strtok_r(text, " ", &cursor);
   if (verb == nullptr || strcmp(verb, "CMD") != 0) {
@@ -62,6 +70,8 @@ void handleLine(rig::State& state, char* text) {
   if (strcmp(command, "PING") == 0) {
     protocol::emitPong();
   } else if (strcmp(command, "READY") == 0) {
+    // The PC ends the verdict face. `verdictAt` is deliberately not cleared here: a capture start is the
+    // only clear, and the expiry ignores a screen that is not PASS or RETAKE anyway.
     state.screen = rig::Screen::Ready;
     state.markDirty();
     protocol::emitScreen(state);
@@ -69,22 +79,8 @@ void handleLine(rig::State& state, char* text) {
     // Rescan on demand. The boot scan is the only other look at the bus, and it happens before anyone has
     // had a chance to move a wire: without this, every wiring change costs a power cycle to test.
     protocol::emitI2CScan();
-  } else if (strcmp(command, "TREAD") == 0) {
-    // `CMD TREAD 00` - read one register and report it. Bench-only, and the reason it exists is that the
-    // sensor's manual gives the shape of a read but not the command byte to put in it.
-    char* argument = strtok_r(nullptr, " ", &cursor);
-    if (argument != nullptr) {
-      protocol::emitRegisterRead(static_cast<uint8_t>(strtol(argument, nullptr, 16)));
-    }
-  } else if (strcmp(command, "TDUMP") == 0) {
-    char* argument = strtok_r(nullptr, " ", &cursor);
-    if (argument != nullptr) {
-      char* length = strtok_r(nullptr, " ", &cursor);
-      const uint8_t count = (length == nullptr) ? 8 : static_cast<uint8_t>(atoi(length));
-      protocol::emitRegisterDump(static_cast<uint8_t>(strtol(argument, nullptr, 16)), count);
-    }
   } else if (strcmp(command, "RESULT") == 0) {
-    if (handleResult(state, &cursor)) {
+    if (handleResult(state, &cursor, now)) {
       protocol::emitScreen(state);
     }
   }
@@ -94,15 +90,15 @@ void handleLine(rig::State& state, char* text) {
 
 namespace protocol {
 
-bool poll(rig::State& state) {
+bool poll(rig::State& state, uint32_t now) {
   sawCommand = false;
 
-  while (Serial.available() > 0) {
-    const char c = static_cast<char>(Serial.read());
+  while (transport::available() > 0) {
+    const char c = static_cast<char>(transport::readByte());
     if (c == '\n' || c == '\r') {
       if (length > 0) {
         line[length] = '\0';
-        handleLine(state, line);
+        handleLine(state, line, now);
         length = 0;
       }
       continue;
@@ -117,6 +113,13 @@ bool poll(rig::State& state) {
   return sawCommand;
 }
 
+void flushInput() {
+  // A new subscription is a new conversation. A partial line has no terminator, so leaving it would let the
+  // next session's first bytes complete a command the previous session never finished sending.
+  length = 0;
+  line[0] = '\0';
+}
+
 const char* screenName(rig::Screen screen) {
   switch (screen) {
     case rig::Screen::Ready:
@@ -127,8 +130,6 @@ const char* screenName(rig::Screen screen) {
       return "PASS";
     case rig::Screen::Retake:
       return "RETAKE";
-    case rig::Screen::Offline:
-      return "OFFLINE";
   }
   return "UNKNOWN";
 }
@@ -137,66 +138,30 @@ void emitI2CScan() {
   for (uint8_t address = 1; address < 127; ++address) {
     Wire.beginTransmission(address);
     if (Wire.endTransmission() == 0) {
-      Serial.printf("EVT I2C %02X\n", address);
+      transport::printf("EVT I2C %02X\n", address);
     }
   }
 }
 
 void emitScreen(const rig::State& state) {
-  Serial.printf("EVT SCREEN %s %d\n", screenName(state.screen), state.score);
+  transport::printf("EVT SCREEN %s %d\n", screenName(state.screen), state.score);
 }
 
-void emitHello() { Serial.printf("EVT HELLO %s\n", cfg::FIRMWARE_VERSION); }
+void emitHello() { transport::printf("EVT HELLO %s\n", cfg::FIRMWARE_VERSION); }
 
 void emitTimeout(uint32_t millisNow) {
-  Serial.printf("EVT TIMEOUT %lu\n", (unsigned long)millisNow);
+  transport::printf("EVT TIMEOUT %lu\n", (unsigned long)millisNow);
 }
 
-void emitStrayResult(int score) { Serial.printf("EVT STRAY RESULT %d\n", score); }
+void emitStrayResult(int score) { transport::printf("EVT STRAY RESULT %d\n", score); }
 
 void emitInvariant(rig::Screen screen, rig::Link link) {
-  Serial.printf("EVT INVARIANT %s %s\n", screenName(screen), rig::linkName(link));
+  transport::printf("EVT INVARIANT %s %s\n", screenName(screen), rig::linkName(link));
 }
 
-void emitTrigger(uint32_t millisNow) { Serial.printf("EVT TRIGGER %lu\n", (unsigned long)millisNow); }
+void emitTrigger(uint32_t millisNow) { transport::printf("EVT TRIGGER %lu\n", (unsigned long)millisNow); }
 
-void emitTurbidity(int value) { Serial.printf("EVT TURBIDITY %d\n", value); }
-
-int readRegister(uint8_t command) {
-  Wire.beginTransmission(cfg::TURBIDITY_ADDR);
-  Wire.write(command);
-  // The manual is explicit about this: "note there is one STOP and two STARTs" - the command write is closed
-  // with a **STOP** and the read begins with a fresh START. `false` here (a repeated START, no STOP) is the
-  // more common idiom and it is what this firmware did first; the sensor answered that with a status byte
-  // (`0xFF`) instead of a measurement.
-  if (Wire.endTransmission(true) != 0) {
-    return -1;
-  }
-  Wire.requestFrom(cfg::TURBIDITY_ADDR, static_cast<uint8_t>(2));
-  if (Wire.available() < 2) {
-    return -1;
-  }
-  const int high = Wire.read();
-  const int low = Wire.read();
-  return (high << 8) | low;
-}
-
-void emitRegisterRead(uint8_t command) {
-  Serial.printf("EVT TREG %02X %d\n", command, readRegister(command));
-}
-
-void emitRegisterDump(uint8_t command, uint8_t count) {
-  Wire.beginTransmission(cfg::TURBIDITY_ADDR);
-  Wire.write(command);
-  const uint8_t ack = Wire.endTransmission(true);
-  const uint8_t got = static_cast<uint8_t>(Wire.requestFrom(cfg::TURBIDITY_ADDR, count));
-  Serial.printf("EVT TDUMP %02X ack=%u n=%u", command, ack, got);
-  for (uint8_t i = 0; i < got && Wire.available() > 0; i += 1) {
-    Serial.printf(" %02X", static_cast<uint8_t>(Wire.read()));
-  }
-  Serial.println();
-}
-
-void emitPong() { Serial.println("EVT PONG"); }
+void emitPong() { transport::printf("EVT PONG");
+  transport::newline(); }
 
 }  // namespace protocol

@@ -114,7 +114,8 @@ Honest list, because a README that overstates is worse than a short one.
   restart - though `POST /api/detect/batches` already queues the task; the live capture page streams
   over `/ws/capture` as api-contract §7 defines it, with polling only the fallback when the socket
   cannot be served. The rig link's PC half exists (`server/app/rig/`) and stays dormant until
-  `AV_RIG_PORT` names a port; `scripts/test_rig_link.py` is the first thing to run when a board is
+  `AV_RIG_PORT` names a port or `AV_RIG_TRANSPORT=ble` asks for the cable-free rig; the two wires are in
+  `docs/rig-transport-en.md`, and `scripts/test_rig_link.py` is the first thing to run when a board is
   plugged in.
 
 ### Prototype mode, no backend
@@ -175,7 +176,7 @@ inference speed at least 90% of the baseline.
 
 | Member | Responsibility |
 |---|---|
-| Yao Tianyu | Capture pipeline, system architecture, requirements |
+| Tianyu Yao | Capture pipeline, system architecture, requirements |
 | Gao Tianxiang | Model training and improvements, inference service, backend API |
 | Sun Jianheng | Frontend pages, annotation and datasets |
 | Fu Yijia | Documentation, test cases, acceptance checks |

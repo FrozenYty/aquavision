@@ -32,16 +32,9 @@ constexpr int HINT_BASELINE = 25;     // the free band above the banner
 constexpr int RULE_BOTTOM = 54;
 constexpr int FOOTER_BASELINE = 62;
 
-// Horizontal bands. The footer is two fixed columns so a five-digit turbidity reading cannot walk into
-// the frame counter: the largest value the sensor produces is 16000, so five digits is the normal case,
-// not an edge case.
+// Horizontal bands. The footer carries one right-aligned column, the frame counter.
 constexpr int MARGIN = 4;
 constexpr int RIGHT_EDGE = 128 - MARGIN;
-// The footer keeps one gutter width in both columns: label, six pixels, value. The turbidity value is
-// left-aligned after that gutter rather than right-aligned to a column edge, because a right-aligned
-// value leaves a two-pixel gap after a five-digit reading and a wide one after a three-digit reading -
-// two different gaps in the same row.
-constexpr int FOOTER_VALUE_LEFT = 34;  // 4 + "TURB" (24) + 6
 constexpr int FRAMES_EDGE = RIGHT_EDGE; // the frame counter is right-aligned as one string
 
 }  // namespace layout
@@ -68,16 +61,12 @@ void drawHeader(U8G2& display, const rig::State& state) {
   display.setFont(u8g2_font_5x7_tf);
   display.drawStr(MARGIN, HEADER_BASELINE, "AQUAVISION");
 
-  const char* link = state.pcAlive() ? "ONLINE" : "OFFLINE";
-  const int width = display.getStrWidth(link);
-  const int text_x = RIGHT_EDGE - width;
-
-  // The dot sits on the text's optical centre rather than on a hand-picked baseline: a disc drawn by eye
-  // landed a pixel low, which reads as "slightly wrong" without anyone being able to name the cause.
-  if (state.heartbeatOn || !state.pcAlive()) {
-    display.drawDisc(text_x - 7, dotRow(display), 1);
+  // The right of the header is the liveness dot alone. The word that used to sit there said `ONLINE` or
+  // `OFFLINE`, and the second of those is retired: a linked-but-quiet peer is no longer a fault or even a
+  // face, so the header stopped naming the link at all. The dot still blinks while the rig runs.
+  if (state.heartbeatOn) {
+    display.drawDisc(RIGHT_EDGE - 3, dotRow(display), 1);
   }
-  display.drawStr(text_x, HEADER_BASELINE, link);
 
   display.drawHLine(0, RULE_TOP, 128);
 }
@@ -151,16 +140,11 @@ const char* reasonWords(rig::Reason reason) {
 void drawFooter(U8G2& display, const rig::State& state) {
   display.setFont(u8g2_font_5x7_tf);
 
-  display.drawStr(MARGIN, FOOTER_BASELINE, "TURB");
-  if (state.turbidity < 0) {
-    // Five dashes, not two: the reading is four or five digits wide, so the placeholder occupies the
-    // same stretch as the number will and the row does not jump when data arrives.
-    display.drawStr(FOOTER_VALUE_LEFT, FOOTER_BASELINE, "-----");
-  } else {
-    char value[8];
-    snprintf(value, sizeof(value), "%d", state.turbidity);
-    display.drawStr(FOOTER_VALUE_LEFT, FOOTER_BASELINE, value);
-  }
+  // The firmware version, built from the same constant `EVT HELLO` sends, so the panel and the log can
+  // never disagree about which build is running. `FRAMES` stays on the right: it is a real capture count.
+  char version[16];
+  snprintf(version, sizeof(version), "v%s", cfg::FIRMWARE_VERSION);
+  display.drawStr(MARGIN, FOOTER_BASELINE, version);
 
   char frames[16];
   snprintf(frames, sizeof(frames), "FRAMES %d", state.frames);
@@ -169,7 +153,13 @@ void drawFooter(U8G2& display, const rig::State& state) {
   display.drawHLine(0, RULE_BOTTOM, 128);
 }
 
-void drawOffline(U8G2& display) {
+//: The house's status face: inverted box, `AQUAVISION` on the header baseline, the headline on the title
+//: baseline and one line below. `drawRadioFault` and `drawWaitingForPc` are the same face with different
+//: words, which is the point: the waiting state borrows the language of the strong face rather than
+//: inventing a weaker one. **There is one title size**: every headline is short enough for Helvetica bold
+//: 12, so the face is identical except for its words. A longer headline must be shortened, not shrunk - a
+//: smaller title is what made the waiting face read as empty.
+void drawStatusFace(U8G2& display, const char* headline, const char* body) {
   display.drawBox(0, 0, 128, 64);
   display.setDrawColor(0);
 
@@ -179,12 +169,23 @@ void drawOffline(U8G2& display) {
   drawCentred(display, "AQUAVISION", 12);
 
   display.setFont(u8g2_font_helvB12_tr);
-  drawCentred(display, "OFFLINE", 34);
+  drawCentred(display, headline, 34);
 
   display.setFont(u8g2_font_5x7_tf);
-  drawCentred(display, "CHECK USB CABLE", 52);
+  // The one line on this panel that is false in the other build: `rig-serial` is right to say the cable is
+  // the thing to check, and `rig-ble` has no cable - a finished rig that tells its operator to check one it
+  // does not have is worse than a blank line (docs/rig-transport-en.md §10).
+  drawCentred(display, body, 52);
 
   display.setDrawColor(1);
+}
+
+//: `Err4`, the face the OLED does not have today: for `Err1` to `Err3` the fault overlay is the panel's and
+//: this screen keeps drawing whatever was underneath, but a dead radio needs its own words - waiting is the
+//: wrong thing to do about it. So the OLED draws the fault itself, in the same inverted treatment, and one
+//: line saying what to do: a power-cycle or `rig-serial` (§10).
+void drawRadioFault(U8G2& display) {
+  drawStatusFace(display, "RADIO FAULT", "REFLASH RIG-SERIAL");
 }
 
 void drawReady(U8G2& display) {
@@ -195,29 +196,42 @@ void drawReady(U8G2& display) {
   drawBanner(display, "READY", false);
 }
 
-// Three dots under the word, one alight at a time. A still CAPTURING screen cannot say whether the
-// board is waiting on the PC or has stopped working, and the press is the moment an operator most wants
-// to know the rig is alive.
+//: The CAPTURING rotation's six dots, one per rim segment the panel turns through. **A row, not a ring,
+//: and that is deliberate**: six dots on a ring inside the 24 px band above the banner come out about
+//: three pixels each on a radius of eight, with under two pixels between them, which is not legible at
+//: arm's length; a row fits the band with room to spare. The lit dot is `animPhase`, the same phase the
+//: panel's segment reads, so the row and the segment cannot disagree. `Pairing` does not draw this row:
+//: its OLED face is the house status face with no moving element at all.
 void drawCapturing(U8G2& display, const rig::State& state) {
   drawBannerFrame(display, false);
 
   display.setFont(u8g2_font_helvB10_tr);
   drawCentred(display, "CAPTURING", BANNER_SINGLE);
 
-  // The dots live in the free band above the banner, not in the strip under the word: at three pixels
-  // across a filled and a hollow mark are nearly indistinguishable, which made the animation read as a
-  // static row of specks. At radius 2 they are five pixels across - one solid, two open - and the band
-  // from 10 to 32 is unused on this screen anyway, because CAPTURING carries no score.
-  constexpr int spacing = 14;
-  constexpr int dot_y = 24;
-  for (int i = 0; i < 3; ++i) {
-    const int x = 64 + (i - 1) * spacing;
-    if (i == state.animPhase) {
-      display.drawDisc(x, dot_y, 2);
+  constexpr int DOT_SPACING = 16;
+  constexpr int DOT_Y = 21;
+  constexpr int FIRST_X = 64 - (cfg::DISPLAY_ROTATE_STEPS - 1) * DOT_SPACING / 2;
+
+  for (uint8_t step = 0; step < cfg::DISPLAY_ROTATE_STEPS; ++step) {
+    const int x = FIRST_X + step * DOT_SPACING;
+    if (step == state.animPhase) {
+      display.drawDisc(x, DOT_Y, 2);
     } else {
-      display.drawCircle(x, dot_y, 2);
+      display.drawCircle(x, DOT_Y, 2);
     }
   }
+}
+
+//: `Pairing`: nobody is listening, so there is nothing to have gone wrong and no PC to paint a score
+//: over this. **It is the house status face with no moving element.** The twelve-cell progress row it
+//: replaces implied an amount of progress that does not exist, and a misleading indicator is worse than
+//: none; this face cannot be made as strong as the rest by animating, so it uses the same face as the
+//: other status screen. The title says `WAITING` and the body says `NO LINK TO PC`, which together read as
+//: "waiting - nothing connected yet". **The title is `WAITING` and not `WAITING FOR PC` because of the
+//: character count, not the font**: thirteen characters do not fit bold 12, and shrinking the type to fit
+//: them is what made this face look empty. Shortening the words keeps the house size.
+void drawWaitingForPc(U8G2& display) {
+  drawStatusFace(display, "WAITING", cfg::BLE_CARRIER ? "NO LINK TO PC" : "CHECK USB CABLE");
 }
 
 void drawPass(U8G2& display, const rig::State& state) {
@@ -247,15 +261,32 @@ void renderSplash(U8G2& display) {
   display.sendBuffer();
 }
 
-void render(U8G2& display, const rig::State& state) {
+void render(U8G2& display, const rig::State& state, presentation::State presentation) {
   display.clearBuffer();
 
-  if (state.screen == rig::Screen::Offline) {
-    drawOffline(display);
+  // The presentation layer outranks the screen (docs/rig-state-machine-en.md §11). A screen change made
+  // while it is not `Live` is **dropped, not deferred**: the face below replaces the rig's screen, the
+  // caller clears `state.dirty` after this send, and nothing replays the change when `Live` returns - the
+  // screens then draw the rig's current screen. A `PASS` that arrived while `Pairing` therefore loses its
+  // arrival sweep, exactly as a verdict inside a fault window does (§10).
+  const presentation::Face& face = presentation::faceFor(presentation);
+
+  // `Err4` outranks every screen, and unlike the other faults it replaces what is underneath rather than
+  // being drawn over it: the screen underneath a dead radio is the rig's own, which is the wrong story -
+  // both are true and only one of them is worth waiting for.
+  if (face.oled == presentation::OledFace::RadioFault) {
+    drawRadioFault(display);
     display.sendBuffer();
     return;
   }
 
+  if (face.oled == presentation::OledFace::WaitingForPc) {
+    drawWaitingForPc(display);
+    display.sendBuffer();
+    return;
+  }
+
+  // `Live`: the rig's own screen, exactly as it was before the presentation layer existed.
   drawHeader(display, state);
   drawFooter(display, state);
 
@@ -272,8 +303,6 @@ void render(U8G2& display, const rig::State& state) {
     case rig::Screen::Retake:
       drawRetake(display, state);
       break;
-    case rig::Screen::Offline:
-      break;  // handled above
   }
 
   display.sendBuffer();

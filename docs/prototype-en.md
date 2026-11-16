@@ -90,7 +90,7 @@ Keep it in `web/static/mock/fixtures.js`, shaped like `api-contract`:
 { frame_id: "20261105T193012-0042", session_id: "s-a3-007",
   captured_at: "2026-11-05T19:30:12+08:00",
   quality: { sharpness: 78, brightness: 91, colorcast: 85, score: 86, verdict: "ok" },
-  env: { turbidity_rel: 12 }, width: 1920, height: 1080 }
+  width: 1920, height: 1080 }
 
 { class_code: "holothurian", confidence: 0.87, x: 0.41, y: 0.52, w: 0.12, h: 0.09 }
 ```
@@ -118,7 +118,7 @@ over empty water and give the whole thing away.
 | Sun Jianheng | screens 3, 4, 5 | frames with boxes, detail, canvas review |
 | Gao Tianxiang | screen 6, mock data | four charts, plausible box positions |
 | Fu Yijia | demo script, six screenshots, one page of notes | script and images |
-| Yao Tianyu | screen 2, visual consistency, walkthrough | the line runs end to end |
+| Tianyu Yao | screen 2, visual consistency, walkthrough | the line runs end to end |
 
 ## 8. Timebox
 

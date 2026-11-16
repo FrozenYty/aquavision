@@ -14,7 +14,7 @@
 | Document version | V1.14 |
 | Phase | Phase 1: requirements analysis |
 | Prepared by | Training Group 14 |
-| Project lead | Yao Tianyu (group lead); supervisor: Wu Jianguang |
+| Project lead | Tianyu Yao (group lead); supervisor: Wu Jianguang |
 | Technology stack | Frontend HTML5/CSS3/JavaScript + Bootstrap 5 + hand-rolled SVG charts · Backend Python 3.11 (FastAPI + SQLAlchemy), SQLite locally and PostgreSQL 14 in deployment · Algorithm PyTorch 2.1 + Ultralytics YOLOv8 + OpenCV · Capture USB camera (1080P, fixed-focus adjustable, manual exposure, driver-free UVC) + OpenCV capture (the microcontroller is an optional enhancement, not part of the main stack) |
 | Project duration | 8 weeks |
 | Date | 2026-11-03 |
@@ -160,7 +160,7 @@ The system has three layers — capture, service and presentation — which exch
 
 #### 2.4.1 Layer responsibilities
 
-- **Capture layer**: USB camera, trigger board and turbidity sensor. Grabs raw frames, locks exposure and white balance, reports water parameters, and performs no inference.
+- **Capture layer**: USB camera and trigger board. Grabs raw frames, locks exposure and white balance, and performs no inference.
 - **Service layer**: capture service, detection service, job queue, file storage and PostgreSQL. Scores quality, stores frames, schedules detection, persists results and aggregates statistics.
 - **Presentation layer**: 13 browser pages. Capture control, result review, statistics and reports, model experiments.
 
@@ -168,7 +168,7 @@ The system has three layers — capture, service and presentation — which exch
 
 - ① **Open the camera**: on start-up, enumerate local video devices and take the first available one by default.
 - ② **Lock exposure**: read the current exposure, lock it, and fix white balance and gain. If locking fails, refuse to start capture.
-- ③ **Grab and read sensors**: take frames at the configured rate (1 frame/s by default), discard the first, read turbidity and report it with the frame.
+- ③ **Grab the frame**: take frames at the configured rate (1 frame/s by default) and discard the first.
 - ④ **Score quality**: weighted score over sharpness, brightness and colour cast; below 60 means retake.
 - ⑤ **Register**: store on disk as site/date/index, write the image row and generate the resource code.
 - ⑥ **Queue for detection**: passing frames enter the queue; failing frames are stored but not queued, and a retake is prompted.
@@ -181,7 +181,6 @@ The system has three layers — capture, service and presentation — which exch
 - **Frame rate**: 1 frame/s by default, adjustable from 0.2 to 5.
 - **Timestamp**: the server's receive time to the millisecond, stored alongside UTC.
 - **Idempotence**: the frame index is unique within a capture session; grabbing twice does not create a second record.
-- **Environment**: turbidity is reported per frame as a relative value (0 clear, 100 most turbid), sampled every 5 s; with no sensor the field stays empty and is excluded from statistics.
 - **Failure**: if the camera is unavailable the capture is marked failed with a prompt to check the device, and no empty record is written.
 
 ### 2.5 Environment and constraints
@@ -207,14 +206,13 @@ The system has three layers — capture, service and presentation — which exch
 |---|---|---|---|---|
 | 1 | USB camera | 1080P, adjustable focus, manual exposure, driver-free UVC | 1 | Image capture |
 | 2 | Fill light | Existing LED study lamp, 10 W, 4000 K, Ra90, no visible flicker, USB-powered | 1 | 45° fill from above; a DC supply carries no mains ripple and the honeycomb lens spreads the light evenly |
-| 3 | Controller board | ESP32-S3, USB serial | 1 | Accepts the trigger, reads the turbidity sensor, drives the status display and the status LEDs, reports over USB serial |
-| 4 | Turbidity sensor | ME2100A-IIC, I2C digital, reflective | 1 | Reads water turbidity, mounted against the outer wall |
+| 3 | Controller board | ESP32-S3, USB serial | 1 | Accepts the trigger, drives the status display and the four-digit display, reports over USB serial |
+| 4 | Four-digit display | Four-digit seven-segment display, common anode; segments A-G on GPIO 3 and 13-18, 330 Ω each; digit commons 1-4 on GPIO 5, 6, 7 and 10, direct | 1 | Shows the process state, the score with its verdict, and the fault codes `Err1`-`Err4` (`Err0` retired) |
 | 5 | Trigger button | Tactile switch | 1 | Triggers one capture by hand |
 | 6 | Demonstration tank | Ultra-clear glass tank 300×170×200 mm, 5 mm walls | 1 | Simulates an underwater scene; glass has no stress birefringence, which cross-polarisation needs |
 | 7 | Polarising sheet | Linear polariser 200×200 mm, cut into a lamp piece and a lens piece | 1 | Cross-polarisation removes reflections from the wall and the water |
 | 8 | Targets and scenery | Four to six real seafood items, dark stones and weed collected on site | 1 set | Objects to detect and distractors |
-| 9 | Status display | 0.96" OLED, 128×64 monochrome, I2C, address 0x3C | 1 | Shows link state, turbidity, quality score and verdict; no PC needed on site |
-| 10 | Status LEDs | One white, one red and one blue LED, one 330 Ω resistor each | 3 | The white lamp is lit while PASS is shown, the red while RETAKE is, blue for every other screen; between them no screen is dark |
+| 9 | Status display | 0.96" OLED, 128×64 monochrome, I2C, address 0x3C | 1 | Shows link state, quality score and verdict; no PC needed on site |
 
 #### 2.5.2 Development and operation constraints
 
@@ -228,7 +226,6 @@ The system has three layers — capture, service and presentation — which exch
 
 - The system runs on a single server with a GPU and no more than 10 concurrent detection jobs; load targets assume a small intranet.
 - Capture uses the local USB camera and depends on no network or external device; the demonstration is filmed through an ultra-clear glass tank.
-- Turbidity is reported automatically by the capture-end sensor as a 0-100 relative value every 5 s; with no sensor the field stays empty and is excluded from statistics rather than estimated.
 - The public DUO dataset (four classes — sea cucumber, sea urchin, scallop, starfish — over seven thousand images with an official split) is available for teaching; additional footage is shot by the group in the tank. The training set is at least 3000 images and the test set at least 500, split by near-duplicate frame groups so that no group spans both sides.
 - The supervisor holds a fixed weekly review and Q&A session, and allocates administrator accounts.
 
@@ -1081,7 +1078,6 @@ Field level, one field per row, with types and constraints usable directly for s
 | quality_score | SMALLINT | DEFAULT 0 | Total score 0-100 |
 | quality_flag | SMALLINT | DEFAULT 0 | 0 pass / 1 needs retake |
 | is_retake | SMALLINT | DEFAULT 0 | Whether this frame is a retake |
-| turbidity_rel | SMALLINT | NULL | Relative turbidity 0-100, 0 clear; from the capture sensor |
 | created_at | TIMESTAMP | DEFAULT now() | Registered at |
 
 #### 4.2.4 detect_task
@@ -1369,14 +1365,14 @@ Interaction rules: every list page offers keyword search, filters and paging; ev
 
 | Week | Phase | Tasks | Output | Owner |
 |---|---|---|---|---|
-| Week 10 (from 11-02) | Requirements | Form the team and divide work; business research; fix classes and metric definitions; build the document skeleton | Research notes, division table, SRS skeleton | All / Yao Tianyu |
-| Week 11 (from 11-09) | Requirements / prototype start | Complete chapters 1-6 of the SRS and freeze the baseline at review; start information architecture and core prototypes | SRS V1.0, information architecture | Yao Tianyu / Sun Jianheng |
+| Week 10 (from 11-02) | Requirements | Form the team and divide work; business research; fix classes and metric definitions; build the document skeleton | Research notes, division table, SRS skeleton | All / Tianyu Yao |
+| Week 11 (from 11-09) | Requirements / prototype start | Complete chapters 1-6 of the SRS and freeze the baseline at review; start information architecture and core prototypes | SRS V1.0, information architecture | Tianyu Yao / Sun Jianheng |
 | Week 12 (from 11-16) | Prototype / database / algorithm start | High-fidelity core pages and walkthrough; ER diagram and schema script; acquire DUO and preprocess (7782 images, official test set 1111) | Prototypes, ER diagram, schema script, dataset inventory | Sun Jianheng / Gao Tianxiang |
 | Week 13 (from 11-23) | Algorithm baseline and improvement | Baseline training and evaluation; underwater enhancement (colour correction, dehazing) and model experiments; metric records | Weights and evaluation reports for baseline and improved models | Gao Tianxiang |
 | Week 14 (from 11-30) | Coding | Backend modules for users, images and jobs; inference service and the in-process job pool; frontend sign-in, image and job pages | Endpoint code, frontend pages, API documentation | Gao Tianxiang / Sun Jianheng |
 | Week 15 (from 12-07) | Coding | Review, dashboard, annotation bench and model management pages; the feedback loop joined end to end | Remaining code, integration self-test | Gao Tianxiang / Sun Jianheng |
 | Week 16 (from 12-14) | Integration testing | Functional and performance cases; accuracy acceptance; defect fixing and regression; traceability check | Test cases, defect report, summary | Fu Yijia / all |
-| Week 17 (from 12-21) | Deployment and acceptance | Deployment drill and seed data; acceptance testing and closing materials; defence rehearsal | Deployment manual, acceptance report, defence material | All / Yao Tianyu |
+| Week 17 (from 12-21) | Deployment and acceptance | Deployment drill and seed data; acceptance testing and closing materials; defence rehearsal | Deployment manual, acceptance report, defence material | All / Tianyu Yao |
 
 Every document in this repository is Markdown, and the inspection report the system produces is
 Markdown too. The Word, PDF and Excel formats in the table above describe what may be handed to the
@@ -1409,7 +1405,7 @@ supervisor; nothing is converted unless it is asked for, and the Markdown is the
 
 | Member | Role | Primary responsibility | Secondary and backup | Key deliverables |
 |---|---|---|---|---|
-| Yao Tianyu | Group lead / capture owner | USB camera capture (the microcontroller is optional), project management and schedule, author of the SRS, defence speaker | Deployment and integration | SRS, weekly reports, defence material |
+| Tianyu Yao | Group lead / capture owner | USB camera capture (the microcontroller is optional), project management and schedule, author of the SRS, defence speaker | Deployment and integration | SRS, weekly reports, defence material |
 | Gao Tianxiang | Algorithm and backend owner | YOLOv8 baseline training and improvement experiments, inference service packaging, core business endpoints and database design | Model activation and rollback | Both sets of weights and the ablation report, API documentation, schema script |
 | Sun Jianheng | Frontend and data engineering owner | 13 pages and visualisation, review canvas, annotation and dataset versions, automation scripts | Statistical reports | Frontend code, annotated datasets, export scripts |
 | Fu Yijia | Quality and documentation owner | Review records and document versioning, test case design and execution, interface walkthroughs and acceptance records, ID and terminology consistency | Species dictionary upkeep | Test case set and report, review minutes, acceptance records |
@@ -1530,20 +1526,20 @@ Defects found in acceptance testing are handled by severity. Critical (system un
 | V0.1 | 2026-10-28 | Requirements group | Business research recorded; document skeleton built; a first division into ten functional modules. | Requirements analysis starts and needs a baseline structure. | Supervisor |
 | V0.9 | 2026-11-01 | Requirements / algorithm group | Detailed functional, data and non-functional requirements plus accuracy metrics; chapters 3-6 complete. | Verifiability must be checked before prototyping starts. | Supervisor |
 | V1.0 | 2026-11-03 | Project lead | Review comments integrated; use cases, acceptance criteria, risks and the traceability matrix added; baseline established. | Forms the submission draft and the input for later phases. | Supervisor |
-| V1.1 | 2026-11-03 | Yao Tianyu | Switched to direct capture from the local camera; capture-terminal modules and tables removed; 3.5 algorithm requirements and 2.4 architecture added; NFR numbering conflicts fixed; 2.3 scenarios, UC-01/UC-09 and 5.3 flows rewritten; wording inconsistent with the new architecture removed. | Implements the annotations on the final revision of 09. | Internal group review |
-| V1.2 | 2026-11-03 | Yao Tianyu | Marine-debris class and per-class metrics added; capture hardware list added (trigger board, temperature and turbidity sensors, status display); environment reporting added to the capture interface; streaming wording, team size and baseline-freeze week corrected; dataset size and acquisition risk added. | Implements the capture plan change and settles the requirements baseline. | Internal group review |
-| V1.3 | 2026-11-04 | Yao Tianyu | Marine-debris class removed and four classes restored; dataset wording unified to DUO; AL-08 and AL-09 deleted from the metric table and AL-03 limited to per-class recall; scenery list in Table 2-3 and class palette in 5.1 adjusted. | No public labels exist for that class and in-house data cannot support an independent accuracy metric; focus on four commercial and predator species to keep the metric basis consistent. | Internal group review |
-| V1.12 | 2026-11-11 | Yao Tianyu | The table count moves from thirteen to fourteen. §4.1 gains `detect_task_item`, which records the frames assigned to each detection task when it is created: one row per frame, with its own state and box count. | A task's work list was a query re-evaluated by every worker, so two workers could claim the same frames and a frame with no objects never finished; the decision is recorded in ADR 12. | Internal group review |
+| V1.1 | 2026-11-03 | Tianyu Yao | Switched to direct capture from the local camera; capture-terminal modules and tables removed; 3.5 algorithm requirements and 2.4 architecture added; NFR numbering conflicts fixed; 2.3 scenarios, UC-01/UC-09 and 5.3 flows rewritten; wording inconsistent with the new architecture removed. | Implements the annotations on the final revision of 09. | Internal group review |
+| V1.2 | 2026-11-03 | Tianyu Yao | Marine-debris class and per-class metrics added; capture hardware list added (trigger board, temperature and turbidity sensors, status display); environment reporting added to the capture interface; streaming wording, team size and baseline-freeze week corrected; dataset size and acquisition risk added. | Implements the capture plan change and settles the requirements baseline. | Internal group review |
+| V1.3 | 2026-11-04 | Tianyu Yao | Marine-debris class removed and four classes restored; dataset wording unified to DUO; AL-08 and AL-09 deleted from the metric table and AL-03 limited to per-class recall; scenery list in Table 2-3 and class palette in 5.1 adjusted. | No public labels exist for that class and in-house data cannot support an independent accuracy metric; focus on four commercial and predator species to keep the metric basis consistent. | Internal group review |
+| V1.12 | 2026-11-11 | Tianyu Yao | The table count moves from thirteen to fourteen. §4.1 gains `detect_task_item`, which records the frames assigned to each detection task when it is created: one row per frame, with its own state and box count. | A task's work list was a query re-evaluated by every worker, so two workers could claim the same frames and a frame with no objects never finished; the decision is recorded in ADR 12. | Internal group review |
 | V1.13 | 2026-11-12 | Gao Tianxiang | AC-23 states what version registration does instead of a refusal it never implemented: a version name always has exactly one row, and registering an existing name updates that row. | The registration script has been idempotent since P2-06c and `scripts/init_db.py` registers the delivered version on every run, so a refused duplicate would make a fresh install non-repeatable - the outcome AC-23 wants, one row per name, was already held. | Internal group review |
 | V1.14 | 2026-11-12 | Gao Tianxiang | §4.2.1 gains `token_epoch`, the column that lets a password change invalidate tokens already issued. | NFR-S-05 promised it and the tokens are stateless, so the requirement needed one revocation number on the account rather than a session table; a token carries the value it was issued under and the guard refuses an older one. | Internal group review |
-| V1.11 | 2026-11-10 | Yao Tianyu | The thirteen page names in §5.2 are one scheme now: object plus action, four characters where the language allows, no `page` suffix, no conjunction. The old set mixed grammars (`capture control` beside `image browsing`), reused `workbench` as both a page and a modifier, and disagreed with `docs/traceability-en.md` on nine of thirteen names in English. | A menu is scanned, not read: parallel entries are quicker to find, and three spellings of one page is three chances to edit the wrong file. | Internal group review |
-| V1.10 | 2026-11-07 | Yao Tianyu | The technology table no longer claims Celery and Redis: batch jobs run in a fixed thread pool inside the one FastAPI process, as ADR 03 decided. SQLAlchemy 2.0 corrected to 2.1, the version pinned in requirements. | The SRS still advertised a message broker the architecture had already rejected, and a reader comparing the two documents would have believed the system had a component it does not. | Internal group review |
-| V1.9 | 2026-11-07 | Yao Tianyu | Table 2-3 gains a status display and two status LEDs; the MCU row adds driving the display. Everything shown on the screen is English or numeric. | The screen and LEDs come from the STM32 kit already on hand, so they cost nothing; V1.4 removed the display on minimum-cost grounds and that premise no longer holds. The screen shows device state only — business data stays on the web side. | Internal group review |
-| V1.8 | 2026-11-07 | Yao Tianyu | Table 2-3 returns to the existing LED desk lamp; the strip, MOSFET and separate supply from V1.7 are withdrawn, and the MCU row goes back to trigger and turbidity. | The lamp on hand is USB-powered (DC), 4000 K, 10 W and advertised as flicker-free, so the flicker argument that justified the strip does not apply. ADR 09 is superseded by ADR 10. | Internal group review |
-| V1.7 | 2026-11-07 | Yao Tianyu | Table 2-3 replaces the desk lamp with a 12 V LED board, an IRF520 MOSFET module and its own supply, and the MCU row gains PWM dimming. | Both the architecture diagram and the parts list said the MCU controls the fill light, but a mains desk lamp cannot be controlled by a program — the claim was empty. A fixed board also removes the variation between capture sessions (ADR 09). | Internal group review |
-| V1.6 | 2026-11-06 | Yao Tianyu | The inspection report is produced as Markdown; scenario 5, FR-M5-04 and §7 say so, and §7 records that the Word, PDF and Excel formats are conversion targets only. | Every document in the repository is Markdown and none of them is submitted as a converted file; keeping two formats would mean keeping two copies, one of which is always stale. | Internal group review |
-| V1.5 | 2026-11-06 | Yao Tianyu | Four tables added to §4.1: `dataset`, `dataset_item`, `report`, `sys_param`; the nine-table decision of V1.1 revised with the reason recorded in ADR 08. | Building the skeleton showed three requirements had no storage: a snapshot exported before any experiment, a report history filtered by period and basis, and parameter changes that must persist and stay audited. | Internal group review |
-| V1.4 | 2026-11-05 | Yao Tianyu | Water-temperature field, probe and status display removed; turbidity changed from NTU to a 0-100 relative value and renamed turbidity_rel; Table 2-3 updated to the selected parts (desk lamp, ultra-clear glass tank, real seafood targets, ME2100A-IIC). Correction of 11-05: the tank material in 2.6 changed from acrylic to ultra-clear glass to match Table 2-3. | Purchase plan settled: meet capture and cleanliness needs at minimum cost, keeping turbidity as the only sensor. | Internal group review |
+| V1.11 | 2026-11-10 | Tianyu Yao | The thirteen page names in §5.2 are one scheme now: object plus action, four characters where the language allows, no `page` suffix, no conjunction. The old set mixed grammars (`capture control` beside `image browsing`), reused `workbench` as both a page and a modifier, and disagreed with `docs/traceability-en.md` on nine of thirteen names in English. | A menu is scanned, not read: parallel entries are quicker to find, and three spellings of one page is three chances to edit the wrong file. | Internal group review |
+| V1.10 | 2026-11-07 | Tianyu Yao | The technology table no longer claims Celery and Redis: batch jobs run in a fixed thread pool inside the one FastAPI process, as ADR 03 decided. SQLAlchemy 2.0 corrected to 2.1, the version pinned in requirements. | The SRS still advertised a message broker the architecture had already rejected, and a reader comparing the two documents would have believed the system had a component it does not. | Internal group review |
+| V1.9 | 2026-11-07 | Tianyu Yao | Table 2-3 gains a status display and two status LEDs; the MCU row adds driving the display. Everything shown on the screen is English or numeric. | The screen and LEDs come from the STM32 kit already on hand, so they cost nothing; V1.4 removed the display on minimum-cost grounds and that premise no longer holds. The screen shows device state only — business data stays on the web side. | Internal group review |
+| V1.8 | 2026-11-07 | Tianyu Yao | Table 2-3 returns to the existing LED desk lamp; the strip, MOSFET and separate supply from V1.7 are withdrawn, and the MCU row goes back to trigger and turbidity. | The lamp on hand is USB-powered (DC), 4000 K, 10 W and advertised as flicker-free, so the flicker argument that justified the strip does not apply. ADR 09 is superseded by ADR 10. | Internal group review |
+| V1.7 | 2026-11-07 | Tianyu Yao | Table 2-3 replaces the desk lamp with a 12 V LED board, an IRF520 MOSFET module and its own supply, and the MCU row gains PWM dimming. | Both the architecture diagram and the parts list said the MCU controls the fill light, but a mains desk lamp cannot be controlled by a program — the claim was empty. A fixed board also removes the variation between capture sessions (ADR 09). | Internal group review |
+| V1.6 | 2026-11-06 | Tianyu Yao | The inspection report is produced as Markdown; scenario 5, FR-M5-04 and §7 say so, and §7 records that the Word, PDF and Excel formats are conversion targets only. | Every document in the repository is Markdown and none of them is submitted as a converted file; keeping two formats would mean keeping two copies, one of which is always stale. | Internal group review |
+| V1.5 | 2026-11-06 | Tianyu Yao | Four tables added to §4.1: `dataset`, `dataset_item`, `report`, `sys_param`; the nine-table decision of V1.1 revised with the reason recorded in ADR 08. | Building the skeleton showed three requirements had no storage: a snapshot exported before any experiment, a report history filtered by period and basis, and parameter changes that must persist and stay audited. | Internal group review |
+| V1.4 | 2026-11-05 | Tianyu Yao | Water-temperature field, probe and status display removed; turbidity changed from NTU to a 0-100 relative value and renamed turbidity_rel; Table 2-3 updated to the selected parts (desk lamp, ultra-clear glass tank, real seafood targets, ME2100A-IIC). Correction of 11-05: the tank material in 2.6 changed from acrylic to ultra-clear glass to match Table 2-3. | Purchase plan settled: meet capture and cleanliness needs at minimum cost, keeping turbidity as the only sensor. | Internal group review |
 
 ## Appendix C Terminology consistency
 

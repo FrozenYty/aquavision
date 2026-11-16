@@ -38,8 +38,9 @@ desktop.ini
 __pycache__/
 *.py[cod]
 .venv/
-# The dedicated inference environment (P2-20): `pip install -r requirements.txt` into a fresh
-# environment is the documented way to get one, and every checkout builds its own.
+# The old in-checkout inference environment (P2-20): the environment is the `aquavision` conda
+# environment now, outside the checkout, and this pattern stays so a leftover or an accidentally
+# rebuilt one can never be committed.
 .venv-infer/
 # ultralytics writes a settings directory into the working directory when the user config
 # directory is not writable, which puts it in the repository root.

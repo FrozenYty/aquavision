@@ -25,7 +25,7 @@ AquaVision — underwater species detection and monitoring. A USB camera feeds a
 YOLOv8 detection, then human review; corrections flow back into training. Four classes: sea
 cucumber, sea urchin, scallop, starfish.
 
-One FastAPI process, a static frontend, and an ESP32 that only handles the trigger, the turbidity sensor and its panel.
+One FastAPI process, a static frontend, and an ESP32 that only handles the trigger and its panel.
 
 Phase and task state live in `PLAN.md`. Recent changes live in `PROGRESS.md`. Do not restate either
 one here — stale summaries are worse than none.
@@ -34,7 +34,7 @@ one here — stale summaries are worse than none.
 
 | User | Lane | Default: read-only |
 |---|---|---|
-| Yao Tianyu | A — capture, architecture, documents | B, C |
+| Tianyu Yao | A — capture, architecture, documents | B, C |
 | Gao Tianxiang | B — data, model, backend | A, C |
 | Sun Jianheng | C — frontend, annotation | A, B |
 | Fu Yijia | D — test cases, acceptance, demo material | everything else |
@@ -74,9 +74,9 @@ the user a list of chores you could have done yourself. Ask once, plainly, with 
 **8. Specify the state matrix before you write the code.** Before writing firmware, or any code that
 talks to hardware, write the states, the events, and the cell each pair lands in. The pairs nobody
 wrote down are where the demo fails — a second press that fires two frames, a verdict that arrives
-after the operator was told the shot failed. `docs/rig-state-machine-en.md` is the example: five
-screens and two link states against every event, every cell filled, and the invariant — `Offline` if
-and only if the link is `Gone` — checked in the firmware loop rather than assumed.
+after the operator was told the shot failed. `docs/rig-state-machine-en.md` is the example: four
+screens and two link states against every event, every cell filled, and the invariant — a capture carries no
+verdict timer, a verdict face carries one — checked in the firmware loop rather than assumed.
 
 ## 5. Rules of the shared repository
 

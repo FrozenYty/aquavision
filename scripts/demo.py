@@ -17,7 +17,7 @@ The development database is never touched: the run gets a fresh one under `data/
 printed so the numbers can be checked afterwards.
 
 Usage:
-    .venv-infer\\Scripts\\python.exe scripts/demo.py
+    conda run -n aquavision python scripts/demo.py
     python scripts/demo.py
 """
 

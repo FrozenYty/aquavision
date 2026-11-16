@@ -4,7 +4,7 @@
 
 > Owner: @FrozenYty · Revisit when: the hardware changes
 
-Final bill of materials: nine items were ordered on 2026-11-05 (¥377.42), and the 330 ohm resistors and the trigger button joined the list on 2026-11-10, making eleven items and ¥388.32. This is the list the
+Final bill of materials: nine items were ordered on 2026-11-05 (¥377.42), and the 330 ohm resistors and the trigger button joined the list on 2026-11-10, making eleven items and ¥388.32. The turbidity sensor, its cable and the level shifter left the list on 2026-11-14, which makes eight items and ¥354.56. This is the list the
 rig is built from; changing it means changing PLAN.md P0-03 and this document together. Brand names
 and the Chinese search strings are listed in the Chinese version; this file describes the same parts
 in English.
@@ -16,16 +16,14 @@ in English.
 | 1 | USB camera | 1080P UVC module, 3.6 mm low-distortion lens, metal housing | 1 | 200.60 | JD | Image capture |
 | 2 | Glass tank | Low-iron ultra-clear glass, 300×170×200 mm, 5 mm walls, bare tank | 1 | 48.90 | JD | Capture chamber |
 | 3 | Linear polariser | FINNER PL sheet, gloss finish, no adhesive, 200×200 mm, 0.2 mm | 1 | 35.60 | JD | Cross-polarisation, two pieces cut from one sheet |
-| 4 | MCU board | DZYJ ESP32-S3 N16R8 DevKitC, headers pre-soldered | 1 | 26.60 | JD | Trigger, I2C master |
-| 5 | Level shifter | 8-channel bidirectional 3.3 V ↔ 5 V, headers pre-soldered | 1 | 7.10 | JD | Bridges the 5 V sensor to 3.3 V GPIO |
-| 6 | Jumper wires | DZYJ 40-pin ribbon, male-male / male-female / female-female, 120 pcs | 1 | 8.26 | JD | All wiring |
-| 7 | Breadboard | DZYJ MB-102, 1660 tie points, with power rails | 1 | 23.70 | JD | Solderless assembly; the 405-hole board is too small once the ESP32 and shifter are seated |
-| 8 | Turbidity sensor | LIGHT ME2100A-IIC, I2C, reflective | 1 | 18.82 | LCSC | Reads water clarity |
-| 9 | Sensor cable | WHEELTEC GH1.25 4-pin to Dupont female, 200 mm | 1 | 7.84 | JD | Turbidity sensor to the level shifter pins |
-| 10 | Resistors | LR1F330R metal film 330 Ω ±1% 600 mW, through-hole, 10 pieces | 1 | 5.10 | LCSC | LED current limiting; the rig needs two, the rest are spares |
-| 11 | Trigger button | XKB8080-W 8×8 through-hole **momentary** switch, blue cap, 13.65 mm tall, 5 pieces | 1 | 5.80 | LCSC | Panel mount; the larger cap and height fix the kit's hard-to-hit small switch |
+| 4 | MCU board | DZYJ ESP32-S3 N16R8 DevKitC, headers pre-soldered | 1 | 26.60 | JD | Trigger, panel, I2C master |
+| 5 | Jumper wires | DZYJ 40-pin ribbon, male-male / male-female / female-female, 120 pcs | 1 | 8.26 | JD | All wiring |
+| 6 | Breadboard | DZYJ MB-102, 1660 tie points, with power rails | 1 | 23.70 | JD | Solderless assembly; the 405-hole board is too small once the ESP32 is seated |
+| 7 | Resistors | LR1F330R metal film 330 Ω ±1% 600 mW, through-hole, 10 pieces | 1 | 5.10 | LCSC | Segment current limiting on the display: seven 330 Ω, one per segment, hold each segment's current to what the panel can take, and this lot is that value |
+| 8 | Trigger button | XKB8080-W 8×8 through-hole **momentary** switch, blue cap, 13.65 mm tall, 5 pieces | 1 | 5.80 | LCSC | Panel mount; the larger cap and height fix the kit's hard-to-hit small switch |
 
-**Total ¥388.32.** The status display (0.96" OLED) and the white and red LEDs come from the STM32 kit on hand and are not bought. The fill light is the Midea MT-10T4 lamp already on hand: 10 W, 4000 K, Ra90,
+**Total ¥354.56.** The status display (0.96" OLED) comes from the STM32 kit on hand and is not bought, and
+the four-digit display is not on this list either. The fill light is the Midea MT-10T4 lamp already on hand: 10 W, 4000 K, Ra90,
 USB-powered (DC) and advertised as flicker-free. A strip was planned on 11-07 and withdrawn the same
 day after the lamp was checked — ADR 10.
 
@@ -39,6 +37,7 @@ day after the lamp was checked — ADR 10.
 | Scenery | Stones and plants found on site. One dark stone shaped like a sea cucumber is enough to stage a false positive. |
 | Water level sensor | The tank level is constant and nothing depends on it. It is not in the SRS. |
 | Water temperature probe | It fills one field and drives no decision. The SRS states that missing sensor fields stay empty and are excluded from statistics. |
+| Turbidity sensor | It was bought and is now withdrawn: a full register sweep on a clean bus found only configuration registers, none of which changed value in response to light, and the vendor states the part has no register map. P3-37 records the evidence, and the four-digit display does the panel's job instead. |
 | Second lamp | Only if the left/right brightness ratio fails; see `PROGRESS.md` 2026-11-05. |
 
 ## 3. Things to verify before assembly
@@ -63,11 +62,10 @@ day after the lamp was checked — ADR 10.
   hole leaves the switch loose. Check its legs are straight: the
   PCB-mount parts with bent legs bought earlier will not seat in a breadboard. A latching switch would
   not work here — the firmware expects a falling edge per press.
-- **Sensor cable.** GH1.25 to Dupont female. A single-ended tinned cable has nothing to plug into.
 
 ## 4. Assembly order
 
-Assemble and power on in six steps, one at a time, so a fault is localised immediately:
+Assemble and power on in four steps, one at a time, so a fault is localised immediately:
 
 1. ESP32 + tactile switch - serial prints a line on each press. **Debounce first**: one press, one line.
    **A press must never disturb the panel.** If pressing dims the OLED or restarts the board, a leg is on a
@@ -77,45 +75,44 @@ Assemble and power on in six steps, one at a time, so a fault is localised immed
    get wrong - find the pair that closes with a multimeter, as section 3 says. A 330 Ohm series resistor
    from the switch to `4` turns a future mistake into "nothing happens" instead of a brownout, and the pin
    still reads a solid LOW because its internal pull-up is 45 kOhm.
-2. Level shifter — measure 3.3 V on VCCA and 5 V on VCCB. **This board cannot be skipped:** rev A3 of the
-   ME2100A-IIC datasheet dropped the 3.3 V specification, so the part runs at 4.5-5.5 V and its I2C
-   lines are pulled up to 5 V, which the ESP32 does not tolerate. Low side to the ESP32's 3V3 and
-   GPIO8/9; high side to 5 V and the sensor's SDA/SCL.
-3. Turbidity sensor — I2C scan finds address `0x49`; clear water reads high, cloudy reads low. Confirm a
-   4.7 kΩ pull-up on both SDA and SCL; without them the reads are intermittent, which is the hardest
-   fault to diagnose.
-4. Fill light — run the lamp **on USB, not on its battery**: falling charge drifts the brightness.
+2. Fill light — run the lamp **on USB, not on its battery**: falling charge drifts the brightness.
    Set one touch-dimming level and **tape over the touch area**. Tape the polariser flat to the lamp
    head, corners taut, no warp.
-5. Display and LEDs — an I2C scan shows both `0x3C` (OLED) and `0x49` (turbidity); the screen boots to
-   `AQUAVISION` then settles on `READY`; **the LEDs answer a verdict, not the button** - with the server
-   attached, press the button and the white or the red one **stays lit** while the verdict is on the
-   screen, with the blue one going dark for as long as it is. **With no PC on the link, a button press lights neither, and that is not a fault**: the button
-   only starts a capture, and the firmware pulses a lamp when `CMD RESULT` answers it. **The blue lamp is
-   already steady the moment power arrives** - check that first, because no blue at all points at the
-   supply rather than at the firmware. **The lamps are fed from 5 V and the pin switches the low side, so
-   LOW lights one and HIGH puts it out** - anode to 5 V, cathode through its 330 Ohm to the pin. Wired the
-   other way round it will not light at all, and the pin never sees more than the LED's forward drop.
-   **A lead too short to reach is a mechanical problem with a mechanical fix** - a 2 cm jumper makes up the
-   distance - and not a reason to fit a lamp of another colour, because the colour is part of what the lamps
-   mean.
-6. Camera — exposure lock, `python scripts/test_exposure.py` exits 0; then `python scripts/test_rig.py`
+3. Display, button and panel — an I2C scan shows `0x3C` (the OLED) and nothing else; the screen boots to
+   `AQUAVISION` then settles on `READY`, and the four-digit panel runs its self-test: one segment at a time
+   through all 28 positions at 25 ms each, then `8888` for 300 ms, then 1000 ms dark. **A segment that never
+   lights is a gap at a known position in that sweep**, which is the reason the sweep is sequential rather
+   than a static row of eights.
+   **The panel answers a verdict, not the button**: a press starts a capture, and with the server attached
+   the panel shows `CAP` until `CMD RESULT` answers it. **A press is refused only while a face owns the
+   screens** (`WAITING` with nobody attached, or a dead radio), and with no PC on the link the rig keeps
+   showing its own screen - a quiet peer is not a fault.
+   **The panel is common anode, so a segment is lit by pulling its pin LOW**, and a segment that never lights
+   is a reversed resistor or a wrong segment long before it is a dead pin. **A lead too short to reach is a
+   mechanical problem with a mechanical fix** - a 2 cm jumper makes up the distance - and not a reason to
+   rearrange the segment order, because the order is what the firmware writes.
+   **The lamps and the bar are gone**; what the panel can show now is the self-test, `READY`, `CAPTURING`,
+   `PASS`, `RETAKE` and the fault windows `Err1`-`Err4` (`Err0` is retired and not reused). **The button has
+   one meaning - a press captures - so the fault windows cannot be performed on demand**: they appear when
+   their event happens, and on a bench where nothing is failing the serial log is where they are seen.
+4. Camera — exposure lock, `python scripts/test_exposure.py` exits 0; then `python scripts/test_rig.py`
    exits 0, which measures the left/right brightness ratio, the 5 cm target width and the brightness
    drift of a ten-minute run under a fixed light level. **Both are required**: the first asks whether
    the camera can be used, the second whether the picture is good enough to detect on.
 
 ## 5. Power and wiring
 
-One 12 V adapter feeds an MB-102 breadboard supply, and **that supply powers only the 5 V side of the
-rig**. The controller keeps its own: the USB cable to the PC carries both power and the serial link, and
-the board's own regulator makes the 3.3 V that the OLED and the shifter's low side run on. Two supplies,
-one ground.
+The controller keeps its own supply: the USB cable to the PC carries both power and the serial link, and the
+board's own regulator makes the 3.3 V that the OLED and the display run on. **Nothing in this build draws
+from a 5 V rail.** The lamps and the bar were its only loads; every pin the four-digit display uses is a
+GPIO, and its segment resistors go to those pins rather than to a rail. The 12 V adapter and the MB-102 stay
+on the parts list - the breadboard is where the rig is built - but the panel no longer has a second supply.
 
 | Rail | Source | Loads |
 |---|---|---|
-| 5 V | 12 V adapter into the MB-102, one rail jumper on 5 V and **the other on OFF** | turbidity sensor VCC, shifter VCCB, the anodes of the three lamps |
-| 3.3 V | the controller board's `3V3` pin, which its own USB cable feeds | OLED VCC, shifter VCCA, the ESP32's own logic |
-| ground | one, shared | every part, including the adapter's negative lead |
+| 3.3 V | the controller board's `3V3` pin, which its own USB cable feeds | OLED VCC, the display's segments and commons, the ESP32's own logic |
+| ground | one, shared | every part |
+| 5 V | the 12 V adapter into the MB-102, one rail jumper on 5 V and **the other on OFF** | **none in this build**: the rail is measured once and left alone |
 
 **The rail that is not used is switched OFF, not parked at 3.3 V.** The module has a jumper position for
 each rail; we use 5 V on one and OFF on the other. Two live regulators on one breadboard is how a board's
@@ -123,25 +120,15 @@ own 3.3 V ends up fighting the module's, and the OFF position is what prevents i
 
 ```mermaid
 flowchart LR
-  DC["12 V adapter, 7-12 V"] --> MB["MB-102: one rail jumper 5 V,<br/>the other OFF"]
-  MB -->|"5 V rail"| S["Turbidity ME2100A-IIC, 0x49"]
-  MB -->|"5 V rail"| HV["HW-221 VCCB"]
-  HV ---|"B0 / B1"| S
   PC["PC USB, the COM port"] -->|"power and serial"| ESP["ESP32-S3-N16R8"]
-  ESP -->|"3V3"| LV["HW-221 VCCA"]
   ESP -->|"3V3"| OLED["OLED, 0x3C"]
-  ESP -->|"GPIO8 / GPIO9"| LV
   ESP -->|"GPIO8 / GPIO9"| OLED
   ESP --> B["button, GPIO4"]
-  MB -->|"5 V"| L1["white LED, PASS"]
-  ESP -->|"sinks"| L1
-  MB -->|"5 V"| L2["red LED, RETAKE"]
-  ESP -->|"sinks"| L2
-  MB -->|"5 V"| L3["blue LED"]
-  ESP -->|"sinks"| L3
-  GND["one ground"] --- MB
-  GND --- ESP
-  GND --- S
+  ESP -->|"GPIO3, 13-18, 330 Ω each"| SEG["display segments A-G"]
+  ESP -->|"GPIO5, 6, 7, 10, direct"| COM["display digit commons"]
+  GND["one ground"] --- ESP
+  GND --- OLED
+  GND --- B
 ```
 
 The board is an **ESP32-S3-N16R8**: terminal names below are the ones silkscreened on it, and the `R8`
@@ -151,41 +138,54 @@ the firmware is built with `ARDUINO_USB_CDC_ON_BOOT=0` and sends `Serial` to UAR
 
 | From | To | Colour | Why |
 |---|---|---|---|
-| ESP32 `8` | OLED SDA and shifter `A0` | yellow | one GPIO, two loads: fan it out on the breadboard, not by twisting wires |
-| ESP32 `9` | OLED SCL and shifter `A1` | green | the same, on the clock |
-| shifter `B0` | sensor SDA | yellow | the 5 V side of the bus |
-| shifter `B1` | sensor SCL | green | the same |
-| ESP32 `3V3` | OLED VCC and shifter `VCCA` | orange | the control side only |
-| MB-102 `5V` | sensor VCC and shifter `VCCB` | red | the sensor side only |
-| MB-102 `GND` | ESP32 `GND`, sensor GND, shifter `GND` | black | one ground: split grounds are the intermittent-I2C fault that hides longest |
+| ESP32 `3` | 330 Ω to display segment A | brown | a segment is lit by pulling its pin LOW, so a dark segment is a HIGH pin |
+| ESP32 `13` | 330 Ω to display segment B | brown | the same, one segment along |
+| ESP32 `14` | 330 Ω to display segment C | brown | the same |
+| ESP32 `15` | 330 Ω to display segment D | brown | the same |
+| ESP32 `16` | 330 Ω to display segment E | brown | the same |
+| ESP32 `17` | 330 Ω to display segment F | brown | the same |
+| ESP32 `18` | 330 Ω to display segment G | brown | the middle bar: the one segment `READY` lights, alone |
+| ESP32 `5` | display digit 1 common (left) | blue | a common is driven HIGH to select its digit, and carries the sum of that digit's segments: **no resistor** |
+| ESP32 `6` | display digit 2 common | blue | the same |
+| ESP32 `7` | display digit 3 common | blue | the same |
+| ESP32 `10` | display digit 4 common (right) | blue | the same |
 | ESP32 `4` | button, other leg to GND | purple | momentary part only - a latching one gives one frame per two presses |
-| ESP32 `5` | 330 Ohm from the white LED's cathode | white | the PASS lamp: anode on 5 V, pin sinks it, so **LOW lights it** |
-| ESP32 `6` | 330 Ohm from the red LED's cathode | grey | the RETAKE lamp, the same |
-| ESP32 `7` | 330 Ohm from the blue LED's cathode | blue | the state lamp: steady when idle, blinking when busy or lost, dark while a verdict is shown |
+| ESP32 `8` | OLED SDA | yellow | the bus data line |
+| ESP32 `9` | OLED SCL | green | the same, on the clock |
+| ESP32 `3V3` | OLED VCC | orange | the control side only |
+| ESP32 `GND` | OLED `GND` | black | one ground: split grounds are the intermittent-I2C fault that hides longest |
 
 The same wiring as a picture is `rig-wiring.svg`, in this directory: the pin column keeps the order printed
 on the board, which is what makes it usable with a jumper wire in hand. Table and picture are generated from
 the same numbers, so they cannot disagree without a test saying so.
 
-**SDA and SCL are one bus, not one wire per device.** The OLED and the shifter sit on the same pair, and
-the protocol separates them by address - `0x3C` and `0x49`, which do not collide. That is what I2C is for, and
-the level question has already been answered by the shifter: both loads are 3.3 V from the ESP32's side,
-because the 5 V part is beyond it.
+**SDA and SCL are one bus, and the OLED is its only device.** The address is `0x3C`; a scan that reports
+anything else is reporting a part this rig does not have. The pair runs straight from the header to the
+module, and nothing on it is a 5 V part any more, so there is no shifter to check and no second device to
+unplug before believing a screen that has stopped answering.
 
-Two consequences are worth knowing before they bite. **A fault on the 5 V side can pull the whole pair
-low**, so an OLED that stops answering may be reporting the sensor's problem: unplug `A0` and `A1`, rescan,
-and if the OLED returns, the fault is beyond the shifter. And **the pull-ups from both boards hang on the
-same 3.3 V net** - measure from SDA to `3V3` with the power off and expect a few kOhm; well under 1 kOhm
-means too many of them are stacked.
+**One consequence is worth knowing before it bites.** The OLED module carries its own pull-ups, so with
+the power off, SDA to `3V3` should read a few kOhm; well under 1 kOhm means too many of them are stacked. The rig
+no longer has another board to blame: if the scan finds nothing, the module, its four wires and the header
+are the whole list.
 
-**Check three things before the first power-on.** Measure the MB-102's 5 V rail with nothing else
-connected. This module does carry its own 5 V regulator, so the pass-through risk that ruins sensors on
-other boards is smaller here - but the check costs ten seconds and the sensor does not survive 12 V. Then
-measure from shifter `B0` to `VCCB` with the power off: the `HW-221` board is populated with `R1` to `R8`,
-and if those are the 10 kOhm pull-ups they look like, **no 4.7 kOhm resistors are needed** - adding them
-beside 10 kOhm leaves 3.2 kOhm, which works at 100 kHz but is not worth stacking. And the register that
-holds the turbidity reading is still unknown, so the first reading is an experiment: a bare read, then
-reads after writing commands `0x00` to `0x03`, and keep the one whose value falls as the water gets turbid.
+**Check the panel's resistors before the first power-on.** Seven of them, one per segment, each 330 Ω and
+each between the pin and its segment - none shared, and **none on a common**. A common with a resistor on
+it, or two commons joined, is a panel that lights two digits dimly and reads as a smear. Then confirm the
+commons are on the four pins the table names, because a common swapped with a segment is a digit that never
+lights rather than a segment that is wrong.
+
+**A common carries a digit's whole segment current, so only one may be high at a time.** That is the
+multiplexer's job, and it is the one rule of this panel a person can check with a meter: with the firmware
+running, four pins alternate and never two at once.
+
+**330 Ω is the value this panel is built to, and the current it sets is the reason.** A segment pin pulled
+LOW sits at about 0 V and the common at 3.3 V, so with an LED forward voltage near 2 V - the one assumption in
+this arithmetic, because no display datasheet is in hand - a segment draws about 4 mA. A common with all seven
+of its segments lit carries seven of those at once, about 28 mA, but the multiplexer leaves each digit on for
+a quarter of the time, so the average on a common is about 7 mA. **The 40 mA a GPIO is rated for is a
+continuous figure**, so 7 mA is what the part carries all day and 28 mA is its worst instant; both are inside
+the rating.
 
 ## 6. Acceptance numbers
 
@@ -198,5 +198,5 @@ reads after writing commands `0x00` to `0x03`, and keep the one whose value fall
 | Light stability | Ten minutes of capture on USB: mean brightness of the first and last frame differ by < 5 % |
 | Polariser flatness | No visible warp; the lens-side sheet locked at the darkest orientation |
 | Target size | A 5 cm object ≥ 45 px wide at 640 input |
-| Turbidity | Clear water reads higher than water with a spoon of milk |
+| Display | The boot self-test walks all 28 segment positions and then shows `8888`; a press from `READY` starts a capture and the panel shows `CAPTURING`; with nothing attached the panel draws `APP` with the fourth digit turning and the OLED says `WAITING` |
 | Tank | 24 h filled, no seepage, front wall without scratches or tint |

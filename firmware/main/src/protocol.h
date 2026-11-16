@@ -15,9 +15,15 @@ namespace protocol {
 
 //: Reads whatever is available and applies complete lines to `state`. Never blocks.
 //: Returns true if a command arrived, which is what keeps the link watchdog alive.
-bool poll(rig::State& state);
+//: `now` is the loop's own clock reading for this pass. Everything this function timestamps - the verdict
+//: face, the stray-fault age - is stamped with it, so no event carries two clock readings.
+bool poll(rig::State& state, uint32_t now);
 
-//: Outgoing events. Each writes one line to `Serial`.
+//: Drops a half-received line. Called when a central subscribes: the previous session may have left bytes
+//: with no terminator, and the next session's first write must not be appended to them as one command.
+void flushInput();
+
+//: Outgoing events. Each writes one line to the transport, whichever wire that is.
 void emitHello();
 // Reports every address that answers on the I2C bus, one EVT line each.
 void emitI2CScan();
@@ -32,24 +38,12 @@ void emitTimeout(uint32_t millisNow);
 //: dropped message leaves the PC believing the rig accepted it, which is why TCP answers an unexpected
 //: segment with a reset instead of ignoring it.
 void emitStrayResult(int score);
-//: A screen/link combination that should be impossible. Never expected on the wire; if it appears, the
-//: state machine has a hole and the panel is showing something it should not.
+//: A state the firmware should never be in - a capture carrying a verdict timer, or a verdict face without
+//: one. **A monitor, not a face an event can reach**: nothing an operator or the PC does raises it, so there
+//: is no input to hunt for. Never expected on the wire; if it appears, the loop has a hole and the panel is
+//: showing something it should not.
 void emitInvariant(rig::Screen screen, rig::Link link);
-void emitTurbidity(int value);
 
-//: Reads two bytes from one register of the turbidity sensor and returns them big-endian, or -1 when the
-//: sensor does not answer. This is the only place the manual's read sequence is written down: it wants a
-//: *repeated* START between the command byte and the data, which is easy to get subtly wrong in a second copy.
-int readRegister(uint8_t command);
-//: Reports a register read as `EVT TREG <cmd> <value>`. The vendor manual publishes no table of command
-//: bytes, so the one this firmware uses was found by sweeping the address space - and this is how that stays
-//: repeatable instead of becoming folklore.
-void emitRegisterRead(uint8_t command);
-//: Reports a raw multi-byte read as `EVT TDUMP <cmd> ack=<n> n=<n> <b0> <b1> ...`.
-//: The reading was byte-identical in air and against a full tank, which says the two bytes this firmware was
-//: collecting are not the measurement - most likely they are a frame header. This command exists to show the
-//: whole frame instead of the first two bytes of it.
-void emitRegisterDump(uint8_t command, uint8_t count);
 void emitPong();
 
 }  // namespace protocol

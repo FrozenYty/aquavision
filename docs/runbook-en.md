@@ -50,18 +50,22 @@ Detection needs `ultralytics` and torch. The server environment deliberately doe
 ADR 11's argument, and it keeps a clone that only runs the API small. So a machine that demonstrates
 detection has **two** environments.
 
-Build the second one, once per checkout, in an environment of its own:
+Build the second one as the `aquavision` conda environment on Python 3.11 — the version `requirements.txt`
+and the CI workflow pin — once per machine rather than once per clone, because it lives outside the
+checkout. It holds the whole `requirements.txt` stack:
 
 ```bash
-python -m venv .venv-infer
-.venv-infer/Scripts/python -m pip install -r requirements.txt
+conda create -n aquavision python=3.11
+conda activate aquavision
+python -m pip install -r requirements.txt
 ```
 
-`.venv-infer/` is in `.gitignore`, so it stays out of the repository. Then run anything that loads a model
-with that interpreter:
+Then run anything that loads a model with that environment's interpreter rather than a bare `python` from
+some other environment, which will not find `ultralytics`:
 
 ```bash
-.venv-infer/Scripts/python -m pytest tests/test_detect_real.py -o addopts="" -q
+conda activate aquavision
+python -m pytest tests/test_detect_real.py -o addopts="" -q
 ```
 
 Three tests run there that skip everywhere else, because they are the only evidence that the delivered
@@ -212,7 +216,7 @@ are deployment decisions, and changing one means a restart on purpose.
 
 ## 11. What this runbook does not cover
 
-- **Hardware.** Wiring, the level shifter and the optical numbers are in `procurement-en.md` and
+- **Hardware.** Wiring and the optical numbers are in `procurement-en.md` and
   `rig-state-machine-en.md`.
 - **Training.** `PLAN.md` P4 and `test-plan-en.md`.
 - **The migration mechanism**, because it does not exist yet; when it does, section 7 shrinks to one
