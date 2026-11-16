@@ -642,7 +642,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       spinner running - asserted as a table of (page, failure, expected state)
       - `P2-12` brought those states to the pages that existed then; the assertion was per page and the
         pages have been rebuilt since
-- [ ] **P3-30** A weight budget for the frontend · @chemflowers · done when a script measures the JS and
+- [x] **P3-30** A weight budget for the frontend · @chemflowers · done when a script measures the JS and
       CSS each page loads, prints the table, and CI fails above a stated ceiling
       - no framework and no build tool is a deliberate choice; its cost is that nobody notices a page
         quietly growing
