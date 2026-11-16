@@ -449,9 +449,17 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - an empty result says so **instead of downloading an empty file**
       - the filename carries the frame id and a timestamp, so two exports are distinguishable
       - **evidence:** `tests/test_result_csv.py` covers the escaping round trip, the row count and the empty result (AC-14).
-- [ ] **P3-15** Species dictionary and per-class thresholds · @chemflowers · closes AC-26 · done when the
-      four classes and their thresholds can be viewed and edited on P-12, a threshold change applies to
-      new jobs and not to finished ones, and a class code that disagrees with `labels.txt` is refused
+- [x] **P3-15** Species dictionary and per-class thresholds · @chemflowers (page) + @Gtechson (server) ·
+      closes AC-26 · **server half delivered 11-16**: `species_dict.conf_thr` is read now. Both detection
+      entries take the floors in force when the job starts - the worker for a batch task and
+      `/api/detect/frames/{frame_id}` for a single frame - the model is asked for the lowest of them (a
+      detector never returns a box it was not asked about, so a floor *below* the job's own value has to
+      lower the ask to mean anything), and each box is then held to its own class's floor.
+      `tests/test_class_thresholds.py` holds AC-26's two sentences: a class floor raised to 0.80 costs a
+      new job that class while the finished job's rows are untouched, a floor lowered to 0.20 is what the
+      model is asked for, and the single-frame route applies the same values. `PATCH /api/species/{code}`
+      refuses an edit the labels contradict (`40901`, naming the disagreement), which is the other half
+      of AC-26
       - **spans two lanes as written.** The page is lane C's; applying a threshold to new jobs and
         refusing a class code that disagrees with `labels.txt` are both in `server/`, which is lane B's
         and read-only for C. Agree the split with lane B before starting, rather than in review
@@ -461,6 +469,8 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         `server/app/params.py`, so a per-class threshold has a place to be read from rather than needing
         a new mechanism, and refusing a class code that disagrees with `labels.txt` is one comparison
         against the delivered file
+
+      - C-lane frontend delivered separately: four-class ordering, API-aligned 0..1/two-decimal validation, and unknown-code refusal are exercised by `tests/test_species_threshold_ui.py`. The task stays open: lane B owns per-job threshold application and labels validation, as agreed with the user.
 
 - [x] **P3-16** Review versions and rollback · @Gtechson · **unblocks `P3-05`** · delivered 11-11 (#148)
       - `GET /api/review/frames/{frame_id}/versions` lists each entry newest first with its action, time,
@@ -569,7 +579,7 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         and `POST /api/users/{id}/reset-password` bumps it. `tests/test_token_epoch.py` shows the old
         token answering `40101` after the reset while the administrator's own session keeps working. The
         SRS records the column at V1.14 and the data-model tables follow in both languages
-- [ ] **P3-21** The interface reads time the way ADR 14 says · @chemflowers · follows **ADR 14** · done
+- [x] **P3-21** The interface reads time the way ADR 14 says · @chemflowers · follows **ADR 14** · done
       when no page re-derives a date from the browser's zone, and a report period is not a hardcoded offset
       - `web/static/js/ui.js`'s formatter rebuilds every timestamp in the **browser's** zone, so a reviewer
         outside UTC+8 reads one date on the dashboard and another in a filtered list, each correct by its
@@ -625,35 +635,58 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         not add to an existing table
       - done when a test builds a database from the previous schema, upgrades it, and asserts the old
         rows survive and the new column exists with its documented default
-- [ ] **P3-26** Upload and input limits · @Gtechson · done when a frame above a stated size, an image
-      whose dimensions exceed the model's input, a request body above the declared maximum, and a
-      name carrying `..` or a path separator are each refused with the project envelope - not accepted,
-      and not a 500
-      - the capture route writes whatever bytes arrive into a path built partly from request values,
-        and no maximum is stated anywhere
-- [ ] **P3-27** Undo on the review canvas · @chemflowers · done when a mistaken drag, draw or delete
+- [x] **P3-39** The turbidity leftovers on the server · @Gtechson · **delivered 11-16**: the sensor's
+      value was removed from the server's three sites - `media_asset.turbidity_rel` (a declared drop in
+      `OBSOLETE_COLUMNS`, after checking that every stored value was NULL), the capture request's
+      `turbidity_rel` field, and `serializers.frame`'s `env` object, which existed only to hold it. The
+      covering assertions now hold the absence (`"env" not in frame`) rather than the field
+      - **the other two sites stay, and here is why.** The firmware still reads the sensor every 5 s
+        (`cfg::TURBIDITY_PERIOD_MS = 5000`) and still sends `EVT TURBIDITY`, so `rig/service.py`'s
+        branch mirrors a real event; `protocol.register_read`/`REGISTER_READ_PREFIX` are used by
+        `scripts/test_turbidity.py` and the firmware still implements `CMD TREAD`. An in-flight branch
+        (`feat/turbidity-write-probe`) is editing `server/app/rig/protocol.py`, so deleting them now
+        would collide. Their removal belongs with the firmware's, not before it
+      - **reported, not edited:** the SRS (Table 2-3, §2.4, the data dictionary row and the module
+        count), the contract's frame example and the prototype's frame shape still describe the field -
+        lane A's documents, for the lead's sweep. `docs/data-model-{en,zh}.md` follows the code now,
+        because that document is the schema the code builds
+      - the service comment claiming a "five-second timeout" was checked against the firmware:
+        `cfg::CAPTURE_TIMEOUT_MS = 5000`, so the comment is right and the note about 4 s does not apply
+- [x] **P3-26** Upload and input limits · @Gtechson · **delivered 11-16**: four inputs the capture path
+      took, declared nowhere and refused by nothing, each refused now with `40002` and a sentence naming
+      the limit - a body over 8 MiB (read from `Content-Length` before parsing, in the request middleware,
+      so it covers every route), a decoded frame over 4 MiB, an image over 1920×1080 (the acquisition
+      chain the SRS declares; the pipeline resizes for the model, so the model's own 640 cannot be the
+      bound), and a point code or session id that is not a plain name - both are written into the stored
+      file's path, which was the traversal. `tests/test_input_limits.py` holds the four refusals plus the
+      legitimate 1280×720 frame that still passes
+      - **the traversal was live, not theoretical:** before this change `point_code: "../escape"` answered
+        200 and stored a frame under a path built from it; the test was written first and it failed
+      - the numbers are declared once, in `server/app/routers/capture.py`, and the contract states them
+        for a client author to read
+- [x] **P3-27** Undo on the review canvas · @chemflowers · done when a mistaken drag, draw or delete
       can be undone before submit, and the undo stack is asserted as a pure function under Node
       - today a wrong drag is unrecoverable until the version panel is used *after* submitting, which
         is too late for a reviewer working through forty frames
-- [ ] **P3-28** The canvas from the keyboard · @chemflowers · done when a box can be selected, nudged,
+- [x] **P3-28** The canvas from the keyboard · @chemflowers · done when a box can be selected, nudged,
       resized and deleted without a mouse, the focus order is visible, and the keys are printed on the
       page
       - the core interaction of the product is mouse-only, and a nudge of one pixel is the correction a
         reviewer needs most often
-- [ ] **P3-29** Every page survives a failed request · @chemflowers · done when each of the thirteen
+- [x] **P3-29** Every page survives a failed request · @chemflowers · done when each of the thirteen
       pages, given a 500, a timeout and a 401, shows a sentence the operator can act on and leaves no
       spinner running - asserted as a table of (page, failure, expected state)
       - `P2-12` brought those states to the pages that existed then; the assertion was per page and the
         pages have been rebuilt since
-- [ ] **P3-30** A weight budget for the frontend · @chemflowers · done when a script measures the JS and
+- [x] **P3-30** A weight budget for the frontend · @chemflowers · done when a script measures the JS and
       CSS each page loads, prints the table, and CI fails above a stated ceiling
       - no framework and no build tool is a deliberate choice; its cost is that nobody notices a page
         quietly growing
-- [ ] **P3-31** The report page previews its own figures · @chemflowers · done when the period chooser
+- [x] **P3-31** The report page previews its own figures · @chemflowers · done when the period chooser
       shows the numbers the report will carry before it is generated, and the preview and the file
       agree in a test
       - generating a report to discover it covers the wrong week is this page's ordinary failure
-- [ ] **P3-32** The canvas keeps its place across a reload · @chemflowers · done when the selection,
+- [x] **P3-32** The canvas keeps its place across a reload · @chemflowers · done when the selection,
       zoom and page survive a refresh, asserted as a pure function that serialises and restores them
       - a reviewer interrupted mid-set currently starts again from the first frame
 - [x] **P3-33** The acceptance matrix cannot go quiet · @IkeaFyj · **delivered 11-12**:

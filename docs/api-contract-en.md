@@ -100,6 +100,7 @@ the number of routes is a consequence, not a target.
 | GET | `/api/stats/corrections` | Review correction distribution | FR-M4-02 | P1 |
 | GET | `/api/stats/species` | Species composition | FR-M5-01 | P1 |
 | GET | `/api/stats/trend` | Daily capture volume | FR-M5-03 | P2 |
+| GET | `/api/reports/preview` | Preview report figures for a period | FR-M5-04 | P1 |
 | GET | `/api/reports` | Report history | FR-M5-04 | P1 |
 | POST | `/api/reports` | Generate a report | FR-M5-04 | P1 |
 | GET | `/api/models` | Model versions | FR-M6-01 | P0 |
@@ -133,6 +134,13 @@ The three components behind the score — sharpness, brightness, colour cast —
 `POST /api/capture/sessions/{id}/frames` in `quality_components` and are **not stored**: the frame table
 keeps the score and the verdict, which is what every later decision reads. They are a diagnostic of the
 moment, not a property of the image.
+
+**Input limits (`P3-26`).** `POST /api/capture/sessions/{id}/frames` refuses each of these with `40002`
+and a sentence naming the limit: a request body over 8 MiB (read from `Content-Length`, before the body is
+parsed), a decoded frame over 4 MiB, an image wider or taller than 1920×1080 - the acquisition chain the
+SRS declares - and a point code or session id that is not a plain name (letters, digits, `_`, `-`, no `..`
+and no path separator, because both end up in the stored file's path). The numbers are declared once, in
+`server/app/routers/capture.py`.
 
 ### Detection box
 
@@ -235,6 +243,12 @@ also carry `splits` with the per-split frame counts; the export response adds `g
 `manifest_path`.
 
 ### Report
+
+Generation may include the returned `preview_token`; if figures, period, basis or model changed, it answers 40901 without writing a report, so the page refreshes the preview before retrying.
+
+`GET /api/reports/preview` takes the same period and `basis` as generation, requires sign-in, and returns `{ preview_token, period_start, period_end, basis, model_version, figures: { frames, rejected, rate, species: [{ name, count, share }] } }`. It uses the generation query without writing a file or history row.
+
+`POST /api/reports` accepts `period_start` and `period_end` as `YYYY-MM-DD` dates (whole days in `AV_TIMEZONE`, inclusive), or existing offset-aware ISO timestamps (exact instants). The response remains offset-aware timestamps.
 
 ```json
 {

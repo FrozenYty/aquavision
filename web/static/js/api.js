@@ -56,7 +56,11 @@ export function toLogin() {
 
 export class ApiError extends Error {
   constructor(code, message, requestId) {
-    super(message);
+    const action = code === 408 ? "请求超时，请重试；若仍无响应，请确认服务已启动。"
+      : code === 500 || (code >= 50000 && code < 50100)
+        ? `${message}。请重试；若仍失败，请联系管理员${requestId ? `并提供请求编号 ${requestId}` : ""}。`
+      : code === 401 || AUTH_CODES.includes(code) ? `${message}。请重新登录。` : message;
+    super(action);
     this.code = code;
     this.requestId = requestId;
   }
@@ -71,19 +75,33 @@ async function request(method, path, { query, body } = {}) {
   } else {
     const token = localStorage.getItem(TOKEN_KEY);
     let res;
+    let deadline;
+    const controller = new AbortController();
     try {
-      res = await fetch(`/api${path}${qs}`, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: body === undefined ? undefined : JSON.stringify(body),
-      });
-    } catch {
+      envelope = await Promise.race([
+        (async () => {
+          res = await fetch(`/api${path}${qs}`, {
+            method, signal: controller.signal,
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: body === undefined ? undefined : JSON.stringify(body),
+          });
+          if (res.status === 401 && path !== "/auth/login") { clearSession(); toLogin(); }
+          return res.json().catch(() => null);
+        })(),
+        new Promise((_, reject) => {
+          deadline = setTimeout(() => { controller.abort(); reject(new ApiError(408)); }, 15000);
+        }),
+      ]);
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      if (controller.signal.aborted) throw new ApiError(408);
       throw new ApiError(0, "无法连接服务器，请确认服务已启动后刷新页面");
+    } finally {
+      clearTimeout(deadline);
     }
-    envelope = await res.json().catch(() => null);
     // Not JSON: usually a plain static server with no API behind it.
     if (!envelope) {
       throw new ApiError(res.status, `没有找到接口服务（HTTP ${res.status}）。只想看原型，请在地址后加 ?mock=1`);
@@ -129,6 +147,7 @@ export const listHardSamples = (query) => request("GET", "/hard-samples", { quer
 export const removeHardSample = (frameId) => request("DELETE", `/hard-samples/${frameId}`);
 export const listDatasets = () => request("GET", "/datasets");
 export const exportDataset = (body) => request("POST", "/datasets", { body });
+export const previewReport = (query) => request("GET", "/reports/preview", { query });
 export const listReports = () => request("GET", "/reports");
 export const createReport = (body) => request("POST", "/reports", { body });
 export const listModels = () => request("GET", "/models");

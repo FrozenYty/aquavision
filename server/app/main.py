@@ -60,6 +60,7 @@ from app.routers import (
     tasks,
     users,
 )
+from app.routers.capture import MAX_BODY_BYTES
 from app.worker import Worker
 
 log = logging.getLogger("aquavision")
@@ -92,6 +93,18 @@ async def request_context(
     token = request_id_ctx.set(request_id)
     request.state.request_id = request_id
     try:
+        # The declared body ceiling (P3-26) is enforced from the header, before the body is read or
+        # parsed: a hundred-megabyte JSON must cost the process nothing to refuse.
+        declared = request.headers.get("content-length")
+        if declared and declared.isdigit() and int(declared) > MAX_BODY_BYTES:
+            return JSONResponse(
+                status_code=STATUS[BAD_PARAM],
+                content=build(
+                    BAD_PARAM,
+                    f"请求体超过上限：{declared} 字节 > {MAX_BODY_BYTES} 字节（声明的上限），已拒绝",
+                ),
+                headers={"X-Request-Id": request_id},
+            )
         response = await call_next(request)
     finally:
         request_id_ctx.reset(token)
@@ -241,7 +254,7 @@ def create_app() -> FastAPI:
                 "database": database,
                 # Included routers are nested, so counting `app.routes` counts wrappers.
                 "routes": sum(len(router.routes) for router in ROUTERS) + 1,
-                "contract_routes": 46,
+                "contract_routes": 47,
                 "jwt_secret_is_default": settings.jwt_secret_is_default,
             }
         )

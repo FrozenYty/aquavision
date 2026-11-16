@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 from app.db import Base, add_missing_columns, engine_from_dsn
-from app.models import SysLog, SysUser
+from app.models import MediaAsset, SysLog, SysUser
 from sqlalchemy import Column, Integer, MetaData, Table, inspect, select, text
 from sqlalchemy.orm import Session
 
@@ -111,6 +111,52 @@ def test_the_script_still_reports_a_schema_it_could_not_upgrade(tmp_path: Path) 
     result = _run_init_db(dsn)
     assert result.returncode == 1, result.stdout
     assert "not upgraded: sys_user.real_name: NOT NULL without a server default" in result.stderr
+
+
+def test_a_declared_obsolete_column_is_dropped_and_the_row_survives(tmp_path: Path) -> None:
+    """The turbidity column is the first declared drop (2026-11-16): every stored value was NULL.
+
+    Dropping is never automatic - the models stopping to mention a column is also what a rename looks
+    like - so `OBSOLETE_COLUMNS` names it, and this test holds the pair of promises: the column goes,
+    the row stays.
+    """
+    path = tmp_path / "old.db"
+    dsn = f"sqlite:///{path.as_posix()}"
+    engine = engine_from_dsn(dsn)
+    Base.metadata.create_all(engine)
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE media_asset ADD COLUMN turbidity_rel SMALLINT"))
+        connection.execute(
+            text(
+                "INSERT INTO media_asset (frame_id, session_id, point_code, file_path, file_size,"
+                " file_hash, captured_at, width, height, quality_score, quality_flag, is_retake,"
+                " turbidity_rel) VALUES ('20261116T090000-0001', 's-old', 'A3', 'frames/old.jpg',"
+                " 2048, 'ab', '2026-11-16 01:00:00', 640, 480, 80, 0, 0, 12)"
+            )
+        )
+    engine.dispose()
+
+    result = _run_init_db(dsn)
+    assert result.returncode == 0, result.stderr
+    assert "schema migrated: dropped media_asset.turbidity_rel" in result.stdout, result.stdout
+
+    engine = engine_from_dsn(dsn)
+    try:
+        names = {column["name"] for column in inspect(engine).get_columns("media_asset")}
+        assert "turbidity_rel" not in names
+        with Session(engine) as session:
+            row = session.scalar(
+                select(MediaAsset).where(MediaAsset.frame_id == "20261116T090000-0001")
+            )
+            assert row is not None, "dropping a column must not drop the row"
+            assert (row.point_code, row.file_size, row.quality_score) == ("A3", 2048, 80)
+    finally:
+        engine.dispose()
+
+    # And it is not "dropped" a second time: the declaration is idempotent like the rest.
+    again = _run_init_db(dsn)
+    assert again.returncode == 0, again.stderr
+    assert "schema migrated" not in again.stdout, again.stdout
 
 
 def test_a_column_that_cannot_be_added_is_refused_rather_than_half_added(tmp_path: Path) -> None:

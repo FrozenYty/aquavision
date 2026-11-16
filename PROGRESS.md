@@ -78,7 +78,6 @@
   renumbering the faces an operator has learned. `FIRMWARE_VERSION` is `1.21` (1.20 was flashed).
 
 ## 2026-11-15
-
 - **The rehearsal is gone, and the button has one meaning again: a press captures, on the pressing edge.** The
   six-second hold, the two-second step and the nine-face walk were a second meaning for one control, and the
   press that ended a rehearsal was consumed rather than capturing - the exact ambiguity the matrix exists to
@@ -187,7 +186,6 @@
   `tests/test_demo_driver.py` name the environment instead of a path inside the repository; that test
   locates it through conda and **skips**, with the reason in the report, where a machine has none.
   `.venv-infer/` is left to the process that owns its deletion.
-
 - **A third machine now decides what the two screens draw, and it reads the other two rather than joining
   them.** At power-up the rig has no central attached, the protocol layer reports `Gone` ten seconds later,
   and the panel drew `Err0` - a blinking fault face - where nothing was wrong; the first connection then
@@ -222,7 +220,6 @@
   transcription to each other, checks the four faces against the document, and checks that `Pairing`'s
   face cannot reach the rig's screen; it fails on a moved cell, a swapped face or a `WAITING FOR PC` that
   stopped outranking a verdict.
-
 - **The flashed 1.14 went to the bench, and all three findings were in the faces rather than the
   machine.** `WAITING FOR PC` at Helvetica bold 12 measures 136 px on the 128 px panel, so it ran off the
   screen; it is now bold 8, measured at 89 px - a 19 px margin either side. Bold 10 was measured at
@@ -360,9 +357,7 @@
   uses. `drawStatusFace` now has one title size with no per-face font argument, so the two screens are
   identical except for their words; the check asserts the shared body line, the one font, and that every
   headline is short enough for it.
-
 ## 2026-11-14
-
 - **The turbidity sensor is gone, and this time the decision is final.** A full sweep of all 256 register
   addresses, on the bus that removing the shifter had just proven clean, found only configuration registers
   and **not one of them changed value in response to light** - hand, white paper at 2 cm, a dark corner, air
@@ -403,7 +398,6 @@
 - **Named here so it is not mistaken for done:** `firmware/README.md` and `firmware/README-zh.md` still
   describe the turbidity sensor, `EVT TURBIDITY`, `CMD TREAD` and a three-lamp panel with no bar. They
   belong to the firmware lane and were left untouched on purpose.
-
 - **The bar never shipped; the panel is a four-digit seven-segment display, and it took the lamps' pins.**
   Segments A-G on GPIO 3 and 13-18 through 240 ohm each, digit commons 1-4 on GPIO 5, 6, 7 and 10 direct,
   button on GPIO 4, OLED unchanged on GPIO 8/9. The ten-lamp bar and the three status lamps are both gone,
@@ -446,6 +440,68 @@
   its only loads; every pin the display uses is a GPIO and the segment resistors go to those pins, so the
   controller's USB cable is the only supply the panel needs. The 12 V adapter and the MB-102 stay on the
   parts list, and the rail is measured once and then left alone.
+- **P3-15 frontend half: species edits are validated and executable.** The user assigned the page and frontend validation to lane C and left job-level threshold application and labels validation with lane B. P-12 orders the real four classes, reports missing/unknown codes, and accepts 0..1 with two decimal places, matching the existing API/storage. `tests/test_species_threshold_ui.py` runs validation, table rendering and the real save handler under Node; a rejected save retains input and re-enables the button. A prototype-key regression was shown red. P3-15 remains open and the interface still states that detection does not read these thresholds yet.
+- **P3-30: every page has a measured asset ceiling.** `scripts/check-frontend-budget.py` prints raw JS/CSS bytes for all thirteen pages, including inline code and deduplicated transitive literal imports (optional mocks included), and fails above 128 KiB JS or 320 KiB CSS. CI runs the gate. `tests/test_frontend_budget.py` proves import cycles do not double-count and that both limits and the command failure path turn red on oversized assets; shrinking the asset restores success. Fonts and images are outside the stated budget.
+- **P3-31: the report previews the chosen period before generation.** With explicit authorization for the backend addition, `GET /api/reports/preview` reuses the exact generation query without writing a file or history row. The page refreshes on period/basis changes, ignores stale answers and disables generation until the current preview succeeds. Contract pairs, mock, REST client, health route count and permission inventory moved together. `tests/test_report_preview.py` compares displayed numbers with the generated Markdown in both bases, and executes delayed/failing page requests under Node. The missing route was shown red first.
+- **P3-21: business dates keep the server basis.** Formatting preserves the supplied wall clock, milliseconds and offset in every host zone; home trend labels use returned dates. Report presets use the operating date from the trend endpoint and submit calendar dates. With explicit cross-lane authorization, the report parser accepts whole operating dates alongside existing timestamp clients; `timebase.report_bounds` owns conversion, including daylight-saving transitions. `tests/test_operating_time.py` checks three host zones, the whole-day API and a 23-hour day. Reverting report parsing was shown to fail the date test.
+- **P3-29: every page is exercised against three failures.** A 15-second request deadline covers both headers and body, aborts the fetch and clears its timer. Server errors name retry and administrator escalation; expired authentication directs the operator back to sign-in. `tests/test_page_failures.py` executes the actual thirteen page scripts, REST client and UI loader for 500, timeout and 401, checking an actionable message and no remaining spinner. The original login 500 path failed the matrix.
+- **P3-32: review resumes its navigation state per tab.** Selection and zoom are restored only for the same frame and surviving object ids; the image browser resumes its page. Corrupt or obsolete saved state is discarded; unavailable browser storage shows an actionable warning. Annotation drafts are not stored. `tests/test_review_place.py` asserts the serialization round trip, frame isolation, stale ids and storage refusal under Node.
+- **P3-28: keyboard review uses original-image pixels.** Tab/Enter selects targets, N/P cycles them, arrows move one pixel, Shift+arrows resize, and Delete removes; keyboard edits enter the same undo stack. Focus is visible and preserved across redraws, and shortcuts are printed beside the canvas. `tests/test_review_keyboard.py` runs geometry and selection assertions under Node; the real page-handler test also exercises move, resize and delete.
+- **P3-27: pre-submit review undo is a stack.** Drag, draw, delete, relabel and confirmation keep isolated snapshots; cancelling a gesture preserves earlier history, and a server reload clears it. Node executes the pure functions and the real page handlers in `tests/review_history.mjs`, invoked by `tests/test_review_history.py`. Replacing the stack with one-step storage was demonstrated to fail.
+- **Defect: the capture API accepted and echoed a sensor reading that no client sent, and stored it
+  in a column nobody read.** Trigger: any authenticated client posting
+  `POST /api/capture/sessions/{id}/frames` with `turbidity_rel` in the body, or reading a frame
+  through `GET /api/frames` / the live socket - the field came back in `env` while the sensor it
+  named was gone from the capture path. Symptom: a frame carried an environment value that was
+  always NULL in the database (checked on 2026-11-16: three rows, zero non-NULL) and always zero
+  in the mock, so every reader had to know the field was decorative. Fixed by removing all three
+  sites; the tests that asserted the field now assert its absence.
+- **Defect: `init_db.py` reported an installed database as having no online model.** Trigger:
+  re-running `scripts/init_db.py` on a database whose online version already exists - the normal
+  thing to do after a schema change. Symptom: the model line printed `(candidate)` and the next
+  line advised activating one, while `model_version.is_online = 1` was true in the same database.
+  The state was read from this run's intention instead of from the database; it is now read back
+  after registration, which is what the operator sees.
+- **The turbidity sensor is not, in fact, gone from the repository - and the sweep says so**
+  (task ① of 11-16). The firmware lights it every five seconds and still answers `CMD TREAD`; the
+  SRS still lists it in Table 2-3 and §2.4; the contract and the prototype still show the field;
+  an in-flight lane-A branch is editing `server/app/rig/protocol.py` right now. So the server's
+  three dead sites were removed and the two live ones left alone: deleting a branch that mirrors a
+  real firmware event is not cleanup, it is a guess. The stale documents are named in the pull
+  request for the lead's sweep rather than edited inside a backend change.
+- **The first declared schema drop.** `OBSOLETE_COLUMNS` in `server/app/db.py` names
+  `media_asset.turbidity_rel` with its reason, and `init_db.py` drops exactly what is listed - never
+  "whatever the models stopped mentioning", because that is also what a rename looks like. The
+  migration ran on this machine's development database and printed
+  `schema migrated: dropped media_asset.turbidity_rel`; the rows were counted before it ran.
+- **One review note did not survive contact with the firmware.** The brief said the rig service's
+  comment claims "five-second timeout" while the firmware waits four. The firmware constant is
+  `cfg::CAPTURE_TIMEOUT_MS = 5000`, the state-machine document says five seconds, and the diagram
+  says `5 s` - so the comment is correct and was left alone. A wrong correction is a change that
+  has to be undone by someone else later.
+- **Defect: a class threshold the operator could edit and nothing read.** Trigger: `PATCH
+  /api/species/{class_code}` with a new `conf_thr`, then any detection. Symptom: the number was
+  stored, audited and shown on P-12, and **no detection path consulted it** - both the worker and the
+  single-frame route passed the caller's global `conf_thr` straight to the model, so AC-26's "a new
+  threshold applies to new jobs" could not hold, and the page's promise was decoration of the same
+  kind `P3-19` had closed for the system parameters. Found by the 11-12 audit and carried in `P4-05`
+  as a major defect; the tests that prove the fix were run red first. The second half of AC-26 -
+  a code that disagrees with the online model's `labels.txt` - is refused at the edit now, instead of
+  being discovered when the model refuses to load.
+- **The detection floor is a minimum, not the task's value, and that is deliberate.** A class floor
+  below the job's own confidence can only matter if the model is asked for the lower number:
+  ultralytics never returns a box it was not asked about, so asking for the task's 0.5 and filtering
+  at 0.2 would have been a filter that never fired. The plain consequence is that a per-class floor
+  *raises* what a job keeps and can *lower* what inference is asked for; the worker's own test now
+  states that in one line, and `tests/test_class_thresholds.py` holds both directions.
+- **Defect: the capture route built a file path from request values and took any size of body.**
+  Trigger: `POST /api/capture/sessions/{id}/frames` with `point_code` or a session id carrying `..`,
+  a slash, a backslash or a percent-encoded dot-dot - or with any body at all, however large. Symptom:
+  before 2026-11-16 the traversal answered **200** and wrote the frame under a path built from that
+  value (`docs` had always said frames live under `data/frames/<site>/<day>/<session>`), and a 9 MiB
+  body was read and parsed before anything objected - `MAX_BODY_BYTES`, `MAX_FRAME_BYTES` and the
+  1920×1080 ceiling now refuse each of those with `40002` and the number in the sentence, and the
+  tests that prove it were run red first (`point_code: "../escape"` was accepted and stored).
 
 ## 2026-11-13
 
@@ -687,7 +743,6 @@
   started; no job had been launched, so the white paper was placed in front of a measurement that was not
   running. The re-run took two seconds. Saying "running" is a claim like any other, and this one was not
   checked.
-
 - **The transport seam is in, and the wire did not move.** `protocol.cpp` no longer names `Serial`: every one
   of its sixteen touch points goes through `transport::`, which `transport.cpp` implements on the UART today
   and a Bluetooth service will implement later. The check that matters is that nothing observable changed -
@@ -704,7 +759,6 @@
   shifter needs a pull-up on each side, and the 3.3 V side has only the ESP32's internal ~45 kOhm.
 - **`I2C_CLOCK_HZ` is a config constant rather than a literal**, so the next measurement of this kind costs an
   edit instead of a search.
-
 - **The level shifter was corrupting the bus, and removing it fixed that.** With the BSS138 in circuit,
   twenty consecutive reads of `0x14` produced **seventeen answers and three silences**, and the same register
   read `0xDF` at 100 kHz and `0x00` at 10 kHz. Wired straight to the ESP32 - sensor on 5 V, no shifter, not
@@ -723,7 +777,6 @@
 - **Three conclusions were withdrawn in one day, all for the same reason**: the instrument was not trusted
   before the result was believed. The zero tail, the "no measurement in the register map", and the write
   probe's "no effect" were each read from a bus that dropped answers or a sensor that was not powered.
-
 - **Register `0x00` is an echo, and the firmware had been reading it as the measurement since day one.** It
   returns whatever register was addressed before it: the periodic `EVT TURBIDITY` tracked this session's sweeps
   (`65280`, then `512`, then `2560`) instead of tracking water, and a one-off `0x00 = 15 00` in a long run was
@@ -744,7 +797,6 @@
   acknowledges its address - enough to look healthy in every scan this project has ever run - while drawing
   nowhere near the 10 mA the datasheet calls for, and driving no emitter. VCC at the pin, or the current in
   series, separates the two in thirty seconds.
-
 - **`0x70` is latched, not live, and the last test settles it.** A white surface at the 2 cm the manual
   calibrates at, held for ten seconds inside a 150-second watch, moved nothing: `00 00` in every sample. Yet
   that same register has held **three** values across boots - 1280, 2560, and 0 - so it is written at start-up
@@ -758,7 +810,6 @@
   left empty, and it is excluded from statistics rather than estimated" is the specified behaviour for a sensor
   that cannot be read, and it is exactly the state this one is in. The rig computes, shows `--` on the panel
   and reports nothing, which is honest, rather than reporting a register that only updates on boot.
-
 ## 2026-11-12
 
 - **A specification is allowed to describe behaviour that is not built; it is not allowed to contradict
@@ -1153,6 +1204,7 @@
   **no single interpreter here can both capture live and draw boxes**. `P2-13` and `GATE P2` need one, and
   the two ways to get it are a decision rather than a discovery: install the inference stack into the
   environment that can see the camera, or find the venv cause.
+
 ## 2026-11-11
 
 - **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint

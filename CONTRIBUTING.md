@@ -93,7 +93,10 @@ check runs only on pull requests.
 | ADR index | `python scripts/check-adr-index.py` | list the record in the architecture ADR table |
 | Acceptance coverage | `python scripts/check-ac-coverage.py` | give the item a task, or give the claim a test |
 | Commit messages | `python scripts/check-commit-messages.py --range origin/<base>..HEAD` | remove the tool footer (§2) |
+| Frontend assets | `python scripts/check-frontend-budget.py` | keep each page below 128 KiB JS and 320 KiB CSS |
 | Tests | `pytest -q` | write the failing test first |
+
+The frontend budget counts uncompressed local JS/CSS, inline scripts/styles, and the deduplicated transitive graph of literal imports, including optional mock imports. Fonts and images are outside this budget. The check prints every page and exits non-zero above either ceiling; missing or external dependencies also fail.
 
 Python style is whatever `ruff` accepts — the configured line length is 100, nothing else is
 negotiated. Comments and docstrings are English.

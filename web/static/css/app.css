@@ -1160,3 +1160,9 @@ body {
     transition: none !important;
   }
 }
+
+/* Keyboard focus stays visible on the canvas and every target control. */
+#viewport:focus-visible, .av-object-row button:focus-visible {
+  outline: 3px solid var(--av-accent);
+  outline-offset: 3px;
+}

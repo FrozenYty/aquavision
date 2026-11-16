@@ -21,7 +21,7 @@ from sqlalchemy import delete, func, select
 
 from app import serializers
 from app.deps import SessionDep, UserDep, get_current_user
-from app.detector import IOU_THRESHOLD, MAX_DET
+from app.detector import IOU_THRESHOLD, MAX_DET, job_thresholds, keep_above_class_floors
 from app.envelope import INTERNAL, NOT_FOUND, NOT_IMPLEMENTED, ApiError, not_built, ok
 from app.models import DetectObject, DetectTask, MediaAsset
 from app.routers.tasks import BatchBody, create_batch, next_task_code
@@ -73,8 +73,11 @@ def detect_frame(
     # actually does with it: handing the image to the model, pre-processing, inference and NMS. The
     # database writes and the JSON encoding that follow are outside it.
     started = time.perf_counter()
+    # The per-class floors in force (FR-M6-04, AC-26): the model is asked for the lowest of them, and
+    # each box is then held to its own class's value. Read here, so an edit binds the next call.
+    floor, floors = job_thresholds(request.app.state.session_factory, conf_thr)
     try:
-        boxes = detector.predict(asset, conf_thr)
+        boxes = keep_above_class_floors(detector.predict(asset, floor), floors, floor)
     except Exception as exc:  # noqa: BLE001 - the reason goes into the response and the task row
         task.status = FAILED
         task.error_msg = f"{type(exc).__name__}: {exc}"[:512]

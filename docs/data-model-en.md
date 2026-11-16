@@ -16,7 +16,7 @@ frame list moved from a query every worker re-ran to a set the task owns (ADR 12
 |---|---|---|
 | `sys_user` | Accounts, roles, login state | 14 |
 | `sys_log` | Audit trail of key actions | 10 |
-| `media_asset` | One captured frame and its metadata | 18 |
+| `media_asset` | One captured frame and its metadata | 17 |
 | `detect_task` | One detection run: model, parameters, progress | 16 |
 | `detect_object` | One detection box | 19 |
 | `species_dict` | Class definitions and per-class thresholds | 10 |
