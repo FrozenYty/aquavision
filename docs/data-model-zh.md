@@ -15,7 +15,7 @@
 |---|---|---|
 | `sys_user` | 账号、角色、登录状态 | 14 |
 | `sys_log` | 关键操作的审计记录 | 10 |
-| `media_asset` | 一帧影像及其元数据 | 18 |
+| `media_asset` | 一帧影像及其元数据 | 17 |
 | `detect_task` | 一次识别的模型、参数与进度 | 16 |
 | `detect_object` | 一个检测框 | 19 |
 | `species_dict` | 类别定义与分类别阈值 | 10 |
@@ -102,7 +102,6 @@
 | `quality_score` | SMALLINT | DEFAULT 0 | 质量总分 0–100 |
 | `quality_flag` | SMALLINT | DEFAULT 0 | 0 合格／1 需重拍 |
 | `is_retake` | SMALLINT | DEFAULT 0 | 是否为重拍帧 |
-| `turbidity_rel` | SMALLINT | NULL | 浊度相对值 0–100，0 为清澈；无传感器时为空 |
 | `created_at` | TIMESTAMP | DEFAULT now() | 入库时间 |
 
 ### 3.4 detect_task 识别任务表

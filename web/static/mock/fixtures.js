@@ -43,7 +43,6 @@ function makeFrame(session, i) {
     session_id: session.session_id,
     captured_at: `${local.toISOString().slice(0, 23)}+08:00`,
     quality: { sharpness, brightness, colorcast, score, verdict: score >= 60 ? "ok" : "retake" },
-    env: { turbidity_rel: int(4, 28) },
     width: 1920,
     height: 1080,
     site: session.site, // mock-only: the server keeps the site as point_code

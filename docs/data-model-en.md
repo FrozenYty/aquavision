@@ -16,7 +16,7 @@ frame list moved from a query every worker re-ran to a set the task owns (ADR 12
 |---|---|---|
 | `sys_user` | Accounts, roles, login state | 14 |
 | `sys_log` | Audit trail of key actions | 10 |
-| `media_asset` | One captured frame and its metadata | 18 |
+| `media_asset` | One captured frame and its metadata | 17 |
 | `detect_task` | One detection run: model, parameters, progress | 16 |
 | `detect_object` | One detection box | 19 |
 | `species_dict` | Class definitions and per-class thresholds | 10 |
@@ -107,7 +107,6 @@ Append only; never updated or deleted in place (archival is an export).
 | `quality_score` | SMALLINT | DEFAULT 0 | Quality score 0–100 |
 | `quality_flag` | SMALLINT | DEFAULT 0 | 0 ok, 1 needs retake |
 | `is_retake` | SMALLINT | DEFAULT 0 | Is a retaken frame |
-| `turbidity_rel` | SMALLINT | NULL | Turbidity 0-100, 0 = clear; NULL without sensor |
 | `created_at` | TIMESTAMP | DEFAULT now() | Ingestion time |
 
 ### 3.4 detect_task

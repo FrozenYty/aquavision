@@ -605,6 +605,23 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         not add to an existing table
       - done when a test builds a database from the previous schema, upgrades it, and asserts the old
         rows survive and the new column exists with its documented default
+- [x] **P3-39** The turbidity leftovers on the server · @Gtechson · **delivered 11-16**: the sensor's
+      value was removed from the server's three sites - `media_asset.turbidity_rel` (a declared drop in
+      `OBSOLETE_COLUMNS`, after checking that every stored value was NULL), the capture request's
+      `turbidity_rel` field, and `serializers.frame`'s `env` object, which existed only to hold it. The
+      covering assertions now hold the absence (`"env" not in frame`) rather than the field
+      - **the other two sites stay, and here is why.** The firmware still reads the sensor every 5 s
+        (`cfg::TURBIDITY_PERIOD_MS = 5000`) and still sends `EVT TURBIDITY`, so `rig/service.py`'s
+        branch mirrors a real event; `protocol.register_read`/`REGISTER_READ_PREFIX` are used by
+        `scripts/test_turbidity.py` and the firmware still implements `CMD TREAD`. An in-flight branch
+        (`feat/turbidity-write-probe`) is editing `server/app/rig/protocol.py`, so deleting them now
+        would collide. Their removal belongs with the firmware's, not before it
+      - **reported, not edited:** the SRS (Table 2-3, §2.4, the data dictionary row and the module
+        count), the contract's frame example and the prototype's frame shape still describe the field -
+        lane A's documents, for the lead's sweep. `docs/data-model-{en,zh}.md` follows the code now,
+        because that document is the schema the code builds
+      - the service comment claiming a "five-second timeout" was checked against the firmware:
+        `cfg::CAPTURE_TIMEOUT_MS = 5000`, so the comment is right and the note about 4 s does not apply
 - [ ] **P3-26** Upload and input limits · @Gtechson · done when a frame above a stated size, an image
       whose dimensions exceed the model's input, a request body above the declared maximum, and a
       name carrying `..` or a path separator are each refused with the project envelope - not accepted,

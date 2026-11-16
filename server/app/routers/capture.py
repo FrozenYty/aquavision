@@ -42,7 +42,6 @@ class FrameBody(BaseModel):
     point_code: str = Field(min_length=1, max_length=32)
     image_b64: str = Field(min_length=16, description="JPEG bytes, base64 encoded")
     captured_at: datetime | None = None
-    turbidity_rel: int | None = Field(default=None, ge=0, le=100)
 
 
 @router.get("/cameras", dependencies=[Depends(only_local)])
@@ -186,7 +185,6 @@ def grab_frame(
         quality_score=int(quality.score),
         quality_flag=0 if verdict_ok else 1,
         is_retake=0,
-        turbidity_rel=body.turbidity_rel,
     )
     db.add(asset)
     db.add(

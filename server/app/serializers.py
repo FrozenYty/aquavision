@@ -37,7 +37,6 @@ def frame(asset: MediaAsset) -> dict[str, object]:
             "verdict": "retake" if asset.quality_flag else "ok",
         },
         "is_retake": bool(asset.is_retake),
-        "env": {"turbidity_rel": asset.turbidity_rel},
         "width": asset.width,
         "height": asset.height,
     }
