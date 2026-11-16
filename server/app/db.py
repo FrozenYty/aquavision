@@ -70,6 +70,19 @@ class Base(DeclarativeBase):
     """Shared declarative base; every table in the data model derives from it."""
 
 
+#: Columns a previous release created and the models no longer declare. **Dropping is deliberately not
+#: automatic**: "the models do not mention it" is also what a rename looks like from the database's side,
+#: and a wrong DROP costs data. Each entry here is a reviewed decision - table, column, and why - and it
+#: is the only thing `drop_obsolete_columns` will ever remove.
+OBSOLETE_COLUMNS: tuple[tuple[str, str, str], ...] = (
+    (
+        "media_asset",
+        "turbidity_rel",
+        "the capture request stopped sending it and no reader consumed it; every stored value was NULL",
+    ),
+)
+
+
 def add_missing_columns(
     engine: Engine, metadata: MetaData | None = None
 ) -> tuple[list[str], list[str]]:
@@ -128,3 +141,41 @@ def add_missing_columns(
                 added.append(label)
 
     return added, refused
+
+
+def drop_obsolete_columns(
+    engine: Engine, obsolete: tuple[tuple[str, str, str], ...] = OBSOLETE_COLUMNS
+) -> tuple[list[str], list[str]]:
+    """Drop the columns declared in `OBSOLETE_COLUMNS`, and nothing else.
+
+    The pair to `add_missing_columns`, with the opposite default: that one acts on its own because
+    adding a column cannot lose anything, and this one acts only on what a person wrote down and
+    reviewed. `create_all` and the models give no signal that distinguishes "dropped on purpose" from
+    "renamed by accident", so the list is the signal.
+
+    Returns `(dropped, refused)` for the same reason the add path does: a column that cannot be
+    dropped - an older SQLite without `ALTER TABLE ... DROP COLUMN`, or one an index still names -
+    must stop the upgrade loudly rather than leave a schema half-migrated.
+    """
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+    quote = engine.dialect.identifier_preparer.quote
+    dropped: list[str] = []
+    refused: list[str] = []
+
+    for table, column, reason in obsolete:
+        if table not in existing_tables:
+            continue
+        if column not in {live["name"] for live in inspector.get_columns(table)}:
+            continue
+        try:
+            with engine.begin() as connection:
+                connection.execute(text(f"ALTER TABLE {quote(table)} DROP COLUMN {quote(column)}"))
+        except SQLAlchemyError as err:
+            refused.append(f"{table}.{column}: {type(err).__name__}: {err}")
+            log.warning("could not drop %s.%s: %s", table, column, err)
+        else:
+            dropped.append(f"{table}.{column} ({reason})")
+            log.info("dropped %s.%s: %s", table, column, reason)
+
+    return dropped, refused

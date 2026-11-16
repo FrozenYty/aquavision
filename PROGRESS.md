@@ -5,6 +5,38 @@
 - **P3-28: keyboard review uses original-image pixels.** Tab/Enter selects targets, N/P cycles them, arrows move one pixel, Shift+arrows resize, and Delete removes; keyboard edits enter the same undo stack. Focus is visible and preserved across redraws, and shortcuts are printed beside the canvas. `tests/test_review_keyboard.py` runs geometry and selection assertions under Node; the real page-handler test also exercises move, resize and delete.
 
 - **P3-27: pre-submit review undo is a stack.** Drag, draw, delete, relabel and confirmation keep isolated snapshots; cancelling a gesture preserves earlier history, and a server reload clears it. Node executes the pure functions and the real page handlers in `tests/review_history.mjs`, invoked by `tests/test_review_history.py`. Replacing the stack with one-step storage was demonstrated to fail.
+- **Defect: the capture API accepted and echoed a sensor reading that no client sent, and stored it
+  in a column nobody read.** Trigger: any authenticated client posting
+  `POST /api/capture/sessions/{id}/frames` with `turbidity_rel` in the body, or reading a frame
+  through `GET /api/frames` / the live socket - the field came back in `env` while the sensor it
+  named was gone from the capture path. Symptom: a frame carried an environment value that was
+  always NULL in the database (checked on 2026-11-16: three rows, zero non-NULL) and always zero
+  in the mock, so every reader had to know the field was decorative. Fixed by removing all three
+  sites; the tests that asserted the field now assert its absence.
+- **Defect: `init_db.py` reported an installed database as having no online model.** Trigger:
+  re-running `scripts/init_db.py` on a database whose online version already exists - the normal
+  thing to do after a schema change. Symptom: the model line printed `(candidate)` and the next
+  line advised activating one, while `model_version.is_online = 1` was true in the same database.
+  The state was read from this run's intention instead of from the database; it is now read back
+  after registration, which is what the operator sees.
+
+- **The turbidity sensor is not, in fact, gone from the repository - and the sweep says so**
+  (task ① of 11-16). The firmware lights it every five seconds and still answers `CMD TREAD`; the
+  SRS still lists it in Table 2-3 and §2.4; the contract and the prototype still show the field;
+  an in-flight lane-A branch is editing `server/app/rig/protocol.py` right now. So the server's
+  three dead sites were removed and the two live ones left alone: deleting a branch that mirrors a
+  real firmware event is not cleanup, it is a guess. The stale documents are named in the pull
+  request for the lead's sweep rather than edited inside a backend change.
+- **The first declared schema drop.** `OBSOLETE_COLUMNS` in `server/app/db.py` names
+  `media_asset.turbidity_rel` with its reason, and `init_db.py` drops exactly what is listed - never
+  "whatever the models stopped mentioning", because that is also what a rename looks like. The
+  migration ran on this machine's development database and printed
+  `schema migrated: dropped media_asset.turbidity_rel`; the rows were counted before it ran.
+- **One review note did not survive contact with the firmware.** The brief said the rig service's
+  comment claims "five-second timeout" while the firmware waits four. The firmware constant is
+  `cfg::CAPTURE_TIMEOUT_MS = 5000`, the state-machine document says five seconds, and the diagram
+  says `5 s` - so the comment is correct and was left alone. A wrong correction is a change that
+  has to be undone by someone else later.
 
 ## 2026-11-13
 
@@ -604,6 +636,7 @@
   **no single interpreter here can both capture live and draw boxes**. `P2-13` and `GATE P2` need one, and
   the two ways to get it are a decision rather than a discovery: install the inference stack into the
   environment that can see the camera, or find the venv cause.
+
 ## 2026-11-11
 
 - **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint
