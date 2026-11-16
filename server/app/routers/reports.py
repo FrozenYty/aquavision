@@ -10,6 +10,8 @@ The row is what makes the history queryable by period, template and basis; the f
 
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import date, datetime
 from pathlib import Path
 
@@ -44,6 +46,31 @@ class ReportBody(BaseModel):
     period_end: date | datetime
     template: str = Field(default="standard", pattern="^(standard|brief)$")
     basis: str = Field(default="reviewed", pattern="^(reviewed|raw)$")
+    preview_token: str | None = Field(default=None, min_length=64, max_length=64)
+
+
+@router.get("/preview")
+def preview_report(
+    db: SessionDep,
+    period_start: date | datetime,
+    period_end: date | datetime,
+    basis: str = Query(default="reviewed", pattern="^(reviewed|raw)$"),
+) -> dict[str, object]:
+    start, end = timebase.report_bounds(period_start, period_end)
+    if end <= start:
+        raise ApiError(BAD_PARAM, "结束日期不能早于开始日期")
+    online = db.scalar(select(ModelVersion).where(ModelVersion.is_online == 1))
+    figures = _figures(db, start, end, basis)
+    return ok(
+        {
+            "preview_token": _preview_token(start, end, basis, figures, online),
+            "period_start": serializers.iso(start),
+            "period_end": serializers.iso(end),
+            "basis": basis,
+            "model_version": online.version_name if online else None,
+            "figures": figures,
+        }
+    )
 
 
 @router.get("")
@@ -78,6 +105,10 @@ def create_report(
 
     online = db.scalar(select(ModelVersion).where(ModelVersion.is_online == 1))
     figures = _figures(db, start, end, body.basis)
+    if body.preview_token and body.preview_token != _preview_token(
+        start, end, body.basis, figures, online
+    ):
+        raise ApiError(CONFLICT, "数据或模型已更新，请刷新预览后重新生成")
 
     row = Report(
         report_code=code,
@@ -228,3 +259,14 @@ def _render(code: str, body: ReportBody, figures: dict[str, object], online) -> 
         "",
     ]
     return "\n".join(lines)
+
+
+def _preview_token(start, end, basis, figures, online) -> str:
+    values = [
+        start.isoformat(),
+        end.isoformat(),
+        basis,
+        figures,
+        online.version_name if online else None,
+    ]
+    return hashlib.sha256(json.dumps(values, sort_keys=True).encode("utf-8")).hexdigest()

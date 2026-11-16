@@ -646,7 +646,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       CSS each page loads, prints the table, and CI fails above a stated ceiling
       - no framework and no build tool is a deliberate choice; its cost is that nobody notices a page
         quietly growing
-- [ ] **P3-31** The report page previews its own figures · @chemflowers · done when the period chooser
+- [x] **P3-31** The report page previews its own figures · @chemflowers · done when the period chooser
       shows the numbers the report will carry before it is generated, and the preview and the file
       agree in a test
       - generating a report to discover it covers the wrong week is this page's ordinary failure

@@ -521,12 +521,32 @@ const ROUTES = {
     return row;
   },
 
+  "GET /reports/preview": async ({ query }) => {
+    if (!query.period_start || !query.period_end) throw new Fail(40001, "请选择统计周期");
+    if (query.period_end < query.period_start) throw new Fail(40002, "结束日期不能早于开始日期");
+    const frames = FRAMES.filter((f) => f.captured_at.slice(0, 10) >= query.period_start && f.captured_at.slice(0, 10) <= query.period_end);
+    const counts = {};
+    for (const frame of frames) for (const box of REVIEWS[frame.frame_id] ?? detectedObjects(frame)) {
+      if (query.basis === "reviewed" && box.review_status === 3) continue;
+      counts[box.class_code] = (counts[box.class_code] ?? 0) + 1;
+    }
+    const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+    const rejected = frames.filter((f) => f.quality.verdict === "retake").length;
+    const result = { period_start: query.period_start, period_end: query.period_end, basis: query.basis,
+      model_version: MODELS.find((m) => m.is_online)?.version_name ?? null,
+      figures: { frames: frames.length, rejected, rate: frames.length ? Number((rejected / frames.length).toFixed(4)) : 0,
+        species: Object.entries(counts).map(([code, count]) => ({ name: SPECIES.find((s) => s.class_code === code)?.cn_name ?? code, count, share: Number((count / total).toFixed(4)) })) } };
+    result.preview_token = [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(result))))].map((b) => b.toString(16).padStart(2, "0")).join("");
+    return result;
+  },
+
   // Reports, as the server answers: generated synchronously, ready when the call returns.
   "GET /reports": ({ query }) => paginate(REPORTS, query),
 
-  "POST /reports": ({ body }) => {
+  "POST /reports": async ({ body }) => {
     if (!body?.period_start || !body?.period_end) throw new Fail(40001, "请选择统计周期");
     if (body.period_end < body.period_start) throw new Fail(40002, "结束日期不能早于开始日期");
+    if (body.preview_token && body.preview_token !== (await ROUTES["GET /reports/preview"]({ query: body })).preview_token) throw new Fail(40901, "数据或模型已更新，请刷新预览后重新生成");
     const id = Math.max(0, ...REPORTS.map((r) => r.report_id)) + 1;
     const code = `RP${new Date().toISOString().slice(2, 10).replaceAll("-", "")}-${String(id).padStart(3, "0")}`;
     const report = {
@@ -639,7 +659,7 @@ export async function handle(method, path, { query, body }) {
   try {
     if (!route) throw new Fail(40401, `接口不存在：${method} ${path}`);
     // Clone so pages never share objects with the mock store, as with real JSON.
-    const data = structuredClone(route.handler({ id: route.id, query, body }));
+    const data = structuredClone(await route.handler({ id: route.id, query, body }));
     return { code: 0, message: "ok", data, request_id };
   } catch (err) {
     if (!(err instanceof Fail)) console.error(err);

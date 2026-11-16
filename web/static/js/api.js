@@ -147,6 +147,7 @@ export const listHardSamples = (query) => request("GET", "/hard-samples", { quer
 export const removeHardSample = (frameId) => request("DELETE", `/hard-samples/${frameId}`);
 export const listDatasets = () => request("GET", "/datasets");
 export const exportDataset = (body) => request("POST", "/datasets", { body });
+export const previewReport = (query) => request("GET", "/reports/preview", { query });
 export const listReports = () => request("GET", "/reports");
 export const createReport = (body) => request("POST", "/reports", { body });
 export const listModels = () => request("GET", "/models");
