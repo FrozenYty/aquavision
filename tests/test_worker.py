@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 import pytest
 from app.config import get_settings
 from app.db import Base, engine_from_dsn
-from app.models import DetectObject, DetectTask, DetectTaskItem, MediaAsset, SysUser
+from app.models import DetectObject, DetectTask, DetectTaskItem, MediaAsset, SpeciesDict, SysUser
 from app.routers.tasks import BatchBody, create_batch, retry_task
 from app.seed import seed_species
 from app.worker import ITEM_DONE, process_task, requeue_stale, run_once
@@ -313,6 +313,14 @@ def test_a_task_runs_with_its_own_inference_parameters(session_factory):
         task.conf_thr = 0.7
         task.iou_thr = 0.5
         task.max_det = 42
+        session.commit()
+
+    # The per-class floors are read for every job (FR-M6-04). With all four at the task's own value the
+    # model is asked for exactly the task's row; a floor *below* it is what lowers the ask, and
+    # tests/test_class_thresholds.py holds that case.
+    with session_factory() as session:
+        for species in session.scalars(select(SpeciesDict)):
+            species.conf_thr = 0.7
         session.commit()
 
     seen: dict = {}
