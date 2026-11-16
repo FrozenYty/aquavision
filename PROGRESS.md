@@ -1,3 +1,7 @@
+## 2026-11-16
+
+- **P3-27: pre-submit review undo is a stack.** Drag, draw, delete, relabel and confirmation keep isolated snapshots; cancelling a gesture preserves earlier history, and a server reload clears it. Node executes the pure functions and the real page handlers in `tests/review_history.mjs`, invoked by `tests/test_review_history.py`. Replacing the stack with one-step storage was demonstrated to fail.
+
 ## 2026-11-13
 
 - **The folder beside the repository was renamed, because it was named for the smaller half of what it
