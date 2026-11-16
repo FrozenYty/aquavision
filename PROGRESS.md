@@ -1,6 +1,14 @@
 ## 2026-11-16
 
 - **P3-27: pre-submit review undo is a stack.** Drag, draw, delete, relabel and confirmation keep isolated snapshots; cancelling a gesture preserves earlier history, and a server reload clears it. Node executes the pure functions and the real page handlers in `tests/review_history.mjs`, invoked by `tests/test_review_history.py`. Replacing the stack with one-step storage was demonstrated to fail.
+- **Defect: the capture route built a file path from request values and took any size of body.**
+  Trigger: `POST /api/capture/sessions/{id}/frames` with `point_code` or a session id carrying `..`,
+  a slash, a backslash or a percent-encoded dot-dot - or with any body at all, however large. Symptom:
+  before 2026-11-16 the traversal answered **200** and wrote the frame under a path built from that
+  value (`docs` had always said frames live under `data/frames/<site>/<day>/<session>`), and a 9 MiB
+  body was read and parsed before anything objected - `MAX_BODY_BYTES`, `MAX_FRAME_BYTES` and the
+  1920×1080 ceiling now refuse each of those with `40002` and the number in the sentence, and the
+  tests that prove it were run red first (`point_code: "../escape"` was accepted and stored).
 
 ## 2026-11-13
 

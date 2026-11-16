@@ -134,6 +134,8 @@ GET /api/frames?page=1&size=24&site=A3&start=2026-11-01&end=2026-11-03
 `POST /api/capture/sessions/{id}/frames` 放在 `quality_components` 里返回，**不入库**：帧表只留总分与判定，
 那才是后续每一步实际读的东西。分项是拍摄当下的诊断量，不是图像的属性。
 
+**输入上限（`P3-26`）。** `POST /api/capture/sessions/{id}/frames` 对下列每种情况都回 `40002` 并点名上限：请求体超过 8 MiB（按 `Content-Length` 在解析请求体之前判断）、解码后的帧超过 4 MiB、图像宽或高超过 1920×1080（SRS 声明的采集链路）、点位编号或会话编号不是普通名字（只能是字母、数字、`_`、`-`，不含 `..` 与路径分隔符——两者都会进入落盘文件的路径）。这些数字只在 `server/app/routers/capture.py` 里声明一次。
+
 ### 检测框
 
 ```json

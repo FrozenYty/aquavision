@@ -135,6 +135,13 @@ The three components behind the score — sharpness, brightness, colour cast —
 keeps the score and the verdict, which is what every later decision reads. They are a diagnostic of the
 moment, not a property of the image.
 
+**Input limits (`P3-26`).** `POST /api/capture/sessions/{id}/frames` refuses each of these with `40002`
+and a sentence naming the limit: a request body over 8 MiB (read from `Content-Length`, before the body is
+parsed), a decoded frame over 4 MiB, an image wider or taller than 1920×1080 - the acquisition chain the
+SRS declares - and a point code or session id that is not a plain name (letters, digits, `_`, `-`, no `..`
+and no path separator, because both end up in the stored file's path). The numbers are declared once, in
+`server/app/routers/capture.py`.
+
 ### Detection box
 
 ```json
