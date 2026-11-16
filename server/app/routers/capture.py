@@ -14,6 +14,7 @@ import base64
 import binascii
 import errno
 import hashlib
+import re
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -36,6 +37,22 @@ router = APIRouter(prefix="/api", tags=["capture"], dependencies=[Depends(get_cu
 
 #: A frame whose capture time is further than this from the server is refused (AC-05).
 CAPTURE_SKEW = timedelta(seconds=5)
+
+#: The declared input limits (P3-26). One place, because the contract, the sentence a client reads and
+#: the code that refuses have to agree.
+#:
+#: The pipeline's acquisition chain is a 1080p camera (`vision/capture.py` opens 1920x1080) and the SRS
+#: says so, so an image beyond that is a client mistake rather than a frame the pipeline resizes. A JPEG
+#: at that size is well under 2 MiB, and 4 leaves headroom for a noisier scene. The body ceiling bounds
+#: what the JSON may weigh: the frame's 4 MiB, base64's four-thirds, and the envelope.
+MAX_BODY_BYTES = 8 * 1024 * 1024
+MAX_FRAME_BYTES = 4 * 1024 * 1024
+MAX_FRAME_WIDTH = 1920
+MAX_FRAME_HEIGHT = 1080
+
+#: A value that ends up in a path (point code, session id) must be a plain name. It is written under
+#: `data/frames/<site>/<day>/<session>`, and `..` or a separator would put the file outside the data root.
+_SAFE_SEGMENT = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,31}\Z")
 
 
 class FrameBody(BaseModel):
@@ -132,8 +149,24 @@ def grab_frame(
     settings: SettingsDep,
 ) -> dict[str, object]:
     """Store one frame, score it, and decide whether it may enter the detection queue."""
+    # Both names land in the file path; neither may carry `..` or a separator (P3-26).
+    _safe_segment("点位编号", body.point_code)
+    _safe_segment("会话编号", session_id)
+
     raw = _decode(body.image_b64)
+    if len(raw) > MAX_FRAME_BYTES:
+        raise ApiError(
+            BAD_PARAM,
+            f"帧图像大小超过上限：{len(raw)} 字节 > {MAX_FRAME_BYTES} 字节（声明的上限），拒绝入库",
+        )
     stored = _reencode(raw)
+    height, width = stored.shape[:2]
+    if width > MAX_FRAME_WIDTH or height > MAX_FRAME_HEIGHT:
+        raise ApiError(
+            BAD_PARAM,
+            f"图像尺寸超过采集链路上限：{width}×{height} > {MAX_FRAME_WIDTH}×{MAX_FRAME_HEIGHT}"
+            "（采集链路声明 1080p），拒绝入库",
+        )
     quality = score_frame(stored)
 
     captured_at = body.captured_at or datetime.now(UTC)
@@ -288,6 +321,16 @@ def _asset(db, frame_id: str) -> MediaAsset:
     if row is None:
         raise ApiError(NOT_FOUND, "帧不存在")
     return row
+
+
+def _safe_segment(field: str, value: str) -> str:
+    """Refuse a path segment that is not a plain name (P3-26)."""
+    if not _SAFE_SEGMENT.match(value):
+        raise ApiError(
+            BAD_PARAM,
+            f"{field}名称不合法：只能用字母、数字、下划线和连字符，且不能包含 .. 或路径分隔符",
+        )
+    return value
 
 
 def _decode(value: str) -> bytes:

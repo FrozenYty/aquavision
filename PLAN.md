@@ -624,12 +624,18 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         because that document is the schema the code builds
       - the service comment claiming a "five-second timeout" was checked against the firmware:
         `cfg::CAPTURE_TIMEOUT_MS = 5000`, so the comment is right and the note about 4 s does not apply
-- [ ] **P3-26** Upload and input limits · @Gtechson · done when a frame above a stated size, an image
-      whose dimensions exceed the model's input, a request body above the declared maximum, and a
-      name carrying `..` or a path separator are each refused with the project envelope - not accepted,
-      and not a 500
-      - the capture route writes whatever bytes arrive into a path built partly from request values,
-        and no maximum is stated anywhere
+- [x] **P3-26** Upload and input limits · @Gtechson · **delivered 11-16**: four inputs the capture path
+      took, declared nowhere and refused by nothing, each refused now with `40002` and a sentence naming
+      the limit - a body over 8 MiB (read from `Content-Length` before parsing, in the request middleware,
+      so it covers every route), a decoded frame over 4 MiB, an image over 1920×1080 (the acquisition
+      chain the SRS declares; the pipeline resizes for the model, so the model's own 640 cannot be the
+      bound), and a point code or session id that is not a plain name - both are written into the stored
+      file's path, which was the traversal. `tests/test_input_limits.py` holds the four refusals plus the
+      legitimate 1280×720 frame that still passes
+      - **the traversal was live, not theoretical:** before this change `point_code: "../escape"` answered
+        200 and stored a frame under a path built from it; the test was written first and it failed
+      - the numbers are declared once, in `server/app/routers/capture.py`, and the contract states them
+        for a client author to read
 - [x] **P3-27** Undo on the review canvas · @chemflowers · done when a mistaken drag, draw or delete
       can be undone before submit, and the undo stack is asserted as a pure function under Node
       - today a wrong drag is unrecoverable until the version panel is used *after* submitting, which
