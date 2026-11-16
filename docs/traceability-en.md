@@ -213,7 +213,7 @@ Every screen of the prototype, element by element, traced to the requirement it 
 | TM-091 | P-11 Inspection reports | form | Template | See figure 11, callout 2. Standard or brief. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-092 | P-11 Inspection reports | form | Counting basis | See figure 11, callout 3. Reviewed or raw results. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-093 | P-11 Inspection reports | actions | Generate | See figure 11, callout 4. Generates the report on the server. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-094 | P-11 Inspection reports | content | Preview | See figure 11, callout 5. Species composition, rejection and model information from the statistics routes. | FR-M5-01, FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
+| TM-094 | P-11 Inspection reports | content | Preview | See figure 11, callout 5. Species composition, rejection and model information for the selected period from `/api/reports/preview`. | FR-M5-01, FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-095 | P-11 Inspection reports | content | Report history | See figure 11, callout 6. Every generated report and its status. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-096 | P-11 Inspection reports | actions | Download | See figure 11, callout 7. No download route yet; the button says so. | FR-M5-04 | Done | Not started | Not started | Sun Jianheng | Yao Tianyu |
 

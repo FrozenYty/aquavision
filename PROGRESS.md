@@ -1,6 +1,52 @@
 ## 2026-11-16
 
+- **P3-15 frontend half: species edits are validated and executable.** The user assigned the page and frontend validation to lane C and left job-level threshold application and labels validation with lane B. P-12 orders the real four classes, reports missing/unknown codes, and accepts 0..1 with two decimal places, matching the existing API/storage. `tests/test_species_threshold_ui.py` runs validation, table rendering and the real save handler under Node; a rejected save retains input and re-enables the button. A prototype-key regression was shown red. P3-15 remains open and the interface still states that detection does not read these thresholds yet.
+
+- **P3-30: every page has a measured asset ceiling.** `scripts/check-frontend-budget.py` prints raw JS/CSS bytes for all thirteen pages, including inline code and deduplicated transitive literal imports (optional mocks included), and fails above 128 KiB JS or 320 KiB CSS. CI runs the gate. `tests/test_frontend_budget.py` proves import cycles do not double-count and that both limits and the command failure path turn red on oversized assets; shrinking the asset restores success. Fonts and images are outside the stated budget.
+
+- **P3-31: the report previews the chosen period before generation.** With explicit authorization for the backend addition, `GET /api/reports/preview` reuses the exact generation query without writing a file or history row. The page refreshes on period/basis changes, ignores stale answers and disables generation until the current preview succeeds. Contract pairs, mock, REST client, health route count and permission inventory moved together. `tests/test_report_preview.py` compares displayed numbers with the generated Markdown in both bases, and executes delayed/failing page requests under Node. The missing route was shown red first.
+
+- **P3-21: business dates keep the server basis.** Formatting preserves the supplied wall clock, milliseconds and offset in every host zone; home trend labels use returned dates. Report presets use the operating date from the trend endpoint and submit calendar dates. With explicit cross-lane authorization, the report parser accepts whole operating dates alongside existing timestamp clients; `timebase.report_bounds` owns conversion, including daylight-saving transitions. `tests/test_operating_time.py` checks three host zones, the whole-day API and a 23-hour day. Reverting report parsing was shown to fail the date test.
+
+- **P3-29: every page is exercised against three failures.** A 15-second request deadline covers both headers and body, aborts the fetch and clears its timer. Server errors name retry and administrator escalation; expired authentication directs the operator back to sign-in. `tests/test_page_failures.py` executes the actual thirteen page scripts, REST client and UI loader for 500, timeout and 401, checking an actionable message and no remaining spinner. The original login 500 path failed the matrix.
+
+- **P3-32: review resumes its navigation state per tab.** Selection and zoom are restored only for the same frame and surviving object ids; the image browser resumes its page. Corrupt or obsolete saved state is discarded; unavailable browser storage shows an actionable warning. Annotation drafts are not stored. `tests/test_review_place.py` asserts the serialization round trip, frame isolation, stale ids and storage refusal under Node.
+
+- **P3-28: keyboard review uses original-image pixels.** Tab/Enter selects targets, N/P cycles them, arrows move one pixel, Shift+arrows resize, and Delete removes; keyboard edits enter the same undo stack. Focus is visible and preserved across redraws, and shortcuts are printed beside the canvas. `tests/test_review_keyboard.py` runs geometry and selection assertions under Node; the real page-handler test also exercises move, resize and delete.
+
 - **P3-27: pre-submit review undo is a stack.** Drag, draw, delete, relabel and confirmation keep isolated snapshots; cancelling a gesture preserves earlier history, and a server reload clears it. Node executes the pure functions and the real page handlers in `tests/review_history.mjs`, invoked by `tests/test_review_history.py`. Replacing the stack with one-step storage was demonstrated to fail.
+- **Defect: the capture API accepted and echoed a sensor reading that no client sent, and stored it
+  in a column nobody read.** Trigger: any authenticated client posting
+  `POST /api/capture/sessions/{id}/frames` with `turbidity_rel` in the body, or reading a frame
+  through `GET /api/frames` / the live socket - the field came back in `env` while the sensor it
+  named was gone from the capture path. Symptom: a frame carried an environment value that was
+  always NULL in the database (checked on 2026-11-16: three rows, zero non-NULL) and always zero
+  in the mock, so every reader had to know the field was decorative. Fixed by removing all three
+  sites; the tests that asserted the field now assert its absence.
+- **Defect: `init_db.py` reported an installed database as having no online model.** Trigger:
+  re-running `scripts/init_db.py` on a database whose online version already exists - the normal
+  thing to do after a schema change. Symptom: the model line printed `(candidate)` and the next
+  line advised activating one, while `model_version.is_online = 1` was true in the same database.
+  The state was read from this run's intention instead of from the database; it is now read back
+  after registration, which is what the operator sees.
+
+- **The turbidity sensor is not, in fact, gone from the repository - and the sweep says so**
+  (task ① of 11-16). The firmware lights it every five seconds and still answers `CMD TREAD`; the
+  SRS still lists it in Table 2-3 and §2.4; the contract and the prototype still show the field;
+  an in-flight lane-A branch is editing `server/app/rig/protocol.py` right now. So the server's
+  three dead sites were removed and the two live ones left alone: deleting a branch that mirrors a
+  real firmware event is not cleanup, it is a guess. The stale documents are named in the pull
+  request for the lead's sweep rather than edited inside a backend change.
+- **The first declared schema drop.** `OBSOLETE_COLUMNS` in `server/app/db.py` names
+  `media_asset.turbidity_rel` with its reason, and `init_db.py` drops exactly what is listed - never
+  "whatever the models stopped mentioning", because that is also what a rename looks like. The
+  migration ran on this machine's development database and printed
+  `schema migrated: dropped media_asset.turbidity_rel`; the rows were counted before it ran.
+- **One review note did not survive contact with the firmware.** The brief said the rig service's
+  comment claims "five-second timeout" while the firmware waits four. The firmware constant is
+  `cfg::CAPTURE_TIMEOUT_MS = 5000`, the state-machine document says five seconds, and the diagram
+  says `5 s` - so the comment is correct and was left alone. A wrong correction is a change that
+  has to be undone by someone else later.
 - **Defect: the capture route built a file path from request values and took any size of body.**
   Trigger: `POST /api/capture/sessions/{id}/frames` with `point_code` or a session id carrying `..`,
   a slash, a backslash or a percent-encoded dot-dot - or with any body at all, however large. Symptom:
@@ -608,6 +654,7 @@
   **no single interpreter here can both capture live and draw boxes**. `P2-13` and `GATE P2` need one, and
   the two ways to get it are a decision rather than a discovery: install the inference stack into the
   environment that can see the camera, or find the venv cause.
+
 ## 2026-11-11
 
 - **A four-way audit ran read-only, and none of it fixed its own findings.** Four agents with disjoint

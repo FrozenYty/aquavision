@@ -135,7 +135,7 @@ def test_every_contract_route_is_mounted(client):
     documented_infrastructure = {("GET", "/api/health")}
     extra = sorted(present - contract - documented_infrastructure)
     assert not extra, f"服务端挂载了契约没有列出的接口: {extra}"
-    assert len(contract) == 46
+    assert len(contract) == 47
     # `/api/health` publishes the contract size as `contract_routes`. Tying it to the table here is the
     # point: it was hardcoded and stayed at 42 while the contract grew to 44, and nothing noticed.
     health = client.get("/api/health").json()["data"]
@@ -231,7 +231,7 @@ def test_capture_scores_the_frame_and_is_idempotent(client):
     assert isinstance(frame["quality"], dict)
     assert frame["quality"]["score"] > 0
     assert frame["quality"]["verdict"] in {"ok", "retake"}
-    assert isinstance(frame["env"], dict) and "turbidity_rel" in frame["env"]
+    assert "env" not in frame, "the turbidity sensor is gone; the field must not come back"
     assert frame["width"] == 160
     assert isinstance(frame["height"], int)
     assert set(frame["quality_components"]) == {"sharpness", "brightness", "colorcast"}
@@ -577,7 +577,7 @@ def test_frame_detail_matches_the_captured_frame(client):
     assert isinstance(detail["quality"], dict)
     assert isinstance(detail["quality"]["score"], int)
     assert detail["quality"]["verdict"] in {"ok", "retake"}
-    assert isinstance(detail["env"], dict) and "turbidity_rel" in detail["env"]
+    assert "env" not in detail
     assert isinstance(detail["width"], int) and isinstance(detail["height"], int)
 
     missing = client.get("/api/frames/nope", headers=auth(token)).json()

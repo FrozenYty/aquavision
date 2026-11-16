@@ -1,0 +1,21 @@
+import assert from "node:assert/strict";
+import { keyboardBox, cycleBox } from "../web/static/js/canvas.js";
+
+const box = { x: .1, y: .2, w: .3, h: .4 };
+const right = keyboardBox(box, "ArrowRight", false, 1280, 720);
+assert.equal(right.x, box.x + 1 / 1280);
+assert.equal(right.w, box.w);
+assert.equal(keyboardBox(box, "ArrowDown", false, 1280, 720).y, box.y + 1 / 720);
+assert.equal(keyboardBox(box, "ArrowLeft", true, 1280, 720).w, box.w - 1 / 1280);
+assert.equal(keyboardBox(box, "ArrowUp", true, 1280, 720).h, box.h - 1 / 720);
+assert.equal(keyboardBox({ ...box, x: 0 }, "ArrowLeft", false, 1280, 720).x, 0);
+assert.equal(keyboardBox({ ...box, w: 1 / 1280 }, "ArrowLeft", true, 1280, 720).w, 1 / 1280);
+assert.equal(keyboardBox(box, "ArrowRight", false, 0, 720), null);
+assert.equal(keyboardBox(box, "a", false, 1280, 720), null);
+assert.deepEqual(box, { x: .1, y: .2, w: .3, h: .4 });
+const objects = [{ object_id: 9 }, { object_id: 2 }];
+assert.equal(cycleBox(objects, 9, 1), 2);
+assert.equal(cycleBox(objects, 2, 1), 9);
+assert.equal(cycleBox(objects, null, -1), 2);
+assert.equal(cycleBox([], null, 1), null);
+console.log("Keyboard: original-pixel move/resize, edges, selection and immutability passed");

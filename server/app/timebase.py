@@ -59,6 +59,17 @@ def as_utc(value: datetime) -> datetime:
     return value.astimezone(UTC).replace(tzinfo=None)
 
 
+def report_bounds(start: date | datetime, end: date | datetime) -> tuple[datetime, datetime]:
+    """Dates cover whole operating days; aware timestamps retain their exact instants."""
+    lower = as_utc(start) if isinstance(start, datetime) else _local_midnight(start)
+    upper = (
+        as_utc(end)
+        if isinstance(end, datetime)
+        else _local_midnight(end + timedelta(days=1)) - timedelta(microseconds=1)
+    )
+    return lower, upper
+
+
 def iso(value: datetime | None, *, timespec: str = "milliseconds") -> str | None:
     """The contract's outbound timestamp: ISO 8601 carrying the configured offset.
 

@@ -461,6 +461,8 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         a new mechanism, and refusing a class code that disagrees with `labels.txt` is one comparison
         against the delivered file
 
+      - C-lane frontend delivered separately: four-class ordering, API-aligned 0..1/two-decimal validation, and unknown-code refusal are exercised by `tests/test_species_threshold_ui.py`. The task stays open: lane B owns per-job threshold application and labels validation, as agreed with the user.
+
 - [x] **P3-16** Review versions and rollback · @Gtechson · **unblocks `P3-05`** · delivered 11-11 (#148)
       - `GET /api/review/frames/{frame_id}/versions` lists each entry newest first with its action, time,
         author, and the box count before and after, read from the JSON `sys_log` recorded rather than
@@ -549,7 +551,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         and `POST /api/users/{id}/reset-password` bumps it. `tests/test_token_epoch.py` shows the old
         token answering `40101` after the reset while the administrator's own session keeps working. The
         SRS records the column at V1.14 and the data-model tables follow in both languages
-- [ ] **P3-21** The interface reads time the way ADR 14 says · @chemflowers · follows **ADR 14** · done
+- [x] **P3-21** The interface reads time the way ADR 14 says · @chemflowers · follows **ADR 14** · done
       when no page re-derives a date from the browser's zone, and a report period is not a hardcoded offset
       - `web/static/js/ui.js`'s formatter rebuilds every timestamp in the **browser's** zone, so a reviewer
         outside UTC+8 reads one date on the dashboard and another in a filtered list, each correct by its
@@ -605,6 +607,23 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         not add to an existing table
       - done when a test builds a database from the previous schema, upgrades it, and asserts the old
         rows survive and the new column exists with its documented default
+- [x] **P3-39** The turbidity leftovers on the server · @Gtechson · **delivered 11-16**: the sensor's
+      value was removed from the server's three sites - `media_asset.turbidity_rel` (a declared drop in
+      `OBSOLETE_COLUMNS`, after checking that every stored value was NULL), the capture request's
+      `turbidity_rel` field, and `serializers.frame`'s `env` object, which existed only to hold it. The
+      covering assertions now hold the absence (`"env" not in frame`) rather than the field
+      - **the other two sites stay, and here is why.** The firmware still reads the sensor every 5 s
+        (`cfg::TURBIDITY_PERIOD_MS = 5000`) and still sends `EVT TURBIDITY`, so `rig/service.py`'s
+        branch mirrors a real event; `protocol.register_read`/`REGISTER_READ_PREFIX` are used by
+        `scripts/test_turbidity.py` and the firmware still implements `CMD TREAD`. An in-flight branch
+        (`feat/turbidity-write-probe`) is editing `server/app/rig/protocol.py`, so deleting them now
+        would collide. Their removal belongs with the firmware's, not before it
+      - **reported, not edited:** the SRS (Table 2-3, §2.4, the data dictionary row and the module
+        count), the contract's frame example and the prototype's frame shape still describe the field -
+        lane A's documents, for the lead's sweep. `docs/data-model-{en,zh}.md` follows the code now,
+        because that document is the schema the code builds
+      - the service comment claiming a "five-second timeout" was checked against the firmware:
+        `cfg::CAPTURE_TIMEOUT_MS = 5000`, so the comment is right and the note about 4 s does not apply
 - [x] **P3-26** Upload and input limits · @Gtechson · **delivered 11-16**: four inputs the capture path
       took, declared nowhere and refused by nothing, each refused now with `40002` and a sentence naming
       the limit - a body over 8 MiB (read from `Content-Length` before parsing, in the request middleware,
@@ -621,25 +640,25 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       can be undone before submit, and the undo stack is asserted as a pure function under Node
       - today a wrong drag is unrecoverable until the version panel is used *after* submitting, which
         is too late for a reviewer working through forty frames
-- [ ] **P3-28** The canvas from the keyboard · @chemflowers · done when a box can be selected, nudged,
+- [x] **P3-28** The canvas from the keyboard · @chemflowers · done when a box can be selected, nudged,
       resized and deleted without a mouse, the focus order is visible, and the keys are printed on the
       page
       - the core interaction of the product is mouse-only, and a nudge of one pixel is the correction a
         reviewer needs most often
-- [ ] **P3-29** Every page survives a failed request · @chemflowers · done when each of the thirteen
+- [x] **P3-29** Every page survives a failed request · @chemflowers · done when each of the thirteen
       pages, given a 500, a timeout and a 401, shows a sentence the operator can act on and leaves no
       spinner running - asserted as a table of (page, failure, expected state)
       - `P2-12` brought those states to the pages that existed then; the assertion was per page and the
         pages have been rebuilt since
-- [ ] **P3-30** A weight budget for the frontend · @chemflowers · done when a script measures the JS and
+- [x] **P3-30** A weight budget for the frontend · @chemflowers · done when a script measures the JS and
       CSS each page loads, prints the table, and CI fails above a stated ceiling
       - no framework and no build tool is a deliberate choice; its cost is that nobody notices a page
         quietly growing
-- [ ] **P3-31** The report page previews its own figures · @chemflowers · done when the period chooser
+- [x] **P3-31** The report page previews its own figures · @chemflowers · done when the period chooser
       shows the numbers the report will carry before it is generated, and the preview and the file
       agree in a test
       - generating a report to discover it covers the wrong week is this page's ordinary failure
-- [ ] **P3-32** The canvas keeps its place across a reload · @chemflowers · done when the selection,
+- [x] **P3-32** The canvas keeps its place across a reload · @chemflowers · done when the selection,
       zoom and page survive a refresh, asserted as a pure function that serialises and restores them
       - a reviewer interrupted mid-set currently starts again from the first frame
 - [x] **P3-33** The acceptance matrix cannot go quiet · @IkeaFyj · **delivered 11-12**:

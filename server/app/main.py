@@ -254,7 +254,7 @@ def create_app() -> FastAPI:
                 "database": database,
                 # Included routers are nested, so counting `app.routes` counts wrappers.
                 "routes": sum(len(router.routes) for router in ROUTERS) + 1,
-                "contract_routes": 46,
+                "contract_routes": 47,
                 "jwt_secret_is_default": settings.jwt_secret_is_default,
             }
         )

@@ -60,6 +60,9 @@ jobs:
         if: github.event_name == 'pull_request'
         run: python scripts/check-commit-messages.py --range "origin/${{ github.base_ref }}..HEAD"
 
+      - name: Frontend asset budget
+        run: python scripts/check-frontend-budget.py
+
       - name: Tests
         run: |
           if compgen -G "tests/test_*.py" > /dev/null; then

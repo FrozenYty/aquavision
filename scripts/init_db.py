@@ -32,7 +32,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "server"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import register_model  # noqa: E402
-from app.db import Base, add_missing_columns, dsn_from_env, engine_from_dsn  # noqa: E402
+from app.db import (  # noqa: E402
+    Base,
+    add_missing_columns,
+    drop_obsolete_columns,
+    dsn_from_env,
+    engine_from_dsn,
+)
 from app.models import EXPECTED_COLUMNS, ModelVersion, SpeciesDict, SysUser  # noqa: E402
 from app.security import hash_password  # noqa: E402
 from app.seed import SPECIES_SEED, seed_species  # noqa: E402
@@ -111,6 +117,7 @@ def init_db(dsn: str, admin_password: str | None = None) -> None:
     # missing columns are added next, in place, without touching a row.
     Base.metadata.create_all(engine)
     added, refused = add_missing_columns(engine)
+    dropped, undroppable = drop_obsolete_columns(engine)
 
     with Session(engine) as session:
         inserted = seed_species(session)
@@ -128,13 +135,24 @@ def init_db(dsn: str, admin_password: str | None = None) -> None:
     print(f"species seeded: {inserted} new, {len(codes)} total")
     if added:
         print(f"schema upgraded: {', '.join(added)} (existing rows kept)")
+    if dropped:
+        print(f"schema migrated: dropped {', '.join(dropped)}")
     if refused:
         for problem in refused:
             print(f"  not upgraded: {problem}", file=sys.stderr)
     model_versions = register_delivered_versions(dsn)
-    for name, path, online in model_versions:
-        print(f"model version: {name} -> {path} ({'online' if online else 'candidate'})")
-    if model_versions and not any(online for _name, _path, online in model_versions):
+    # Which version is online is a fact about the database after registration, not a by-product of this
+    # run: a version that was already online is not "activated" again, and reporting it as a candidate
+    # (with a hint to activate one) was a misleading line on every re-run of an installed database.
+    with Session(engine) as session:
+        online_name = session.scalar(
+            select(ModelVersion.version_name).where(ModelVersion.is_online == 1)
+        )
+    for name, path, _activated in model_versions:
+        print(
+            f"model version: {name} -> {path} ({'online' if name == online_name else 'candidate'})"
+        )
+    if model_versions and online_name is None:
         print("no model version is online: activate one with scripts/register_model.py <directory>")
     if first_password is not None:
         print()
@@ -155,6 +173,7 @@ def init_db(dsn: str, admin_password: str | None = None) -> None:
         if actual != count:
             problems.append(f"{table} has {actual} columns, the dictionary says {count}")
     problems.extend(refused)
+    problems.extend(undroppable)
     if problems:
         for problem in problems:
             print(f"  mismatch: {problem}", file=sys.stderr)

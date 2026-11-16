@@ -3,11 +3,7 @@
 export const esc = (value) =>
   String(value ?? "").replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
-// Timestamps arrive as ISO 8601 with offset; render in the browser's local zone.
-export function fmtTime(iso) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("zh-CN", { hour12: false });
-}
+export { fmtTime } from "./time.js";
 
 // Retake is marked by text as well as colour (SRS §5.1).
 export function qualityBadge(quality) {

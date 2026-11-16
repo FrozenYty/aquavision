@@ -108,7 +108,6 @@ class MediaAsset(Base):
     quality_score: Mapped[int] = mapped_column(SmallInteger, server_default="0")  # 0-100
     quality_flag: Mapped[int] = mapped_column(SmallInteger, server_default="0")  # 0 ok, 1 retake
     is_retake: Mapped[int] = mapped_column(SmallInteger, server_default="0")
-    turbidity_rel: Mapped[int | None] = mapped_column(SmallInteger)  # NULL without sensor
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
@@ -425,7 +424,7 @@ TABLES = (
 EXPECTED_COLUMNS = {
     "sys_user": 14,
     "sys_log": 10,
-    "media_asset": 18,
+    "media_asset": 17,
     "detect_task": 16,
     "detect_object": 19,
     "species_dict": 10,
