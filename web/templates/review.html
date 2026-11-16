@@ -36,8 +36,8 @@
             </div>
             <span class="ms-auto small">计数 <strong class="av-mono" id="count-change">—</strong></span>
           </div>
-          <div id="viewport" class="av-empty">正在载入…</div>
-          <div class="small text-secondary mt-2">选中框后拖动可移动，拖四角手柄可调整大小；改类别用上方下拉框。按住 Ctrl 滚动滚轮缩放；拖动中按 Esc 撤回这一次拖动；Ctrl＋Z（Mac 为 ⌘＋Z）依次撤销提交前的修改。</div>
+          <div id="viewport" class="av-empty" tabindex="0" role="region" aria-label="复核画布" aria-describedby="keyboard-help">正在载入…</div>
+          <div class="small text-secondary mt-2" id="keyboard-help">Tab 移动焦点，Enter 选择目标；N／P 选择下一个／上一个框；方向键移动原图 1 像素，Shift＋方向键调整宽高 1 像素；Delete 删除；V 选择，B 画框；＋／－ 缩放，0 适应宽度。选中框后拖动可移动，拖四角手柄可调整大小；改类别用上方下拉框。按住 Ctrl 滚动滚轮缩放；拖动中按 Esc 撤回这一次拖动；Ctrl＋Z（Mac 为 ⌘＋Z）依次撤销提交前的修改。</div>
         </section>
       </div>
       <div class="col-xl-4">
@@ -70,7 +70,7 @@
     import { confirmAction, esc, fmtTime, loadInto, showEmpty, showError, showLoading, toast }
       from "../static/js/ui.js";
     import { CLASSES, boxHtml, pictureHtml, statusBadge } from "../static/js/boxes.js";
-    import { MIN_BOX, ZOOM_STEPS, anchorScroll, drawBox, moveBox, nextZoom, resizeBox, toImageCoords }
+    import { MIN_BOX, ZOOM_STEPS, anchorScroll, cycleBox, drawBox, keyboardBox, moveBox, nextZoom, resizeBox, toImageCoords }
       from "../static/js/canvas.js";
     import { actionLabel, actionTone, authorText, restoreState, restoreText, rollbackPlan, versionText }
       from "../static/js/versions.js";
@@ -92,6 +92,8 @@
     let mode = "select";
     let history = [];
     let zoom = 1;
+    let imageWidth = 0;
+    let imageHeight = 0;
     // The gesture in progress: { id, kind: "draw" | "move" | a corner, start, from, undoBefore, moved }.
     let drag = null;
     // The version panel: the frame's timeline, what the reviewer picked, and the restore in flight.
@@ -123,9 +125,12 @@
         box.insertAdjacentHTML("beforeend", HANDLES.map((h) => `<span class="av-handle" data-h="${h}"></span>`).join(""));
       }
       $("count-change").textContent = `${initialCount} → ${objects.length}`;
+      const focused = document.activeElement?.closest(".av-object-row");
+      const focusId = focused?.dataset.id;
+      const focusAction = document.activeElement?.dataset.act;
       $("objects").innerHTML = objects.map((o) => `
         <li class="av-object-row${o.object_id === selected ? " is-selected" : ""}" data-id="${o.object_id}">
-          <span class="av-class av-class-${o.class_code}">${CLASSES[o.class_code]}</span>
+          <button class="btn btn-sm av-class av-class-${o.class_code}" type="button" data-act="select" aria-pressed="${o.object_id === selected}">目标 ${objects.indexOf(o) + 1} · ${CLASSES[o.class_code]}</button>
           <span class="av-mono small">${o.is_manual ? "人工" : o.confidence.toFixed(2)}</span>
           ${statusBadge(o)}
           <span class="ms-auto d-flex gap-1">
@@ -133,6 +138,10 @@
             <button class="btn btn-sm btn-outline-danger" data-act="delete" type="button">删除</button>
           </span>
         </li>`).join("") || '<li class="text-secondary small">没有目标，用“画框”新增。</li>';
+      if (focusId) {
+        const target = $("objects").querySelector(`[data-id="${focusId}"] [data-act="${focusAction}"]`);
+        (target ?? $("viewport")).focus({ preventScroll: true });
+      }
     }
 
     function select(id) {
@@ -286,6 +295,11 @@
       select(id);
     });
 
+    $("objects").addEventListener("focusin", (event) => {
+      const row = event.target.closest(".av-object-row");
+      if (!drag && row && Number(row.dataset.id) !== selected) select(Number(row.dataset.id));
+    });
+
     $("class-select").addEventListener("change", () => {
       if (!selected || drag) return;
       remember();
@@ -309,7 +323,7 @@
     };
 
     document.addEventListener("keydown", (event) => {
-      if (event.target instanceof Element && event.target.closest("select, input")) return;
+      if (event.target instanceof Element && event.target.closest("select, input, textarea, [contenteditable]")) return;
       if (event.key === "Escape") {
         // Esc takes back the gesture in progress, then the version panel, then the draw tool and selection.
         if (drag) return cancelDrag();
@@ -323,7 +337,22 @@
         event.preventDefault();
         return $("tool-undo").click();
       }
-      if (event.key === "Delete" || event.key === "Backspace") removeSelected();
+      if (restoring) return;
+      if (["n", "p"].includes(event.key.toLowerCase()) && !event.ctrlKey && !event.metaKey) {
+        event.preventDefault();
+        return select(cycleBox(objects, selected, event.key.toLowerCase() === "n" ? 1 : -1));
+      }
+      if (selected && event.key.startsWith("Arrow") && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        const next = keyboardBox(find(selected), event.key, event.shiftKey, imageWidth, imageHeight);
+        if (!next) return;
+        event.preventDefault();
+        const old = find(selected);
+        if (["x", "y", "w", "h"].every((key) => old[key] === next[key])) return;
+        remember();
+        Object.assign(old, next, { review_status: MODIFIED });
+        return render();
+      }
+      if (event.key === "Delete" || event.key === "Backspace") { event.preventDefault(); removeSelected(); }
       if (event.key === "v") setMode("select");
       if (event.key === "b") { selected = null; setMode("draw"); }
       if (event.key === "+" || event.key === "=") setZoom(nextZoom(zoom, 1));
@@ -497,6 +526,8 @@
       render: ({ frame, boxes: all }) => {
         frameId = frame.frame_id;
         imageUrl = frame.image_url ?? "";
+        imageWidth = frame.width;
+        imageHeight = frame.height;
         $("viewport").className = "av-viewport";
         $("viewport").innerHTML = `<div id="canvas" class="av-stage is-editing">${pictureHtml(imageUrl)}` +
           '<div id="box-layer" class="av-box-layer"></div></div>';

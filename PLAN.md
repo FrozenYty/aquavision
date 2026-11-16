@@ -615,7 +615,7 @@ Handles: `@FrozenYty` Yao Tianyu · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       can be undone before submit, and the undo stack is asserted as a pure function under Node
       - today a wrong drag is unrecoverable until the version panel is used *after* submitting, which
         is too late for a reviewer working through forty frames
-- [ ] **P3-28** The canvas from the keyboard · @chemflowers · done when a box can be selected, nudged,
+- [x] **P3-28** The canvas from the keyboard · @chemflowers · done when a box can be selected, nudged,
       resized and deleted without a mouse, the focus order is visible, and the keys are printed on the
       page
       - the core interaction of the product is mouse-only, and a nudge of one pixel is the correction a
