@@ -77,6 +77,8 @@
 
     import { rememberEdit, undoEdit } from "../static/js/history.js";
 
+    import { placeStore, restorePlace } from "../static/js/place.js";
+
     renderShell();
 
     const $ = (id) => document.getElementById(id);
@@ -84,6 +86,11 @@
     const CONFIRMED = 1;
     const HANDLES = ["nw", "ne", "sw", "se"];
 
+    const place = placeStore("av_review_place", () => toast("浏览器未允许保存复核位置，刷新后需重新选择。请允许此站点使用存储。", "warning"));
+    const savedPlace = place.read();
+    const browserPlace = placeStore("av_browser_place", () => toast("无法读取浏览页码，请允许此站点使用存储。", "warning"));
+    const page = restorePlace(browserPlace.read()).page;
+    const savePlace = () => { if (frameId) place.write({ frameId, selected, zoom, page }); };
     let frameId = null;
     let imageUrl = "";
     let objects = [];
@@ -142,12 +149,14 @@
         const target = $("objects").querySelector(`[data-id="${focusId}"] [data-act="${focusAction}"]`);
         (target ?? $("viewport")).focus({ preventScroll: true });
       }
+      savePlace();
     }
 
     function select(id) {
       selected = id;
       if (id) $("class-select").value = find(id).class_code;
       render();
+      savePlace();
     }
 
     function setMode(next) {
@@ -196,6 +205,7 @@
       $("zoom-reset").textContent = `${Math.round(zoom * 100)}%`;
       $("zoom-in").disabled = zoom >= ZOOM_STEPS.at(-1);
       $("zoom-out").disabled = zoom <= ZOOM_STEPS[0];
+      savePlace();
     }
 
     $("zoom-in").onclick = () => setZoom(nextZoom(zoom, 1));
@@ -511,9 +521,10 @@
       }
     };
 
-    // Without ?id= the page opens the newest frame, so the menu entry is never a dead end.
+    // Without ?id= resume the saved frame; a new tab opens the newest one.
     async function fetchFrame() {
       const id = new URLSearchParams(location.search).get("id")
+        ?? restorePlace(savedPlace).frameId
         ?? (await api.listFrames({ page: 1, size: 1 })).items[0]?.frame_id;
       if (!id) return null;
       const [frame, data] = await Promise.all([api.getFrame(id), api.getObjects(id)]);
@@ -541,14 +552,15 @@
         initialCount = boxes.length;
         $("frame-id").textContent = frame.frame_id;
         $("btn-back").href = `result-detail.html?id=${encodeURIComponent(frame.frame_id)}`;
-        setZoom(1);
+        const restored = restorePlace(savedPlace, { frameId, objectIds: boxes.map((box) => box.object_id) });
+        setZoom(restored.zoom);
         // A frame has one timeline: a new frame drops the previous frame's version selection.
         versions = [];
         selectedLogId = null;
         if (versionsOpen) refreshVersions({ quiet: true });
         // Open on the box most likely to be wrong: the lowest confidence.
         const doubtful = [...boxes].sort((a, b) => a.confidence - b.confidence)[0];
-        select(doubtful?.object_id ?? null);
+        select(restorePlace(savedPlace).frameId === frameId ? restored.selected : doubtful?.object_id ?? null);
       },
     });
   </script>
