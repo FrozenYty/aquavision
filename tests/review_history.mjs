@@ -51,7 +51,7 @@ const source = html.match(/<script type="module">([\s\S]*?)<\/script>/)[1]
   .replace(/import[\s\S]*?from\s+"[^"\n]+";/g, "");
 runInNewContext(source + `
   globalThis.reviewTest = {
-    init() { frameId = "frame-1"; objects = [{ object_id: 1, x: .1, y: .1, w: .2, h: .2,
+    init() { imageWidth = 1280; imageHeight = 720; frameId = "frame-1"; objects = [{ object_id: 1, x: .1, y: .1, w: .2, h: .2,
       class_code: "holothurian", confidence: .5, review_status: 0 }]; selected = 1; },
     state() { return structuredClone({ objects, selected, steps: history.length }); },
     reloadBoxes,
@@ -105,6 +105,23 @@ viewport.handlers.pointerup();
 assert.equal(page.state().objects.length, 1, "a tiny draw is discarded");
 assert.equal(page.state().steps, 0);
 move();
+const key = (name, shiftKey = false) => document.keydown({ key: name, shiftKey, preventDefault() {} });
+const xBefore = page.state().objects[0].x;
+key("ArrowRight");
+assert.equal(page.state().objects[0].x, xBefore + 1 / 1280);
+key("z");
+element("tool-undo").click();
+assert.equal(page.state().objects[0].x, xBefore);
+const widthBefore = page.state().objects[0].w;
+key("ArrowRight", true);
+assert.equal(page.state().objects[0].w, widthBefore + 1 / 1280);
+element("tool-undo").click();
+key("n");
+assert.equal(page.state().selected, 1);
+key("Delete");
+assert.equal(page.state().objects.length, 0);
+element("tool-undo").click();
+assert.equal(page.state().objects.length, 1);
 const getObjects = context.api.getObjects;
 context.api.getObjects = async () => { throw new Error("offline"); };
 await assert.rejects(page.reloadBoxes(), /offline/);

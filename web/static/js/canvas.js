@@ -79,3 +79,24 @@ export function anchorScroll(clientX, clientY, before, after) {
     dy: after.top + p.y * after.height - clientY,
   };
 }
+
+// Keyboard distances are original-image pixels, independent of zoom and viewport size.
+export function keyboardBox(box, key, resize, width, height) {
+  if (!(width > 0 && height > 0) || !key.startsWith("Arrow")) return null;
+  const dx = key === "ArrowRight" ? 1 / width : key === "ArrowLeft" ? -1 / width : 0;
+  const dy = key === "ArrowDown" ? 1 / height : key === "ArrowUp" ? -1 / height : 0;
+  if (!resize) return moveBox(box, dx, dy);
+  return {
+    x: box.x, y: box.y,
+    w: Math.min(1 - box.x, Math.max(1 / width, box.w + dx)),
+    h: Math.min(1 - box.y, Math.max(1 / height, box.h + dy)),
+  };
+}
+
+export function cycleBox(objects, selected, direction) {
+  if (!objects.length) return null;
+  const index = objects.findIndex((box) => box.object_id === selected);
+  const next = index < 0 ? (direction > 0 ? 0 : objects.length - 1)
+    : (index + direction + objects.length) % objects.length;
+  return objects[next].object_id;
+}
