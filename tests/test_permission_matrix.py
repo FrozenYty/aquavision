@@ -85,6 +85,7 @@ MATRIX: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("GET", "/api/monitor", ALL_ROLES),
     ("GET", "/api/params", ALL_ROLES),
     ("GET", "/api/reports", ALL_ROLES),
+    ("GET", "/api/reports/preview", ALL_ROLES),
     ("GET", "/api/review/frames/{frame_id}/versions", ALL_ROLES),
     ("GET", "/api/species", ALL_ROLES),
     ("GET", "/api/stats/corrections", ALL_ROLES),

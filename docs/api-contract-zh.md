@@ -100,6 +100,7 @@ GET /api/frames?page=1&size=24&site=A3&start=2026-11-01&end=2026-11-03
 | GET | `/api/stats/corrections` | 复核修正分布 | FR-M4-02 | P1 |
 | GET | `/api/stats/species` | 物种组成统计 | FR-M5-01 | P1 |
 | GET | `/api/stats/trend` | 每日采集量 | FR-M5-03 | P2 |
+| GET | `/api/reports/preview` | 按周期预览报告数字 | FR-M5-04 | P1 |
 | GET | `/api/reports` | 报告历史 | FR-M5-04 | P1 |
 | POST | `/api/reports` | 生成报告 | FR-M5-04 | P1 |
 | GET | `/api/models` | 模型版本列表 | FR-M6-01 | P0 |
@@ -216,6 +217,10 @@ POST /api/review/frames/{frame_id}/rollback
 `status` 取 `building`、`ready` 或 `archived`。帧级归属存在 `dataset_item` 里，不放进响应——七千帧不是载荷。列表与导出响应还会带上 `splits`（各集合的帧数）；导出响应另有 `groups` 与 `manifest_path`。
 
 ### 巡检报告
+
+生成时可携带返回的 `preview_token`；数字、周期、口径或模型改变时返回 40901，不写入报告，页面刷新预览后才允许重试。
+
+`GET /api/reports/preview` 接受与生成相同的周期和 `basis`，要求登录，返回 `{ preview_token, period_start, period_end, basis, model_version, figures: { frames, rejected, rate, species: [{ name, count, share }] } }`。预览复用生成查询，不写入文件或历史记录。
 
 `POST /api/reports` 的 `period_start`、`period_end` 接受 `YYYY-MM-DD` 日期（按 `AV_TIMEZONE` 解释为完整日，首尾包含），也兼容带偏移的 ISO 时间戳（精确时刻）。响应仍返回带偏移的时间戳。
 

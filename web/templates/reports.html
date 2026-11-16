@@ -25,6 +25,7 @@
           <select class="form-select form-select-sm mb-2" id="period">
             <option value="week">本周</option><option value="month">本月</option><option value="custom">自定义</option>
           </select>
+          <div id="period-state" class="small mb-2"></div>
           <div class="row g-2 mb-2" id="custom-range" hidden>
             <div class="col-6"><input class="form-control form-control-sm" id="from" type="date" aria-label="开始日期"></div>
             <div class="col-6"><input class="form-control form-control-sm" id="to" type="date" aria-label="结束日期">
@@ -39,7 +40,7 @@
           <select class="form-select form-select-sm mb-3" id="basis">
             <option value="reviewed">复核后结果</option><option value="raw">原始识别结果</option>
           </select>
-          <button class="btn btn-primary w-100" id="btn-generate" type="submit">生成报告</button>
+          <button class="btn btn-primary w-100" id="btn-generate" type="submit" disabled>生成报告</button>
         </form>
       </div>
       <div class="col-xl-8">
@@ -65,8 +66,8 @@
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
     import * as api from "../static/js/api.js";
-    import { esc, fmtTime, loadInto, toast } from "../static/js/ui.js";
-    import { CLASSES } from "../static/js/boxes.js";
+    import { esc, fmtTime, loadInto, showEmpty, showError, showLoading, toast } from "../static/js/ui.js";
+    import { reportPreviewHtml, reportQuery } from "../static/js/report-preview.js";
 
     import { reportPeriod } from "../static/js/time.js";
 
@@ -77,7 +78,10 @@
     const BASIS = { reviewed: "复核后结果", raw: "原始识别结果" };
     // The reports route's status words.
     const STATUS = { ready: ["已生成", "success"], generating: ["生成中", "info"], failed: ["失败", "danger"] };
-    let stats = null;
+    let previewData = null;
+    let previewEpoch = 0;
+    let readyQuery = null;
+    let generating = false;
 
     let today = null;
     function period() {
@@ -86,39 +90,28 @@
       return result;
     }
 
-    // The server answers /stats/species with { items: [{ class_code, count, share }] } and
-    // /stats/quality with totals; the prototype's fixtures still hold per-class and per-day arrays.
-    function adapt([species, quality]) {
-      const rows = Array.isArray(species)
-        ? species.map((r) => ({ class_code: r.class_code, count: r.box_count }))
-        : species.items.map((r) => ({ class_code: r.class_code, count: r.count }));
-      const totals = Array.isArray(quality)
-        ? quality.reduce((t, q) => ({ total: t.total + q.total, rejected: t.rejected + q.intercepted }), { total: 0, rejected: 0 })
-        : { total: quality.total, rejected: quality.rejected };
-      return { rows, ...totals };
+    function renderPreview() {
+      if (previewData) $("preview").innerHTML = reportPreviewHtml(previewData, api.USE_MOCK);
     }
 
-    function renderPreview() {
-      if (!stats) return;
-      const p = period();
-      const all = stats.rows.reduce((sum, r) => sum + r.count, 0);
-      const rows = stats.rows.length
-        ? stats.rows.map((r) => `<tr><td><span class="av-class av-class-${r.class_code}">${CLASSES[r.class_code] ?? esc(r.class_code)}</span></td>
-            <td class="av-mono">${r.count}</td><td class="av-mono">${((r.count / all) * 100).toFixed(1)}%</td></tr>`).join("")
-        : '<tr><td colspan="3" class="text-secondary">所选口径下还没有识别结果</td></tr>';
-      const standard = $("template").value === "standard";
-      const rate = stats.total ? `${((stats.rejected / stats.total) * 100).toFixed(1)}%` : "—";
-      $("preview").innerHTML = `
-        <h3>${esc(p ? `${p.label}巡检报告` : "巡检报告")}</h3>
-        <p class="text-secondary small">统计周期：${p ? `${p.from} 至 ${p.to}` : "请选择有效的日期范围"}</p>
-        <h4>一、物种组成</h4>
-        <table class="table table-sm small mb-3"><thead><tr><th>物种</th><th>目标数</th><th>占比</th></tr></thead><tbody>${rows}</tbody></table>
-        ${standard ? `<h4>二、质量拦截</h4>
-        <p class="small">近 7 日共采集 <strong>${stats.total}</strong> 帧，拦截低质量帧 <strong>${stats.rejected}</strong> 帧，
-          拦截率 <strong>${rate}</strong>。被拦截的帧只入库、不识别。</p>
-        <h4>三、模型信息</h4>
-        <p class="small">报告记录生成时的在线模型版本，结果均可追溯到帧、模型版本与参数。</p>` : ""}
-        <footer>统计口径：${BASIS[$("basis").value]}${api.USE_MOCK ? " · 数据为演示数据，非真实运行结果" : ""}</footer>`;
+    async function loadPreview() {
+      const epoch = ++previewEpoch;
+      readyQuery = null;
+      previewData = null;
+      $("btn-generate").disabled = true;
+      const query = reportQuery(period(), $("basis").value);
+      if (!query) { showEmpty($("preview"), "请先选择有效周期，预览数字后再生成。"); return; }
+      showLoading($("preview"));
+      try {
+        const data = await api.previewReport(query);
+        if (epoch !== previewEpoch) return;
+        previewData = data;
+        readyQuery = JSON.stringify(query);
+        renderPreview();
+        $("btn-generate").disabled = generating;
+      } catch (error) {
+        if (epoch === previewEpoch) showError($("preview"), error, loadPreview);
+      }
     }
 
     const day = (value) => (value ? value.slice(0, 10) : "—");
@@ -143,19 +136,23 @@
 
     $("period").addEventListener("change", () => {
       $("custom-range").hidden = $("period").value !== "custom";
-      renderPreview();
+      loadPreview();
     });
-    ["from", "to", "template", "basis"].forEach((id) => $(id).addEventListener("change", renderPreview));
+    ["from", "to", "template", "basis"].forEach((id) => $(id).addEventListener("change", loadPreview));
 
     $("report-form").addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (generating) return;
       const p = period();
       if (!p) return toast("请先选好有效的日期范围", "warning");
+      const query = reportQuery(p, $("basis").value);
+      if (JSON.stringify(query) !== readyQuery) return toast("请等待当前周期的预览完成后再生成", "warning");
+      generating = true;
       $("btn-generate").disabled = true;
       try {
         const report = await api.createReport({
-          period_start: p.from,
-          period_end: p.to,
+          ...query,
+          preview_token: previewData.preview_token,
           template: $("template").value,
           basis: $("basis").value,
         });
@@ -163,8 +160,10 @@
         await loadHistory();
       } catch (err) {
         toast(err.message, "danger");
+        if (err.code === 40901) await loadPreview();
       } finally {
-        $("btn-generate").disabled = false;
+        generating = false;
+        $("btn-generate").disabled = JSON.stringify(reportQuery(period(), $("basis").value)) !== readyQuery;
       }
     });
 
@@ -173,14 +172,13 @@
       if (format) toast(`报告文件已在服务端生成；${format} 格式的下载还没有接口`, "info");
     });
 
-    loadInto($("preview"), () => Promise.all([api.statsSpecies(), api.statsQuality(), api.statsTrend()]), {
+    loadInto($("period-state"), api.statsTrend, {
       isEmpty: () => false,
       empty: "",
-      render: (data) => {
-        const trend = data[2];
+      render: (trend) => {
+        $("period-state").innerHTML = "";
         today = (Array.isArray(trend) ? trend : trend.items).at(-1)?.date ?? null;
-        stats = adapt(data);
-        renderPreview();
+        loadPreview();
       },
     });
     loadHistory();
