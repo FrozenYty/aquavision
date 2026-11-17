@@ -528,8 +528,9 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         Firmware, SRS table 2-3, the wiring table, the firmware README and a new section 10 of the state
         machine all moved together for the lamps, and for the display again, and **the firmware compiles**
         under the pinned toolchain
-      - done when `python scripts/test_rig.py` reports the three numbers the design fixed - left/right
-        brightness ratio >= 0.7, a 5 cm target >= 45 px at 640 input, no flicker - and
+      - done when `python scripts/test_rig.py --index 1 --minutes 10` reports the three numbers the
+        design fixed - left/right brightness ratio >= 0.7, a 5 cm target 45-300 px at 640 input, no
+        flicker - and
         `python scripts/test_rig_link.py --port COM<n> --scan` finds `3C` for the OLED. **The scan tool
         was added 11-13**: until then `CMD SCAN` existed in the
         firmware and nothing on the PC could send it, so that half of the acceptance had no way to run.
