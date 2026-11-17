@@ -72,6 +72,35 @@ def test_a_thin_reflection_is_not_a_target():
     assert rig.target_width_px(image) == 0.0
 
 
+def test_each_way_a_target_is_missed_gets_its_own_reason():
+    """One number used to stand for an empty tank, a small target and a reflection alike."""
+    assert rig.target_rejections([with_square(12)]) == {rig.TARGET_REJECT_AREA: 1}
+    assert rig.target_rejections([with_square(30)]) == {rig.TARGET_REJECT_NARROW: 1}
+
+    # The width tests sit behind the aspect test, so only a near-square shape past the ceiling is
+    # reported as wide; an elongated bright region is reported as a shape, which is what it is.
+    big_square = frame(40)
+    big_square[60:420, 140:500] = 250
+    assert rig.target_rejections([big_square]) == {rig.TARGET_REJECT_WIDE: 1}
+
+    window = frame(40)
+    window[40:300, 20:600] = 250
+    assert rig.target_rejections([window]) == {rig.TARGET_REJECT_SHAPE: 1}
+
+    streak = frame(40)
+    streak[40:320, 300:316] = 250
+    assert rig.target_rejections([streak]) == {rig.TARGET_REJECT_SHAPE: 1}
+
+    assert rig.target_rejections([frame(0)]) == {rig.TARGET_REJECT_NOTHING: 1}
+
+
+def test_the_hint_names_the_reason_and_the_next_move():
+    hint = rig.target_hint([with_square(30)])
+    assert "窄于" in hint
+    assert "动物所在的那一层" in hint
+    assert rig.target_hint([with_square(106)]) == "已认定靶标"
+
+
 def test_identical_frames_show_no_flicker():
     passed, measurement = rig.flicker_check(frame(120), frame(120))
     assert passed is True

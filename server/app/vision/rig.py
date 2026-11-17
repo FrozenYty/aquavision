@@ -4,12 +4,12 @@
 answers a different question, asked after the tank, the lamp and the polariser are in place: **is the
 picture good enough to detect on?**
 
-The numbers come from the procurement document, section 5, and the SRS behind it:
+The numbers come from the procurement document, section 6, and the SRS behind it:
 
 | Check | Pass |
 |---|---|
 | Lighting uniformity | left half / right half mean brightness ≥ 0.7 |
-| Target size | a 5 cm square is at least 45 px wide at 640 input |
+| Target size | a 5 cm square is 45-300 px wide at 640 input |
 | Flicker | first and last frame of a 10-minute run differ by < 5 % |
 
 None of them needs a model, a database or the API — only frames. That is deliberate: when the rig is
@@ -23,6 +23,7 @@ wrong, the reason should not be buried under three other layers.
 from __future__ import annotations
 
 import time
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -88,14 +89,37 @@ def brightness_ratio(first: np.ndarray, last: np.ndarray) -> float:
     return abs(float(last.mean()) - before) / before
 
 
-def target_width_px(frame: np.ndarray, min_px_width: int = TARGET_MIN_PX_WIDTH) -> float:
-    """Width of the widest bright region, scaled to `min_px_width` across.
+# Why a bright shape was not accepted as the target. One "0 px" used to stand for all of these, and
+# the operator's next move depends on which one it is: an empty tank, a target too small at this
+# distance, a lamp streak on the glass, or a reflection wider than any 5 cm square.
+TARGET_REJECT_NOTHING = "nothing"
+TARGET_REJECT_AREA = "area"
+TARGET_REJECT_SHAPE = "shape"
+TARGET_REJECT_FILL = "fill"
+TARGET_REJECT_NARROW = "narrow"
+TARGET_REJECT_WIDE = "wide"
 
-    The operator puts a white 5 cm square in the tank; this finds it. The threshold is Otsu's rather
-    than a fixed percentile: a target that occupies a few percent of the frame does not move a
-    percentile at all, so a 60th-percentile cut left the whole frame in the bright class and every
-    image looked like one enormous target. Otsu splits the two populations instead, and a frame with no
-    target has no second population to find.
+_TARGET_REJECTION_TEXT = {
+    TARGET_REJECT_NOTHING: "画面里没有亮区（水箱里没有靶标，或者灯没开）",
+    TARGET_REJECT_AREA: "有亮区，但都太小，够不到面积下限",
+    TARGET_REJECT_SHAPE: "亮区不是近方形，多半是灯或窗在玻璃上的长条反光",
+    TARGET_REJECT_FILL: "亮区不成块，边缘被反光切走",
+    TARGET_REJECT_NARROW: f"靶标窄于 {TARGET_MIN_PX} px：相机离得太远，或靶标不在动物所在的那一层",
+    TARGET_REJECT_WIDE: f"近方形的亮区宽于 {TARGET_MAX_PX} px：靶标离镜头太近，或那是一块反光",
+}
+
+
+def target_shapes(
+    frame: np.ndarray, min_px_width: int = TARGET_MIN_PX_WIDTH
+) -> Iterator[tuple[float, str | None]]:
+    """Every bright shape worth considering, as `(width_px, rejection)`.
+
+    `rejection` is None when the shape is the target. One contour loop decides both the number
+    `target_width_px` reports and the reason `target_hint` prints, so the two cannot disagree. The
+    threshold is Otsu's rather than a fixed percentile: a target that occupies a few percent of the
+    frame does not move a percentile at all, so a 60th-percentile cut left the whole frame in the
+    bright class and every image looked like one enormous target, while a frame with no target has no
+    second population to find.
     """
     grey = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if frame.ndim == 3 else frame
     height, width = grey.shape[:2]
@@ -104,26 +128,71 @@ def target_width_px(frame: np.ndarray, min_px_width: int = TARGET_MIN_PX_WIDTH) 
 
     _, mask = cv2.threshold(scaled, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if not contours:
-        return 0.0
-
     min_area = max(4.0, scaled.shape[0] * scaled.shape[1] * TARGET_MIN_AREA_FRACTION)
-    widest = 0.0
     for contour in contours:
         area = cv2.contourArea(contour)
-        if area < min_area:
-            continue
         _, _, rect_width, rect_height = cv2.boundingRect(contour)
-        if rect_height == 0 or not 0.75 <= rect_width / rect_height <= 1.33:
-            continue
+        if area < min_area:
+            yield float(rect_width), TARGET_REJECT_AREA
+        elif rect_height == 0 or not 0.75 <= rect_width / rect_height <= 1.33:
+            yield float(rect_width), TARGET_REJECT_SHAPE
         # A filled square, not a smear: this is what rejects a window edge or a lamp reflection.
-        if area / (rect_width * rect_height) < TARGET_MIN_FILL:
-            continue
+        elif area / (rect_width * rect_height) < TARGET_MIN_FILL:
+            yield float(rect_width), TARGET_REJECT_FILL
+        # The width tests sit behind the aspect test, so only a near-square shape can reach the
+        # ceiling: an elongated bright region is reported as a shape, which is what it is.
+        elif rect_width < TARGET_MIN_PX:
+            yield float(rect_width), TARGET_REJECT_NARROW
         # Too wide to be a 5 cm target, so it is something else bright in the scene.
-        if not TARGET_MIN_PX <= rect_width <= TARGET_MAX_PX:
+        elif rect_width > TARGET_MAX_PX:
+            yield float(rect_width), TARGET_REJECT_WIDE
+        else:
+            yield float(rect_width), None
+
+
+def target_width_px(frame: np.ndarray, min_px_width: int = TARGET_MIN_PX_WIDTH) -> float:
+    """Width of the widest accepted target, scaled to `min_px_width` across.
+
+    The operator puts a white 5 cm square in the tank; this finds it. **A rejection is not a
+    measurement**: no bright region, a shape too small to count, a non-square streak, an unfilled
+    smear and a shape past the width ceiling are five different situations, so `target_hint` names the
+    one that happened instead of printing one zero for all of them.
+    """
+    widths = [w for w, rejection in target_shapes(frame, min_px_width) if rejection is None]
+    return max(widths, default=0.0)
+
+
+def target_rejections(
+    frames: list[np.ndarray], min_px_width: int = TARGET_MIN_PX_WIDTH
+) -> dict[str, int]:
+    """Count the reasons no target was accepted, per reason, across `frames`.
+
+    A frame whose bright class holds no contour at all counts as `TARGET_REJECT_NOTHING`: nothing
+    bright in the frame. This is the difference between "the tank has no target", "the target is too
+    small at this distance" and "a reflection swamped it", which one number could not carry.
+    """
+    counts: dict[str, int] = {}
+    for frame in frames:
+        shapes = list(target_shapes(frame, min_px_width))
+        if not shapes:
+            counts[TARGET_REJECT_NOTHING] = counts.get(TARGET_REJECT_NOTHING, 0) + 1
             continue
-        widest = max(widest, float(rect_width))
-    return widest
+        for _width, rejection in shapes:
+            if rejection is not None:
+                counts[rejection] = counts.get(rejection, 0) + 1
+    return counts
+
+
+def target_hint(frames: list[np.ndarray], min_px_width: int = TARGET_MIN_PX_WIDTH) -> str:
+    """One sentence naming why the target check read nothing, for the operator."""
+    counts = target_rejections(frames, min_px_width)
+    if not counts:
+        return "已认定靶标"
+    parts = [
+        f"{_TARGET_REJECTION_TEXT.get(reason, reason)}（{count} 处）"
+        for reason, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    ]
+    return "未认定靶标：" + "；".join(parts) + "。把 5cm 白方块放到动物所在那一层再测"
 
 
 def uniformity_check(frames: list[np.ndarray]) -> tuple[bool, Measurement]:
