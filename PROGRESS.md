@@ -1,3 +1,27 @@
+## 2026-11-17
+
+- **The acceptance commands in the procurement document aimed at the wrong camera, and a failed target
+  check could not say why.** Section 4 step 4 ran `python scripts/test_exposure.py` and
+  `python scripts/test_rig.py` with no `--index`, so both measured index 0 - the laptop's built-in
+  camera - while section 3 of the same document and the arrived unit both say the rig camera is index
+  1; the second command also ran its twelve-second default instead of the ten-minute drift that step
+  asks for. Both now carry `--index 1`, the ten-minute run carries `--minutes 10`, and the step says
+  why. **A zero width was also five different situations wearing one number**: no bright region, a
+  shape too small to count, a non-square streak, an unfilled smear and a shape past the width ceiling
+  all printed as `0 px`, so the operator's next move was a guess between moving the camera, moving the
+  target and cleaning the glass. `rig.target_shapes` yields each candidate with its rejection,
+  `target_rejections` counts them and `target_hint` names them in the output, and
+  `tests/test_rig_measure.py` pins one synthetic frame per reason. **The 300 px ceiling only existed in a
+  code comment**; it is now in the acceptance table of the procurement document in both languages,
+  because a number that decides a pass belongs where the pass is defined. The rig module and the script
+  also said "section 5" for numbers that section 6 holds.
+- **The tracing-paper diffuser and the white-card reflector from 2026-11-05 are not in the build.**
+  The lead checked the bench on 11-17: the lamp is used bare, so the fallback ladder's step "between
+  0.5 and 0.7 adjust the reflector or move the lamp" named a part that is not on the bench. The 11-05
+  entry stays as written - this log is append-only - and this entry supersedes that ladder step: between
+  0.5 and 0.7 the moves are the lamp's touch-dimming level, its distance and the lens-side polariser.
+  The procurement document's "second lamp" row now points here.
+
 ## 2026-11-16
 
 - **The panel's seven segment resistors are fitted, and they are 330 Ω - the value the purchase list has held

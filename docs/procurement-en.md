@@ -38,7 +38,7 @@ day after the lamp was checked — ADR 10.
 | Water level sensor | The tank level is constant and nothing depends on it. It is not in the SRS. |
 | Water temperature probe | It fills one field and drives no decision. The SRS states that missing sensor fields stay empty and are excluded from statistics. |
 | Turbidity sensor | It was bought and is now withdrawn: a full register sweep on a clean bus found only configuration registers, none of which changed value in response to light, and the vendor states the part has no register map. P3-37 records the evidence, and the four-digit display does the panel's job instead. |
-| Second lamp | Only if the left/right brightness ratio fails; see `PROGRESS.md` 2026-11-05. |
+| Second lamp | Only if the left/right brightness ratio fails; see `PROGRESS.md` 2026-11-05. The fallback ladder on that day also said to adjust the white-card reflector, and a tracing-paper diffuser was part of the 11-05 design; **neither is in the build**, which the 2026-11-17 entry records. |
 
 ## 3. Things to verify before assembly
 
@@ -95,10 +95,13 @@ Assemble and power on in four steps, one at a time, so a fault is localised imme
    `PASS`, `RETAKE` and the fault windows `Err1`-`Err4` (`Err0` is retired and not reused). **The button has
    one meaning - a press captures - so the fault windows cannot be performed on demand**: they appear when
    their event happens, and on a bench where nothing is failing the serial log is where they are seen.
-4. Camera — exposure lock, `python scripts/test_exposure.py` exits 0; then `python scripts/test_rig.py`
-   exits 0, which measures the left/right brightness ratio, the 5 cm target width and the brightness
-   drift of a ten-minute run under a fixed light level. **Both are required**: the first asks whether
-   the camera can be used, the second whether the picture is good enough to detect on.
+4. Camera — exposure lock, `python scripts/test_exposure.py --index 1` exits 0; then
+   `python scripts/test_rig.py --index 1 --minutes 10` exits 0, which measures the left/right
+   brightness ratio, the 5 cm target width and the brightness drift of a ten-minute run under a fixed
+   light level. **Both are required**: the first asks whether the camera can be used, the second
+   whether the picture is good enough to detect on. **`--index 1` is not decoration**: index 0 is the
+   laptop's built-in camera, so the bare command measures the wrong device, and the script's own
+   default run is twelve seconds rather than the ten minutes this step asks for.
 
 ## 5. Power and wiring
 
@@ -197,6 +200,6 @@ the rating.
 | Flicker | Filmed by a phone camera, no rolling bars |
 | Light stability | Ten minutes of capture on USB: mean brightness of the first and last frame differ by < 5 % |
 | Polariser flatness | No visible warp; the lens-side sheet locked at the darkest orientation |
-| Target size | A 5 cm object ≥ 45 px wide at 640 input |
+| Target size | A 5 cm object 45-300 px wide at 640 input; wider is a reflection, a window or the tank edge, not the target |
 | Display | The boot self-test walks all 28 segment positions and then shows `8888`; a press from `READY` starts a capture and the panel shows `CAPTURING`; with nothing attached the panel draws `APP` with the fourth digit turning and the OLED says `WAITING` |
 | Tank | 24 h filled, no seepage, front wall without scratches or tint |

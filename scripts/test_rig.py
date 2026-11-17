@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Rig acceptance: is the assembled tank good enough to detect on?
 
-The three numbers are in the procurement document, section 5. This script measures them from frames
+The three numbers are in the procurement document, section 6. This script measures them from frames
 instead of asking anyone to eyeball a screen.
 
     python scripts/test_rig.py
@@ -40,12 +40,12 @@ def uniformity_checks(frames: list) -> Check:
 
 def target_checks(frames: list) -> Check:
     passed, measurement = rig.target_check(frames)
-    return Check(
-        "靶标尺寸",
-        passed,
-        f"最宽目标 {measurement.as_text()}（640 宽下，下限 {rig.TARGET_MIN_PX} px）"
-        "；把 5cm 白方块放进水箱再测",
-    )
+    bounds = f"（640 宽下，{rig.TARGET_MIN_PX}-{rig.TARGET_MAX_PX} px）"
+    if passed:
+        detail = f"最宽目标 {measurement.as_text()}{bounds}"
+    else:
+        detail = f"最宽目标 {measurement.as_text()}{bounds}；{rig.target_hint(frames)}"
+    return Check("靶标尺寸", passed, detail)
 
 
 def flicker_checks(frames: list) -> Check:
@@ -59,7 +59,12 @@ def flicker_checks(frames: list) -> Check:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--index", type=int, default=0, help="camera index")
+    parser.add_argument(
+        "--index",
+        type=int,
+        default=0,
+        help="camera index; 0 is usually the laptop's built-in camera, the rig camera is index 1",
+    )
     parser.add_argument("--frames", type=int, default=DEFAULT_FRAMES, help="frames per check")
     parser.add_argument("--minutes", type=float, default=0.2, help="flicker run length, in minutes")
     parser.add_argument("--images", metavar="DIR", help="read frames from a directory instead")
