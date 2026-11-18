@@ -53,6 +53,9 @@ jobs:
       - name: Every decision record is listed
         run: python scripts/check-adr-index.py
 
+      - name: Plan tasks belong to their phase and gates come last
+        run: python scripts/check-plan.py
+
       - name: Acceptance coverage
         run: python scripts/check-ac-coverage.py
 

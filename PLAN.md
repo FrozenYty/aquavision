@@ -711,9 +711,6 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       screenshots are regenerated from the current build and each is referenced by the matrix row it
       illustrates
       - the pages were renamed and restyled since the figures were taken
-- [ ] **GATE P3** — all 36 acceptance items demonstrated live, one after another, no manual database
-      edits in between, and every item traceable to the task that closed it · **checked by @IkeaFyj**, not the
-      lane owner (§5.3)
 
 - [x] **P3-37** The turbidity sensor either measures or says it cannot · @FrozenYty · **closed 11-14 by
       removing the sensor**, because it could not measure and could not say anything else: a full sweep of
@@ -760,6 +757,10 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         the `Err4` face and the two build targets, and the PC-side BLE client; then a dry run over BLE and a
         `rig-serial` fallback drill, which `P4-07`'s three rehearsals inherit and which the gate cannot pass
         without
+
+- [ ] **GATE P3** — all 36 acceptance items demonstrated live, one after another, no manual database
+      edits in between, and every item traceable to the task that closed it · **checked by @IkeaFyj**, not the
+      lane owner (§5.3)
 
 ### P4 — close
 
@@ -836,6 +837,14 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       browser, the batch worker, review submission and the demo reset - those stay `P4-07`'s. · done when one command runs the slice end to
       end against a fresh database and prints the numbers a rehearsal needs - frames captured, boxes
       drawn, per-class counts, elapsed time - so `P4-07` is a run rather than a walkthrough
+- [ ] **P4-13** The delivered MySQL script has actually run · @Gtechson, or @chemflowers if he has a MySQL
+      instance · the design deliverable's DDL was generated from `server/app/models.py` and checked only
+      statically, so nobody has executed it yet · done when `mysql -u … -p < database-script-v1.0.sql` exits 0
+      on MySQL 8.0, `SHOW TABLES` lists the fourteen tables, the four `species_dict` rows are present, and the
+      sixteen foreign keys plus the two table-level unique constraints appear in `information_schema`; paste
+      the run's output in the PR. The file is a course deliverable kept outside the repository — ask
+      @FrozenYty for it, and report what the server printed, not that it "looks fine".
+
 - [ ] **GATE P4** — four tables full: metrics, ablation, reproducibility, acceptance checklist · **checked by @IkeaFyj**, not
       the lane owner (§5.3)
 

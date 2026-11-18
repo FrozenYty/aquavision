@@ -42,6 +42,7 @@ only single-language files above the line. Within `docs/`, the fastest route is 
 |---|---|---|---|
 | `srs-en/zh.md` | what the system does, how it is accepted | a requirement or an acceptance item changes | @FrozenYty |
 | `architecture-en/zh.md` | layers, dependency direction, runtime model | the shape changes, not the code | @FrozenYty |
+| `design-en/zh.md` | the eight modules, which document answers each design question, the ER diagram | a module boundary or the table set changes | @FrozenYty |
 | `api-contract-en/zh.md` | endpoint paths, envelope, error codes, WebSocket | an endpoint or a field changes | @Gtechson |
 | `data-model-en/zh.md` | tables, columns, indexes, file layout | a table or column changes | @Gtechson |
 | `test-plan-en/zh.md` | levels, datasets, metrics, defect classes | a metric or acceptance item changes | @IkeaFyj |
