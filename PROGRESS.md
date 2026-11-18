@@ -1,4 +1,15 @@
-## 2026-11-17
+## 2026-11-18
+
+- **The design phase has one page in the repository that says where every design answer lives.** The course
+  deliverable (a 概要设计说明书, a MySQL script, a table-design workbook and an ER diagram) is generated from
+  a schema extracted out of `server/app/models.py`, but none of it belongs in a public repository, so the
+  repository keeps only the knowledge: `docs/design-{en,zh}.md` maps the sixteen routers onto the eight
+  business modules, lists which document owns which design question, carries the entity-relationship model
+  as Mermaid (fourteen entities, sixteen keys, keys only), and names the one task that would prove the
+  delivered script. Rebuilding the field list from the code also found six places where `data-model-en.md`
+  describes something the code does not; they are recorded in design §5 and handed to that document's
+  owner rather than edited from another lane. `check-bilingual`, `check-language` and `check-paths` pass.
+
 
 - **The acceptance commands in the procurement document aimed at the wrong camera, and a failed target
   check could not say why.** Section 4 step 4 ran `python scripts/test_exposure.py` and

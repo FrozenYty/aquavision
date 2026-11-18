@@ -41,6 +41,7 @@
 |---|---|---|---|
 | `srs-en/zh.md` | 系统做什么、怎么验收 | 需求条目或验收项变化 | @FrozenYty |
 | `architecture-en/zh.md` | 分层、依赖方向、运行时模型 | 形状变化时，不是改代码时 | @FrozenYty |
+| `design-en/zh.md` | 八个模块、每个设计问题由哪份文档回答、ER 图 | 模块边界或表集合变化 | @FrozenYty |
 | `api-contract-en/zh.md` | 路径、封装、错误码、WebSocket | 接口或字段变化 | @Gtechson |
 | `data-model-en/zh.md` | 表、字段、索引、文件落盘 | 加表或加字段 | @Gtechson |
 | `test-plan-en/zh.md` | 测试分层、数据集、指标、缺陷分级 | 指标或验收项变化 | @IkeaFyj |
