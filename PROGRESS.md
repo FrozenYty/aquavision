@@ -1,14 +1,24 @@
 ## 2026-11-18
 
+- **A task placed after its phase gate is invisible to the gate, and it had already happened twice.** Three
+  tasks sat below the gate that was supposed to wait for them: `P3-37` and `P3-38` below `GATE P3`, and the
+  new `P4-13` below `GATE P4`. §1 says a phase does not start until every box in it is ticked *and the gate
+  is ticked*, so a task after the gate cannot block anything. All three now sit inside their phases, and
+  `scripts/check-plan.py` — wired into CI — fails when a task follows a gate, when a phase has no gate, when
+  a task id is duplicated or a number is skipped, or when an owner is not one of the four handles. It also
+  reports, without failing, the twenty older tasks whose acceptance is phrased another way; the plan never
+  mandated the words "done when".
+
 - **The design phase has one page in the repository that says where every design answer lives.** The course
-  deliverable (a 概要设计说明书, a MySQL script, a table-design workbook and an ER diagram) is generated from
-  a schema extracted out of `server/app/models.py`, but none of it belongs in a public repository, so the
-  repository keeps only the knowledge: `docs/design-{en,zh}.md` maps the sixteen routers onto the eight
-  business modules, lists which document owns which design question, carries the entity-relationship model
-  as Mermaid (fourteen entities, sixteen keys, keys only), and names the one task that would prove the
-  delivered script. Rebuilding the field list from the code also found six places where `data-model-en.md`
-  describes something the code does not; they are recorded in design §5 and handed to that document's
-  owner rather than edited from another lane. `check-bilingual`, `check-language` and `check-paths` pass.
+  deliverable (a Chinese outline-design document, a MySQL script, a table-design workbook and an ER diagram)
+  is generated from a schema extracted out of `server/app/models.py`, but none of it belongs in a public
+  repository, so the repository keeps only the knowledge: `docs/design-{en,zh}.md` maps the sixteen routers
+  onto the eight business modules, lists which document owns which design question, carries the
+  entity-relationship model as Mermaid (fourteen entities, sixteen keys, keys only), and names the one task
+  that would prove the delivered script. Rebuilding the field list from the code also found six places where
+  `data-model-en.md` describes something the code does not; they are recorded in design §5 and handed to that
+  document's owner rather than edited from another lane. `check-bilingual`, `check-language` and
+  `check-paths` pass.
 
 
 - **The acceptance commands in the procurement document aimed at the wrong camera, and a failed target
