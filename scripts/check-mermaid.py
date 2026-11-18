@@ -20,20 +20,23 @@ Exit code: 0 when every block is well formed, 1 otherwise.
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 FENCE = re.compile(r"^\s*```\s*([A-Za-z0-9_-]*)\s*$")
-ATTRIBUTE = re.compile(r'^\s*[A-Za-z_][A-Za-z0-9_]*\s+[A-Za-z_][A-Za-z0-9_]*\s+(PK|FK|UK)\s*(?:"[^"]*")?\s*$')
+ATTRIBUTE = re.compile(
+    r'^\s*[A-Za-z_][A-Za-z0-9_]*\s+[A-Za-z_][A-Za-z0-9_]*\s+(PK|FK|UK)\s*(?:"[^"]*")?\s*$'
+)
 ENTITY_OPEN = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\{\s*$")
 ENTITY_CLOSE = re.compile(r"^\s*\}\s*$")
 RELATIONSHIP = re.compile(
-    r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s+(\|\||\|o|o\||\}o|\}\|)\s*--\s*(\|\||o\||\|o|o\{|\|\{)\s*'
+    r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s+(\|\||\|o|o\||\}o|\}\|)\s*--\s*(\|\||o\||\|o|o\{|\|\{)\s*"
     r'([A-Za-z_][A-Za-z0-9_]*)\s*:\s*"[^"]*"\s*$',
 )
-DIRECTIVE = re.compile(r"^\s*(erDiagram|flowchart|graph|sequenceDiagram|stateDiagram(?:-v2)?|classDiagram|gantt|pie)\b")
+DIRECTIVE = re.compile(
+    r"^\s*(erDiagram|flowchart|graph|sequenceDiagram|stateDiagram(?:-v2)?|classDiagram|gantt|pie)\b"
+)
 
 
 def mermaid_blocks(path: Path) -> list[tuple[int, str, list[str]]]:
@@ -75,9 +78,13 @@ def check_er(body: list[str], where: str) -> list[str]:
             if relationship:
                 for endpoint in (relationship.group(1), relationship.group(4)):
                     if endpoint not in entities:
-                        problems.append(f"{where}:{offset}: relationship names undeclared entity '{endpoint}'")
+                        problems.append(
+                            f"{where}:{offset}: relationship names undeclared entity '{endpoint}'"
+                        )
                 continue
-            problems.append(f"{where}:{offset}: unexpected line outside an entity: {stripped[:60]!r}")
+            problems.append(
+                f"{where}:{offset}: unexpected line outside an entity: {stripped[:60]!r}"
+            )
             continue
         if ENTITY_CLOSE.match(line):
             inside = None
