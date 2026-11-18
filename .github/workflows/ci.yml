@@ -56,6 +56,9 @@ jobs:
       - name: Plan tasks belong to their phase and gates come last
         run: python scripts/check-plan.py
 
+      - name: Mermaid diagrams parse
+        run: python scripts/check-mermaid.py
+
       - name: Acceptance coverage
         run: python scripts/check-ac-coverage.py
 

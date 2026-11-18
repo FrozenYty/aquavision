@@ -50,30 +50,30 @@ is a change to this block.
 erDiagram
   sys_user {
     bigint user_id PK
-    varchar username UQ
-    varchar phone UQ
-    varchar email UQ
+    varchar username UK
+    varchar phone UK
+    varchar email UK
   }
   species_dict {
     bigint species_id PK
-    varchar class_code UQ
+    varchar class_code UK
   }
   model_version {
     bigint model_id PK
-    varchar version_name UQ
+    varchar version_name UK
   }
   sys_param {
     bigint param_id PK
-    varchar param_key UQ
+    varchar param_key UK
     bigint updated_by FK
   }
   media_asset {
     bigint asset_id PK
-    varchar frame_id UQ
+    varchar frame_id UK
   }
   detect_task {
     bigint task_id PK
-    varchar task_code UQ
+    varchar task_code UK
     bigint model_version_id FK
     bigint created_by FK
   }
@@ -91,7 +91,7 @@ erDiagram
   }
   dataset {
     bigint dataset_id PK
-    varchar snapshot_name UQ
+    varchar snapshot_name UK
     bigint created_by FK
   }
   dataset_item {
@@ -105,7 +105,7 @@ erDiagram
   }
   report {
     bigint report_id PK
-    varchar report_code UQ
+    varchar report_code UK
     bigint model_version_id FK
     bigint created_by FK
   }
