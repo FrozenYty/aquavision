@@ -1,5 +1,14 @@
 ## 2026-11-18
 
+- **A Mermaid diagram GitHub could not render, and a check that now would.** `design-{en,zh}.md` wrote `UQ`
+  as an entity-attribute key because the DDL calls the constraint UNIQUE; Mermaid's entity grammar accepts
+  only `PK`, `FK` and `UK`, so both files showed "Parse error on line 6 … got 'BLOCK_STOP'" in place of the
+  diagram while every check stayed green — a fenced block is not a rendered diagram. All ten keys became
+  `UK`, and `scripts/check-mermaid.py` now parses the `erDiagram` subset (entity headers, `<type> <name>
+  [PK|FK|UK]` attributes, relationship endpoints that are declared, closed braces) and fails on anything
+  GitHub would refuse; CI runs it. The other diagram types are checked only for a closed fence, because a
+  hand-written parser for them would give false confidence.
+
 - **P4 is now one critical chain with four feeders, a risk table and no idle lane.** The close phase was a
   flat list of thirteen tasks whose order lived in people's heads; stage-gate practice asks a gate to name
   its premises, and this gate's premise is the metric chain, so the tasks are grouped by track with the
