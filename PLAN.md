@@ -839,6 +839,14 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **GATE P4** — four tables full: metrics, ablation, reproducibility, acceptance checklist · **checked by @IkeaFyj**, not
       the lane owner (§5.3)
 
+- [ ] **P4-13** The delivered MySQL script has actually run · @Gtechson, or @chemflowers if he has a MySQL
+      instance · the design deliverable's DDL was generated from `server/app/models.py` and checked only
+      statically, so nobody has executed it yet · done when `mysql -u … -p < database-script-v1.0.sql` exits 0
+      on MySQL 8.0, `SHOW TABLES` lists the fourteen tables, the four `species_dict` rows are present, and the
+      sixteen foreign keys plus the two table-level unique constraints appear in `information_schema`; paste
+      the run's output in the PR. The file is a course deliverable kept outside the repository — ask
+      @FrozenYty for it, and report what the server printed, not that it "looks fine".
+
 ## 5. Text constraints
 
 These replace process tooling. Short on purpose.
