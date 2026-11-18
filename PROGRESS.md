@@ -1,5 +1,17 @@
 ## 2026-11-18
 
+- **P4 is now one critical chain with four feeders, a risk table and no idle lane.** The close phase was a
+  flat list of thirteen tasks whose order lived in people's heads; stage-gate practice asks a gate to name
+  its premises, and this gate's premise is the metric chain, so the tasks are grouped by track with the
+  order written down — dataset freeze, E0, then E1/E2/E3, then the ablation, with reproducibility and the
+  same-frame comparison hanging off the first and the second version. Lane load in P4 measured 7/4/4/1
+  across B/A/D/C; six tasks were added (demo screens, release freeze, marking-scheme audit, restore drill,
+  environment kit, browser profile) and the MySQL execution moved to lane C, leaving 6/7/5/3 and covering
+  four risks that no task addressed: a missed metric, a dead rig, an offline laptop, a lost database. The
+  phase goal also still said "nine metrics" where SRS V1.3 leaves seven; corrected to `AL-01`..`AL-07`.
+  Network to the usual methodology sources was blocked (Wikipedia, Scrum.org, Wrike), so the shape
+  follows Stage-Gate, Critical Chain and the Definition of Done as practised rather than as cited here.
+
 - **A task placed after its phase gate is invisible to the gate, and it had already happened twice.** Three
   tasks sat below the gate that was supposed to wait for them: `P3-37` and `P3-38` below `GATE P3`, and the
   new `P4-13` below `GATE P4`. §1 says a phase does not start until every box in it is ticked *and the gate
