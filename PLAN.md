@@ -15,6 +15,9 @@ Phase status lives here. Why it moved lives in `PROGRESS.md`.
   is ticked and the gate box is ticked too.
 - Editing a task is a normal commit. Moving a **gate** needs the whole team to agree first — a gate
   is the only thing here meant to be expensive to move.
+- A task added from here on states its acceptance as something that can fail — a number, a named file, a
+  command — because §5.2 makes a tick a claim until something proves it. Older tasks whose acceptance is
+  phrased otherwise are reported by `scripts/check-plan.py`, not rewritten.
 
 ## 2. Lanes
 
@@ -36,7 +39,7 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 | P1 | Every layer has a minimal implementation | `uvicorn` starts, `/api/health` returns the envelope, 14 tables created, 13 pages open |
 | P2 | One real end-to-end slice | press capture → boxes and counts on screen within 3 s; edit one box → count changes |
 | P3 | All 29 requirements implemented | the 36 acceptance items can each be demonstrated live |
-| P4 | Metrics, tests, defence | nine metrics recorded; blocker defects at zero; three rehearsals |
+| P4 | Metrics, tests, defence | seven metrics recorded (`AL-01`..`AL-07`); blocker and major defects at zero; three rehearsals, one with an injected failure |
 
 ## 4. Tasks
 
@@ -764,6 +767,32 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 
 ### P4 — close
 
+P4 is the only phase whose order is not optional. One critical chain decides whether the project has
+numbers: freeze the dataset, record E0, then E1, E2 and E3 on top of each other, then the ablation. Four
+feeder tracks — hardening, evidence, demo delivery, operations — run beside the chain and must finish before
+the gate, not before the chain, or the dress rehearsal happens on a tree that is still moving.
+
+| Track | Tasks | Finishes when |
+|---|---|---|
+| Metrics chain | P4-01 → P4-02 → P4-03 → P4-04; P4-08 and P4-10 hang off E0 and the second version | the seven metrics have rows and the ablation table has each delta |
+| Hardening | P4-05, P4-15 | blocker and major at zero on the frozen tag, with a test per fix |
+| Evidence | P4-11, P4-09, P4-16 | every claim points at a file, a test or a minute of the demo |
+| Demo delivery | P4-14, P4-19, P4-06, P4-07 | three rehearsals under eight minutes, one with a failure injected |
+| Operations | P4-13, P4-17, P4-18 | the script runs on MySQL, a restore returns the same totals, the kit is ticked from a card |
+
+Split this way, no lane is idle in the close phase and the critical chain does not sit on one person: A owns
+delivery and operations, B the metrics chain, C the demo screens, D the evidence and the gate.
+
+Four things can still make P4 fail. Each has a prepared move and a task that owns it, so a bad day costs a
+minute rather than a meeting:
+
+| If this goes wrong | The prepared move | Covered by |
+|---|---|---|
+| a metric misses its `AL` threshold | report the miss with its cause beside the best ablation row; never retune the test set to pass | P4-04 |
+| the rig or the camera dies on the day | the `rig-serial` fallback, and the recorded-frame path `scripts/demo.py` already supports | P4-07, P4-18 |
+| the demo laptop is offline or a font is missing | static assets and local fonts only, rehearsed once with the radio off | P4-19 |
+| the database or the dataset is lost | the tagged tree plus a restore drill, not a hope that the backup works | P4-15, P4-17 |
+
 - [ ] **P4-01** Dataset freeze, then baseline E0 · @Gtechson · closes AC-30 · done when the snapshot is
       frozen **before** the first official run — name, split, seed and manifest written down — and E0
       is recorded with every metric column filled
@@ -805,19 +834,25 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         `POST /api/demo/reset` clears them by design, because a rehearsal must start clean
       - **the owner is one person**, because §5.1 says so and "all" is not an owner. Each lane reports
         its own defects into the table; this task keeps the counts and the regression checks
+      - **acceptance is the three majors above**, each closed with a test named in the defect table, plus
+        zero blocker and zero major rows against the frozen tag of `P4-15`
 - [ ] **P4-06** Acceptance checklist, demo script, slides · @IkeaFyj · done when every acceptance item
       is ticked with the evidence beside it, and the demo runs end to end on paper without a question
-      left unanswerable
+      left unanswerable; the ten questions an examiner is most likely to ask have written answers beside
+      the script
 - [ ] **P4-07** Three rehearsals · @FrozenYty · done when each run finishes under eight minutes with no
-      dead air, and the third run needs no fix made between it and the previous one
+      dead air, and the third run needs no fix made between it and the previous one; one of the three
+      injects a failure — the camera unplugged, or a model version removed — and recovers inside thirty
+      seconds, with the presenter saying the sentence written for it rather than improvising
 - [ ] **P4-08** Reproducibility · @Gtechson · closes AC-25 · done when the same configuration run twice
       differs by less than 1 % on every metric, and both runs are in the table — a single run proves
       nothing about the next one
       - the second run reuses E0's recorded configuration, so it is one repeat rather than a new
         experiment: a seed change with everything else pinned is what this measures
 - [ ] **P4-09** Submission package · @FrozenYty · closes AC-35 · done when the SRS, the traceability
-      matrix, the test report and this plan agree with each other and with the code at one commit, and
-      the document index lists nothing that does not exist
+      matrix, the test report and this plan agree with each other and with the code at one commit, the
+      document index lists nothing that does not exist, and each submitted file's SHA-256 is written beside
+      the commit it was built from — "the same commit" is a hash, not a recollection
 - [ ] **P4-10** Same-frame comparison · @Gtechson · moved from `P1-02` · done when
       `POST /api/compare/frames/{id}` runs the baseline and one improved model on the same frame, the
       response carries both sets of boxes and both version names, and the page can show them side by
@@ -837,16 +872,38 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       browser, the batch worker, review submission and the demo reset - those stay `P4-07`'s. · done when one command runs the slice end to
       end against a fresh database and prints the numbers a rehearsal needs - frames captured, boxes
       drawn, per-class counts, elapsed time - so `P4-07` is a run rather than a walkthrough
-- [ ] **P4-13** The delivered MySQL script has actually run · @Gtechson, or @chemflowers if he has a MySQL
-      instance · the design deliverable's DDL was generated from `server/app/models.py` and checked only
-      statically, so nobody has executed it yet · done when `mysql -u … -p < database-script-v1.0.sql` exits 0
-      on MySQL 8.0, `SHOW TABLES` lists the fourteen tables, the four `species_dict` rows are present, and the
-      sixteen foreign keys plus the two table-level unique constraints appear in `information_schema`; paste
-      the run's output in the PR. The file is a course deliverable kept outside the repository — ask
-      @FrozenYty for it, and report what the server printed, not that it "looks fine".
+- [ ] **P4-13** The delivered MySQL script has actually run · @chemflowers · the design deliverable's DDL
+      was generated from `server/app/models.py` and checked only statically, so nobody has executed it yet ·
+      done when `mysql -u … -p < database-script-v1.0.sql` exits 0 on MySQL 8.0, `SHOW TABLES` lists the
+      fourteen tables, the four `species_dict` rows are present, and the sixteen foreign keys plus the two
+      table-level unique constraints appear in `information_schema`; paste the run's output in the PR. The
+      file is a course deliverable kept outside the repository — ask @FrozenYty for it, and report what the
+      server printed, not that it "looks fine". If he has no MySQL 8 instance, the task moves to whoever
+      does; the acceptance does not become "reviewed".
+- [ ] **P4-14** The five demo screens, drilled · @chemflowers · done when each of the five screens the demo
+      touches opens from a cold start in at most two clicks, shows no mock data and no placeholder text,
+      logs no console error, and is timed at under twenty seconds per screen
+- [ ] **P4-15** Release freeze · @FrozenYty · done when `main` carries the tag `v1.0.0-demo`, that tree is
+      the submission commit of `P4-09`, a clean virtual environment installs `requirements-server.txt` and
+      passes `pytest -q`, and a one-line rollback is written in `runbook`
+- [ ] **P4-16** Marking-scheme self-audit · @IkeaFyj · done when every graded criterion of the course
+      rubric has a row naming its evidence — a document section, a test file, or a minute of the demo — and
+      a row without evidence becomes a defect rather than an argument
+- [ ] **P4-17** Backup and restore drill · @FrozenYty · done when a backup taken before the rehearsal
+      restores into a scratch database and `/api/stats` returns the same totals as before, following
+      `runbook` — the runbook is a claim until it is run
+- [ ] **P4-18** Demo environment kit · @FrozenYty · done when a printed one-page card lists every item —
+      laptop, offline database copy, camera at index 1, lamp, polariser, rig, spare USB cable, power — and
+      the first rehearsal ticks it from the card alone
+- [ ] **P4-19** Demo browser profile · @chemflowers · done when the rehearsal laptop opens the thirteen pages
+      at 100 % zoom on the demo resolution with the radio off, and every asset loads from the repository —
+      no CDN, no network font — proven by one rehearsal with Wi-Fi disabled
 
-- [ ] **GATE P4** — four tables full: metrics, ablation, reproducibility, acceptance checklist · **checked by @IkeaFyj**, not
-      the lane owner (§5.3)
+- [ ] **GATE P4** — seven metric rows per class, the ablation table with each delta, and the reproducibility
+      table; blocker and major defects at zero, each closed with a named test; three rehearsals under eight
+      minutes including the injected failure; the submission archived with per-file hashes on the tagged
+      tree; the restore drill passed; the marking-scheme audit has no unexplained row · **checked by
+      @IkeaFyj**, not the lane owner (§5.3)
 
 ## 5. Text constraints
 
