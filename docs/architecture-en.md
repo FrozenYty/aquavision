@@ -165,6 +165,7 @@ AV_RIG_TRANSPORT=serial             # or ble: the cable-free rig, found by its a
 AV_RIG_KEEPALIVE_SECONDS=2.0
 AV_WORKER_ENABLED=1
 AV_WORKER_POLL_SECONDS=1.0
+AV_DEMO_ENABLED=0                  # 1 enables POST /api/demo/reset, which clears business data
 ```
 
 Two things `.env` does not do, both learned the hard way: the file is resolved against the **process
@@ -172,7 +173,9 @@ working directory**, so a `.env` at the repository root is invisible to a server
 and `scripts/init_db.py` does not read it at all, only the process environment. Set the variables in the
 shell instead if that is simpler.
 
-No path, port or threshold is hard-coded in business code. Relative SQLite paths are anchored to the
+No path, port or threshold is hard-coded in business code, with one exception: the quality threshold
+exists twice, as `PASS_MARK` in `server/app/vision/quality.py` and as `AV_QUALITY_THRESHOLD` in
+`server/app/config.py`, and is recorded as a defect in PLAN.md P4-05. Relative SQLite paths are anchored to the
 repository root by `app.db.resolve_dsn`, so the database is one file per repository rather than one file
 per working directory.
 

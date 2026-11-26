@@ -47,7 +47,7 @@ What exists and must not be rewritten:
 
 | Piece | Where | State |
 |---|---|---|
-| App factory, envelope, error codes, JWT, role guards | `server/app/main.py`, `envelope.py`, `security.py`, `deps.py` | 45 contract routes mounted |
+| App factory, envelope, error codes, JWT, role guards | `server/app/main.py`, `envelope.py`, `security.py`, `deps.py` | 47 contract routes mounted |
 | Capture ingest, quality scoring, dedup, clock guard | `routers/capture.py` | done |
 | Review, hard-example pool | `routers/review.py`, `routers/hard_samples.py` | done |
 | Datasets, reports, parameters | `routers/datasets.py`, `reports.py`, `system.py` | done |
@@ -95,7 +95,8 @@ mAP@0.5:0.95 0.561 and mean recall 0.692; and its version is registered and onli
 and puts it online, so the clone that has nothing but this repository and `requirements-server.txt`
 runs detection; `tests/test_delivered_weights.py` holds the three-file layout, the class order
 against `species_dict` and the repository-relative path, and `tests/test_detect_real.py` runs the
-weights for real where ultralytics is installed. `P2-13` and `GATE P2` are unblocked by this.
+weights for real where ultralytics is installed. The weights blocker is gone, but `P2-13` and `GATE P2` still wait
+on `P2-20` and real targets in front of the camera; `PLAN.md` keeps `P2-20` open as their unblocker.
 
 **What is left:**
 

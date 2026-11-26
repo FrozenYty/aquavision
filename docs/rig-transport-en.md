@@ -326,7 +326,7 @@ is written. The measurement belongs in the pull request as a table, not in a com
 
 The arithmetic the rehearsal needs: one attempt can cost up to forty seconds — a scan that sees the rig and a
 connection that then times out — so five attempts plus the backoff sum is a little under four minutes in the
-worst case, `5 × 40 + 31 = 231 s`, and about two minutes if the rig is never seen at all, because a scan that
+worst case, `5 × 40 + 15 = 215 s`, and about two minutes if the rig is never seen at all, because a scan that
 finds nothing does not reach the connect phase. Both are bounds, not predictions.
 
 ## 10. What the operator sees when it fails

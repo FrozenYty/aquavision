@@ -5,16 +5,11 @@ The rig has its own state machine - four screens, two link states, documented in
 hold the port open, send `CMD PING` every two seconds because the rig's liveness rule requires it, hand
 every received event to a callback, and get out of the way.
 
-The states are written out as a matrix in the same document, because the pairs nobody writes down are
-exactly where a serial link misbehaves: a write attempted on a closed port, a keepalive thread outliving
-its transport, two reconnect attempts racing each other.
-
-| State \\ Event | start | port opened | open failed | read failed | write failed | stop | tick | line in |
-|---|---|---|---|---|---|---|---|---|
-| DOWN | OPENING | - | - | - | - | STOPPING | - | - |
-| OPENING | ignored | OPEN | DOWN (retry) | - | - | STOPPING | - | - |
-| OPEN | ignored | - | - | DOWN (retry) | DOWN (retry) | STOPPING | OPEN | OPEN |
-| STOPPING | ignored | ignored | ignored | - | - | - | ignored | ignored |
+The states are written out as a matrix in §9 of the same document, because the pairs nobody writes down
+are exactly where a serial link misbehaves: a write attempted on a closed port, a keepalive thread
+outliving its transport, two reconnect attempts racing each other. The matrix is not repeated here; §9 is
+the authority for the cells, where a failure moves the link back to `OPENING`, an `OPEN` tick sends
+`CMD PING`, and a parsed line is dispatched.
 
 Two invariants follow, and the code checks both:
 

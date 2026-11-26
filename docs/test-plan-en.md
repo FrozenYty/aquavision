@@ -18,8 +18,7 @@ produce a wrong number must have a test.** That means quality scoring, coordinat
 deduplication and statistics — not CRUD endpoints.
 
 An end-to-end run works for a single frame: capture, detect, review, report. What is not
-exercised is a batch run - `P3-01`'s hundred frames, live progress and resume - and the
-per-class thresholds `P3-15` owns, which the worker does not read yet.
+exercised is `P3-02`'s basis switch, `P3-07`'s report and the official runs `P4` carries.
 
 ## 2. Datasets and splitting
 

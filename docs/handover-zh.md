@@ -41,7 +41,7 @@
 
 | 部分 | 位置 | 状态 |
 |---|---|---|
-| 应用工厂、封装、错误码、JWT、角色守卫 | `server/app/main.py`、`envelope.py`、`security.py`、`deps.py` | 45 条契约路由已挂载 |
+| 应用工厂、封装、错误码、JWT、角色守卫 | `server/app/main.py`、`envelope.py`、`security.py`、`deps.py` | 47 条契约路由已挂载 |
 | 采集入库、质量打分、去重、时钟容差 | `routers/capture.py` | 完成 |
 | 复核、难例池 | `routers/review.py`、`routers/hard_samples.py` | 完成 |
 | 数据集、报告、参数 | `routers/datasets.py`、`reports.py`、`system.py` | 完成 |
@@ -84,7 +84,8 @@ mAP@0.5 0.770、mAP@0.5:0.95 0.561、平均召回 0.692；其版本已登记并�
 按 ADR 13 纳入版本库。`scripts/init_db.py` 会在空库上注册该版本并置为在线，所以只拿到这个仓库与
 `requirements-server.txt` 的克隆就能跑识别；`tests/test_delivered_weights.py` 约束三个文件的布局、
 类别顺序与 `species_dict` 的一致性以及相对仓库根的路径，`tests/test_detect_real.py` 则在装有
-ultralytics 的机器上真跑一遍权重。`P2-13` 与 `GATE P2` 由此解除阻塞。
+ultralytics 的机器上真跑一遍权重。权重这一环已经解决，但 `P2-13` 与 `GATE P2` 仍在等 `P2-20` 与镜头前的真实靶标；`PLAN.md` 仍未关闭
+`P2-20`，它是这两项的解锁前提。
 
 **还缺的：**
 

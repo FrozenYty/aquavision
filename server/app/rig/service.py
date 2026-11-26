@@ -6,9 +6,9 @@ scores a frame, `settings.quality_threshold` turns the score into a verdict - so
 product agree about what "good enough" means instead of inventing a second opinion here.
 
 Deliberately absent: any retry, any queueing, any second attempt. A capture that fails sends **nothing**,
-and the rig's own five-second timeout turns the silence into `RETAKE / NO REPLY` with no score. That is
-the honest answer - the shot did fail - and it reuses the firmware's mechanism rather than adding a new
-message the rig would have to learn.
+and the rig's own four-second timeout (`cfg::CAPTURE_TIMEOUT_MS`) turns the silence into
+`RETAKE / NO REPLY` with no score. That is the honest answer - the shot did fail - and it reuses the
+firmware's mechanism rather than adding a new message the rig would have to learn.
 """
 
 from __future__ import annotations
@@ -67,7 +67,7 @@ class RigService:
         try:
             quality = self._capture()
         except Exception:  # noqa: BLE001 - camera busy, no camera, disk full: all the same answer
-            # Silence, on purpose. The rig's five-second timeout reports NO REPLY, which is true.
+            # Silence, on purpose. The rig's `cfg::CAPTURE_TIMEOUT_MS` (4 s) reports NO REPLY, which is true.
             log.exception("rig: capture failed for trigger %s; staying silent", event.arg(0))
             return
 

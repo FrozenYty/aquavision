@@ -80,12 +80,13 @@ checked.
 - Where: manual — the case's three steps. `POST /api/users/{id}/status` exists and flips `status`, but
   no test calls it with `status: 0`, signs in afterwards, or queries the history.
 
-**TC-ACC-02** — AC-03 · duplicate phone · uncovered
+**TC-ACC-02** — AC-03 · duplicate phone · automated
 - Precondition: one account already uses a phone number.
 - Steps: create a second account with the same number.
 - Expected: refused with a message naming the conflict; no new row appears.
-- Where: uncovered — the contract has no account-creation operation, so there is no route to post a
-  second account to and no uniqueness rule to exercise.
+- Where: `tests/test_accounts.py::test_a_duplicate_identifier_is_refused_with_the_message` — the
+  duplicate phone is refused with `409` and a message naming the field. Not asserted: no new row
+  appears; the test reads the refusal, not the table.
 
 **TC-AUD-01** — AC-04 · audit values · automated
 - Precondition: one frame with a review pending.
@@ -357,12 +358,12 @@ checked.
 - Where: manual — the disk half is a person filling a disk. The queue figures are covered by
   `tests/test_failure_messages.py::test_a_dead_worker_is_reported_with_the_tasks_it_is_not_advancing`.
 
-**TC-SYS-03** — AC-29 · message deduplication · uncovered
+**TC-SYS-03** — AC-29 · message deduplication · automated
 - Precondition: a capture failure can be triggered on demand.
 - Steps: trigger it twice within an hour.
 - Expected: one unread message, one increment, and the second failure adds nothing.
-- Where: uncovered — nothing creates a `sys_message` row. The routes list and mark messages read, but
-  there is no capture-failure event and no deduplication rule.
+- Where: `tests/test_messages.py::test_repeated_failures_within_the_hour_add_nothing` — three failures
+  of one capture session leave one unread message and one row; a second session is a second message.
 
 ### 3.8 Algorithm
 
@@ -454,10 +455,9 @@ from a new one.
 
 ## 5. Status
 
-49 cases: 20 `automated`, 21 `manual`, 8 `uncovered`. The eight uncovered ones are the gap this document
-now shows instead of hiding — scheduled capture and its failed run, retake marking, cleanup, duplicate
-phone numbers, the site distribution, the period comparison and message deduplication have nothing to
-check.
+49 cases: 22 `automated`, 21 `manual`, 6 `uncovered`. The six uncovered ones are the gap this document
+now shows instead of hiding — scheduled capture and its failed run, retake marking, cleanup, the site
+distribution and the period comparison have nothing to check.
 
 Six of the 21 manual cases name a test that covers part of the claim (the quality gate, immediate
 detection, the report figures, the experiment table, the dictionary guard, the monitoring panel); the

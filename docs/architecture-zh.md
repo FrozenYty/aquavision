@@ -161,13 +161,17 @@ AV_RIG_TRANSPORT=serial             # 或 ble：无线缆的成品装置，按�
 AV_RIG_KEEPALIVE_SECONDS=2.0
 AV_WORKER_ENABLED=1
 AV_WORKER_POLL_SECONDS=1.0
+AV_DEMO_ENABLED=0                  # 为 1 才开放 POST /api/demo/reset（会清业务数据）
 ```
 
 `.env` 有两件它做不到的事，都是踩过才知道的：文件是相对**进程工作目录**解析的，所以放在仓库根目录
 的 `.env` 对从 `server/` 启动的服务是不可见的；而 `scripts/init_db.py` 根本不读它，只读进程环境变量。
 嫌麻烦就直接在 shell 里设。
 
-业务代码里不允许出现硬编码的路径、端口与阈值。相对 SQLite 路径由 `app.db.resolve_dsn` 锚定到
+业务代码里不允许出现硬编码的路径、端口与阈值，只有一个例外：质量阈值有两处，分别是
+`server/app/vision/quality.py` 里的 `PASS_MARK` 与 `server/app/config.py` 里的
+`AV_QUALITY_THRESHOLD`，这一项作为缺陷记在 PLAN.md P4-05。相对 SQLite 路径由
+`app.db.resolve_dsn` 锚定到
 仓库根目录，所以数据库是「每个仓库一个文件」，而不是「每个工作目录一个文件」。
 
 ## 九、不做什么

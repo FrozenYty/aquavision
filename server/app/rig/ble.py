@@ -23,8 +23,7 @@ and checked cell by cell in `tests/test_rig_ble.py`:
 **`Failed` is the reason that table has seven rows.** An unbounded reconnect loop makes a broken link look
 like a working one: the log fills with attempts, a page says "reconnecting", and no state anywhere ever
 admits that this is not going to work. Five attempts, and then a state that stays put until a person asks
-again (C1) - which is the same decision the rig takes from its own end when it drops five times in a
-minute.
+again (C1).
 
 Two things about the shape of this module belong in the open rather than in a comment nobody reads:
 
@@ -663,10 +662,11 @@ class BleClient:
                 elif state is BleState.RECONNECTING:
                     await self._backoff()
         finally:
-            # A polite goodbye, and the firmware depends on it: the rig tells a client that is leaving
-            # (subscription disabled, its F4) from a radio that died (no F4), and only the second kind
-            # counts towards its drop-storm rule. A link that is already gone answers nothing here, which
-            # is correct - the disconnect that mattered was the radio's, and the rig has seen it.
+            # A polite goodbye: disable notifications before disconnecting, so the firmware sees a client
+            # that is leaving (its F4) rather than a radio that died. Firmware 1.24 deleted the drop-storm
+            # rule this order used to serve, so nothing depends on the distinction now; the teardown is
+            # still the honest one. A link that is already gone answers nothing here, which is correct -
+            # the disconnect that mattered was the radio's, and the rig has seen it.
             with contextlib.suppress(Exception):
                 await self._radio.unsubscribe(self._tx_uuid)
             await self._radio.disconnect()
