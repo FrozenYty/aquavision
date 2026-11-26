@@ -1,3 +1,25 @@
+## 2026-11-26
+
+- **A five-lane audit corrected sixty claims the artifacts contradict, and the defects it found in the code
+  are recorded instead of described away.** Five read-only lanes (code against documents, process documents,
+  bilingual content, rig and firmware, machine-local material) produced 34 findings; the ones where the
+  document was wrong became 60 edits across 24 files in #212 - counts (`media_asset` 18->17, 45->47 routes,
+  SRS v1.12->V1.14, thirteen->sixteen ADRs), dates and arithmetic (procurement-zh's chain, 231->215 s,
+  forty->seventy minutes), stale verdicts (two test cases uncovered->automated, tally 20/21/8->22/21/6),
+  retired firmware rules (drop-storm, `Err0`, the U8g2 pin, the "95-character line is dropped whole"), a
+  missing `AV_DEMO_ENABLED`, and the machine-local material's stale command, sample default and commit
+  citations. Where the artifact is wrong instead of the document, the defect went to `PLAN.md` P4-05: the BLE
+  link never built without `AV_RIG_PORT`, `request_id` never logged, every validation error answered `40001`,
+  the quality threshold's two truths, two `frame_id` formats, the protocol tail parsed as a command, and ADR 16
+  stating two rules firmware 1.24 retired (an accepted ADR is superseded, so ADR 17 is lane A's).
+- **This audit's own entry was missing until now, and that is the defect it was auditing.** `PROGRESS.md` is
+  the repository's change log, and no check enforces that a change writes here: `check-progress.py` validates
+  the shape of the days, not whether the newest one covers the newest commit. #212 changed 23 files and
+  recorded nothing - the same shape the audit's process lane found elsewhere: a rule stated, enforced by
+  nothing, and therefore drifted. It is recorded rather than argued. A check comparing the newest heading with
+  the newest commit date would make it enforceable; proposed rather than added, because it would change what
+  every pull request must do.
+
 ## 2026-11-18
 
 - **A Mermaid diagram GitHub could not render, and a check that now would.** `design-{en,zh}.md` wrote `UQ`
