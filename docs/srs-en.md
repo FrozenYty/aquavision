@@ -1001,7 +1001,7 @@ than picked up again; the decision is recorded in ADR 12.
 |---|---|---|---|
 | sys_user | User | Account, role and sign-in state; underpins authentication and permissions. | 14 |
 | sys_log | Operation log | Audit record of key actions; append-only. | 10 |
-| media_asset | Image asset | Captured frame with path, timestamp, exposure and quality score. | 18 |
+| media_asset | Image asset | Captured frame with path, timestamp, exposure and quality score. | 17 |
 | detect_task | Detection job | Model, parameters, progress and statistics for one job. | 16 |
 | detect_object | Detected object | Class, confidence, coordinates and review state of one box. | 19 |
 | species_dict | Species dictionary | Class code, names, category and per-class confidence threshold. | 10 |

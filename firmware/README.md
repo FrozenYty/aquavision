@@ -56,7 +56,7 @@ seconds and one cable rather than the demonstration: flash `rig-serial`, plug th
 service at a COM port. That is only true while this target keeps compiling and keeps being used, which is
 why it owns bench work.
 
-PlatformIO pulls U8g2 at the pinned version. If `pio` is not installed:
+PlatformIO pulls a compatible U8g2 2.x (currently 2.36.18). If `pio` is not installed:
 
 ```
 python -m pip install platformio
@@ -298,8 +298,8 @@ debounce: the number matches by coincidence, not by construction.
 ## Serial protocol
 
 One message per line at 115200 baud, ASCII, `\n` terminated. A line is limited to 95 characters: on
-overflow the buffer resets, so anything longer is not handled as one message. The firmware ignores
-anything it does not understand, so a garbled byte cannot brick the rig.
+overflow the counter resets and the tail is parsed as a new line — a defect recorded in PLAN.md P4-05.
+The firmware ignores anything it does not understand, so a garbled byte cannot brick the rig.
 
 | Direction | Message | Meaning |
 |---|---|---|

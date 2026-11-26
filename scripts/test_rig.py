@@ -8,7 +8,7 @@ instead of asking anyone to eyeball a screen.
     python scripts/test_rig.py --index 1 --minutes 10
     python scripts/test_rig.py --images ../data/frames/A3/20261110/...   # a captured session
 
-A directory of images has no time axis, so the flicker check is skipped there rather than passed:
+A directory of images has no time axis, so the light-stability check is skipped there rather than passed:
 a check that did not run must not look like a check that held.
 
 Exit codes: 0 pass, 1 a check failed, 2 the source could not be read.
@@ -48,10 +48,10 @@ def target_checks(frames: list) -> Check:
     return Check("靶标尺寸", passed, detail)
 
 
-def flicker_checks(frames: list) -> Check:
+def light_stability_checks(frames: list) -> Check:
     passed, measurement = rig.flicker_check(frames[0], frames[-1])
     return Check(
-        "频闪",
+        "补光稳定",
         passed,
         f"首尾亮度差 {measurement.as_text()}（上限 {rig.FLICKER_TOLERANCE:.0%}）",
     )
@@ -66,7 +66,9 @@ def main(argv: list[str] | None = None) -> int:
         help="camera index; 0 is usually the laptop's built-in camera, the rig camera is index 1",
     )
     parser.add_argument("--frames", type=int, default=DEFAULT_FRAMES, help="frames per check")
-    parser.add_argument("--minutes", type=float, default=0.2, help="flicker run length, in minutes")
+    parser.add_argument(
+        "--minutes", type=float, default=0.2, help="light-stability run length, in minutes"
+    )
     parser.add_argument("--images", metavar="DIR", help="read frames from a directory instead")
     args = parser.parse_args(argv)
 
@@ -89,9 +91,9 @@ def main(argv: list[str] | None = None) -> int:
 
     checks = [uniformity_checks(frames), target_checks(frames)]
     if args.images:
-        print(f"  注：{source} 没有时间轴，频闪检查已跳过\n")
+        print(f"  注：{source} 没有时间轴，补光稳定检查已跳过\n")
     else:
-        checks.append(flicker_checks(frames))
+        checks.append(light_stability_checks(frames))
 
     print(render(checks, {"取样来源": source, "帧数": len(frames)}))
     ok, _failed = verdict(checks)

@@ -88,7 +88,7 @@ python -m uvicorn app.main:app --app-dir server --port 8000
 pytest -q
 ```
 
-229 个测试，约一分钟。不需要摄像头、数据库服务或网络。
+测试套件约一分钟。不需要摄像头、数据库服务或网络。
 
 ### 出问题的时候
 
@@ -125,14 +125,14 @@ python -m http.server 8765 --directory web
 | 文档 | 说明 |
 |---|---|
 | [文档索引](docs/INDEX-zh.md) | 哪份文档回答什么，以及改一处要连带改哪些 |
-| [需求定义书 V1.12](docs/srs-zh.md) | 功能需求 29 条、用例 9 个、数据表 14 张、验收项 36 条 |
+| [需求定义书 V1.14](docs/srs-zh.md) | 功能需求 29 条、用例 9 个、数据表 14 张、验收项 36 条 |
 | [任务计划](PLAN.md) | 阶段、任务与门禁，团队的任务契约 |
 | [总体架构](docs/architecture-zh.md) · [English](docs/architecture-en.md) | 分层、依赖规则、运行时模型、一帧的生命周期 |
 | [接口约定](docs/api-contract-zh.md) · [English](docs/api-contract-en.md) | REST 路径、响应封装、错误码、WebSocket 协议 |
 | [数据模型](docs/data-model-zh.md) · [English](docs/data-model-en.md) | 十四张表、字段、索引、文件存储 |
 | [测试计划](docs/test-plan-zh.md) · [English](docs/test-plan-en.md) | 测试分层、数据集划分、指标与验收 |
 | [术语表](docs/glossary-en-zh.md) | 中英对照，代码与文档共用的唯一词表 |
-| [决策记录](docs/adr/) | 十三份决策记录及其理由：09 已被 10 取代，07 的 pytest 条款已被 11 取代，12 增补了 08；逐条列在 `docs/architecture-zh.md` 第十节 |
+| [决策记录](docs/adr/) | 十六份决策记录及其理由：09 已被 10 取代，07 的 pytest 条款已被 11 取代，12 增补了 08；逐条列在 `docs/architecture-zh.md` 第十节 |
 
 设计文档以英文版为准，中文为对照版，两者必须在同一次提交内同步。
 

@@ -473,7 +473,7 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         a new mechanism, and refusing a class code that disagrees with `labels.txt` is one comparison
         against the delivered file
 
-      - C-lane frontend delivered separately: four-class ordering, API-aligned 0..1/two-decimal validation, and unknown-code refusal are exercised by `tests/test_species_threshold_ui.py`. The task stays open: lane B owns per-job threshold application and labels validation, as agreed with the user.
+      - C-lane frontend delivered separately: four-class ordering, API-aligned 0..1/two-decimal validation, and unknown-code refusal are exercised by `tests/test_species_threshold_ui.py`.
 
 - [x] **P3-16** Review versions and rollback · @Gtechson · **unblocks `P3-05`** · delivered 11-11 (#148)
       - `GET /api/review/frames/{frame_id}/versions` lists each entry newest first with its action, time,
@@ -644,18 +644,17 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       `OBSOLETE_COLUMNS`, after checking that every stored value was NULL), the capture request's
       `turbidity_rel` field, and `serializers.frame`'s `env` object, which existed only to hold it. The
       covering assertions now hold the absence (`"env" not in frame`) rather than the field
-      - **the other two sites stay, and here is why.** The firmware still reads the sensor every 5 s
-        (`cfg::TURBIDITY_PERIOD_MS = 5000`) and still sends `EVT TURBIDITY`, so `rig/service.py`'s
-        branch mirrors a real event; `protocol.register_read`/`REGISTER_READ_PREFIX` are used by
-        `scripts/test_turbidity.py` and the firmware still implements `CMD TREAD`. An in-flight branch
-        (`feat/turbidity-write-probe`) is editing `server/app/rig/protocol.py`, so deleting them now
-        would collide. Their removal belongs with the firmware's, not before it
+      - **the two PC-side leftovers are now dead code.** The current firmware (1.24) sends no
+        `EVT TURBIDITY` and implements no `CMD TREAD`, and #196 deleted the two probe scripts, so
+        `rig/service.py`'s `TURBIDITY` branch and `protocol.py`'s `register_read`/`REGISTER_READ_PREFIX`
+        mirror an event nothing sends; removing them is a later cleanup, not this task
       - **reported, not edited:** the SRS (Table 2-3, §2.4, the data dictionary row and the module
         count), the contract's frame example and the prototype's frame shape still describe the field -
         lane A's documents, for the lead's sweep. `docs/data-model-{en,zh}.md` follows the code now,
         because that document is the schema the code builds
       - the service comment claiming a "five-second timeout" was checked against the firmware:
-        `cfg::CAPTURE_TIMEOUT_MS = 5000`, so the comment is right and the note about 4 s does not apply
+        `cfg::CAPTURE_TIMEOUT_MS` is `2 * PC_KEEPALIVE_MS`, which is 4000 ms, so the comment is wrong and
+        the note about 4 s does apply
 - [x] **P3-26** Upload and input limits · @Gtechson · **delivered 11-16**: four inputs the capture path
       took, declared nowhere and refused by nothing, each refused now with `40002` and a sentence naming
       the limit - a body over 8 MiB (read from `Content-Length` before parsing, in the request middleware,
@@ -727,9 +726,9 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       - `EVT TURBIDITY`, `CMD TREAD` and `CMD TDUMP` left the firmware with the sensor in 1.12, along with
         the two probe scripts (`scripts/test_turbidity.py`, `tests/test_turbidity_probe.py`), and both
         wiring and state-machine documents were rewritten rather than trimmed
-      - **lane B still owes one thing**: `turbidity_rel` is gone from the data model and the contract
-        documents but the column remains in `server/app/models.py`, so `media_asset` may now carry an
-        orphaned field that nothing writes
+      - **lane B has closed it**: `turbidity_rel` is gone from the data model, the contract documents and
+        `server/app/models.py`, and `server/app/db.py` lists it in `OBSOLETE_COLUMNS` so a populated
+        database drops it deliberately
 - [x] **P3-38** The finished rig needs no cable to the PC · @FrozenYty · the assembled rig must run from a
       power module with only the camera's wire on the desk · done when a verdict reaches the PC
       over BLE with the serial cable unplugged, the `rig-serial` build still exists and is documented as the
@@ -826,15 +825,39 @@ minute rather than a meeting:
         pass, in `server/app/routers/detect.py`
       - **major: a batch cannot be built from a selection.** AC-08's drill-down does not exist — a batch is
         created from an `asset_count`, not from frames someone ticked
-      - **major: `species_dict.conf_thr` is read by no detection path**, so AC-26's "a new threshold
-        applies to new jobs" cannot hold; `P3-15` owns it
+      - **major: the BLE rig link is never built when `AV_RIG_PORT` is empty.** `server/app/main.py`
+        starts the link only when `rig_port` is set, while `server/app/rig/wiring.py::build_link` builds
+        the BLE link without a port and `tests/test_rig_ble.py` expects a `BleRigLink`, so the
+        cable-free configuration starts no link at all
+      - **major: `request_id` is returned but never logged.** `server/app/envelope.py` carries it in
+        every response and `server/app/main.py` in `X-Request-Id`, but no log record contains it,
+        although `docs/api-contract-en.md` §1 says it is echoed in server logs
+      - **major: every validation failure is reported as a missing parameter.** `server/app/main.py`'s
+        `RequestValidationError` handler answers `40001` for any rejected schema, so a
+        present-but-invalid value is reported as missing while `40002` is defined and never reached by
+        validation
+      - **major: the quality threshold has two truths.** `server/app/vision/quality.py` hard-codes
+        `PASS_MARK = 60` for the verdict it returns, and `server/app/routers/capture.py` reads the
+        configurable `quality_threshold` for the stored `quality_flag`, so the two can disagree after an
+        operator changes the parameter
+      - **major: `frame_id` has two formats.** `server/app/vision/capture.py` ends it with a four-digit
+        counter (`-{index:04d}`) and `server/app/routers/capture.py` with the first four hex characters
+        of the content hash (`digest[:4]`), while the SRS, the data model and the API contract describe
+        only the digit form
+      - **major: `protocol.cpp` does not drop an over-long line.** `firmware/main/src/protocol.cpp`
+        resets the counter when the 95-character buffer fills and keeps reading, so the tail of the
+        line is parsed as a new command instead of being rejected
+      - **major: ADR 16 still states two retired rules.** `docs/adr/16-rig-cable-free-over-ble.md`
+        describes the drop-storm rule ("five disconnects inside a minute") and treats `Err0` as a live
+        face; neither exists in firmware 1.24 (`Err0` was retired in 1.21), and an accepted ADR is
+        superseded rather than edited, so lane A must write ADR 17
       - **minor, documentation: the fifth failed sign-in.** The case text promises the remaining seconds;
         the lock message reports fifteen minutes, and the seconds sentence arrives on a later attempt
       - **minor, documentation: log deletion.** A case says no endpoint deletes a `sys_log` row;
         `POST /api/demo/reset` clears them by design, because a rehearsal must start clean
       - **the owner is one person**, because §5.1 says so and "all" is not an owner. Each lane reports
         its own defects into the table; this task keeps the counts and the regression checks
-      - **acceptance is the three majors above**, each closed with a test named in the defect table, plus
+      - **acceptance is the nine majors above**, each closed with a test named in the defect table, plus
         zero blocker and zero major rows against the frozen tag of `P4-15`
 - [ ] **P4-06** Acceptance checklist, demo script, slides · @IkeaFyj · done when every acceptance item
       is ticked with the evidence beside it, and the demo runs end to end on paper without a question

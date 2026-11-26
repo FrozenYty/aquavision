@@ -10,7 +10,10 @@ The numbers come from the procurement document, section 6, and the SRS behind it
 |---|---|
 | Lighting uniformity | left half / right half mean brightness ≥ 0.7 |
 | Target size | a 5 cm square is 45-300 px wide at 640 input |
-| Flicker | first and last frame of a 10-minute run differ by < 5 % |
+| Light stability | first and last frame of a 10-minute run differ by < 5 % |
+
+Procurement section 6 also lists a flicker row: filmed by a phone camera, no rolling bars. That one is
+outside this script - it needs the lamp photographed by a phone, not frames from the camera under test.
 
 None of them needs a model, a database or the API — only frames. That is deliberate: when the rig is
 wrong, the reason should not be buried under three other layers.
@@ -44,7 +47,7 @@ TARGET_MIN_AREA_FRACTION = 0.0005
 TARGET_MAX_PX = 300
 # A square target fills its bounding box; a reflection does not.
 TARGET_MIN_FILL = 0.80
-# Flicker: the first and the last frame of a continuous run.
+# Light stability: the first and the last frame of a continuous run.
 FLICKER_TOLERANCE = 0.05
 
 
@@ -214,9 +217,13 @@ def target_check(frames: list[np.ndarray]) -> tuple[bool, Measurement]:
 
 
 def flicker_check(first: np.ndarray, last: np.ndarray) -> tuple[bool, Measurement]:
-    """Brightness drift between the first and last frame of a continuous run."""
+    """Light stability: brightness drift between the first and last frame of a continuous run.
+
+    The symbol keeps its old name because `tests/test_rig_measure.py` imports it; the check it performs
+    is light stability, while flicker is the phone-camera row procurement §6 measures with a phone.
+    """
     drift = brightness_ratio(first, last)
-    return drift < FLICKER_TOLERANCE, Measurement("频闪", drift, "%")
+    return drift < FLICKER_TOLERANCE, Measurement("补光稳定", drift, "%")
 
 
 def sample_from_camera(index: int, frames: int, seconds: float) -> list[np.ndarray]:
