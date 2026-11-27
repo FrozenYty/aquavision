@@ -636,10 +636,32 @@ const ROUTES = {
 
   // Screen 6 statistics. species and quality are contract routes; trend and
   // corrections are contract routes too (api-contract §6).
-  "GET /stats/species": () => STATS_SPECIES,
-  "GET /stats/quality": () => STATS_QUALITY,
-  "GET /stats/trend": () => STATS_TREND,
-  "GET /stats/corrections": () => STATS_CORRECTIONS,
+  // The four statistics routes answer in the contract's shapes (api-contract §6, server/app/routers/stats.py),
+  // derived from the prototype's per-day and per-class fixtures, so the page has one code path. The demo
+  // counts do not depend on the basis; the page says so.
+  "GET /stats/species": ({ query }) => {
+    const total = STATS_SPECIES.reduce((sum, row) => sum + row.box_count, 0);
+    return {
+      basis: query.basis === "raw" ? "raw" : "reviewed",
+      days: STATS_TREND.length,
+      items: [...STATS_SPECIES]
+        .sort((a, b) => b.box_count - a.box_count)
+        .map((row) => ({ class_code: row.class_code, cn_name: row.class_code, count: row.box_count,
+          share: Math.round((row.box_count / total) * 10000) / 10000 })),
+      total,
+    };
+  },
+  "GET /stats/quality": () => {
+    const total = STATS_QUALITY.reduce((sum, row) => sum + row.total, 0);
+    const rejected = STATS_QUALITY.reduce((sum, row) => sum + row.intercepted, 0);
+    return { days: STATS_QUALITY.length, total, rejected, rate: Math.round((rejected / total) * 10000) / 10000 };
+  },
+  "GET /stats/trend": () => ({ days: STATS_TREND.length, items: STATS_TREND }),
+  "GET /stats/corrections": () => {
+    const sum = (key) => STATS_CORRECTIONS.reduce((total, row) => total + row[key], 0);
+    const [modified, added, rejected] = [sum("relabel"), sum("added"), sum("removed")];
+    return { days: STATS_TREND.length, rejected, modified, added, total: rejected + modified + added };
+  },
 };
 
 function match(method, path) {
