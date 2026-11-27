@@ -279,8 +279,11 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         describes `tests/fixtures/` as holding three JPEGs; neither exists - metrics come out of
         `train_baseline.py`, and the tests synthesise their frames (lane D)
 
-- [ ] **P2-20** An environment that can run inference · @Gtechson · unblocks `GATE P2`, `P2-13`,
-      `P3-10` and `P4-10` · done when `pip install -r requirements.txt` into a fresh environment makes
+- [x] **P2-20** An environment that can run inference · @Gtechson · unblocks `GATE P2`, `P2-13`,
+      `P3-10` and `P4-10` · **delivered 11-27**: runbook section 4's three commands, into a fresh conda
+      environment, installed the pinned stack and ran `tests/test_detect_real.py` to **3 passed, 0
+      skipped**; the section now names the four prerequisites a skip reports · done when
+      `pip install -r requirements.txt` into a fresh environment makes
       `python -m pytest tests/test_detect_real.py -o addopts="" -q` **run and pass** instead of skip, and
       the command is written down as a step rather than discovered per machine
       - `requirements.txt` already pins `ultralytics`; **no new dependency file is needed** - the path

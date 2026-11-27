@@ -71,7 +71,13 @@ python -m pytest tests/test_detect_real.py -o addopts="" -q
 Three tests run there that skip everywhere else, because they are the only evidence that the delivered
 weights load and produce the boxes the API reports. If they pass, detection works.
 
-**Two things that go wrong on Windows, both seen on this project:**
+They need four things besides the interpreter, and a missing one is a **skip that names it**, not a
+pass: `ultralytics` (the skip says it is not installed when a `python` from another environment was
+used), the development database from section 3 with its one online `model_version` row, the weight
+file that row names, and one frame image - the DUO test split under `data/dataset/test/images` when
+this machine has it, otherwise any frame captured into the data root.
+
+**Three things that go wrong on Windows, all seen on this project:**
 
 - `python -m venv` or `pip` failing with `PermissionError` while writing a **temporary** directory they
   just created. Python gives a temporary directory owner-only permissions, and a sandboxed or restricted

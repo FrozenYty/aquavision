@@ -1,5 +1,17 @@
 ## 2026-11-27
 
+- **P2-20: a fresh environment built from `requirements.txt` runs the delivered weights.** Walked
+  runbook section 4 on a fresh conda environment (`aquavision-p2-20`; the working environment on this
+  machine is already named `aquavision`): `python -m pip install -r requirements.txt`, then
+  `python -m pytest tests/test_detect_real.py -o addopts="" -q` answers **3 passed, 0 skipped** in
+  11.59 s - the three tests that are the only evidence the delivered weights load and produce the
+  boxes the API reports no longer skip on a machine whose only install step is the pinned file. The
+  walk found one thing section 4 did not say: the tests also need section 3's database (`data/app.db`
+  with its one online `model_version` row) and one frame image, and the section now names those four
+  prerequisites so a missing piece reads as a skip with its name rather than a quiet pass. The same
+  section's Windows list called itself "two things" over three bullets; it says three. No dependency
+  file and no code changed - the path existed, it had just not been walked.
+
 - **ADR 17 supersedes the two rules ADR 16 still states, and the repository now lists seventeen
   decision records.** `docs/adr/17-drop-storm-and-err0-retired.md` records what firmware 1.21 and
   1.24 already do: `Err0` and the `OFFLINE`/`NoLink` faces are gone, a disconnect returns to
