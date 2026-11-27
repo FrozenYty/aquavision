@@ -833,6 +833,9 @@ minute rather than a meeting:
         has not been detected yet and never filters `quality_flag`, so AC-07's "stays out of the queue"
         half is false today: the queue accepts what the quality gate refused. Found by `P3-34`'s verdict
         pass, in `server/app/routers/detect.py`
+        **closed 11-27:** the selection in `server/app/routers/tasks.py::create_batch` now filters
+        `MediaAsset.quality_flag`, and `tests/test_batch_quality.py` fails on the old code - the batch
+        assigned the refused frames' asset ids.
       - **major: a batch cannot be built from a selection.** AC-08's drill-down does not exist — a batch is
         created from an `asset_count`, not from frames someone ticked
       - **major: the BLE rig link is never built when `AV_RIG_PORT` is empty.** `server/app/main.py`
@@ -871,6 +874,9 @@ minute rather than a meeting:
       - **acceptance is the nine majors above** - eight code majors, each closed with a test named in
         the defect table, and the ADR-16 item ADR 17 has closed - plus zero blocker and zero major rows
         against the frozen tag of `P4-15`; the count stays at nine until the code fixes land
+        - **11-27: seven of the eight code majors are closed with their tests.** The one left is a
+          batch built from a selection - AC-08's drill-down - which needs `POST /api/detect/batches` to
+          accept frame ids, a contract change rather than a defect fix, so this task stays open.
 - [ ] **P4-06** Acceptance checklist, demo script, slides · @IkeaFyj · done when every acceptance item
       is ticked with the evidence beside it, and the demo runs end to end on paper without a question
       left unanswerable; the ten questions an examiner is most likely to ask have written answers beside

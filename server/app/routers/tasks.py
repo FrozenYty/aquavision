@@ -139,7 +139,9 @@ def create_batch(db, body: BatchBody) -> DetectTask:
 
     The selection happens once, here. A task's work list is fixed at creation and identical for every
     worker, and frames already detected or already owned by another task are skipped - otherwise two
-    batches created back to back would claim the same frames before either had run.
+    batches created back to back would claim the same frames before either had run. Frames the quality
+    gate refused are skipped too: AC-07 says a defocused frame stays out of the queue, and a batch is
+    the queue.
     """
     online = db.scalar(select(ModelVersion).where(ModelVersion.is_online == 1))
     row = DetectTask(
@@ -159,6 +161,7 @@ def create_batch(db, body: BatchBody) -> DetectTask:
     assigned = db.scalars(
         select(MediaAsset.asset_id)
         .where(
+            MediaAsset.quality_flag == 0,
             MediaAsset.asset_id.not_in(select(DetectObject.asset_id)),
             MediaAsset.asset_id.not_in(select(DetectTaskItem.asset_id)),
         )
