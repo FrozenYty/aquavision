@@ -58,9 +58,8 @@ function niceStep(max) {
 }
 
 // ---- Chart 1: species composition donut ----
-export function renderSpeciesDonut(container, rows) {
+export function renderSpeciesDonut(container, rows, total) {
   container.replaceChildren();
-  const total = rows.reduce((sum, row) => sum + row.box_count, 0);
   const W = 480;
   const H = 236;
   const s = svgEl(W, H);
@@ -71,7 +70,7 @@ export function renderSpeciesDonut(container, rows) {
   const circ = 2 * Math.PI * r;
   let acc = 0;
   for (const row of rows) {
-    const len = Math.max((row.box_count / total) * circ - 2, 0.5);
+    const len = Math.max(row.share * circ - 2, 0.5);
     const seg = node("circle", {
       cx,
       cy,
@@ -102,7 +101,7 @@ export function renderSpeciesDonut(container, rows) {
     const y = 40 + i * 40;
     const swatch = node("rect", { x: 268, y: y - 12, width: 14, height: 14, rx: 3 });
     swatch.style.fill = `var(--av-class-${row.class_code})`;
-    const pct = ((row.box_count / total) * 100).toFixed(1);
+    const pct = (row.share * 100).toFixed(1);
     s.append(
       swatch,
       text(292, y, `${SPECIES[row.class_code]} · ${row.class_code}`, {
@@ -157,7 +156,7 @@ export function renderTrendLine(container, rows) {
     dot.setAttribute("stroke", "var(--av-primary)");
     dot.setAttribute("stroke-width", 2);
     const tip = node("title");
-    tip.textContent = `${row.date}：${row.frames} 帧`;
+    tip.textContent = `${row.date}：${row.frames} 帧${row.changeText ? `（较前日 ${row.changeText}）` : ""}`;
     dot.append(tip);
     s.append(dot, text(xs[i], H - B + 18, shortDate(row.date), { size: 10 }));
   });
@@ -174,92 +173,43 @@ export function renderTrendLine(container, rows) {
   container.append(s);
 }
 
-// ---- Chart 3: quality interception rate bars ----
-export function renderInterceptBars(container, rows) {
+// ---- Charts 3 and 4: totals as bars (quality rejection, review corrections) ----
+// The server answers both routes with totals for the period, not a daily or per-class breakdown, so they
+// are drawn as one bar per total. Each bar's height is its value over the axis maximum.
+export function renderTotalBars(container, bars) {
   container.replaceChildren();
   const W = 480;
   const H = 236;
   const L = 46;
-  const T = 18;
+  const T = 24;
   const B = 30;
   const s = svgEl(W, H);
-  const rates = rows.map((row) => ({ ...row, rate: (row.intercepted / row.total) * 100 }));
-  const maxRate = Math.max(...rates.map((row) => row.rate));
-  const step = niceStep(maxRate);
-  const top = Math.ceil(maxRate / step) * step;
-  yAxis(s, { left: L, top: T, bottom: B, height: H, width: W, max: top, step, unit: "%" });
-
-  const slot = (W - L - 14) / rows.length;
-  const bw = Math.min(slot * 0.56, 40);
-  rates.forEach((row, i) => {
-    const x = L + slot * i + (slot - bw) / 2;
-    const y = T + (1 - row.rate / top) * (H - T - B);
-    const bar = node("rect", { x, y, width: bw, height: H - B - y, rx: 3 });
-    bar.style.fill = "var(--av-warning)";
-    bar.setAttribute("opacity", i === rows.length - 1 ? 1 : 0.75);
-    const tip = node("title");
-    tip.textContent = `${row.date}：拦截 ${row.intercepted}/${row.total} 帧（${row.rate.toFixed(1)}%）`;
-    bar.append(tip);
-    s.append(
-      bar,
-      text(x + bw / 2, y - 6, `${row.rate.toFixed(1)}%`, {
-        size: 10,
-        fill: "var(--av-text)",
-        family: "var(--av-font-mono)",
-      }),
-      text(x + bw / 2, H - B + 18, shortDate(row.date), { size: 10 }),
-    );
-  });
-  container.append(s);
-}
-
-// ---- Chart 4: review corrections stacked bars ----
-export function renderCorrectionStack(container, rows) {
-  container.replaceChildren();
-  const W = 480;
-  const H = 236;
-  const L = 46;
-  const T = 30;
-  const B = 30;
-  const s = svgEl(W, H);
-  const series = [
-    ["relabel", "改类别", "var(--av-primary)"],
-    ["added", "补框", "var(--av-success)"],
-    ["removed", "删框", "var(--av-danger)"],
-  ];
-  const totals = rows.map((row) => series.reduce((sum, [key]) => sum + row[key], 0));
-  const maxV = Math.max(...totals);
+  const maxV = Math.max(...bars.map((bar) => bar.value), 1);
   const step = niceStep(maxV);
   const top = Math.ceil(maxV / step) * step;
   yAxis(s, { left: L, top: T, bottom: B, height: H, width: W, max: top, step });
 
-  const slot = (W - L - 14) / rows.length;
-  const bw = Math.min(slot * 0.5, 44);
-  rows.forEach((row, i) => {
+  const total = bars.reduce((sum, bar) => sum + bar.value, 0);
+  const slot = (W - L - 14) / bars.length;
+  const bw = Math.min(slot * 0.5, 64);
+  bars.forEach((bar, i) => {
     const x = L + slot * i + (slot - bw) / 2;
-    let yCursor = H - B;
-    for (const [key, name, color] of series) {
-      const hgt = (row[key] / top) * (H - T - B);
-      yCursor -= hgt;
-      if (hgt > 0) {
-        const seg = node("rect", { x, y: yCursor, width: bw, height: hgt });
-        seg.style.fill = color;
-        const tip = node("title");
-        tip.textContent = `${SPECIES[row.class_code]} · ${name} ${row[key]} 次`;
-        seg.append(tip);
-        s.append(seg);
-      }
-    }
+    const height = (bar.value / top) * (H - T - B);
+    const rect = node("rect", { x, y: H - B - height, width: bw, height, rx: 3, "data-key": bar.key });
+    rect.style.fill = `var(--av-${bar.tone})`;
+    const share = total ? ` · ${((bar.value / total) * 100).toFixed(1)}%` : "";
+    const tip = node("title");
+    tip.textContent = `${bar.label}：${bar.value}${share}`;
+    rect.append(tip);
     s.append(
-      text(x + bw / 2, H - B + 18, SPECIES[row.class_code], { size: 11, fill: "var(--av-text)" }),
+      rect,
+      text(x + bw / 2, H - B - height - 6, String(bar.value), {
+        size: 11,
+        fill: "var(--av-text)",
+        family: "var(--av-font-mono)",
+      }),
+      text(x + bw / 2, H - B + 18, bar.label, { size: 11, fill: "var(--av-text)" }),
     );
-  });
-
-  series.forEach(([, name, color], i) => {
-    const x = 60 + i * 110;
-    const swatch = node("rect", { x, y: 6, width: 12, height: 12, rx: 2 });
-    swatch.style.fill = color;
-    s.append(swatch, text(x + 18, 17, name, { anchor: "start", size: 11 }));
   });
   container.append(s);
 }
