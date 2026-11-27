@@ -100,6 +100,21 @@ pg_dump --no-owner --format=custom "$DB_DSN" > backup.dump
 恢复就是把上面的过程倒过来：停服务、把数据库文件或 dump 放回去、把采集帧目录放回它旁边、启动服务。
 然后查 `/api/health`、登录、随便打开一帧——**一个能过健康检查却显示不出帧的恢复，恢复错了那一半**。
 
+### 演练一次恢复
+
+手册在被执行之前只是一份声明。演练用 `VACUUM INTO` 为 SQLite 开发库做一份一致备份，写到
+`data/drill/` 下的临时文件，再以只读方式打开副本，比较 `sys_user`、`detect_object`、`detect_task`
+的行数以及 `/api/stats` 算出的合计值；每项打印一行，最后打印 `PASS` 或 `FAIL`。
+
+```bash
+python scripts/drill_restore.py
+```
+
+它以只读方式打开源库；临时副本已存在时，不加 `--force` 就拒绝覆盖；临时目录之外不删除任何东西；
+也不涵盖 PostgreSQL：`DB_DSN` 指向 PostgreSQL 时它直接说明并退出，不会假装通过。采集帧是恢复的
+另一半，按上文单独复制 `data/frames/`。每次排练之前和打发布标签之前各跑一次，并把打印出的 `PASS`
+留在标签里。
+
 ## 6. 轮换 JWT 密钥
 
 每个已签发的令牌都用 `AV_JWT_SECRET` 签名，而令牌是无状态的：没有会话表可以清。所以轮换密钥会

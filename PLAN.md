@@ -924,9 +924,15 @@ minute rather than a meeting:
 - [ ] **P4-16** Marking-scheme self-audit · @IkeaFyj · done when every graded criterion of the course
       rubric has a row naming its evidence — a document section, a test file, or a minute of the demo — and
       a row without evidence becomes a defect rather than an argument
-- [ ] **P4-17** Backup and restore drill · @FrozenYty · done when a backup taken before the rehearsal
-      restores into a scratch database and `/api/stats` returns the same totals as before, following
-      `runbook` — the runbook is a claim until it is run
+- [x] **P4-17** Backup and restore drill · @FrozenYty · **delivered 11-27**: `scripts/drill_restore.py` takes
+      the runbook §5 `VACUUM INTO` copy into a scratch file, opens both sides read-only, and compares the
+      `sys_user`/`detect_object`/`detect_task` counts and the `/api/stats` totals that the route functions
+      themselves compute; it says PostgreSQL is not covered rather than passing. `tests/test_drill_restore.py`
+      holds seven cases, and the drill run on this machine printed `PASS` against a populated database
+      (300 frames, 300 objects, species reviewed 168 = 168) while the source's SHA-256 stayed unchanged.
+      Runbook §5 en+zh now carries the "Rehearse the restore" subsection · done when a backup taken before
+      the rehearsal restores into a scratch database and `/api/stats` returns the same totals as before,
+      following `runbook` — the runbook is a claim until it is run
 - [ ] **P4-18** Demo environment kit · @FrozenYty · done when a printed one-page card lists every item —
       laptop, offline database copy, camera at index 1, lamp, polariser, rig, spare USB cable, power — and
       the first rehearsal ticks it from the card alone
