@@ -212,9 +212,33 @@ refused at the page and ignored if it got in some other way.
 | `retention_days` | 1–3650 | how old an intermediate frame must be to be a cleanup candidate |
 
 Everything else is environment-only: the secret, the DSN, the time zone, the data root, the rig port. Those
-are deployment decisions, and changing one means a restart on purpose.
+are deployment decisions, and changing one means a restart on purpose. `AV_TIMEZONE` also decides which
+calendar day a frame id and its `frames/<site>/<YYYYMMDD>/` folder carry, while the database keeps every
+timestamp in UTC (ADR 14).
 
-## 11. What this runbook does not cover
+## 11. Clean up intermediate files
+
+The retention job is a script, not a timer: run it from cron or by hand. It removes **intermediate** files
+older than `retention_days` and nulls the `media_asset.thumb_path` references that point at them.
+**Originals are never touched** - every file a `media_asset.file_path` names survives, and no option
+deletes one.
+
+```bash
+python scripts/cleanup_retention.py            # dry run: print the cleanup list, change nothing
+python scripts/cleanup_retention.py --apply    # delete the files and null their references
+```
+
+It reads `retention_days` **when it runs** - the `sys_param` value, or `AV_RETENTION_DAYS` when no row
+exists (ADR 15); `--retention-days N` overrides one run. `--data-dir` and `--dsn` override the configured
+locations. Read the dry run before the `--apply`: a deleted intermediate cannot be rebuilt. It prints one
+line for each file it deleted, one for each file it could not delete with the reason, and the totals.
+
+The candidates are the thumbnails a row still points at, and the scratch frames `/ws/capture` writes under
+`frames/live/` when a process dies before removing them. Nothing else under the data root is a candidate:
+a frame with no row is still an original and is left alone. Run the script from the repository root, so
+the relative default `data/` means this checkout's.
+
+## 12. What this runbook does not cover
 
 - **Hardware.** Wiring and the optical numbers are in `procurement-en.md` and
   `rig-state-machine-en.md`.

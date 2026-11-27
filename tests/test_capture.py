@@ -92,11 +92,10 @@ def test_empty_image_is_rejected():
 
 def test_frame_id_shape():
     from datetime import datetime
+    from zoneinfo import ZoneInfo
 
-    from app.vision.capture import LOCAL_TZ
-
-    frame_id = make_frame_id(datetime(2026, 11, 6, 9, 46, 12, tzinfo=LOCAL_TZ), 7)
-    assert frame_id == "20261106T094612-0007"
+    moment = datetime(2026, 11, 6, 9, 46, 12, tzinfo=ZoneInfo("Asia/Shanghai"))
+    assert make_frame_id(moment, 7) == "20261106T094612-0007"
 
 
 def test_session_writes_files_and_manifest(tmp_path):
@@ -183,3 +182,33 @@ def test_recorded_score_matches_the_stored_file(tmp_path):
     stored = cv2.imread(str(tmp_path / "out" / record.path), cv2.IMREAD_COLOR)
     assert score_frame(stored).score == record.quality.score
     assert verify(session.directory) == []
+
+
+def test_a_capture_session_uses_the_configured_zone_not_a_fixed_offset(tmp_path, monkeypatch):
+    """P3-22: AV_TIMEZONE decides the id and the day folder, not a hardcoded +08:00.
+
+    This is the command-line capture path. Under a UTC deployment the session's frame ids and its
+    recorded capture times must both read UTC; the default deployment stays Asia/Shanghai.
+    """
+    from datetime import datetime
+
+    from app.config import get_settings
+
+    monkeypatch.setenv("AV_TIMEZONE", "UTC")
+    get_settings.cache_clear()
+    try:
+        images = tmp_path / "in"
+        images.mkdir()
+        cv2.imwrite(str(images / "a.jpg"), sharp_image())
+        source = ImageFolderSource(images)
+        source.open()
+        session = CaptureSession(source, tmp_path / "out", site="A3")
+        record = session.grab()
+        source.close()
+    finally:
+        get_settings.cache_clear()
+
+    assert session.started_at.utcoffset().total_seconds() == 0
+    assert record.captured_at.endswith("+00:00"), record.captured_at
+    assert session.directory.parent.name == session.started_at.strftime("%Y%m%d")
+    assert record.frame_id[:8] == datetime.fromisoformat(record.captured_at).strftime("%Y%m%d")

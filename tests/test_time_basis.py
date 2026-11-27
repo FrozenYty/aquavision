@@ -3,22 +3,27 @@
 Storage keeps `captured_at` naive UTC, so a capture taken just after local midnight is stored under the
 previous UTC date. These tests seed the three instants around a local day - 00:00:00, 23:59:59 and the
 next 00:00:00 - and assert both halves of the defect: the date filter means the operator's day, and an
-emitted timestamp carries the configured offset. The last test runs the same rows with
-`AV_TIMEZONE=UTC`, which proves the setting is consulted rather than a `+08:00` baked into the code.
+emitted timestamp carries the configured offset. One test runs the same rows with `AV_TIMEZONE=UTC`,
+which proves the setting is consulted rather than a `+08:00` baked into the code; the last test pins
+the frame identity and its day folder to that same configured zone (P3-22).
 """
 
 from __future__ import annotations
 
+import base64
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
+import cv2
+import numpy as np
 import pytest
 from app.config import get_settings
 from app.db import Base, engine_from_dsn
 from app.models import MediaAsset, SysUser
 from app.security import hash_password
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 SHANGHAI = ZoneInfo("Asia/Shanghai")
@@ -187,3 +192,49 @@ def test_the_same_rows_fall_on_utc_days_when_the_zone_is_utc(utc_client):
     assert set(frame_ids(page)) == {LAST_ID, NEXT_ID}
     by_id = {item["frame_id"]: item for item in page["items"]}
     assert by_id[NEXT_ID]["captured_at"] == "2026-11-02T16:00:00.000+00:00"
+
+
+class FrozenDatetime(datetime):
+    """A datetime whose `now()` is three seconds before the frame the test stores."""
+
+    @classmethod
+    def now(cls, tz=None):
+        instant = datetime(2026, 11, 1, 16, 30, 3, tzinfo=UTC)
+        return instant.astimezone(tz) if tz is not None else instant.replace(tzinfo=None)
+
+
+def test_a_frame_after_local_midnight_is_named_and_foldered_in_the_operating_day(
+    client, monkeypatch
+):
+    """P3-22: the id and the day folder carry the operator's day, not UTC's.
+
+    A capture at 00:30 on 2 November in Beijing is stored as 1 November 16:30 UTC. Before the
+    fix both the id and the folder said 1 November; they must both say 2 November, while
+    `captured_at` keeps the naive UTC basis ADR 14 keeps for storage.
+    """
+    from app.routers import capture as capture_router
+
+    monkeypatch.setattr(capture_router, "datetime", FrozenDatetime)
+    token = sign_in(client)
+    session = client.post("/api/capture/sessions", headers=auth(token)).json()["data"]
+    image = np.random.default_rng(7).integers(60, 200, size=(120, 160, 3), dtype=np.uint8)
+    ok, buffer = cv2.imencode(".jpg", image)
+    assert ok
+    body = client.post(
+        f"/api/capture/sessions/{session['session_id']}/frames",
+        json={
+            "point_code": "A3",
+            "image_b64": base64.b64encode(buffer.tobytes()).decode(),
+            "captured_at": "2026-11-02T00:30:00+08:00",
+        },
+        headers=auth(token),
+    ).json()
+    assert body["code"] == 0, body
+    assert body["data"]["frame_id"] == "20261102T003000-0001"
+
+    with client.app.state.session_factory() as db:
+        asset = db.scalar(select(MediaAsset).where(MediaAsset.frame_id == body["data"]["frame_id"]))
+    assert asset is not None
+    assert asset.file_path.startswith("frames/A3/20261102/"), asset.file_path
+    # Storage still keeps naive UTC: the local day is derived from it, never stored as local.
+    assert asset.captured_at == datetime(2026, 11, 1, 16, 30)

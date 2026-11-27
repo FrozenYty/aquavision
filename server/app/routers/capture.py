@@ -189,8 +189,10 @@ def grab_frame(
         # Idempotent by content: the second post returns the first row instead of duplicating it.
         return ok(serializers.frame(existing), message="同一帧已存在")
 
+    # The frame's own instant decides the day folder, the same basis its id uses (P3-22).
+    day = timebase.to_zone(captured_at).strftime("%Y%m%d")
     try:
-        relative = _write(stored, digest, Path(settings.data_dir), body.point_code, session_id)
+        relative = _write(stored, digest, Path(settings.data_dir), body.point_code, session_id, day)
     except OSError as err:
         # The frame is not in the database yet, so nothing is left half-stored; the caller is told
         # which resource refused the write and what to do about it. The operator also gets a message
@@ -374,7 +376,14 @@ def _storage_error(err: OSError) -> ApiError:
     )
 
 
-def _write(stored: np.ndarray, digest: str, root: Path, site: str, session: str) -> str:
+def _write(
+    stored: np.ndarray,
+    digest: str,
+    root: Path,
+    site: str,
+    session: str,
+    day: str,
+) -> str:
     """Write one frame where the data model says frames live.
 
     `data/frames/<site>/<YYYYMMDD>/<session>/<frame_id>` - the same layout `vision/capture.py` writes. This
@@ -382,10 +391,13 @@ def _write(stored: np.ndarray, digest: str, root: Path, site: str, session: str)
     path disagree with `docs/data-model-en.md` §5 and put thousands of frames from different sessions in one
     folder.
 
+    `day` is the frame's `captured_at` in the configured zone, the same basis `_next_frame_id` gives the
+    id (ADR 14, P3-22), so the folder and the id name one calendar day - the operator's. It used to be
+    the UTC day at write time, which put a 00:30 local capture in yesterday's folder.
+
     OpenCV reports a write it could not finish by returning ``False``, not by raising. That must fail
     here too: a row pointing at a file that was never written is worse than a refused capture.
     """
-    day = datetime.now(UTC).strftime("%Y%m%d")
     folder = root / "frames" / site / day / session
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / f"{digest[:16]}.jpg"
@@ -403,6 +415,10 @@ def _next_frame_id(db, captured_at: datetime, session_id: str) -> str:
     exactly as `CaptureSession` keeps it, and a bump keeps the table's UNIQUE constraint honest when
     another session already used that second; a row from the retired hash-prefix format may share the
     timestamp, which is why the second attempt asks the database instead of trusting arithmetic.
+
+    `captured_at` is stored naive UTC, so it is converted to the configured zone before the id is
+    formatted (ADR 14, P3-22): the id's day is the operator's, not UTC's, and it agrees with the
+    folder `_write` puts the file in.
     """
     stored = (
         db.scalar(
@@ -410,14 +426,13 @@ def _next_frame_id(db, captured_at: datetime, session_id: str) -> str:
         )
         or 0
     )
+    moment = timebase.to_zone(captured_at)
     index = stored + 1
     while (
         db.scalar(
-            select(MediaAsset.asset_id).where(
-                MediaAsset.frame_id == make_frame_id(captured_at, index)
-            )
+            select(MediaAsset.asset_id).where(MediaAsset.frame_id == make_frame_id(moment, index))
         )
         is not None
     ):
         index += 1
-    return make_frame_id(captured_at, index)
+    return make_frame_id(moment, index)
