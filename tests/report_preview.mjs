@@ -39,7 +39,7 @@ get("from").value = "2026-11-03";
 get("to").value = "2026-11-03";
 get("from").handlers.change();
 assert.equal(requests.length, 2);
-const response = (query, frames) => ({ ...query, model_version: "v8n-test", figures: {
+const response = (query, frames) => ({ ...query, preview_token: "test-preview-token", model_version: "v8n-test", figures: {
   frames, rejected: 1, rate: .5, species: [{ name: "Sea cucumber", count: 4, share: 1 }],
 } });
 requests[0].resolve(response(requests[0].query, 7));
@@ -52,8 +52,10 @@ assert.ok(!get("preview").innerHTML.includes("7 帧"));
 assert.equal(get("btn-generate").disabled, false);
 const submission = get("report-form").handlers.submit({ preventDefault() {} });
 await new Promise(setImmediate);
+assert.equal(get("generation-status").textContent, "生成中…");
 assert.equal(generated[0].period_start, "2026-11-03");
 assert.equal(generated[0].basis, "raw");
+assert.equal(generated[0].preview_token, "test-preview-token");
 get("basis").value = "reviewed";
 get("basis").handlers.change();
 requests[2].resolve(response(requests[2].query, 3));
@@ -61,6 +63,7 @@ await new Promise(setImmediate);
 assert.equal(get("btn-generate").disabled, true, "a new preview cannot unlock an in-flight generation");
 finishGeneration({ report_code: "RP-1" });
 await submission;
+assert.match(get("generation-status").textContent, /RP-1.*已生成/);
 assert.equal(get("btn-generate").disabled, false);
 get("basis").value = "raw";
 get("basis").handlers.change();
@@ -80,3 +83,15 @@ assert.equal(emptyPreview.code, 0);
 assert.equal(emptyPreview.data.figures.frames, 0);
 assert.deepEqual(emptyPreview.data.figures.species, []);
 assert.equal((await handle("GET", "/reports", { query: {} })).data.total, historyBefore);
+
+const archive = [
+  { period_start: "2026-11-01", period_end: "2026-11-03", template: "brief", basis: "raw" },
+  { period_start: "2026-10-01", period_end: "2026-10-04", template: "standard", basis: "reviewed" },
+];
+const fetched = [];
+const search = await view.reportHistory(async ({ page }) => {
+  fetched.push(page);
+  return { total: 101, items: [archive[2 - page]] };
+}, { from: "2026-11-02", to: "2026-11-02", template: "brief", basis: "raw" });
+assert.deepEqual(fetched, [1, 2]);
+assert.deepEqual(search.items, [archive[0]]);

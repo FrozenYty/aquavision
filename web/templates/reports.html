@@ -33,14 +33,15 @@
           </div>
           <label class="form-label small" for="template">模板</label>
           <select class="form-select form-select-sm mb-2" id="template">
-            <option value="standard">标准巡检（物种组成、质量拦截、模型信息）</option>
-            <option value="brief">简版（只含物种组成）</option>
+            <option value="standard">标准巡检</option>
+            <option value="brief">简版</option>
           </select>
           <label class="form-label small" for="basis">统计口径</label>
           <select class="form-select form-select-sm mb-3" id="basis">
             <option value="reviewed">复核后结果</option><option value="raw">原始识别结果</option>
           </select>
           <button class="btn btn-primary w-100" id="btn-generate" type="submit" disabled>生成报告</button>
+          <p class="small mt-2 mb-0" id="generation-status" role="status"></p>
         </form>
       </div>
       <div class="col-xl-8">
@@ -52,9 +53,20 @@
       <div class="col-12">
         <section class="av-card">
           <h2 class="av-card-title">历史报告 <small class="text-secondary fw-normal">保留全部版本，可回溯</small></h2>
+          <form id="history-filters" class="d-flex flex-wrap align-items-end gap-2 mb-3">
+            <label class="small">周期开始<input id="history-from" class="form-control form-control-sm" type="date"></label>
+            <label class="small">周期结束<input id="history-to" class="form-control form-control-sm" type="date"></label>
+            <label class="small">模板<select id="history-template" class="form-select form-select-sm">
+              <option value="">全部</option><option value="standard">标准巡检</option><option value="brief">简版</option>
+            </select></label>
+            <label class="small">统计口径<select id="history-basis" class="form-select form-select-sm">
+              <option value="">全部</option><option value="reviewed">复核后结果</option><option value="raw">原始识别结果</option>
+            </select></label>
+            <button class="btn btn-outline-primary btn-sm" id="history-search" type="submit">查询</button>
+          </form>
           <div class="table-responsive">
             <table class="table table-hover align-middle mb-0 small">
-              <thead><tr><th>报告</th><th>周期</th><th>模板</th><th>口径</th><th>模型</th><th>生成时间</th><th>状态</th><th>下载</th></tr></thead>
+              <thead><tr><th>报告</th><th>周期</th><th>模板</th><th>口径</th><th>模型</th><th>生成时间</th><th>状态</th></tr></thead>
               <tbody id="history"></tbody>
             </table>
           </div>
@@ -67,7 +79,7 @@
     import { renderShell } from "../static/js/layout.js";
     import * as api from "../static/js/api.js";
     import { esc, fmtTime, loadInto, showEmpty, showError, showLoading, toast } from "../static/js/ui.js";
-    import { reportPreviewHtml, reportQuery } from "../static/js/report-preview.js";
+    import { reportHistory, reportPreviewHtml, reportQuery } from "../static/js/report-preview.js";
 
     import { reportPeriod } from "../static/js/time.js";
 
@@ -121,17 +133,37 @@
       return `<span class="badge text-bg-${kind}">${label}</span>${r.error_msg ? `<div class="text-danger">${esc(r.error_msg)}</div>` : ""}`;
     }
 
-    const loadHistory = () => loadInto($("history"), () => api.listReports(), {
-      isEmpty: (d) => d.items.length === 0,
-      empty: "还没有生成过报告。选好周期后点“生成报告”。",
-      render: ({ items }) => {
-        $("history").innerHTML = items.map((r) => `<tr>
-          <td class="av-mono">${esc(r.report_code)}</td><td class="av-mono">${day(r.period_start)} ~ ${day(r.period_end)}</td>
-          <td>${TEMPLATE[r.template] ?? esc(r.template)}</td><td>${BASIS[r.basis] ?? esc(r.basis)}</td>
-          <td class="av-mono">${r.model_version_id == null ? "—" : `#${r.model_version_id}`}</td><td>${fmtTime(r.created_at)}</td>
-          <td>${statusCell(r)}</td>
-          <td>${r.status === "ready" ? `<div class="d-flex gap-1" title="${esc(r.file_path ?? "")}"><button class="btn btn-sm btn-outline-secondary" data-format="Word" type="button">Word</button><button class="btn btn-sm btn-outline-secondary" data-format="PDF" type="button">PDF</button></div>` : ""}</td></tr>`).join("");
-      },
+    async function loadHistory() {
+      const button = $("history-search");
+      if (button.disabled) return;
+      const filters = {
+        from: $("history-from").value, to: $("history-to").value,
+        template: $("history-template").value, basis: $("history-basis").value,
+      };
+      if (filters.from && filters.to && filters.from > filters.to) {
+        showError($("history"), new Error("结束日期不能早于开始日期，请调整周期。"));
+        return;
+      }
+      button.disabled = true;
+      try {
+        await loadInto($("history"), () => reportHistory(api.listReports, filters), {
+        isEmpty: (d) => d.items.length === 0,
+        empty: "没有符合筛选条件的报告。请调整查询条件。",
+        render: ({ items }) => {
+          $("history").innerHTML = items.map((r) => `<tr>
+            <td class="av-mono">${esc(r.report_code)}</td><td class="av-mono">${day(r.period_start)} ~ ${day(r.period_end)}</td>
+            <td>${TEMPLATE[r.template] ?? esc(r.template)}</td><td>${BASIS[r.basis] ?? esc(r.basis)}</td>
+            <td class="av-mono">${r.model_version_id == null ? "—" : `#${r.model_version_id}`}</td><td>${fmtTime(r.created_at)}</td>
+            <td>${statusCell(r)}</td></tr>`).join("");
+          },
+        });
+      } finally {
+        button.disabled = false;
+      }
+    }
+    $("history-filters").addEventListener("submit", (event) => {
+      event.preventDefault();
+      loadHistory();
     });
 
     $("period").addEventListener("change", () => {
@@ -148,6 +180,7 @@
       const query = reportQuery(p, $("basis").value);
       if (JSON.stringify(query) !== readyQuery) return toast("请等待当前周期的预览完成后再生成", "warning");
       generating = true;
+      $("generation-status").textContent = "生成中…";
       $("btn-generate").disabled = true;
       try {
         const report = await api.createReport({
@@ -156,20 +189,18 @@
           template: $("template").value,
           basis: $("basis").value,
         });
-        toast(`报告 ${report.report_code} 已生成`, "success");
+        $("generation-status").textContent = report.status === "failed"
+          ? `生成失败：${report.error_msg ?? "请重试"}`
+          : `报告 ${report.report_code}：${STATUS[report.status ?? "ready"]?.[0] ?? "状态未知"}`;
         await loadHistory();
       } catch (err) {
-        toast(err.message, "danger");
+        $("generation-status").textContent = `生成失败：${err.message}`;
+        await loadHistory();
         if (err.code === 40901) await loadPreview();
       } finally {
         generating = false;
         $("btn-generate").disabled = JSON.stringify(reportQuery(period(), $("basis").value)) !== readyQuery;
       }
-    });
-
-    $("history").addEventListener("click", (event) => {
-      const format = event.target.closest("[data-format]")?.dataset.format;
-      if (format) toast(`报告文件已在服务端生成；${format} 格式的下载还没有接口`, "info");
     });
 
     loadInto($("period-state"), api.statsTrend, {
