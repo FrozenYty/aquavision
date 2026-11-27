@@ -31,6 +31,7 @@ from app.envelope import BAD_PARAM, INTERNAL, NOT_FOUND, ApiError, ok
 from app.models import MediaAsset, SysLog
 from app.notify import LEVEL_WARN, notify
 from app.params import effective
+from app.vision.capture import make_frame_id
 from app.vision.quality import score_frame
 
 router = APIRouter(prefix="/api", tags=["capture"], dependencies=[Depends(get_current_user)])
@@ -167,7 +168,11 @@ def grab_frame(
             f"图像尺寸超过采集链路上限：{width}×{height} > {MAX_FRAME_WIDTH}×{MAX_FRAME_HEIGHT}"
             "（采集链路声明 1080p），拒绝入库",
         )
-    quality = score_frame(stored)
+    # The threshold in force, read here rather than at start-up: an operator who lowers it expects the
+    # next frame to be judged by the new one (ADR 15). One read supplies both the verdict and the
+    # stored flag, so `quality.verdict` and `quality_flag` cannot disagree.
+    threshold = effective(request.app.state.session_factory, "quality_threshold", settings)
+    quality = score_frame(stored, threshold)
 
     captured_at = body.captured_at or datetime.now(UTC)
     if captured_at.tzinfo is not None:
@@ -200,13 +205,10 @@ def grab_frame(
             ref_id=session_id,
         )
         raise _storage_error(err) from err
-    # The threshold in force, read here rather than at start-up: an operator who lowers it expects the
-    # next frame to be judged by the new one (ADR 15).
-    verdict_ok = quality.score >= effective(
-        request.app.state.session_factory, "quality_threshold", settings
-    )
+    # The verdict was decided against that same threshold, so the flag cannot disagree with it.
+    verdict_ok = quality.verdict == "ok"
     asset = MediaAsset(
-        frame_id=_frame_id(captured_at, digest),
+        frame_id=_next_frame_id(db, captured_at, session_id),
         session_id=session_id,
         point_code=body.point_code,
         file_path=relative,
@@ -393,5 +395,26 @@ def _write(stored: np.ndarray, digest: str, root: Path, site: str, session: str)
     return str(path.relative_to(root)).replace("\\", "/")
 
 
-def _frame_id(captured_at: datetime, digest: str) -> str:
-    return captured_at.strftime("%Y%m%dT%H%M%S") + f"-{digest[:4]}"
+def _next_frame_id(db, captured_at: datetime, session_id: str) -> str:
+    """The next `YYYYMMDDTHHMMSS-####` for the frame being stored (data model §3.3).
+
+    Reuses `vision.capture.make_frame_id`, the one implementation of the documented format, instead
+    of formatting a second variant from the content hash. The index is the session's own counter,
+    exactly as `CaptureSession` keeps it, and a bump keeps the table's UNIQUE constraint honest when
+    another session already used that second; a row from the retired hash-prefix format may share the
+    timestamp, which is why the second attempt asks the database instead of trusting arithmetic.
+    """
+    stored = (
+        db.scalar(
+            select(func.count(MediaAsset.asset_id)).where(MediaAsset.session_id == session_id)
+        )
+        or 0
+    )
+    index = stored + 1
+    while db.scalar(
+        select(MediaAsset.asset_id).where(
+            MediaAsset.frame_id == make_frame_id(captured_at, index)
+        )
+    ) is not None:
+        index += 1
+    return make_frame_id(captured_at, index)

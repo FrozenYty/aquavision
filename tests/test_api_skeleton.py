@@ -226,6 +226,8 @@ def test_capture_scores_the_frame_and_is_idempotent(client):
     assert first["code"] == 0
     frame = first["data"]
     assert isinstance(frame["frame_id"], str)
+    # One format, the documented counter one (data model §3.3); the hash prefix was a second format.
+    assert re.fullmatch(r"\d{8}T\d{6}-\d{4}", frame["frame_id"]), frame["frame_id"]
     assert frame["session_id"] == session["session_id"]
     assert isinstance(frame["captured_at"], str)
     assert isinstance(frame["quality"], dict)
@@ -245,6 +247,24 @@ def test_capture_scores_the_frame_and_is_idempotent(client):
     listed = client.get("/api/frames", headers=auth(token)).json()["data"]
     assert listed["total"] == 1
     assert listed["items"][0]["frame_id"] == frame["frame_id"]
+
+
+def test_capture_frame_ids_follow_the_counter_format(client):
+    token = sign_in(client)
+    session = client.post("/api/capture/sessions", headers=auth(token)).json()["data"]
+    ids = []
+    for seed in (11, 12):
+        body = client.post(
+            f"/api/capture/sessions/{session['session_id']}/frames",
+            json={"point_code": "A3", "image_b64": a_frame(seed)},
+            headers=auth(token),
+        ).json()
+        assert body["code"] == 0, body
+        ids.append(body["data"]["frame_id"])
+
+    for frame_id in ids:
+        assert re.fullmatch(r"\d{8}T\d{6}-\d{4}", frame_id), frame_id
+    assert ids[0] != ids[1], ids
 
 
 def test_a_frame_with_a_skewed_clock_is_refused(client):
@@ -453,10 +473,17 @@ def test_statistics_answer_with_real_figures(client):
 
 
 def test_validation_errors_use_the_envelope(client):
+    # A field that is present but fails its rule is a bad parameter, not a missing one; answering
+    # 40001 for every rejection was the defect (PLAN P4-05).
     body = client.post(
         "/api/auth/login",
         json={"username": ""},
     ).json()
+    assert body["code"] == 40002
+    assert body["data"] is None
+
+    # A field that is absent really is the missing-parameter case.
+    body = client.post("/api/auth/login", json={"username": "admin"}).json()
     assert body["code"] == 40001
     assert body["data"] is None
 

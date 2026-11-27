@@ -3,9 +3,10 @@
 Implements FR-M2-03 (SRS §3.3.2): three measurements, weighted, below the pass mark the frame is
 stored but kept out of the detection queue.
 
-The SRS fixes the weights (0.5 / 0.3 / 0.2) and the pass mark (60). How each raw measurement maps to
+The SRS fixes the weights (0.5 / 0.3 / 0.2) and a pass mark of 60. How each raw measurement maps to
 a 0-100 sub-score is ours, so the constants below are named and separated from the formula: tuning
-them against real footage must not mean editing arithmetic.
+them against real footage must not mean editing arithmetic. The pass mark is the documented default;
+`score_frame` takes the threshold in force, so an operator's value decides the verdict.
 """
 
 from __future__ import annotations
@@ -26,6 +27,9 @@ COLORCAST_FULL = 36.0
 WEIGHT_SHARPNESS = 0.5
 WEIGHT_BRIGHTNESS = 0.3
 WEIGHT_COLORCAST = 0.2
+#: The SRS pass mark, used when no caller supplies the operator's effective threshold. The capture
+#: route passes `settings`/`sys_param`'s value in, so a verdict and the `quality_flag` stored beside
+#: it cannot disagree after the parameter changes (ADR 15).
 PASS_MARK = 60
 
 
@@ -80,8 +84,12 @@ def measure(image: np.ndarray) -> tuple[float, float, float]:
     return sharpness, brightness, colorcast
 
 
-def score_frame(image: np.ndarray) -> Quality:
-    """Score one frame. Same input, same output — no randomness, no state."""
+def score_frame(image: np.ndarray, pass_mark: int = PASS_MARK) -> Quality:
+    """Score one frame, with the verdict decided against `pass_mark`.
+
+    Same input and threshold, same output — no randomness, no state. The default is the documented
+    SRS pass mark; a caller that answers to the operator's threshold passes the effective one here.
+    """
     sharpness_raw, brightness_raw, colorcast_raw = measure(image)
 
     sharpness = _clamp(100.0 * sharpness_raw / SHARPNESS_FULL)
@@ -94,7 +102,7 @@ def score_frame(image: np.ndarray) -> Quality:
         WEIGHT_SHARPNESS * sharpness + WEIGHT_BRIGHTNESS * brightness + WEIGHT_COLORCAST * colorcast
     )
     score = int(round(total))
-    verdict = "ok" if score >= PASS_MARK else "retake"
+    verdict = "ok" if score >= pass_mark else "retake"
     return Quality(
         sharpness=int(round(sharpness)),
         brightness=int(round(brightness)),

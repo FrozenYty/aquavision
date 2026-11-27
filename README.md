@@ -142,7 +142,7 @@ sign-in. Mock mode hides backend defects by design — use it to show the interf
 | [Data model](docs/data-model-en.md) | Fourteen tables, fields, indexes, file storage |
 | [Test plan](docs/test-plan-en.md) | Test levels, dataset splitting, metrics and acceptance |
 | [Glossary](docs/glossary-en-zh.md) | English ↔ Chinese, the single word list shared by code and docs |
-| [Decisions](docs/adr/) | Sixteen decision records with the reasoning: 09 is superseded by 10, 07's pytest clause by 11, and 12 amends 08; `docs/architecture-en.md` §10 lists them |
+| [Decisions](docs/adr/) | Seventeen decision records with the reasoning: 09 is superseded by 10, 07's pytest clause by 11, 12 amends 08, and 17 supersedes 16's two retired rig rules; `docs/architecture-en.md` §10 lists them |
 
 English is the source of truth for design documents; the Chinese files are reference versions and
 must be updated in the same commit.

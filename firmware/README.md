@@ -297,8 +297,9 @@ debounce: the number matches by coincidence, not by construction.
 
 ## Serial protocol
 
-One message per line at 115200 baud, ASCII, `\n` terminated. A line is limited to 95 characters: on
-overflow the counter resets and the tail is parsed as a new line — a defect recorded in PLAN.md P4-05.
+One message per line at 115200 baud, ASCII, `\n` terminated. A line is limited to 95 characters: a
+longer line is dropped whole — once the buffer is full, the rest of its bytes are discarded up to the
+terminator, so the tail of an over-long line is never parsed as a command.
 The firmware ignores anything it does not understand, so a garbled byte cannot brick the rig.
 
 | Direction | Message | Meaning |

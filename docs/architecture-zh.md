@@ -201,3 +201,4 @@ AV_DEMO_ENABLED=0                  # 为 1 才开放 POST /api/demo/reset（会�
 | [15](adr/15-parameters-take-effect-live.md) | 操作员可改的参数在下一次做决定的时刻生效——单一读取入口、短 TTL、声明取值范围——而不是等下次重启 |
 | [13](adr/13-weights-in-the-repository.md) | 交付的模型权重进仓库；数据集、采集帧与训练产物仍在外 |
 | [16](adr/16-rig-cable-free-over-ble.md) | 成品装置以 BLE 免线缆运行，因为现场校园网对装置不可用；`rig-serial` 作为构建变体保留而不删除 |
+| [17](adr/17-drop-storm-and-err0-retired.md) | 断连风暴规则与 `Err0` 已退役；ADR 16 关于这两点的表述由本篇取代，承载该行为的是固件 1.24 |

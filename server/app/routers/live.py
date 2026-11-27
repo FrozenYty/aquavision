@@ -24,6 +24,7 @@ import contextlib
 import json
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
@@ -157,8 +158,15 @@ async def capture_socket(websocket: WebSocket) -> None:
             return
 
         detector = getattr(websocket.app.state, "detector", None)
+
+        def threshold() -> int:
+            """The threshold in force, read per frame rather than fixed when the socket opened."""
+            return effective(
+                websocket.app.state.session_factory, "quality_threshold", settings
+            )
+
         await websocket.send_json({"type": "auth_ok"})
-        await _serve(websocket, source, detector, settings)
+        await _serve(websocket, source, detector, settings, threshold)
     except WebSocketDisconnect:
         return
     finally:
@@ -191,6 +199,7 @@ async def _serve(
     source: FrameSource,
     detector: Detector | None,
     settings: Settings,
+    threshold: Callable[[], int],
 ) -> None:
     """Wait for `start`, run the feed until `stop`, and cancel it if the client goes away."""
     sender = _Sender(websocket)
@@ -218,6 +227,7 @@ async def _serve(
                                 settings,
                             ),
                         ),
+                        threshold,
                     )
                 )
             elif kind == "stop":
@@ -237,6 +247,7 @@ async def _feed(
     detector: Detector | None,
     settings: Settings,
     config: _StartConfig,
+    threshold: Callable[[], int],
 ) -> None:
     """Capture at the requested rate and stream frame units; detections run beside the feed."""
     index = 0
@@ -247,7 +258,7 @@ async def _feed(
     try:
         while True:
             frame_started = time.monotonic()
-            captured = await run_in_threadpool(_grab, source, index + 1)
+            captured = await run_in_threadpool(_grab, source, index + 1, threshold)
             index += 1
             await sender.frame(
                 {
@@ -349,7 +360,9 @@ def _run_detector(
     return boxes, latency_ms
 
 
-def _grab(source: FrameSource, index: int) -> _CapturedFrame:
+def _grab(
+    source: FrameSource, index: int, threshold: Callable[[], int]
+) -> _CapturedFrame:
     """Read, encode and score one frame, exactly as `vision.capture.CaptureSession.grab` does."""
     captured_monotonic = time.monotonic()
     frame = source.read()
@@ -365,7 +378,7 @@ def _grab(source: FrameSource, index: int) -> _CapturedFrame:
     return _CapturedFrame(
         frame_id=make_frame_id(captured_at, index),
         captured_at=timebase.iso(captured_at, timespec="milliseconds"),
-        quality=score_frame(stored),
+        quality=score_frame(stored, threshold()),
         jpeg=buffer.tobytes(),
         captured_monotonic=captured_monotonic,
     )

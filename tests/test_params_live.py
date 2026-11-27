@@ -24,7 +24,7 @@ import pytest
 from app import params
 from app.config import get_settings
 from app.db import Base, engine_from_dsn
-from app.envelope import MISSING_PARAM
+from app.envelope import BAD_PARAM
 from app.models import DetectTask, MediaAsset, SysLog, SysParam, SysUser
 from app.security import hash_password
 from app.seed import seed_species
@@ -284,7 +284,7 @@ def test_an_out_of_range_value_is_refused_at_the_page(rig):
         {"camera_index": 10},
     ):
         body = client.patch("/api/params", json=payload, headers=headers).json()
-        assert body["code"] == MISSING_PARAM, f"{payload} was accepted: {body}"
+        assert body["code"] == BAD_PARAM, f"{payload} was accepted: {body}"
 
     with factory() as session:
         assert session.scalar(select(func.count()).select_from(SysParam)) == 0

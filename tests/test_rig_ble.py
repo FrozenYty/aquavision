@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 
 import pytest
-from app.config import Settings
+from app.config import Settings, get_settings
 from app.rig.ble import (
     MATRIX,
     BleClient,
@@ -638,6 +638,42 @@ def test_the_ble_wire_needs_no_port_and_starts_the_client(monkeypatch) -> None:
     finally:
         link.stop()
     assert radio.disconnects >= 1, "stopping the link releases the radio"
+
+
+def test_the_application_starts_the_ble_link_with_no_port(monkeypatch, tmp_path) -> None:
+    """The lifespan gated on `AV_RIG_PORT`, so `AV_RIG_TRANSPORT=ble` alone started no link at all."""
+    from app import main as main_module
+    from fastapi.testclient import TestClient
+
+    monkeypatch.setenv("DB_DSN", f"sqlite:///{(tmp_path / 'rig.db').as_posix()}")
+    monkeypatch.setenv("AV_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AV_WORKER_ENABLED", "0")
+    monkeypatch.setenv("AV_RIG_PORT", "")
+    monkeypatch.setenv("AV_RIG_TRANSPORT", "ble")
+    get_settings.cache_clear()
+
+    started: list[str] = []
+
+    class StubLink:
+        def start(self) -> None:
+            started.append("start")
+
+        def stop(self) -> None:
+            started.append("stop")
+
+    def build(settings, _session_factory=None):
+        assert settings.rig_transport == "ble"
+        return StubLink()
+
+    monkeypatch.setattr(main_module, "build_link", build)
+    app = main_module.create_app()
+    try:
+        with TestClient(app):
+            pass
+    finally:
+        get_settings.cache_clear()
+
+    assert started == ["start", "stop"], "the BLE wire must start without a COM port"
 
 
 def test_a_transport_nobody_implemented_is_refused_rather_than_ignored() -> None:
