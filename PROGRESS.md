@@ -26,6 +26,14 @@
   `frames/live/`, never touches a `file_path` original, and prints every action; seven cases run on a
   temporary root, and runbook §11 describes what the operator sees.
 
+- **P4-18 demo kit card: the kit has a page, and the rehearsal has something to tick.** `docs/demo-kit-card-en.md`
+  and `-zh.md` are one printed page each: the eight items PLAN names as their own tick boxes, the order the
+  room is laid out in, the arrival checks (camera at index 1, the §5 `VACUUM INTO` copy and its frames,
+  power, cables), and the first-rehearsal instruction that the first run is from the card alone.
+  `tests/test_demo_kit_card.py` fails if an item is missing or out of order, if either half of the pair is
+  gone, or if the card grows past one page. Both index files route to it. The task stays open for the one
+  thing a repository cannot do: the first rehearsal ticking it with a pen.
+
 ## 2026-11-26
 
 - **A five-lane audit corrected sixty claims the artifacts contradict, and the defects it found in the code

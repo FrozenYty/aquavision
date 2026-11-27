@@ -930,6 +930,10 @@ minute rather than a meeting:
 - [ ] **P4-18** Demo environment kit · @FrozenYty · done when a printed one-page card lists every item —
       laptop, offline database copy, camera at index 1, lamp, polariser, rig, spare USB cable, power — and
       the first rehearsal ticks it from the card alone
+      - **delivered 11-27, one step open:** `docs/demo-kit-card-en/zh.md` is the card, the eight items have
+        their own tick box in both languages, and `tests/test_demo_kit_card.py` fails if one is missing,
+        out of order, or the card grows past one page; the rehearsal that ticks it with a pen is the
+        owner's, and that signed card is what closes this task
 - [ ] **P4-19** Demo browser profile · @chemflowers · done when the rehearsal laptop opens the thirteen pages
       at 100 % zoom on the demo resolution with the radio off, and every asset loads from the repository —
       no CDN, no network font — proven by one rehearsal with Wi-Fi disabled
