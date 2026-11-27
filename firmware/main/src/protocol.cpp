@@ -12,11 +12,16 @@
 
 namespace {
 
-//: One line at a time. A line longer than this is dropped whole rather than truncated into nonsense.
+//: One line at a time. A line longer than this is dropped whole: once the buffer fills, the rest of
+//: that line is discarded up to its terminator rather than its tail parsed as a command.
 constexpr size_t LINE_CAPACITY = 96;
 
 char line[LINE_CAPACITY];
 size_t length = 0;
+
+//: Set when the buffer fills; cleared at that line's terminator. While it is set, bytes are read and
+//: thrown away, so the tail of an over-long line never reaches `handleLine` as a command.
+bool discarding = false;
 
 //: Set by `handleLine` when a command was applied; cleared by `poll`.
 bool sawCommand = false;
@@ -96,16 +101,26 @@ bool poll(rig::State& state, uint32_t now) {
   while (transport::available() > 0) {
     const char c = static_cast<char>(transport::readByte());
     if (c == '\n' || c == '\r') {
-      if (length > 0) {
+      if (discarding) {
+        // The over-long line ends here. It was never parsed, and the next line starts clean.
+        discarding = false;
+        length = 0;
+      } else if (length > 0) {
         line[length] = '\0';
         handleLine(state, line, now);
         length = 0;
       }
       continue;
     }
+    if (discarding) {
+      continue;
+    }
     if (length < LINE_CAPACITY - 1) {
       line[length++] = c;
     } else {
+      // Full: keep no more of this line, but stay on it up to the terminator. Its tail is not a
+      // command, and parsing it as one is what let 96 `X`s run `CMD READY`.
+      discarding = true;
       length = 0;
     }
   }
@@ -118,6 +133,8 @@ void flushInput() {
   // next session's first bytes complete a command the previous session never finished sending.
   length = 0;
   line[0] = '\0';
+  // An over-long line that was still being discarded belongs to that conversation too.
+  discarding = false;
 }
 
 const char* screenName(rig::Screen screen) {

@@ -851,14 +851,16 @@ minute rather than a meeting:
         describes the drop-storm rule ("five disconnects inside a minute") and treats `Err0` as a live
         face; neither exists in firmware 1.24 (`Err0` was retired in 1.21), and an accepted ADR is
         superseded rather than edited, so lane A must write ADR 17
+        **ADR 17 is written and closes this entry**: `docs/adr/17-drop-storm-and-err0-retired.md`.
       - **minor, documentation: the fifth failed sign-in.** The case text promises the remaining seconds;
         the lock message reports fifteen minutes, and the seconds sentence arrives on a later attempt
       - **minor, documentation: log deletion.** A case says no endpoint deletes a `sys_log` row;
         `POST /api/demo/reset` clears them by design, because a rehearsal must start clean
       - **the owner is one person**, because §5.1 says so and "all" is not an owner. Each lane reports
         its own defects into the table; this task keeps the counts and the regression checks
-      - **acceptance is the nine majors above**, each closed with a test named in the defect table, plus
-        zero blocker and zero major rows against the frozen tag of `P4-15`
+      - **acceptance is the nine majors above** - eight code majors, each closed with a test named in
+        the defect table, and the ADR-16 item ADR 17 has closed - plus zero blocker and zero major rows
+        against the frozen tag of `P4-15`; the count stays at nine until the code fixes land
 - [ ] **P4-06** Acceptance checklist, demo script, slides · @IkeaFyj · done when every acceptance item
       is ticked with the evidence beside it, and the demo runs end to end on paper without a question
       left unanswerable; the ten questions an examiner is most likely to ask have written answers beside

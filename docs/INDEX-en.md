@@ -56,7 +56,7 @@ only single-language files above the line. Within `docs/`, the fastest route is 
 | `runbook-en/zh.md` | start it, back it up, restore it, rotate the secret, upgrade the schema, read the log | a deployment step changes, or the migration mechanism arrives | @FrozenYty | @FrozenYty |
 | `test-cases-en/zh.md` | one case per acceptance item, and how to run it | an acceptance item changes, or a case is executed | @IkeaFyj |
 | `glossary-en-zh.md` | the one word for each concept | a new concept appears | @FrozenYty |
-| `adr/01-16` | why a decision was taken and when to revisit it | never edited; superseded instead | the author of that ADR |
+| `adr/01-17` | why a decision was taken and when to revisit it | never edited; superseded instead | the author of that ADR |
 | `PLAN.md` | phases, tasks, gates | a task is delivered or re-scoped | every lane |
 | `PROGRESS.md` | what happened and why it moved | continuously, append only | whoever did the work |
 

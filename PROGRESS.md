@@ -1,3 +1,17 @@
+## 2026-11-27
+
+- **ADR 17 supersedes the two rules ADR 16 still states, and the repository now lists seventeen
+  decision records.** `docs/adr/17-drop-storm-and-err0-retired.md` records what firmware 1.21 and
+  1.24 already do: `Err0` and the `OFFLINE`/`NoLink` faces are gone, a disconnect returns to
+  `Advertising` instead of counting towards `Fault`, and `Err4` has exactly one cause - the radio
+  would not start. The proofs are `firmware/main/src/config.h`'s 1.21/1.24 changelog and
+  `FIRMWARE_VERSION`, `docs/rig-transport-en.md` §5 rule 5,
+  `tests/test_rig_presentation.py::test_there_is_no_drop_storm_rule`, and the 11-16 entries below;
+  ADR 16 itself is untouched, because an accepted record is superseded rather than edited.
+  `docs/INDEX-en.md` and `docs/INDEX-zh.md`, both READMEs and §10 of both architecture documents
+  now list the record, and the `PLAN.md` `P4-05` entry it closes stays in the list while the code
+  defects beside it are fixed in separate pull requests.
+
 ## 2026-11-26
 
 - **A five-lane audit corrected sixty claims the artifacts contradict, and the defects it found in the code

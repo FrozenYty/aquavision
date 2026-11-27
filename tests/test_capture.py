@@ -57,6 +57,14 @@ def test_flat_frame_is_a_retake():
     assert result.score < PASS_MARK
 
 
+def test_the_pass_mark_is_an_argument_with_a_documented_default():
+    """The verdict must follow the threshold in force, not only the module constant (PLAN P4-05)."""
+    flat = score_frame(flat_image())
+    assert flat.verdict == "retake"
+    assert score_frame(flat_image(), pass_mark=flat.score).verdict == "ok"
+    assert score_frame(flat_image(), pass_mark=flat.score + 1).verdict == "retake"
+
+
 def test_blue_cast_loses_colorcast_points():
     neutral = score_frame(flat_image())
     cast = score_frame(blue_cast_image())

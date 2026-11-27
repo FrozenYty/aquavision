@@ -206,3 +206,4 @@ per working directory.
 | [15](adr/15-parameters-take-effect-live.md) | A parameter the operator can change takes effect at the next decision point - one accessor, a short TTL, a declared range - not at the next restart |
 | [13](adr/13-weights-in-the-repository.md) | The delivered model is tracked in the repository; datasets, frames and training runs stay out |
 | [16](adr/16-rig-cable-free-over-ble.md) | The finished rig is cable-free over BLE because the site's campus network is unavailable to it, and `rig-serial` stays as a build variant rather than being removed |
+| [17](adr/17-drop-storm-and-err0-retired.md) | The drop-storm rule and `Err0` are retired; ADR 16's two statements about them are superseded, and firmware 1.24 is the build that carries the change |

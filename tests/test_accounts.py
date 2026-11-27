@@ -18,7 +18,7 @@ from datetime import UTC, datetime
 import pytest
 from app.config import get_settings
 from app.db import Base, engine_from_dsn
-from app.envelope import CONFLICT, FORBIDDEN, MISSING_PARAM
+from app.envelope import BAD_PARAM, CONFLICT, FORBIDDEN
 from app.models import MediaAsset, SysLog, SysUser
 from app.security import hash_password
 from app.seed import seed_species
@@ -182,7 +182,7 @@ def test_an_unknown_role_is_refused(rig):
     admin = auth(client)
     response = client.post("/api/users", json={**NEW, "role": "manager"}, headers=admin)
     assert response.status_code == 400
-    assert response.json()["code"] == MISSING_PARAM
+    assert response.json()["code"] == BAD_PARAM
     assert client.get("/api/users", headers=admin).json()["data"]["total"] == 2, (
         "an invalid role must not create a row"
     )

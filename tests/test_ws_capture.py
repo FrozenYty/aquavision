@@ -15,9 +15,10 @@ import time
 
 import numpy as np
 import pytest
+from app import params
 from app.config import get_settings
 from app.db import Base, engine_from_dsn
-from app.models import SysUser
+from app.models import SysParam, SysUser
 from app.routers import live
 from app.security import hash_password
 from app.vision.capture import CaptureError
@@ -251,6 +252,25 @@ def test_auth_then_start_streams_a_frame_and_its_image(client):
         code, _reason = expect_close(websocket)
     assert code == 1000
     assert source.opened and source.closed
+
+
+def test_the_live_verdict_uses_the_threshold_in_force(client):
+    """ADR 15: a lowered threshold applies to the feed too, not only to a stored frame."""
+    client.app.state.frame_source = FakeSource()
+    with client.app.state.session_factory() as session:
+        session.add(SysParam(param_key="quality_threshold", param_value="0", value_type="int"))
+        session.commit()
+    params.forget()
+    try:
+        with client.websocket_connect("/ws/capture") as websocket:
+            handshake(websocket, sign_in(client))
+            start(websocket)
+            frame, _binary = read_frame_unit(websocket)
+            assert frame["quality"]["verdict"] == "ok", frame
+            websocket.send_json({"type": "stop"})
+            expect_close(websocket)
+    finally:
+        params.forget()
 
 
 def test_detect_carries_its_frame_id_and_the_documented_fields(client):

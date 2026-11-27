@@ -132,7 +132,7 @@ python -m http.server 8765 --directory web
 | [数据模型](docs/data-model-zh.md) · [English](docs/data-model-en.md) | 十四张表、字段、索引、文件存储 |
 | [测试计划](docs/test-plan-zh.md) · [English](docs/test-plan-en.md) | 测试分层、数据集划分、指标与验收 |
 | [术语表](docs/glossary-en-zh.md) | 中英对照，代码与文档共用的唯一词表 |
-| [决策记录](docs/adr/) | 十六份决策记录及其理由：09 已被 10 取代，07 的 pytest 条款已被 11 取代，12 增补了 08；逐条列在 `docs/architecture-zh.md` 第十节 |
+| [决策记录](docs/adr/) | 十七份决策记录及其理由：09 已被 10 取代，07 的 pytest 条款已被 11 取代，12 增补了 08，17 取代 16 中两条已退役的装置规则；逐条列在 `docs/architecture-zh.md` 第十节 |
 
 设计文档以英文版为准，中文为对照版，两者必须在同一次提交内同步。
 

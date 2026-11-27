@@ -144,13 +144,13 @@ async def lifespan(app: FastAPI):
         )
         worker.start()
         app.state.worker = worker
-    link = None
-    if getattr(app.state, "rig_port", ""):
-        # The rig link is started last and stopped first: a panel that asks for a frame while the
-        # database is gone would produce a verdict nobody can store.
-        link = build_link(get_settings(), app.state.session_factory)
-        if link is not None:
-            link.start()
+    # The rig link is started last and stopped first: a panel that asks for a frame while the
+    # database is gone would produce a verdict nobody can store. `build_link` owns the decision: it
+    # returns None when no wire is configured, and a BLE link needs no port (ADR 16), so gating on
+    # `rig_port` here started nothing at all for `AV_RIG_TRANSPORT=ble`.
+    link = build_link(get_settings(), app.state.session_factory)
+    if link is not None:
+        link.start()
 
     try:
         yield
@@ -161,13 +161,42 @@ async def lifespan(app: FastAPI):
             worker.stop()
 
 
+#: The one format the application writes; uvicorn keeps its own for the access log.
+LOG_FORMAT = "%(asctime)s %(levelname)-7s %(name)s: %(message)s"
+
+
+class RequestIdFilter(logging.Filter):
+    """Append the request id in force to every record that reaches a handler (contract §1).
+
+    The id already travels in the context, in the response envelope and in `X-Request-Id`, but a
+    caller who reports a failure still could not find the matching log line: no record carried it.
+    A filter is used rather than a formatter because uvicorn configures its own handlers and the root
+    handlers may already exist (`basicConfig` is a no-op then); appending to the record's message
+    reaches both without either handler having to learn a new format string.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        request_id = request_id_ctx.get()
+        if request_id and not getattr(record, "request_id_attached", False):
+            record.msg = f"{record.getMessage()} [req={request_id}]"
+            record.args = None
+            record.request_id_attached = True
+        return True
+
+
+def install_request_id_logging() -> None:
+    """Put the filter on every root handler, including one that already existed when app was built."""
+    for handler in logging.getLogger().handlers:
+        if not any(isinstance(item, RequestIdFilter) for item in handler.filters):
+            handler.addFilter(RequestIdFilter())
+
+
 def create_app() -> FastAPI:
     # The application's own loggers have to be visible at INFO, because a hardware link that starts and
     # says nothing looks exactly like a link that never started. Uvicorn configures its own loggers and
     # leaves the root alone, so one root handler here is what makes `app.*` appear in the terminal.
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s %(levelname)-7s %(name)s: %(message)s"
-    )
+    logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
+    install_request_id_logging()
 
     settings = get_settings()
     app = FastAPI(
@@ -188,7 +217,6 @@ def create_app() -> FastAPI:
     app.state.worker_enabled = settings.worker_enabled
     app.state.worker_poll_seconds = settings.worker_poll_seconds
     app.state.max_concurrency = settings.max_concurrency
-    app.state.rig_port = settings.rig_port
 
     app.middleware("http")(request_context)
 
@@ -219,10 +247,21 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(RequestValidationError)
     async def on_validation(_: Request, exc: RequestValidationError) -> JSONResponse:
+        """Report the schema's own distinction: a field that is absent, or one that is invalid.
+
+        Every rejection used to answer `40001 MISSING_PARAM`, so a value the caller had sent but that
+        failed its range was reported as a value they had not sent, and `40002` was defined but never
+        reached from validation (PLAN P4-05). Pydantic's error type carries the distinction; only
+        `missing` is the missing-parameter case.
+        """
         first = exc.errors()[0] if exc.errors() else {}
         field = ".".join(str(part) for part in first.get("loc", ()) if part != "body")
-        message = f"参数有误：{field}" if field else "参数有误"
-        return JSONResponse(status_code=400, content=build(MISSING_PARAM, message))
+        if first.get("type") == "missing":
+            code, said = MISSING_PARAM, "缺少参数"
+        else:
+            code, said = BAD_PARAM, "参数有误"
+        message = f"{said}：{field}" if field else said
+        return JSONResponse(status_code=STATUS[code], content=build(code, message))
 
     @app.exception_handler(StarletteHTTPException)
     async def on_http(_: Request, exc: StarletteHTTPException) -> JSONResponse:
