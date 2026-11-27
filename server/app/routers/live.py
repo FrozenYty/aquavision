@@ -161,9 +161,7 @@ async def capture_socket(websocket: WebSocket) -> None:
 
         def threshold() -> int:
             """The threshold in force, read per frame rather than fixed when the socket opened."""
-            return effective(
-                websocket.app.state.session_factory, "quality_threshold", settings
-            )
+            return effective(websocket.app.state.session_factory, "quality_threshold", settings)
 
         await websocket.send_json({"type": "auth_ok"})
         await _serve(websocket, source, detector, settings, threshold)
@@ -360,9 +358,7 @@ def _run_detector(
     return boxes, latency_ms
 
 
-def _grab(
-    source: FrameSource, index: int, threshold: Callable[[], int]
-) -> _CapturedFrame:
+def _grab(source: FrameSource, index: int, threshold: Callable[[], int]) -> _CapturedFrame:
     """Read, encode and score one frame, exactly as `vision.capture.CaptureSession.grab` does."""
     captured_monotonic = time.monotonic()
     frame = source.read()

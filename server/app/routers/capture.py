@@ -411,10 +411,13 @@ def _next_frame_id(db, captured_at: datetime, session_id: str) -> str:
         or 0
     )
     index = stored + 1
-    while db.scalar(
-        select(MediaAsset.asset_id).where(
-            MediaAsset.frame_id == make_frame_id(captured_at, index)
+    while (
+        db.scalar(
+            select(MediaAsset.asset_id).where(
+                MediaAsset.frame_id == make_frame_id(captured_at, index)
+            )
         )
-    ) is not None:
+        is not None
+    ):
         index += 1
     return make_frame_id(captured_at, index)
