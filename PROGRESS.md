@@ -14,6 +14,8 @@
 
 - **P3-02 dashboard integration:** all four cards render the live API responses, with empty, pending and retry states. Species uses the returned basis, count and share, and rejects stale responses. Node checks the chart values and the thirteen-page failure matrix. P3-02 stays open pending site distribution and full trend aggregation under API contract section 6.
 
+- **P3-07 report interface:** history searches the paginated API by overlapping operating dates, template and basis. Generation shows a persistent status, retains the preview token and refreshes after conflicts. Removed the Word/PDF controls that had no endpoint. The report preview and page suites verify the history logic and generated file. A local browser generated a Markdown report and displayed its history entry. AC-22 stays open pending dashboard aggregation for an identical period.
+
 ## 2026-11-26
 
 - **A five-lane audit corrected sixty claims the artifacts contradict, and the defects it found in the code

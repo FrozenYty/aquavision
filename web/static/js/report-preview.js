@@ -15,3 +15,19 @@ export function reportPreviewHtml(data, mock = false) {
     <h4>物种组成</h4><table class="table table-sm small"><thead><tr><th>物种</th><th>目标数</th><th>占比</th></tr></thead><tbody>${rows}</tbody></table>
     <footer>模型版本：${esc(data.model_version ?? "未上线")} · 统计口径：${data.basis === "raw" ? "原始识别结果" : "复核后结果"}${mock ? " · 演示数据" : ""}</footer>`;
 }
+
+export async function reportHistory(fetchPage, { from, to, template, basis }) {
+  const matches = [];
+  const size = 100;
+  let lastPage = 1;
+  for (let page = 1; page <= lastPage; page++) {
+    const result = await fetchPage({ page, size });
+    if (page === 1) lastPage = Math.ceil(result.total / size);
+    matches.push(...result.items.filter((row) =>
+      (!from || row.period_end.slice(0, 10) >= from) &&
+      (!to || row.period_start.slice(0, 10) <= to) &&
+      (!template || row.template === template) &&
+      (!basis || row.basis === basis)));
+  }
+  return { items: matches };
+}
