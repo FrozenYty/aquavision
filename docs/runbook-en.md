@@ -114,6 +114,23 @@ Restore is the same in reverse: stop the service, put the database file or dump 
 directory beside it, start the service. Then check `/api/health`, sign in, and open one frame — a restore
 that answers health but cannot display a frame has restored the wrong half.
 
+### Rehearse the restore
+
+The runbook is a claim until it is run. The drill takes a consistent backup of the SQLite development
+database with `VACUUM INTO` into a scratch file under `data/drill/`, opens the copy read-only, and
+compares the row counts of `sys_user`, `detect_object` and `detect_task` plus the totals `/api/stats`
+computes; one line per figure, then `PASS` or `FAIL`.
+
+```bash
+python scripts/drill_restore.py
+```
+
+It opens the source read-only, refuses an existing scratch copy unless `--force`, deletes nothing
+outside that scratch path, and does not cover PostgreSQL: when `DB_DSN` names one it says so and
+exits rather than pretending to pass. The frames are the other half - copy `data/frames/` separately
+as above. Run it before a rehearsal and before a release tag, and keep the printed `PASS` with the
+tag.
+
 ## 6. Rotate the JWT secret
 
 Every issued token is signed with `AV_JWT_SECRET`, and tokens are stateless: there is no session table to

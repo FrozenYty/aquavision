@@ -34,6 +34,17 @@
   gone, or if the card grows past one page. Both index files route to it. The task stays open for the one
   thing a repository cannot do: the first rehearsal ticking it with a pen.
 
+- **P4-17 restore drill: the runbook's backup page became an executable claim.** `scripts/drill_restore.py`
+  takes the §5 `VACUUM INTO` copy into `data/drill/`, opens the source and the copy read-only, and compares
+  the three table counts and the `/api/stats` totals (species reviewed and raw, quality, corrections) that
+  the route functions themselves compute — one line per figure, then `PASS`/`FAIL`, exit 0/1. It refuses an
+  existing scratch copy without `--force`, deletes nothing outside it, and names PostgreSQL as not covered
+  instead of passing. `tests/test_drill_restore.py` holds seven cases: an intact copy passes; a deleted row
+  fails naming the table; a changed review state moves the stats while the row count stays; the source's hash
+  and mtime do not change; the force and refusal behaviour holds. Run here against a populated database
+  (300 frames, 300 objects over ten days), it printed `PASS` with species reviewed 168 = 168 and the source
+  SHA-256 unchanged; runbook §5 en+zh carries the "Rehearse the restore" subsection.
+
 ## 2026-11-26
 
 - **A five-lane audit corrected sixty claims the artifacts contradict, and the defects it found in the code
