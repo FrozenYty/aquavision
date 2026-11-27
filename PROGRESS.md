@@ -16,6 +16,16 @@
 
 - **P3-07 report interface:** history searches the paginated API by overlapping operating dates, template and basis. Generation shows a persistent status, retains the preview token and refreshes after conflicts. Removed the Word/PDF controls that had no endpoint. The report preview and page suites verify the history logic and generated file. A local browser generated a Markdown report and displayed its history entry. AC-22 stays open pending dashboard aggregation for an identical period.
 
+- **P3-22 and P3-08: the frame's day is the operator's, and expired thumbnails have a cleanup.** A frame
+  captured between 00:00 and 08:00 local used to carry yesterday in its id and its folder, because both
+  derived their day from UTC; they now take it from `AV_TIMEZONE` through `timebase.now()`, while the
+  stored timestamp stays UTC, so the filter, the id and the directory agree — ADR 14's one-zone rule.
+  `tests/test_time_basis.py::test_a_frame_after_local_midnight_is_named_and_foldered_in_the_operating_day`
+  fails on the old code. `scripts/cleanup_retention.py` is the retention half: a preview by default and
+  `--apply` to act, it deletes an expired thumbnail and nulls the reference that pointed at it, prunes
+  `frames/live/`, never touches a `file_path` original, and prints every action; seven cases run on a
+  temporary root, and runbook §11 describes what the operator sees.
+
 ## 2026-11-26
 
 - **A five-lane audit corrected sixty claims the artifacts contradict, and the defects it found in the code

@@ -397,7 +397,11 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P3-07** Report generation and history · @chemflowers · closes AC-22 · done when a report is
       generated as Markdown from the same queries the dashboard uses, its figures equal the dashboard,
       and the footer carries the model version and the basis — **not Word or PDF; SRS V1.6 settled that**
-- [ ] **P3-08** Retention cleanup and reference nulling · @FrozenYty · closes AC-09 · it is the file
+- [x] **P3-08** Retention cleanup and reference nulling · @FrozenYty · **delivered 11-27**:
+      `scripts/cleanup_retention.py` previews by default and acts under `--apply`. It deletes an expired
+      thumbnail, nulls the reference that pointed at it, and prunes `frames/live/`; it never touches a
+      `file_path` original and prints every action. `tests/test_cleanup_retention.py` holds seven cases
+      on a temporary data root, and runbook §11 is the operator's page · closes AC-09 · it is the file
       lifecycle of the data root, which is lane A's, not database logic · done when the
       cleanup job removes intermediate files older than the retention period, nulls the references,
       never touches originals by default, and reports what it deleted
@@ -593,7 +597,13 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         boundary
       - `reports.html` hardcodes `T00:00:00+08:00` and `T23:59:59+08:00`; a deployment that changes
         `AV_TIMEZONE` then asks for a period the server interprets in a different zone
-- [ ] **P3-22** A frame's identity keeps a different day from the operator's · @FrozenYty
+- [x] **P3-22** A frame's identity keeps a different day from the operator's · @FrozenYty · **delivered
+      11-27**: the id and the `frames/<site>/<day>/` folder now take their day from `AV_TIMEZONE` through
+      `timebase.now()`, while stored timestamps stay UTC — ADR 14's one-zone rule applied to the
+      identifier. The regressions are
+      `tests/test_time_basis.py::test_a_frame_after_local_midnight_is_named_and_foldered_in_the_operating_day`
+      and `tests/test_capture.py::test_a_capture_session_uses_the_configured_zone_not_a_fixed_offset`;
+      the old code fails both
       - `_frame_id` and the `frames/<site>/<day>/` directory are derived from UTC, so under the default
         zone a capture between 00:00 and 08:00 local carries **yesterday** in its id and its folder: the
         filter says 2 November, the frame id says 1 November
