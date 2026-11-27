@@ -183,8 +183,30 @@ python -c "import sqlite3; [print(r) for r in sqlite3.connect('data/app.db').exe
 | `retention_days` | 1–3650 | 中间帧要到多少天才算清理候选 |
 
 其余的只能用环境变量：密钥、DSN、时区、数据根、装置端口。那些是部署决定，改一个就意味着刻意重启。
+`AV_TIMEZONE` 还决定一帧的编号和它的 `frames/<site>/<YYYYMMDD>/` 目录落在哪个日历日，而数据库里的
+时间戳一律是 UTC（ADR 14）。
 
-## 11. 本手册不覆盖的部分
+## 11. 清理中间文件
+
+保留清理是一个脚本，不是定时器：用 cron 跑，或者手动跑。它删除超过 `retention_days` 的**中间**文件，
+并把指向这些文件的 `media_asset.thumb_path` 置空。**原始文件永远不动**——`media_asset.file_path`
+指到的每个文件都会留下，也没有哪个选项会删它。
+
+```bash
+python scripts/cleanup_retention.py            # 试运行：打印清理清单，什么都不改
+python scripts/cleanup_retention.py --apply    # 真正删除文件并把引用置空
+```
+
+它在**运行时**才读 `retention_days`——有 `sys_param` 行就用它，没有就用 `AV_RETENTION_DAYS`
+（ADR 15）；`--retention-days N` 覆盖单次运行。`--data-dir` 和 `--dsn` 覆盖配置里的位置。执行
+`--apply` 之前先读试运行的结果：删掉的中间文件是重建不回来的。每个被删的文件打印一行，每个删不掉
+的文件打印一行并带上原因，最后打印合计。
+
+候选对象是数据库行还指向的缩略图，以及 `/ws/capture` 在进程没来得及清理时留在 `frames/live/`
+下的临时帧。数据根下别的都不是候选：没有数据库行的帧仍然是原始文件，不会被碰。请在仓库根目录运行
+这个脚本，这样默认的相对路径 `data/` 指的就是这份克隆的目录。
+
+## 12. 本手册不覆盖的部分
 
 - **硬件。** 接线和光学指标在 `procurement-en.md` 与 `rig-state-machine-en.md` 里。
 - **训练。** 见 `PLAN.md` 的 P4 与 `test-plan-en.md`。

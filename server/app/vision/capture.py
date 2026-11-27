@@ -12,7 +12,10 @@ Run it from the server directory:
     python -m app.vision.capture --count 20 --site A3 --images ../samples   # no camera attached
     python -m app.vision.capture --verify ../data/frames/A3/20261106/s-a3-001
 
-Frame ids follow the contract: ``YYYYMMDDTHHMMSS-####`` in the local zone, unique inside a session.
+Frame ids and the ``<site>/<YYYYMMDD>`` folder follow the contract in the **configured operating
+zone** (ADR 14, ``AV_TIMEZONE``), while recorded timestamps stay naive UTC; ids are unique inside
+a session. A capture at 00:30 local therefore carries that day in its id and its folder, not
+UTC's yesterday, and an id already on disk keeps the basis it was written under (P3-22).
 """
 
 from __future__ import annotations
@@ -21,15 +24,15 @@ import argparse
 import json
 import sys
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from pathlib import Path
 
 import cv2
 import numpy as np
 
+from app import timebase
 from app.vision.quality import Quality, score_frame
 
-LOCAL_TZ = timezone(timedelta(hours=8))
 DEFAULT_WIDTH = 1920
 DEFAULT_HEIGHT = 1080
 # SRS §2.4.3: once exposure is locked, mean brightness between frames must vary by under 10 %.
@@ -81,8 +84,10 @@ class FrameRecord:
 def make_frame_id(moment: datetime, index: int) -> str:
     """`YYYYMMDDTHHMMSS-####` in the zone `moment` carries, so the caller decides the calendar.
 
-    The live socket passes a configured-zone moment (ADR 14); the CLI passes a local one. Converting
-    to a fixed zone here would make a deployment outside UTC+8 disagree with its own setting.
+    Every caller passes a configured-zone moment (ADR 14): the live socket and `CaptureSession` use
+    `timebase.now`, and the REST capture route converts the stored UTC `captured_at` with
+    `timebase.to_zone`. Converting to a fixed zone here would make a deployment outside UTC+8 disagree
+    with its own setting; formatting a naive UTC moment here was P3-22, where the id kept yesterday.
     """
     return f"{moment.strftime('%Y%m%dT%H%M%S')}-{index:04d}"
 
@@ -312,7 +317,9 @@ class CaptureSession:
         self.source = source
         self.root = Path(root)
         self.site = site
-        self.started_at = datetime.now(LOCAL_TZ)
+        # The configured zone (ADR 14), not a fixed +08:00: the id and the day folder must read the
+        # operator's calendar, including a deployment that changes AV_TIMEZONE.
+        self.started_at = timebase.now()
         self.session_id = session_id or default_session_id(site, self.started_at)
         self.jpeg_quality = jpeg_quality
         self.records: list[FrameRecord] = []
@@ -329,7 +336,7 @@ class CaptureSession:
     def grab(self) -> FrameRecord:
         frame = self.source.read()
         self._index += 1
-        captured_at = datetime.now(LOCAL_TZ)
+        captured_at = timebase.now()
         frame_id = make_frame_id(captured_at, self._index)
 
         # Encode first, then score the decoded bytes: JPEG smoothing shifts Laplacian variance, so a
