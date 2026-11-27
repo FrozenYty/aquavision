@@ -45,6 +45,15 @@
   (300 frames, 300 objects over ten days), it printed `PASS` with species reviewed 168 = 168 and the source
   SHA-256 unchanged; runbook §5 en+zh carries the "Rehearse the restore" subsection.
 
+- **P4-05, one major closed: a frame the quality gate refused no longer enters a detection batch.** AC-07
+  says a defocused frame stays out of the queue, and `create_batch` selected every undetected frame without
+  looking at `quality_flag`, so the gate's verdict was recorded and then ignored by the queue. The selection
+  in `server/app/routers/tasks.py` now filters `MediaAsset.quality_flag == 0`;
+  `tests/test_batch_quality.py` fails on the old code - the queue held the refused frames' asset ids - and
+  passes now, and a second case pins that staying out of the queue does not rewrite the gate's marks.
+  P4-05 stays open for the one major left: a batch built from a selection (AC-08's drill-down) needs
+  `POST /api/detect/batches` to accept frame ids, which is a contract change, not a defect fix.
+
 ## 2026-11-26
 
 - **A five-lane audit corrected sixty claims the artifacts contradict, and the defects it found in the code
