@@ -31,6 +31,7 @@ only single-language files above the line. Within `docs/`, the fastest route is 
 | pack and check the demo kit | `demo-kit-card-en.md` |
 | run the judged demonstration, minute by minute | `demo-script-en.md` |
 | know which acceptance item is closed, manual or open | `acceptance-checklist-en.md` |
+| reproduce a test number | `test-report-en.md` |
 | add a table or a column | `data-model-en.md` |
 | buy or wire hardware | `procurement-en.md` |
 | know what the prototype shows | `prototype-en.md` |
@@ -61,6 +62,7 @@ only single-language files above the line. Within `docs/`, the fastest route is 
 | `demo-script-en/zh.md` | the eight-minute judged run, the failure sentence and the ten questions | a step, a page, a question or a slide changes | @IkeaFyj |
 | `test-cases-en/zh.md` | one case per acceptance item, and how to run it | an acceptance item changes, or a case is executed | @IkeaFyj |
 | `acceptance-checklist-en/zh.md` | one row per acceptance item with its evidence and state | an acceptance item changes, or its evidence moves | @IkeaFyj |
+| `test-report-en/zh.md` | what was run, what passed, what is skipped and why, and every defect with its severity | a suite is run, or an acceptance case changes | @IkeaFyj |
 | `glossary-en-zh.md` | the one word for each concept | a new concept appears | @FrozenYty |
 | `adr/01-17` | why a decision was taken and when to revisit it | never edited; superseded instead | the author of that ADR |
 | `PLAN.md` | phases, tasks, gates | a task is delivered or re-scoped | every lane |

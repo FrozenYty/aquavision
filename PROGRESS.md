@@ -124,6 +124,20 @@
   rows whose evidence arrived after the 11-12 case verdicts instead of editing the cases. Both pairs are
   indexed; P4-07's rehearsals are what validate the script, and it has not been presented.
 
+- **P4-11: the test report, with one run's numbers and the skips named instead of rounded away.**
+  `docs/test-report-en/zh.md` states the test levels and their owning documents, then one completed run
+  at `3259dfb` - `python -m pytest -v -p no:cacheprovider -o addopts=""` in a clone plus the git-ignored
+  `data/`: **563 collected, 563 passed, 0 failed, 0 skipped, 432 s**, CPython 3.11.18, pytest 9.2.0 and
+  torch 2.15.0+cpu. It then separates what CI does: 563 collected, **6 skipped, 557 executed**, with
+  each skip's condition read from the code (3 `test_detect_real`, 2 `test_demo_driver`, 1
+  `test_delivered_weights`) and says the CI count is derived from those conditions rather than observed
+  in a CI log. Two tables carry what cannot be automated - 21 manual cases with why a person must run
+  each and where its evidence will land, and 6 uncovered cases with what would close them - and no
+  manual case is called passed. The defect section lists 15 majors and 10 minors with the fix and the
+  regression check that fails on the old code (the measurement's hard-sample finding included), plus one
+  open cosmetic, zero blocker and zero major open. The last section prints the commands that reproduce
+  every number, so the report is checkable rather than trusted.
+
 ## 2026-11-27
 
 - **P2-20: a fresh environment built from `requirements.txt` runs the delivered weights.** Walked
