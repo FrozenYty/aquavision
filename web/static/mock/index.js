@@ -640,27 +640,42 @@ const ROUTES = {
   // derived from the prototype's per-day and per-class fixtures, so the page has one code path. The demo
   // counts do not depend on the basis; the page says so.
   "GET /stats/species": ({ query }) => {
+    const days = Number(query.days ?? 7);
     const total = STATS_SPECIES.reduce((sum, row) => sum + row.box_count, 0);
     return {
       basis: query.basis === "raw" ? "raw" : "reviewed",
-      days: STATS_TREND.length,
+      days,
       items: [...STATS_SPECIES]
         .sort((a, b) => b.box_count - a.box_count)
-        .map((row) => ({ class_code: row.class_code, cn_name: row.class_code, count: row.box_count,
-          share: Math.round((row.box_count / total) * 10000) / 10000 })),
+        .map((row) => ({
+          class_code: row.class_code,
+          cn_name: SPECIES.find((s) => s.class_code === row.class_code)?.cn_name ?? row.class_code,
+          count: row.box_count,
+          share: Math.round((row.box_count / total) * 10000) / 10000,
+        })),
       total,
     };
   },
-  "GET /stats/quality": () => {
+  "GET /stats/quality": ({ query }) => {
+    const days = Number(query.days ?? 7);
     const total = STATS_QUALITY.reduce((sum, row) => sum + row.total, 0);
     const rejected = STATS_QUALITY.reduce((sum, row) => sum + row.intercepted, 0);
-    return { days: STATS_QUALITY.length, total, rejected, rate: Math.round((rejected / total) * 10000) / 10000 };
+    return {
+      days,
+      total,
+      rejected,
+      rate: Math.round((rejected / total) * 10000) / 10000,
+    };
   },
-  "GET /stats/trend": () => ({ days: STATS_TREND.length, items: STATS_TREND }),
-  "GET /stats/corrections": () => {
+  "GET /stats/trend": ({ query }) => {
+    const days = Number(query.days ?? 7);
+    return { days, items: STATS_TREND.slice(-days) };
+  },
+  "GET /stats/corrections": ({ query }) => {
+    const days = Number(query.days ?? 7);
     const sum = (key) => STATS_CORRECTIONS.reduce((total, row) => total + row[key], 0);
     const [modified, added, rejected] = [sum("relabel"), sum("added"), sum("removed")];
-    return { days: STATS_TREND.length, rejected, modified, added, total: rejected + modified + added };
+    return { days, rejected, modified, added, total: rejected + modified + added };
   },
 };
 

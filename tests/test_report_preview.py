@@ -103,3 +103,27 @@ def test_report_page_tracks_its_current_preview():
         text=True,
         timeout=30,
     )
+
+
+def test_brief_template_keeps_the_species_section_and_the_footer(tmp_path, monkeypatch):
+    with _app_client(tmp_path, monkeypatch, "Asia/Shanghai") as client:
+        headers = auth(sign_in(client))
+        period = {"period_start": "2026-11-02", "period_end": "2026-11-02", "basis": "raw"}
+        brief = client.post(
+            "/api/reports", json={**period, "template": "brief"}, headers=headers
+        ).json()
+        assert brief["code"] == 0, brief
+        document = Path(brief["data"]["file_path"]).read_text(encoding="utf-8")
+        assert "统计周期" in document
+        assert "## 物种组成" in document
+        assert "模型版本" in document and "口径" in document
+        assert "## 采集与质量" not in document
+        assert "- 模型版本" not in document
+
+        standard = client.post(
+            "/api/reports", json={**period, "template": "standard"}, headers=headers
+        ).json()
+        assert standard["code"] == 0, standard
+        full = Path(standard["data"]["file_path"]).read_text(encoding="utf-8")
+        assert "## 采集与质量" in full
+        assert "- 模型版本" in full

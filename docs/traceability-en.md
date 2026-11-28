@@ -199,8 +199,8 @@ Every screen of the prototype, element by element, traced to the requirement it 
 | TM-084 | P-10 Statistics | actions | Counting basis | See figure 10, callout 2. Switches the species chart between reviewed and raw results; its caption changes with it. The other charts do not depend on it. | FR-M5-01 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
 | TM-085 | P-10 Statistics | content | Species composition | See figure 10, callout 3. Boxes per class over seven days. | FR-M5-01 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-086 | P-10 Statistics | content | Capture trend | See figure 10, callout 4. Frames per day. | FR-M5-03 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-087 | P-10 Statistics | content | Rejection by day | See figure 10, callout 5. Per-day bars in the prototype; the server returns totals only, stated in words. | FR-M2-03 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
-| TM-088 | P-10 Statistics | content | Review corrections | See figure 10, callout 6. Per-class stack in the prototype; the server returns totals only. | FR-M4-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-087 | P-10 Statistics | content | Rejection by day | See figure 10, callout 5. One bar per period total (passed versus retake) from `/api/stats/quality`; the prototype's per-day bars are not built. | FR-M2-03 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
+| TM-088 | P-10 Statistics | content | Review corrections | See figure 10, callout 6. One bar per correction total (relabelled, added, removed) from `/api/stats/corrections`; the prototype's per-class stack is not built. | FR-M4-02 | Done | In progress | Not started | Sun Jianheng | Yao Tianyu |
 | TM-089 | P-10 Statistics | content | Site heat map | Figure 10, no callout: not on screen. Site density and ranking are not built yet. | FR-M5-02 | Done | Not started | Not started | Sun Jianheng | Yao Tianyu |
 
 ### 4.11 P-11 Inspection reports (figure 11)
@@ -215,7 +215,7 @@ Every screen of the prototype, element by element, traced to the requirement it 
 | TM-093 | P-11 Inspection reports | actions | Generate | See figure 11, callout 4. Generates the report on the server. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-094 | P-11 Inspection reports | content | Preview | See figure 11, callout 5. Species composition, rejection and model information for the selected period from `/api/reports/preview`. | FR-M5-01, FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
 | TM-095 | P-11 Inspection reports | content | Report history | See figure 11, callout 6. Every generated report and its status. | FR-M5-04 | Done | Done | Not started | Sun Jianheng | Yao Tianyu |
-| TM-096 | P-11 Inspection reports | actions | Download | See figure 11, callout 7. No download route yet; the button says so. | FR-M5-04 | Done | Not started | Not started | Sun Jianheng | Yao Tianyu |
+| TM-096 | P-11 Inspection reports | actions | Download | See figure 11, callout 7. The history table offers no export control and no download route exists. | FR-M5-04 | Done | Not started | Not started | Sun Jianheng | Yao Tianyu |
 
 ### 4.12 P-12 Model experiments (figure 12)
 

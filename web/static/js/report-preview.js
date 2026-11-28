@@ -16,18 +16,26 @@ export function reportPreviewHtml(data, mock = false) {
     <footer>模型版本：${esc(data.model_version ?? "未上线")} · 统计口径：${data.basis === "raw" ? "原始识别结果" : "复核后结果"}${mock ? " · 演示数据" : ""}</footer>`;
 }
 
+// A live list can gain or lose a report between pages: follow full pages until one comes back
+// short instead of trusting page 1's total, and keep each report id once so a shift cannot count
+// a report twice or drop one that was there for the whole scan.
 export async function reportHistory(fetchPage, { from, to, template, basis }) {
   const matches = [];
+  const seen = new Set();
   const size = 100;
-  let lastPage = 1;
-  for (let page = 1; page <= lastPage; page++) {
+  for (let page = 1; ; page++) {
     const result = await fetchPage({ page, size });
-    if (page === 1) lastPage = Math.ceil(result.total / size);
-    matches.push(...result.items.filter((row) =>
-      (!from || row.period_end.slice(0, 10) >= from) &&
-      (!to || row.period_start.slice(0, 10) <= to) &&
-      (!template || row.template === template) &&
-      (!basis || row.basis === basis)));
+    for (const row of result.items) {
+      if (seen.has(row.report_id)) continue;
+      seen.add(row.report_id);
+      if ((!from || row.period_end.slice(0, 10) >= from) &&
+          (!to || row.period_start.slice(0, 10) <= to) &&
+          (!template || row.template === template) &&
+          (!basis || row.basis === basis)) {
+        matches.push(row);
+      }
+    }
+    if (result.items.length < size) break;
   }
   return { items: matches };
 }

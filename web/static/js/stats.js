@@ -58,12 +58,18 @@ export function trendView(data) {
   const total = rows.reduce((sum, row) => sum + row.frames, 0);
   const changes = dayOverDay(rows);
   const last = changes.at(-1) ?? null;
+  // The line joins each day to the next, so fewer than two days cannot be drawn: it
+  // used to divide by rows.length - 1 and produce NaN for a one-day response.
+  const tooShort = rows.length < 2;
   return {
     rows: rows.map((row, i) => ({ ...row, change: changes[i], changeText: formatChange(changes[i]) })),
     total,
     caption: `近 ${data.days} 日共 ${total} 帧 · 最近一日较前日 ${formatChange(last)}`,
-    empty: total === 0,
-    emptyText: `近 ${data.days} 日没有采集任何帧`,
+    empty: total === 0 || tooShort,
+    emptyText:
+      total === 0
+        ? `近 ${data.days} 日没有采集任何帧。去 <a href="capture.html">采集控制</a> 采一帧。`
+        : '数据不足两天，画不出趋势。去 <a href="capture.html">采集控制</a> 至少再采一天。',
   };
 }
 
@@ -77,7 +83,7 @@ export function qualityView(data) {
     total: data.total,
     caption: `近 ${data.days} 日共 ${data.total} 帧 · 拦截率 ${pct(data.rate)}`,
     empty: data.total === 0,
-    emptyText: `近 ${data.days} 日没有采集任何帧`,
+    emptyText: `近 ${data.days} 日没有采集任何帧。去 <a href="capture.html">采集控制</a> 采一帧。`,
   };
 }
 
@@ -92,6 +98,6 @@ export function correctionsView(data) {
     total: data.total,
     caption: `近 ${data.days} 日共 ${data.total} 处人工修正`,
     empty: data.total === 0,
-    emptyText: `近 ${data.days} 日还没有人工修正`,
+    emptyText: `近 ${data.days} 日还没有人工修正。去 <a href="review.html">复核工作台</a> 复核一帧。`,
   };
 }

@@ -57,6 +57,13 @@ function niceStep(max) {
   return [1, 2, 5, 10].map((m) => m * pow).find((step) => step >= raw);
 }
 
+// Count axes are whole numbers: a maximum of 1 would otherwise step by 0.2 and
+// print labels like "0.6000000000000001". A whole step of at least 1 keeps every
+// label an integer; the percent axis is untouched.
+function countStep(max) {
+  return Math.max(1, Math.ceil(niceStep(max)));
+}
+
 // ---- Chart 1: species composition donut ----
 export function renderSpeciesDonut(container, rows, total) {
   container.replaceChildren();
@@ -129,7 +136,7 @@ export function renderTrendLine(container, rows) {
   const B = 30;
   const s = svgEl(W, H);
   const maxV = Math.max(...rows.map((row) => row.frames));
-  const step = niceStep(maxV);
+  const step = countStep(maxV);
   const top = Math.ceil(maxV / step) * step;
   yAxis(s, { left: L, top: T, bottom: B, height: H, width: W, max: top, step });
 
@@ -185,7 +192,7 @@ export function renderTotalBars(container, bars) {
   const B = 30;
   const s = svgEl(W, H);
   const maxV = Math.max(...bars.map((bar) => bar.value), 1);
-  const step = niceStep(maxV);
+  const step = countStep(maxV);
   const top = Math.ceil(maxV / step) * step;
   yAxis(s, { left: L, top: T, bottom: B, height: H, width: W, max: top, step });
 

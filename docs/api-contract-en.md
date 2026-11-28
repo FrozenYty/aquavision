@@ -254,8 +254,8 @@ Generation may include the returned `preview_token`; if figures, period, basis o
 {
   "report_id": 12,
   "report_code": "RP261106-001",
-  "period_start": "2026-11-01T00:00:00+00:00",
-  "period_end": "2026-11-30T23:59:59+00:00",
+  "period_start": "2026-11-01T00:00:00+08:00",
+  "period_end": "2026-11-30T23:59:59+08:00",
   "template": "standard",
   "basis": "reviewed",
   "model_version_id": 3,

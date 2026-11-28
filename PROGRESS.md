@@ -1,3 +1,24 @@
+## 2026-11-28
+
+- **A review of yesterday's statistics and report-history merges closed four majors and nine minors,
+  each with a check that fails on the old code.** The four statistics routes counted "the last seven
+  days" three different ways - rolling 168 hours for species, quality and corrections, local calendar days
+  for trend -
+  so one page printed two different frame totals; `stats.py` now has one `_window()` built from
+  `recent_days`/`day_bounds` (ADR 14), and `tests/test_stats_windows.py` pins a frame on each side of the
+  boundary (`assert 5 == 3` fails on the old code). The report history paged by page 1's live `total`, so
+  a report created mid-scan counted one row twice and dropped another; it now follows short pages and
+  dedupes by `report_id`. A refresh requested while another scan ran was dropped, which is how a freshly
+  generated report failed to appear; it is queued now. The brief template the select offered was not
+  implemented in `_render`; brief now keeps the period, species and footer only, while standard keeps
+  the capture-quality and model sections. The minors: count axes printed `0.6000000000000001`, a one-day
+  trend rendered `NaN`, the statistics mock echoed the wrong `days` and `cn_name`, mock report rows and
+  the contract's Report example carried a UTC offset where the operating zone belongs, the history
+  filters named "period start/end" for an overlap test, the empty archive claimed a filter was set,
+  statistics empty states named no next step, and TM-087, TM-088 and TM-096 described pages that no
+  longer exist. P3-02 and P3-07 stay open for their own reasons; `GET /api/reports` still has no
+  server-side filter (a contract change) and no route serves the generated Markdown.
+
 ## 2026-11-27
 
 - **P2-20: a fresh environment built from `requirements.txt` runs the delivered weights.** Walked
