@@ -76,6 +76,24 @@
   footer with model version and basis, plus the server-side history filter/pager and the
   stored-Markdown download landed in #226.
 
+- **P3-10 is measured, and the measurement found a major defect the covering index fixes.**
+  `scripts/measure_performance.py` seeds NFR-P-05's design capacity - 100,000 image assets and
+  5,000,000 detected objects, with the 200 batch tasks and 100,000 task items those frames imply - in a
+  throwaway SQLite database, times the four paginated list routes in-process (30 calls each after a
+  warm-up) and the real single-frame route 100 times, and prints median/P90 against the requirements'
+  budgets. The first run at capacity took 403 s just to seed, then measured frames P90 12.8 ms, tasks
+  9.0 ms, reports 7.6 ms - and `/api/hard-samples` **357,241 ms**, six minutes per request: the hard
+  sample pool filters, groups and orders over five million `detect_object` rows and had no covering
+  index, so SQLite walked an index and fetched rows one at a time. `detect_object` now declares
+  `(hard_flag, review_status, frame_id, hard_reason)`; `init_db` runs `ensure_indexes`, so a database
+  created before the index was declared gets it from the deployment command, and two tests pin both the
+  declared index and that upgrade path. The re-run measured hard-samples P90 **143.8 ms** and every
+  budget passed: worst list P90 143.8 ms (<= 2,000), single-frame median 71.1 ms and P90 87.6 ms
+  (<= 1,500) on a CPU - `torch 2.15.0+cpu`, `torch.cuda.is_available(): False`, printed by the script -
+  so the deployment GPU run remains AC-34's acceptance run and this is its lower-bound evidence.
+  `PLAN.md` ticks P3-10; the design capacity is NFR-P-05's, cited by TC-PERF-01/02 and test-plan §3,
+  and `/api/datasets` is named as skipped because it has no page/size to time.
+
 ## 2026-11-27
 
 - **P2-20: a fresh environment built from `requirements.txt` runs the delivered weights.** Walked

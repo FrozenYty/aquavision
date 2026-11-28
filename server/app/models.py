@@ -150,6 +150,11 @@ class DetectObject(Base):
         Index("ix_detect_object_frame_id", "frame_id"),
         Index("ix_detect_object_task_class", "task_id", "class_code"),
         Index("ix_detect_object_review_status", "review_status"),
+        # The hard-sample pool filters, groups and orders over these four columns. Without a covering
+        # index the route scanned the five-million-row table: 357 s per request at design capacity.
+        Index(
+            "ix_detect_object_hard_pool", "hard_flag", "review_status", "frame_id", "hard_reason"
+        ),
     )
 
     object_id: Mapped[int] = mapped_column(BigIntPK, primary_key=True, autoincrement=True)

@@ -320,6 +320,7 @@
 | `detect_object` | `(frame_id)` | 取单帧的框 |
 | `detect_object` | `(task_id, class_code)` | 按任务统计类别 |
 | `detect_object` | `(review_status)` | 待复核队列 |
+| `detect_object` | `(hard_flag, review_status, frame_id, hard_reason)` | 难例池：筛选、分组、排序全部走索引（AC-34；没有它时该接口在设计容量下每次 357 秒） |
 | `sys_log` | `(created_at)` | 按日期查审计 |
 | `detect_task_item` | `(task_id, asset_id)` | 唯一：一个任务一帧只有一行 |
 | `detect_task_item` | `(task_id, state)` | 领取某个任务的下一个待处理项 |
