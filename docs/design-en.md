@@ -12,7 +12,7 @@ endpoint shapes (`api-contract-en.md`) or the columns (`data-model-en.md`); it s
 ## 1. The eight modules
 
 The 16 router modules are one API surface, but the design, the test plan and the course deliverable all
-speak of eight business modules. The mapping below is the single place it is written down: 47 REST
+speak of eight business modules. The mapping below is the single place it is written down: 48 REST
 endpoints in total, plus `/ws/capture` and `/api/health`.
 
 | # | Module | Routers | REST endpoints | Responsibility |
@@ -22,7 +22,7 @@ endpoints in total, plus `/ws/capture` and `/api/health`.
 | 3 | Detection and batch tasks | `detect`, `tasks` | 6 | One-frame detection, batch task creation, progress, cancel and retry |
 | 4 | Review and hard samples | `review`, `hard_samples` | 5 | Correcting detections with a version history, rollback, the hard-sample pool |
 | 5 | Datasets and experiments | `datasets`, `experiments` | 4 | Reproducible dataset snapshots and the training-experiment record |
-| 6 | Models and reports | `models`, `reports` | 5 | Model versions and activation; report generation and history |
+| 6 | Models and reports | `models`, `reports` | 6 | Model versions and activation; report generation, history, download |
 | 7 | Statistics and species | `stats`, `species` | 6 | Quality, species, trend and correction statistics; the class dictionary |
 | 8 | Parameters, logs and demo | `system`, `demo` | 7 | Runtime parameters, monitoring, messages, the audit log and the demo reset |
 

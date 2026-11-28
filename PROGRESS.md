@@ -47,6 +47,21 @@
   the ADR 17 item and the review's five more each name their test; the frozen-tag half of its acceptance
   belongs to `P4-15`.
 
+- **The report archive is filtered and paged by the server, and the generated Markdown is downloadable.**
+  Two gaps the 11-28 review recorded in P4-05 are closed. `GET /api/reports` takes `from`/`to` (whole
+  operating-zone days, an overlap test on the report's own period decided on the stored UTC instants),
+  `template` and `basis`; `total` counts the filtered set and `page`/`size` walk it, so the page sends
+  the operator's choice instead of fetching every page and filtering in the browser. `GET
+  /api/reports/{report_code}/file` serves the stored Markdown (`text/markdown`, attachment named
+  `<report_code>.md`) rather than regenerating it: `generating` answers `40901`, `failed`, an unknown
+  code and a missing file answer `40401`, and a stored path that leaves the data root is refused. The
+  history table gains a pager and a download control that fetches with the bearer token (a plain link
+  would arrive unauthenticated). `tests/test_reports_route.py` (12 cases) and
+  `tests/report_preview.mjs` fail on the old code (8 of the 10 route cases); the contract's route table,
+  TM-096, and both design and handover documents move from 47 to 48 routes. P3-07 stays open for AC-22
+  alone, and checking it turned up a defect worth its own fix: `_figures` re-spells the dashboard's
+  queries instead of sharing them, and its end bound is inclusive where the dashboard's is exclusive.
+
 ## 2026-11-27
 
 - **P2-20: a fresh environment built from `requirements.txt` runs the delivered weights.** Walked

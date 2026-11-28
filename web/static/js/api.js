@@ -150,6 +150,39 @@ export const exportDataset = (body) => request("POST", "/datasets", { body });
 export const previewReport = (query) => request("GET", "/reports/preview", { query });
 export const listReports = (query) => request("GET", "/reports", { query });
 export const createReport = (body) => request("POST", "/reports", { body });
+
+// The stored report is a Markdown file, not the JSON envelope, so this declaration is the one call
+// that reads a response as text instead of going through request(). The bearer token still travels
+// in the header - a plain link would arrive unauthenticated and be refused. Demo mode answers from
+// the mock's own file handler. Returns { filename, text }.
+export async function downloadReport(reportCode) {
+  if (USE_MOCK) {
+    const { handle } = await import("../mock/index.js");
+    const envelope = await handle("GET", `/reports/${encodeURIComponent(reportCode)}/file`, { query: {} });
+    if (envelope.code !== 0) throw new ApiError(envelope.code, envelope.message, envelope.request_id);
+    return envelope.data;
+  }
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(`/api/reports/${encodeURIComponent(reportCode)}/file`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (res.status === 401) {
+    clearSession();
+    toLogin();
+  }
+  if (!res.ok) {
+    // The route's failures are still the contract's envelope, so the page can say why.
+    const envelope = await res.json().catch(() => null);
+    throw new ApiError(
+      envelope?.code ?? res.status,
+      envelope?.message ?? `下载失败（HTTP ${res.status}）`,
+      envelope?.request_id,
+    );
+  }
+  const disposition = res.headers.get("content-disposition") ?? "";
+  const filename = /filename="?([^";]+)"?/.exec(disposition)?.[1] ?? `${reportCode}.md`;
+  return { filename, text: await res.text() };
+}
 export const listModels = () => request("GET", "/models");
 export const activateModel = (id) => request("POST", `/models/${id}/activate`);
 export const listExperiments = () => request("GET", "/experiments");

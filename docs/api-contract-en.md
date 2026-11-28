@@ -103,6 +103,7 @@ the number of routes is a consequence, not a target.
 | GET | `/api/reports/preview` | Preview report figures for a period | FR-M5-04 | P1 |
 | GET | `/api/reports` | Report history | FR-M5-04 | P1 |
 | POST | `/api/reports` | Generate a report | FR-M5-04 | P1 |
+| GET | `/api/reports/{report_code}/file` | Download a generated report as Markdown | FR-M5-04 | P1 |
 | GET | `/api/models` | Model versions | FR-M6-01 | P0 |
 | POST | `/api/models/{id}/activate` | Switch the online model | FR-M6-02 | P1 |
 | GET | `/api/experiments` | Training experiments | FR-M6-03 | P0 |
@@ -272,6 +273,8 @@ Generation may include the returned `preview_token`; if figures, period, basis o
 
 `POST /api/reports` accepts `period_start` and `period_end` as `YYYY-MM-DD` dates (whole days in `AV_TIMEZONE`, inclusive), or existing offset-aware ISO timestamps (exact instants). The response remains offset-aware timestamps.
 
+`GET /api/reports` returns the archive, newest first. Besides `page` and `size` it takes four optional filters, which combine: `from` and `to` (`YYYY-MM-DD`, whole days in `AV_TIMEZONE`, inclusive) select the reports whose period **overlaps** the range - `period_end` is on or after the `from` day's start, and `period_start` is on or before the `to` day's end - plus `template` (`standard` or `brief`) and `basis` (`reviewed` or `raw`). `total` counts the filtered set, not the archive, and `page`/`size` walk that set. The overlap is decided on the stored UTC instants, so a report whose period ends just after local midnight still belongs to its own operating day; the page therefore sends what the operator chose instead of fetching every page and filtering in the browser.
+
 ```json
 {
   "report_id": 12,
@@ -287,6 +290,8 @@ Generation may include the returned `preview_token`; if figures, period, basis o
   "created_at": "2026-11-06T15:41:00+00:00"
 }
 ```
+
+`GET /api/reports/{report_code}/file` answers the stored Markdown itself as a download: `text/markdown`, `Content-Disposition: attachment` with filename `<report_code>.md`. Serving the document rather than regenerating it is what makes a downloaded report the one its figures were checked against, and it is the only route whose response is not the JSON envelope of §2. A report whose `status` is not `ready` cannot have a document: `generating` answers `40901` (the file is being written; retry later), and `failed` answers `40401` naming the recorded `error_msg`. An unknown code is `40401`; a stored `file_path` that leaves the data directory is refused with `40401` rather than served, and a file missing from disk answers `40401` instead of a server error.
 
 ### Parameters
 

@@ -67,10 +67,11 @@
           </form>
           <div class="table-responsive">
             <table class="table table-hover align-middle mb-0 small">
-              <thead><tr><th>报告</th><th>周期</th><th>模板</th><th>口径</th><th>模型</th><th>生成时间</th><th>状态</th></tr></thead>
+              <thead><tr><th>报告</th><th>周期</th><th>模板</th><th>口径</th><th>模型</th><th>生成时间</th><th>状态</th><th>下载</th></tr></thead>
               <tbody id="history"></tbody>
             </table>
           </div>
+          <div id="pager" class="d-flex align-items-center gap-2 mt-2"></div>
         </section>
       </div>
     </div>
@@ -79,8 +80,8 @@
   <script type="module">
     import { renderShell } from "../static/js/layout.js";
     import * as api from "../static/js/api.js";
-    import { esc, fmtTime, loadInto, showEmpty, showError, showLoading, toast } from "../static/js/ui.js";
-    import { reportHistory, reportPreviewHtml, reportQuery } from "../static/js/report-preview.js";
+    import { esc, fmtTime, loadInto, renderPager, showEmpty, showError, showLoading, toast } from "../static/js/ui.js";
+    import { reportDownloadControl, reportHistory, reportPreviewHtml, reportQuery } from "../static/js/report-preview.js";
 
     import { reportPeriod } from "../static/js/time.js";
 
@@ -134,12 +135,13 @@
       return `<span class="badge text-bg-${kind}">${label}</span>${r.error_msg ? `<div class="text-danger">${esc(r.error_msg)}</div>` : ""}`;
     }
 
+    let historyPage = 1;
     let historyQueued = false;
 
     async function loadHistory() {
       const button = $("history-search");
-      // A refresh wanted while a scan runs is remembered and run once in `finally`: the table is
-      // never rendered by two scans at once, and a generation's follow-up is not dropped.
+      // A refresh wanted while a request runs is remembered and run once in `finally`: the table is
+      // never rendered by two requests at once, and a generation's follow-up is not dropped.
       if (button.disabled) {
         historyQueued = true;
         return;
@@ -155,17 +157,23 @@
           return;
         }
         const filtered = Boolean(filters.from || filters.to || filters.template || filters.basis);
-        await loadInto($("history"), () => reportHistory(api.listReports, filters), {
+        // One server page: the route applies the filters and reports the filtered total, so the table
+        // never fetches the whole archive to hide most of it in the browser.
+        await loadInto($("history"), () => reportHistory(api.listReports, filters, historyPage), {
           isEmpty: (d) => d.items.length === 0,
           empty: filtered
             ? "没有符合筛选条件的报告。请调整查询条件。"
             : "还没有生成过报告。选好周期后点“生成报告”。",
-          render: ({ items }) => {
-            $("history").innerHTML = items.map((r) => `<tr>
+          render: (page) => {
+            $("history").innerHTML = page.items.map((r) => `<tr>
               <td class="av-mono">${esc(r.report_code)}</td><td class="av-mono">${day(r.period_start)} ~ ${day(r.period_end)}</td>
               <td>${TEMPLATE[r.template] ?? esc(r.template)}</td><td>${BASIS[r.basis] ?? esc(r.basis)}</td>
               <td class="av-mono">${r.model_version_id == null ? "—" : `#${r.model_version_id}`}</td><td>${fmtTime(r.created_at)}</td>
-              <td>${statusCell(r)}</td></tr>`).join("");
+              <td>${statusCell(r)}</td><td>${reportDownloadControl(r)}</td></tr>`).join("");
+            renderPager($("pager"), page, (n) => {
+              historyPage = n;
+              loadHistory();
+            });
           },
         });
       } finally {
@@ -176,9 +184,36 @@
         }
       }
     }
+
+    function refreshHistory() {
+      // A new report is the newest row: whatever page was open, show the one that holds it.
+      historyPage = 1;
+      return loadHistory();
+    }
+
     $("history-filters").addEventListener("submit", (event) => {
       event.preventDefault();
+      historyPage = 1;
       loadHistory();
+    });
+
+    // The file route needs the bearer token, so the row's control fetches the Markdown and saves it:
+    // a plain link would arrive without the header and be refused (FR-M5-04, TM-096).
+    $("history").addEventListener("click", async (event) => {
+      const code = event.target.closest("[data-download]")?.dataset.download;
+      if (!code) return;
+      try {
+        const { filename, text } = await api.downloadReport(code);
+        const url = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" }));
+        const link = Object.assign(document.createElement("a"), { href: url, download: filename });
+        document.body.append(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 0);
+        toast(`已下载 ${filename}`, "success");
+      } catch (error) {
+        toast(`下载失败：${error.message}`, "danger");
+      }
     });
 
     $("period").addEventListener("change", () => {
@@ -207,10 +242,10 @@
         $("generation-status").textContent = report.status === "failed"
           ? `生成失败：${report.error_msg ?? "请重试"}`
           : `报告 ${report.report_code}：${STATUS[report.status ?? "ready"]?.[0] ?? "状态未知"}`;
-        await loadHistory();
+        await refreshHistory();
       } catch (err) {
         $("generation-status").textContent = `生成失败：${err.message}`;
-        await loadHistory();
+        await refreshHistory();
         if (err.code === 40901) await loadPreview();
       } finally {
         generating = false;

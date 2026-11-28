@@ -549,8 +549,41 @@ const ROUTES = {
     return result;
   },
 
-  // Reports, as the server answers: generated synchronously, ready when the call returns.
-  "GET /reports": ({ query }) => paginate(REPORTS, query),
+  // Reports, as the server answers: generated synchronously, ready when the call returns. The archive
+  // is filtered and paged here too (api-contract §6): the page renders one server page, never a
+  // fetch-all. The fixture's timestamps carry the operating offset, so its first ten characters are
+  // the operating day a from/to filter names.
+  "GET /reports": ({ query }) => {
+    if (query.from && query.to && query.from > query.to) throw new Fail(40002, "结束日期不能早于开始日期");
+    const rows = REPORTS.filter((row) =>
+      (!query.from || row.period_end.slice(0, 10) >= query.from) &&
+      (!query.to || row.period_start.slice(0, 10) <= query.to) &&
+      (!query.template || row.template === query.template) &&
+      (!query.basis || row.basis === query.basis));
+    return paginate(rows, query);
+  },
+
+  // The generated document. The real route answers text/markdown as an attachment; the mock answers
+  // in the envelope with the file's two parts, and api.downloadReport() presents both the same way.
+  "GET /reports/{id}/file": ({ id }) => {
+    const row = REPORTS.find((r) => r.report_code === id);
+    if (!row) throw new Fail(40401, "报告不存在");
+    if (row.status !== "ready") throw new Fail(40901, "报告正在生成，请稍后再试");
+    const period = `${row.period_start.slice(0, 10)} 至 ${row.period_end.slice(0, 10)}`;
+    const text = [
+      `# 巡检报告 ${row.report_code}`,
+      "",
+      `- 统计周期：${period}`,
+      `- 模板：${row.template}`,
+      `- 统计口径：${row.basis === "reviewed" ? "复核后结果" : "原始识别结果"}`,
+      "",
+      "---",
+      "",
+      "> 演示数据：报告文件由演示模式生成，真实文件由服务端渲染。",
+      "",
+    ].join("\n");
+    return { filename: `${row.report_code}.md`, text };
+  },
 
   "POST /reports": async ({ body }) => {
     if (!body?.period_start || !body?.period_end) throw new Fail(40001, "请选择统计周期");
