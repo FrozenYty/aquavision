@@ -50,6 +50,32 @@ def resolve_dsn(dsn: str) -> str:
     return f"{prefix}{(PROJECT_ROOT / path).as_posix()}"
 
 
+def ensure_sqlite_directory(dsn: str) -> None:
+    """Create the directory a file-backed SQLite database lives in, when it is missing.
+
+    `data/` is git-ignored, so a fresh clone has none and SQLite refuses to create the database file
+    itself: `sqlite3.OperationalError: unable to open database file`. Creating the parent here, where
+    every caller builds its engine, makes the documented commands work from a clone as written.
+    Only `sqlite:///` file DSNs are touched; `:memory:` and every server database are left alone.
+    """
+    prefix = "sqlite:///"
+    if not dsn.startswith(prefix):
+        return
+    location = dsn[len(prefix) :]
+    if not location or location.startswith(":memory:"):
+        return
+    parent = Path(location).parent
+    if parent.exists():
+        # A file where the directory should be is a broken path somebody may be probing on purpose:
+        # leave it to SQLite, which reports it when the connection is opened.
+        return
+    try:
+        parent.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        # Report what cannot be created through the connection error, not earlier and differently.
+        return
+
+
 def dsn_from_env() -> str:
     """The configured DSN, or the dev default when the environment is silent."""
     return resolve_dsn(os.environ.get(DSN_ENV, DEFAULT_DSN))
@@ -61,7 +87,11 @@ def engine_from_dsn(dsn: str) -> Engine:
     SQLite connections are opened with check_same_thread=False because the detection worker uses the
     same engine from a background thread. Pool settings stay at SQLAlchemy's defaults: the load is one
     team on one rig, and tuning a pool before there is traffic is guesswork.
+
+    A file-backed SQLite DSN gets its parent directory created first, so a clone without the
+    git-ignored `data/` directory still starts.
     """
+    ensure_sqlite_directory(dsn)
     connect_args = {"check_same_thread": False} if dsn.startswith("sqlite") else {}
     return create_engine(dsn, connect_args=connect_args)
 

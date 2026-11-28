@@ -3,7 +3,7 @@
 The tests run against a SQLite file under tests/tmp (the conftest replacement
 for tmp_path): the DDL is plain SQLAlchemy and behaves identically on SQLite
 and PostgreSQL, while keeping CI free of a database server. The script itself
-is also run as a subprocess once, because PLAN.md words the acceptance as
+is also run as a subprocess, because PLAN.md words the acceptance as
 "scripts/init_db.py runs" — not "the functions under it".
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 from app.db import Base
-from app.models import EXPECTED_COLUMNS, TABLES, SpeciesDict
+from app.models import EXPECTED_COLUMNS, TABLES, ModelVersion, SpeciesDict
 from app.seed import SPECIES_SEED, seed_species
 from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.engine import Engine
@@ -101,3 +101,26 @@ def test_script_runs_on_an_empty_database(tmp_path: Path):
         assert len(species_rows(eng)) == 4
     finally:
         eng.dispose()
+
+
+def test_script_creates_the_missing_database_directory(tmp_path: Path):
+    """A clone has no data/ (git-ignored); the documented command must still create its database."""
+    db = tmp_path / "missing-parent" / "app.db"
+    assert not db.parent.exists()
+
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "init_db.py"), "--dsn", f"sqlite:///{db}"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert db.is_file()
+
+    eng = create_engine(f"sqlite:///{db}")
+    try:
+        with Session(eng) as session:
+            online = list(session.scalars(select(ModelVersion).where(ModelVersion.is_online == 1)))
+    finally:
+        eng.dispose()
+    assert len(online) == 1, "the delivered model version must be registered as the online one"

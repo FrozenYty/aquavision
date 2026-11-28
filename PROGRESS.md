@@ -19,6 +19,21 @@
   longer exist. P3-02 and P3-07 stay open for their own reasons; `GET /api/reports` still has no
   server-side filter (a contract change) and no route serves the generated Markdown.
 
+- **P2-20's walk was true but its wording was not, and the clean-clone hole underneath it is fixed.**
+  Section 4 said the inference test falls back to "any frame captured into the data root"; the test
+  actually takes the first `media_asset` row whose image is still under the repository's `data/`, and a
+  bare image file - or a data root elsewhere - does not count, so the sentence now says that. The
+  delivered note claimed the pinned file alone makes the three tests run; they did on this machine, on
+  top of the git-ignored `data/app.db` with its one online `model_version` row and a frame it already
+  carried, and `PLAN.md` now states that inheritance: a clean clone still skips 3/3 until a frame
+  exists. The audit also found that a clean clone could not create its database at all - `data/` is
+  ignored, so `init_db.py` died with `sqlite3.OperationalError: unable to open database file` and the
+  README's three commands did not work as written. `server/app/db.py` now creates a file-backed SQLite
+  DSN's parent directory in `engine_from_dsn` (never PostgreSQL, never `:memory:`);
+  `tests/test_init_db.py` runs the script against a missing parent and asserts the file and the one
+  online `model_version` row, and the pristine tree fails that test with the same error. The walk's
+  throwaway `aquavision-p2-20` environment was removed after it; the runbook still names `aquavision`.
+
 ## 2026-11-27
 
 - **P2-20: a fresh environment built from `requirements.txt` runs the delivered weights.** Walked
