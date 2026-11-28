@@ -756,7 +756,14 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       `docs/test-cases-{en,zh}.md` stops calling every case "not implemented" and records, for each
       case, whether it is automated or manual and where it lives
       - 21 cases covering already-ticked acceptance items still read as unimplemented
-- [ ] **P3-35** Every closed defect has a regression test · @IkeaFyj · done when the defect log names
+- [x] **P3-35** Every closed defect has a regression test · @IkeaFyj · **delivered 11-28**: every
+      closed entry in `P4-05` now carries its own `closed DD-MM` marker and names the evidence that
+      guards it - a `tests/*.py` or `tests/*.mjs` file (optionally `::test_name`), an ADR for a
+      decision-record closure, the document for a `minor, documentation` entry, or, for the firmware
+      line parser which has no host harness, a written bench procedure in `firmware/README.md` with the
+      `manual:` form. `scripts/check-defect-evidence.py` fails when a closed entry names nothing, names
+      a file that does not exist, or when the log loses its closure markers; `tests/test_defect_evidence.py`
+      proves each failure, and CI runs the check · done when the defect log names
       the test that fails if the defect returns, and a check fails when a defect has none
 - [ ] **P3-36** The traceability figures match the pages · @IkeaFyj · done when the thirteen
       screenshots are regenerated from the current build and each is referenced by the matrix row it
@@ -880,37 +887,57 @@ minute rather than a meeting:
         assigned the refused frames' asset ids.
       - **major: a batch cannot be built from a selection.** AC-08's drill-down does not exist — a batch is
         created from an `asset_count`, not from frames someone ticked
+        **closed 11-28:** `BatchBody.frame_ids` is the ticked list, the request is all-or-nothing against
+        the queue rules, and `tests/test_batch_selection.py` fails on the old code (`[1, 2] == [3, 5]`).
       - **major: the BLE rig link is never built when `AV_RIG_PORT` is empty.** `server/app/main.py`
         starts the link only when `rig_port` is set, while `server/app/rig/wiring.py::build_link` builds
         the BLE link without a port and `tests/test_rig_ble.py` expects a `BleRigLink`, so the
         cable-free configuration starts no link at all
+        **closed 11-27:** the link is chosen by transport, not by port;
+        `tests/test_rig_ble.py::test_the_application_starts_the_ble_link_with_no_port` fails on the old
+        start-up.
       - **major: `request_id` is returned but never logged.** `server/app/envelope.py` carries it in
         every response and `server/app/main.py` in `X-Request-Id`, but no log record contains it,
         although `docs/api-contract-en.md` §1 says it is echoed in server logs
+        **closed 11-27:** a logging filter puts it on every record;
+        `tests/test_request_id_logging.py` pins the filter and its install site.
       - **major: every validation failure is reported as a missing parameter.** `server/app/main.py`'s
         `RequestValidationError` handler answers `40001` for any rejected schema, so a
         present-but-invalid value is reported as missing while `40002` is defined and never reached by
         validation
+        **closed 11-27:** only a *missing* field is `40001`, every other schema error answers `40002`;
+        `tests/test_api_skeleton.py::test_validation_errors_use_the_envelope` fails on the old handler.
       - **major: the quality threshold has two truths.** `server/app/vision/quality.py` hard-codes
         `PASS_MARK = 60` for the verdict it returns, and `server/app/routers/capture.py` reads the
         configurable `quality_threshold` for the stored `quality_flag`, so the two can disagree after an
         operator changes the parameter
+        **closed 11-27:** `score_frame` takes the pass mark in force and the live route reads it per
+        frame; `tests/test_capture.py::test_the_pass_mark_is_an_argument_with_a_documented_default` and
+        `tests/test_params_live.py` pin the single source.
       - **major: `frame_id` has two formats.** `server/app/vision/capture.py` ends it with a four-digit
         counter (`-{index:04d}`) and `server/app/routers/capture.py` with the first four hex characters
         of the content hash (`digest[:4]`), while the SRS, the data model and the API contract describe
         only the digit form
+        **closed 11-27:** the router reuses `vision.capture.make_frame_id`, and
+        `tests/test_capture.py::test_frame_id_shape` holds the one format.
       - **major: `protocol.cpp` does not drop an over-long line.** `firmware/main/src/protocol.cpp`
         resets the counter when the 95-character buffer fills and keeps reading, so the tail of the
         line is parsed as a new command instead of being rejected
+        **closed 11-27:** an over-long line sets a `discarding` flag and is dropped whole;
+        firmware has no host test harness, so the regression check is the bench procedure documented in
+        `manual: firmware/README.md`.
       - **major: ADR 16 still states two retired rules.** `docs/adr/16-rig-cable-free-over-ble.md`
         describes the drop-storm rule ("five disconnects inside a minute") and treats `Err0` as a live
         face; neither exists in firmware 1.24 (`Err0` was retired in 1.21), and an accepted ADR is
         superseded rather than edited, so lane A must write ADR 17
-        **ADR 17 is written and closes this entry**: `docs/adr/17-drop-storm-and-err0-retired.md`.
+        **ADR 17 is written and closes this entry** (`closed 11-27`):
+        `docs/adr/17-drop-storm-and-err0-retired.md`.
       - **minor, documentation: the fifth failed sign-in.** The case text promises the remaining seconds;
         the lock message reports fifteen minutes, and the seconds sentence arrives on a later attempt
+        **closed 11-27:** the case text says what the server answers; `docs/test-cases-en.md`.
       - **minor, documentation: log deletion.** A case says no endpoint deletes a `sys_log` row;
         `POST /api/demo/reset` clears them by design, because a rehearsal must start clean
+        **closed 11-27:** the case text names the reset as the exception; `docs/test-cases-en.md`.
       - **the owner is one person**, because §5.1 says so and "all" is not an owner. Each lane reports
         its own defects into the table; this task keeps the counts and the regression checks
       - **acceptance is the nine majors above** - eight code majors, each closed with a test named in
@@ -936,12 +963,16 @@ minute rather than a meeting:
         never appeared - it is queued now; and the brief template the select offered was not implemented in
         `_render` - brief now carries the period, species and footer only, asserted in
         `tests/test_report_preview.py`
+        **closed 11-28:** `tests/test_stats_windows.py`, `tests/report_preview.mjs`,
+        `tests/stats_view.mjs` and `tests/test_report_preview.py` fail on the old page and routes.
       - **review 11-28, minors closed:** count axes printed fractions and `0.6000000000000001`; a
         one-day trend rendered `NaN`; the statistics mock echoed the wrong `days` and `cn_name`;
         report-history mock rows and the contract's Report example carried a UTC offset where the
         operating zone belongs; the history filters said "period start/end" for an overlap test; the
         empty archive claimed a filter was set; statistics empty states named no next step; and TM-087,
         TM-088 and TM-096 described pages that no longer existed
+        **closed 11-28:** `tests/stats_view.mjs` and `tests/report_preview.mjs` hold the chart and page
+        fixes; the documentation rows are TM-087, TM-088 and TM-096 in `docs/traceability-en.md`.
       - **review 11-28, one more major closed:** a clean clone could not create its database at all -
         `data/` is git-ignored, `init_db.py` did not create the directory, and README section 3's three
         commands died with `sqlite3.OperationalError: unable to open database file`. `server/app/db.py`
@@ -949,6 +980,7 @@ minute rather than a meeting:
         PostgreSQL or `:memory:`), and `tests/test_init_db.py` runs the script against a missing parent,
         asserting the file and its one online `model_version` row; the pristine tree fails that test with
         the same error.
+        **closed 11-28:** `tests/test_init_db.py`.
       - **review 11-28, left open:** `GET /api/reports` takes only `page`/`size`, so the page still
         fetches the whole archive and filters in the browser - a server-side filter is a contract
         change; no route serves the generated Markdown, which FR-M5-04's "downloadable" and TM-096
@@ -956,13 +988,15 @@ minute rather than a meeting:
       - **review 11-28, two of those three are now closed:** `GET /api/reports` filters and pages the
         filtered set, and `GET /api/reports/{report_code}/file` serves the stored Markdown
         (`tests/test_reports_route.py`, `tests/report_preview.mjs`); the species card's slow-server
-        notice is the only one left, and it is cosmetic.
+        notice is the only one left, and it is cosmetic. (**closed 11-28** for the two named; the
+        cosmetic one stays unmarked.)
       - **measurement 11-28, one more major closed:** the performance measurement of `P3-10` found
         `GET /api/hard-samples` taking 357,241 ms per request at design capacity - the hard-sample pool
         filtered, grouped and ordered over five million `detect_object` rows with no covering index.
         `detect_object` now declares `(hard_flag, review_status, frame_id, hard_reason)`, `init_db`
         creates a missing index on an existing database (`ensure_indexes`), and the re-measured P90 is
         143.8 ms; `tests/test_init_db.py` pins both the declared index and the upgrade path.
+        **closed 11-28:** `tests/test_init_db.py`.
 - [ ] **P4-06** Acceptance checklist, demo script, slides · @IkeaFyj · done when every acceptance item
       is ticked with the evidence beside it, and the demo runs end to end on paper without a question
       left unanswerable; the ten questions an examiner is most likely to ask have written answers beside

@@ -302,6 +302,14 @@ longer line is dropped whole — once the buffer is full, the rest of its bytes 
 terminator, so the tail of an over-long line is never parsed as a command.
 The firmware ignores anything it does not understand, so a garbled byte cannot brick the rig.
 
+**The bench check for that rule, and the manual regression check for the over-long-line defect
+(`PLAN.md` P4-05):** open the port and send 96 `X` characters followed by `CMD PING\n` **in one write**.
+The `CMD PING` is the tail of the over-long line and must be discarded with it, so no `EVT PONG` comes
+back. Then send a normal `CMD PING\n`; `EVT PONG` answers. A `PONG` from the first write means the tail
+was parsed as a command and the defect is back. The firmware has no host test harness, which is why this
+procedure - not a `pytest` file - is the check; recorded 11-28, not yet run because the rig is being
+rebuilt.
+
 | Direction | Message | Meaning |
 |---|---|---|
 | → PC | `EVT HELLO <version>` | the board is up |
