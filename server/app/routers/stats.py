@@ -11,6 +11,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 from app import timebase
 from app.deps import SessionDep, get_current_user
@@ -27,11 +28,60 @@ def _window(days: int) -> tuple[datetime, datetime]:
     day (inclusive) to the start of tomorrow (exclusive), both expressed as the naive UTC the columns
     store. A rolling `now - days * 24h` window cuts the first local day at the current clock time, so
     two cards labelled "近 7 日" count different frames - the defect this helper removes.
+
+    `species_counts` and `quality_counts` take these bounds unchanged, so every caller -
+    the dashboard's own routes and the report - counts the same window.
     """
     recent = timebase.recent_days(days)
     lower, upper = timebase.day_bounds(recent[0].isoformat(), recent[-1].isoformat())
     assert lower is not None and upper is not None
     return lower, upper
+
+
+def species_counts(db: Session, start: datetime, until: datetime, basis: str) -> dict[str, int]:
+    """Boxes per class code captured in `[start, until)`, on the requested basis.
+
+    The one query behind both the dashboard card and the report. `until` is exclusive because
+    the column is an instant: an inclusive end would count the frame at the boundary the
+    dashboard excludes. `basis` is `reviewed`, which drops rejected boxes, or `raw`, which
+    keeps them.
+    """
+    stmt = (
+        select(DetectObject.class_code, func.count(DetectObject.object_id))
+        .join(MediaAsset, MediaAsset.frame_id == DetectObject.frame_id)
+        .where(MediaAsset.captured_at >= start, MediaAsset.captured_at < until)
+        .group_by(DetectObject.class_code)
+    )
+    if basis == "reviewed":
+        stmt = stmt.where(DetectObject.review_status != 3)
+    return {row[0]: row[1] for row in db.execute(stmt).all()}
+
+
+def quality_counts(db: Session, start: datetime, until: datetime) -> tuple[int, int]:
+    """Frames captured in `[start, until)` and how many the quality gate rejected.
+
+    Shares the window contract with `species_counts`, so the dashboard's two cards and the
+    report count one window; a rejected frame is the one `quality_flag == 1` marks.
+    """
+    total = (
+        db.scalar(
+            select(func.count(MediaAsset.asset_id)).where(
+                MediaAsset.captured_at >= start, MediaAsset.captured_at < until
+            )
+        )
+        or 0
+    )
+    rejected = (
+        db.scalar(
+            select(func.count(MediaAsset.asset_id)).where(
+                MediaAsset.captured_at >= start,
+                MediaAsset.captured_at < until,
+                MediaAsset.quality_flag == 1,
+            )
+        )
+        or 0
+    )
+    return total, rejected
 
 
 @router.get("/species")
@@ -41,16 +91,7 @@ def species_composition(
     days: int = Query(default=7, ge=1, le=90),
 ) -> dict[str, object]:
     since, until = _window(days)
-    stmt = (
-        select(DetectObject.class_code, func.count(DetectObject.object_id))
-        .join(MediaAsset, MediaAsset.frame_id == DetectObject.frame_id)
-        .where(MediaAsset.captured_at >= since, MediaAsset.captured_at < until)
-        .group_by(DetectObject.class_code)
-    )
-    if basis == "reviewed":
-        stmt = stmt.where(DetectObject.review_status != 3)
-
-    counts = {row[0]: row[1] for row in db.execute(stmt).all()}
+    counts = species_counts(db, since, until, basis)
     names = {row.class_code: row.cn_name for row in db.scalars(select(SpeciesDict)).all()}
     total = sum(counts.values()) or 1
     items = [
@@ -70,24 +111,7 @@ def quality_rejection(
     db: SessionDep, days: int = Query(default=7, ge=1, le=90)
 ) -> dict[str, object]:
     since, until = _window(days)
-    total = (
-        db.scalar(
-            select(func.count(MediaAsset.asset_id)).where(
-                MediaAsset.captured_at >= since, MediaAsset.captured_at < until
-            )
-        )
-        or 0
-    )
-    rejected = (
-        db.scalar(
-            select(func.count(MediaAsset.asset_id)).where(
-                MediaAsset.captured_at >= since,
-                MediaAsset.captured_at < until,
-                MediaAsset.quality_flag == 1,
-            )
-        )
-        or 0
-    )
+    total, rejected = quality_counts(db, since, until)
     return ok(
         {
             "days": days,
