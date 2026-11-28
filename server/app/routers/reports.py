@@ -16,12 +16,13 @@ from datetime import date, datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
 from app import serializers, timebase
 from app.deps import SessionDep, SettingsDep, UserDep, get_current_user, require
-from app.envelope import BAD_PARAM, CONFLICT, INTERNAL, ApiError, ok
+from app.envelope import BAD_PARAM, CONFLICT, INTERNAL, NOT_FOUND, ApiError, ok
 from app.models import (
     DetectObject,
     MediaAsset,
@@ -78,12 +79,74 @@ def list_reports(
     db: SessionDep,
     page: int = Query(default=1, ge=1),
     size: int = Query(default=24, ge=1, le=100),
+    date_from: str | None = Query(default=None, alias="from"),
+    date_to: str | None = Query(default=None, alias="to"),
+    template: str | None = Query(default=None, pattern="^(standard|brief)$"),
+    basis: str | None = Query(default=None, pattern="^(reviewed|raw)$"),
 ) -> dict[str, object]:
+    """The archive, newest first, narrowed by the filters the history page offers.
+
+    The period filter is an overlap test on the report's own period, decided on the stored UTC
+    instants: a day range is converted once (`day_bounds`), never compared as a rendered string, so a
+    report that ends just after local midnight still belongs to its operating day (ADR 14). `total`
+    is the size of the filtered set, and `page`/`size` walk that set rather than the whole archive.
+    """
+    try:
+        lower, upper = timebase.day_bounds(date_from, date_to)
+    except ValueError as err:
+        raise ApiError(BAD_PARAM, f"参数有误：日期须为 YYYY-MM-DD（{err.args[0]}）") from err
+    if lower is not None and upper is not None and upper <= lower:
+        raise ApiError(BAD_PARAM, "结束日期不能早于开始日期")
+
+    conditions = []
+    if lower is not None:
+        conditions.append(Report.period_end >= lower)
+    if upper is not None:
+        conditions.append(Report.period_start < upper)
+    if template:
+        conditions.append(Report.template == template)
+    if basis:
+        conditions.append(Report.basis == basis)
+
     rows = db.scalars(
-        select(Report).order_by(Report.report_id.desc()).limit(size).offset((page - 1) * size)
+        select(Report)
+        .where(*conditions)
+        .order_by(Report.report_id.desc())
+        .limit(size)
+        .offset((page - 1) * size)
     ).all()
-    total = db.scalar(select(func.count(Report.report_id))) or 0
+    total = db.scalar(select(func.count(Report.report_id)).where(*conditions)) or 0
     return ok({"items": [_report(row) for row in rows], "total": total, "page": page, "size": size})
+
+
+@router.get("/{report_code}/file")
+def download_report(report_code: str, db: SessionDep, settings: SettingsDep) -> FileResponse:
+    """The generated document itself, as a download (FR-M5-04, AC-22, TM-096).
+
+    The row records where `_render` wrote the Markdown, so the route serves that file rather than
+    regenerating it: a downloaded report must be the one the figures were checked against. The
+    database is trusted, but a stored path is still resolved and refused unless it stays inside the
+    data root - a path is data, and data can be wrong. A report whose state cannot have a document
+    yet is answered with the state, not with a server error.
+    """
+    row = db.scalar(select(Report).where(Report.report_code == report_code))
+    if row is None:
+        raise ApiError(NOT_FOUND, "报告不存在")
+    if row.status == 0:
+        # The document is being written: retrying later is the correct action, so this is a conflict
+        # with the state rather than an absent resource.
+        raise ApiError(CONFLICT, "报告正在生成，请稍后再试")
+    if row.status != 1 or not row.file_path:
+        reason = row.error_msg or "没有留下原因"
+        raise ApiError(NOT_FOUND, f"报告生成失败（{reason}），没有可下载的文件")
+
+    root = Path(settings.data_dir).resolve()
+    path = (root / row.file_path).resolve()
+    if not path.is_relative_to(root):
+        raise ApiError(NOT_FOUND, "报告文件的记录不在数据目录内，拒绝下载")
+    if not path.is_file():
+        raise ApiError(NOT_FOUND, "报告文件已丢失，请重新生成")
+    return FileResponse(path, media_type="text/markdown", filename=f"{row.report_code}.md")
 
 
 @router.post("", dependencies=[Depends(require("analyst", "admin"))])

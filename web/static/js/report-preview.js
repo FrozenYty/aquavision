@@ -16,26 +16,25 @@ export function reportPreviewHtml(data, mock = false) {
     <footer>模型版本：${esc(data.model_version ?? "未上线")} · 统计口径：${data.basis === "raw" ? "原始识别结果" : "复核后结果"}${mock ? " · 演示数据" : ""}</footer>`;
 }
 
-// A live list can gain or lose a report between pages: follow full pages until one comes back
-// short instead of trusting page 1's total, and keep each report id once so a shift cannot count
-// a report twice or drop one that was there for the whole scan.
-export async function reportHistory(fetchPage, { from, to, template, basis }) {
-  const matches = [];
-  const seen = new Set();
-  const size = 100;
-  for (let page = 1; ; page++) {
-    const result = await fetchPage({ page, size });
-    for (const row of result.items) {
-      if (seen.has(row.report_id)) continue;
-      seen.add(row.report_id);
-      if ((!from || row.period_end.slice(0, 10) >= from) &&
-          (!to || row.period_start.slice(0, 10) <= to) &&
-          (!template || row.template === template) &&
-          (!basis || row.basis === basis)) {
-        matches.push(row);
-      }
-    }
-    if (result.items.length < size) break;
-  }
-  return { items: matches };
+// The server filters and pages the archive, so the page sends what the operator chose and renders the
+// page that comes back: no fetch-all, and `total` is the size of the filtered set. A blank field is
+// left out, so "no filter" is "every report" (GET /api/reports, api-contract §6).
+export function reportHistoryQuery({ from, to, template, basis } = {}, page = 1, size = 24) {
+  const query = { page, size };
+  if (from) query.from = from;
+  if (to) query.to = to;
+  if (template) query.template = template;
+  if (basis) query.basis = basis;
+  return query;
+}
+
+export function reportHistory(fetchPage, filters, page = 1, size = 24) {
+  return fetchPage(reportHistoryQuery(filters, page, size));
+}
+
+// The archive's download control: only a ready report has a stored document to fetch (FR-M5-04).
+// The page owns the click and the save; this names the row's control and nothing else.
+export function reportDownloadControl(row) {
+  if (row.status !== "ready" || !row.file_path) return "";
+  return `<button class="btn btn-outline-secondary btn-sm" type="button" data-download="${esc(row.report_code)}">下载</button>`;
 }

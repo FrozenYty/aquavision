@@ -47,7 +47,7 @@ What exists and must not be rewritten:
 
 | Piece | Where | State |
 |---|---|---|
-| App factory, envelope, error codes, JWT, role guards | `server/app/main.py`, `envelope.py`, `security.py`, `deps.py` | 47 contract routes mounted |
+| App factory, envelope, error codes, JWT, role guards | `server/app/main.py`, `envelope.py`, `security.py`, `deps.py` | 48 contract routes mounted |
 | Capture ingest, quality scoring, dedup, clock guard | `routers/capture.py` | done |
 | Review, hard-example pool | `routers/review.py`, `routers/hard_samples.py` | done |
 | Datasets, reports, parameters | `routers/datasets.py`, `reports.py`, `system.py` | done |

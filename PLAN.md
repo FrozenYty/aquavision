@@ -403,6 +403,18 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
 - [ ] **P3-07** Report generation and history · @chemflowers · closes AC-22 · done when a report is
       generated as Markdown from the same queries the dashboard uses, its figures equal the dashboard,
       and the footer carries the model version and the basis — **not Word or PDF; SRS V1.6 settled that**
+      - **11-28: the two service gaps the review left open are closed.** `GET /api/reports` now filters
+        by `from`/`to` (operating-zone days, overlap on the stored instants), `template` and `basis`, and
+        `total` counts the filtered set, so the page no longer fetches the whole archive; `GET
+        /api/reports/{report_code}/file` serves the stored Markdown as an attachment, with `generating`
+        → `40901`, `failed`/unknown/missing → `40401`, and a stored path outside the data root refused.
+        `tests/test_reports_route.py` (12 cases) and `tests/report_preview.mjs` fail on the old code (8 of
+        10 route cases). TM-096 now says the control exists, and the contract's route table and both
+        design and handover documents move from 47 to 48 routes.
+      - **what still keeps this open:** AC-22 asks the report's figures to equal the dashboard's for an
+        identical period; that equality is checked in its own follow-up (the report's figures are a
+        second copy of the dashboard queries today, and the window's end boundary disagrees by one
+        instant), so this task stays open until the shared-query test lands.
 - [x] **P3-08** Retention cleanup and reference nulling · @FrozenYty · **delivered 11-27**:
       `scripts/cleanup_retention.py` previews by default and acts under `--apply`. It deletes an expired
       thumbnail, nulls the reference that pointed at it, and prunes `frames/live/`; it never touches a
@@ -920,6 +932,10 @@ minute rather than a meeting:
         fetches the whole archive and filters in the browser - a server-side filter is a contract
         change; no route serves the generated Markdown, which FR-M5-04's "downloadable" and TM-096
         record; the species card alone bypasses `loadInto`'s slow-server notice
+      - **review 11-28, two of those three are now closed:** `GET /api/reports` filters and pages the
+        filtered set, and `GET /api/reports/{report_code}/file` serves the stored Markdown
+        (`tests/test_reports_route.py`, `tests/report_preview.mjs`); the species card's slow-server
+        notice is the only one left, and it is cosmetic.
 - [ ] **P4-06** Acceptance checklist, demo script, slides · @IkeaFyj · done when every acceptance item
       is ticked with the evidence beside it, and the demo runs end to end on paper without a question
       left unanswerable; the ten questions an examiner is most likely to ask have written answers beside

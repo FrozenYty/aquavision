@@ -41,7 +41,7 @@
 
 | 部分 | 位置 | 状态 |
 |---|---|---|
-| 应用工厂、封装、错误码、JWT、角色守卫 | `server/app/main.py`、`envelope.py`、`security.py`、`deps.py` | 47 条契约路由已挂载 |
+| 应用工厂、封装、错误码、JWT、角色守卫 | `server/app/main.py`、`envelope.py`、`security.py`、`deps.py` | 48 条契约路由已挂载 |
 | 采集入库、质量打分、去重、时钟容差 | `routers/capture.py` | 完成 |
 | 复核、难例池 | `routers/review.py`、`routers/hard_samples.py` | 完成 |
 | 数据集、报告、参数 | `routers/datasets.py`、`reports.py`、`system.py` | 完成 |
