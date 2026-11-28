@@ -997,7 +997,17 @@ minute rather than a meeting:
         creates a missing index on an existing database (`ensure_indexes`), and the re-measured P90 is
         143.8 ms; `tests/test_init_db.py` pins both the declared index and the upgrade path.
         **closed 11-28:** `tests/test_init_db.py`.
-- [ ] **P4-06** Acceptance checklist, demo script, slides · @IkeaFyj · done when every acceptance item
+- [x] **P4-06** Acceptance checklist, demo script, slides · @IkeaFyj · **delivered 11-28**:
+      `docs/acceptance-checklist-en/zh.md` has one row per acceptance item (36, sorted by id) with its
+      SRS sentence, its case, its evidence and a state - `closed` only where automated evidence exists,
+      `manual` where a person or machine must still run it, `open` where a clause has none, with the
+      three open rows - scheduled capture, retake marking, site distribution - listed
+      as defects against their owning tasks. `docs/demo-script-en/zh.md` is the eight-minute run: a
+      minute budget (in-room 7:50 plus 0:10 reserved), a page-by-page click-and-sentence table, the
+      injected camera failure with its two exact sentences and thirty-second recovery, the ten examiner
+      questions with written answers pointing at the ADR, contract, test or SRS section that proves
+      each, and a twelve-slide outline. Both pairs are indexed; the rehearsals of P4-07 are what
+      validates the script, and the run has not been presented yet · done when every acceptance item
       is ticked with the evidence beside it, and the demo runs end to end on paper without a question
       left unanswerable; the ten questions an examiner is most likely to ask have written answers beside
       the script

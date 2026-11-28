@@ -29,6 +29,8 @@ only single-language files above the line. Within `docs/`, the fastest route is 
 | call or serve an API | `api-contract-en.md` |
 | run it, back it up, or recover it | `runbook-en.md` |
 | pack and check the demo kit | `demo-kit-card-en.md` |
+| run the judged demonstration, minute by minute | `demo-script-en.md` |
+| know which acceptance item is closed, manual or open | `acceptance-checklist-en.md` |
 | add a table or a column | `data-model-en.md` |
 | buy or wire hardware | `procurement-en.md` |
 | know what the prototype shows | `prototype-en.md` |
@@ -56,7 +58,9 @@ only single-language files above the line. Within `docs/`, the fastest route is 
 | `rig-transport-en/zh.md` | the BLE layer on both ends, the two transition matrices, the timings, the failure faces | a transport, a BLE state or a timeout is added | @FrozenYty |
 | `runbook-en/zh.md` | start it, back it up, restore it, rotate the secret, upgrade the schema, read the log | a deployment step changes, or the migration mechanism arrives | @FrozenYty | @FrozenYty |
 | `demo-kit-card-en/zh.md` | the kit list, the room order and the arrival checks, ticked at the first rehearsal | a kit item, a check or the layout changes | @FrozenYty |
+| `demo-script-en/zh.md` | the eight-minute judged run, the failure sentence and the ten questions | a step, a page, a question or a slide changes | @IkeaFyj |
 | `test-cases-en/zh.md` | one case per acceptance item, and how to run it | an acceptance item changes, or a case is executed | @IkeaFyj |
+| `acceptance-checklist-en/zh.md` | one row per acceptance item with its evidence and state | an acceptance item changes, or its evidence moves | @IkeaFyj |
 | `glossary-en-zh.md` | the one word for each concept | a new concept appears | @FrozenYty |
 | `adr/01-17` | why a decision was taken and when to revisit it | never edited; superseded instead | the author of that ADR |
 | `PLAN.md` | phases, tasks, gates | a task is delivered or re-scoped | every lane |
@@ -98,7 +102,6 @@ Planned, and deliberately absent until the phase that needs them:
 
 | Document | Appears at |
 |---|---|
-| demo script and screenshots | P4-06 |
 | metric report | P4-04 |
 
 Writing them early would mean writing them twice.

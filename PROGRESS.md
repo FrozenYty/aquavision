@@ -107,6 +107,23 @@
   `CONTRIBUTING.md` §4 list the check. The firmware READMEs also gained the over-long-line bench
   procedure itself, which had existed only in conversation.
 
+- **P4-06: the judged demo is on paper - eight minutes, ten answers, and a state for every acceptance
+  item.** `docs/demo-script-en/zh.md` is the presenter's page: a pre-room checklist keyed to the kit
+  card, a minute budget whose in-room blocks add to 7:50 with ten seconds reserved, a page-by-page table
+  naming the click, what appears and the one sentence to say, the injected camera failure with the two
+  exact sentences and a thirty-second recovery (including the recorded-frame fallback when the camera
+  does not return), the ten questions an examiner is most likely to ask - BLE vs Wi-Fi, Markdown vs
+  Word/PDF, SQLite vs PostgreSQL, the frame's day, a missing model, the four classes, the 60 pass mark,
+  what is not built, the 48 routes and 17 ADRs, and a camera or rig dying on stage - each answered with
+  the ADR, contract, test or SRS section that proves it, and a twelve-slide outline that points at the
+  tracked screenshots instead of copying the design. `docs/acceptance-checklist-en/zh.md` has one row
+  per acceptance item (36, sorted by id) with its SRS sentence, case, evidence and state; `closed` only
+  where automated evidence exists, `manual` where a person or the deployment machine must still run it,
+  and three `open` rows recorded as defects against their tasks: AC-06 scheduled capture (P3-13), AC-07
+  retake marking (no writer for `is_retake`), AC-20 site distribution (P3-02). A section lists the six
+  rows whose evidence arrived after the 11-12 case verdicts instead of editing the cases. Both pairs are
+  indexed; P4-07's rehearsals are what validate the script, and it has not been presented.
+
 ## 2026-11-27
 
 - **P2-20: a fresh environment built from `requirements.txt` runs the delivered weights.** Walked
