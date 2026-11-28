@@ -92,6 +92,7 @@ check runs only on pull requests.
 | Paths | `python scripts/check-paths.py` | write it relative to the repository root |
 | ADR index | `python scripts/check-adr-index.py` | list the record in the architecture ADR table |
 | Acceptance coverage | `python scripts/check-ac-coverage.py` | give the item a task, or give the claim a test |
+| Defect evidence | `python scripts/check-defect-evidence.py` | name the test that fails if the defect returns |
 | Commit messages | `python scripts/check-commit-messages.py --range origin/<base>..HEAD` | remove the tool footer (§2) |
 | Frontend assets | `python scripts/check-frontend-budget.py` | keep each page below 128 KiB JS and 320 KiB CSS |
 | Tests | `pytest -q` | write the failing test first |

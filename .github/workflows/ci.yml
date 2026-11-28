@@ -62,6 +62,9 @@ jobs:
       - name: Acceptance coverage
         run: python scripts/check-ac-coverage.py
 
+      - name: Closed defects name their regression check
+        run: python scripts/check-defect-evidence.py
+
       - name: No tool is credited as a co-author
         if: github.event_name == 'pull_request'
         run: python scripts/check-commit-messages.py --range "origin/${{ github.base_ref }}..HEAD"

@@ -94,6 +94,19 @@
   `PLAN.md` ticks P3-10; the design capacity is NFR-P-05's, cited by TC-PERF-01/02 and test-plan §3,
   and `/api/datasets` is named as skipped because it has no page/size to time.
 
+- **P3-35: the defect log can no longer close a defect without naming what guards it.** P4-05's entries
+  were closed in prose - only one carried a dated closure marker, and most majors named no test - so
+  "every closed defect has a regression test" was a claim. Each closed entry now carries its own
+  `closed DD-MM` marker and names its evidence: a `tests/*.py` or `tests/*.mjs` file (optionally
+  `::test_name`), an ADR where a decision record is the closure, the document that corrects a
+  `minor, documentation` entry, or the bench procedure in `firmware/README.md` under the `manual:` form
+  for the line parser, which has no host harness (the check prints that closure as a note rather than
+  hiding it). The new `scripts/check-defect-evidence.py` fails on a closed entry with no evidence, on a
+  named file that does not exist, and on a log that lost its closure markers;
+  `tests/test_defect_evidence.py` (10 cases) proves each path, and `ci.yml`, `AGENTS.md` §6 and
+  `CONTRIBUTING.md` §4 list the check. The firmware READMEs also gained the over-long-line bench
+  procedure itself, which had existed only in conversation.
+
 ## 2026-11-27
 
 - **P2-20: a fresh environment built from `requirements.txt` runs the delivered weights.** Walked

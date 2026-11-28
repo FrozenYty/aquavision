@@ -99,6 +99,7 @@ python scripts/check-progress.py       # PROGRESS.md well formed
 python scripts/check-paths.py          # no machine-specific paths
 python scripts/check-adr-index.py      # every decision record is listed in the architecture table
 python scripts/check-ac-coverage.py    # every acceptance item is owned, and a closed one names a test
+python scripts/check-defect-evidence.py  # every closed defect names the test that fails if it returns
 python scripts/check-commit-messages.py --range origin/main..HEAD   # no tool credited as co-author
 python -m ruff check .                 # lint
 python -m ruff format --check .        # format
