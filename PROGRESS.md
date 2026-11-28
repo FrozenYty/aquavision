@@ -34,6 +34,19 @@
   online `model_version` row, and the pristine tree fails that test with the same error. The walk's
   throwaway `aquavision-p2-20` environment was removed after it; the runbook still names `aquavision`.
 
+- **P4-05's last major is closed: a batch is built from the frames the operator ticked.** The image
+  browser has sent `frame_ids` since the page was written, but `BatchBody` had no such field, so Pydantic
+  dropped it and `create_batch` queued the first N eligible frames instead. The body now carries either
+  `asset_count` (the automatic form, unchanged) or `frame_ids` (the selection); a selection is
+  all-or-nothing - every ticked frame must pass the same queue rules, and an unknown frame, one the
+  quality gate refused, one already detected and one already owned by another task refuse the whole
+  request with `40002`, naming the frame and the reason, because a silently shrunk selection would run a
+  different job than the one confirmed. Duplicates collapse, an empty list is refused, and the recorded
+  count is the number assigned. `tests/test_batch_selection.py` covers all of it and fails 8 of its 9
+  cases on the old code (`assert [1, 2] == [3, 5]`). `P4-05` is ticked: the audit's eight code majors,
+  the ADR 17 item and the review's five more each name their test; the frozen-tag half of its acceptance
+  belongs to `P4-15`.
+
 ## 2026-11-27
 
 - **P2-20: a fresh environment built from `requirements.txt` runs the delivered weights.** Walked

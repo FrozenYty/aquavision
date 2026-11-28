@@ -15,7 +15,7 @@ from sqlalchemy import delete, func, select, update
 
 from app import serializers, timebase
 from app.deps import SessionDep, UserDep, get_current_user
-from app.envelope import CONFLICT, NOT_FOUND, ApiError, ok
+from app.envelope import BAD_PARAM, CONFLICT, MISSING_PARAM, NOT_FOUND, ApiError, ok
 from app.models import DetectObject, DetectTask, DetectTaskItem, MediaAsset, ModelVersion, SysLog
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"], dependencies=[Depends(get_current_user)])
@@ -29,7 +29,15 @@ ITEM_PENDING = 0
 
 
 class BatchBody(BaseModel):
-    asset_count: int = Field(ge=1, le=5000)
+    """A batch request: a frame count, or the frames the operator ticked.
+
+    `asset_count` is the automatic form - "take this many from the queue". `frame_ids` is the
+    selection the image browser sends; it wins when present, and `asset_count` may travel beside it
+    as a convenience count that the recorded value does not come from.
+    """
+
+    asset_count: int | None = Field(default=None, ge=1, le=5000)
+    frame_ids: list[str] | None = None
     conf_thr: float = Field(default=0.5, ge=0.0, le=1.0)
     iou_thr: float = Field(default=0.45, ge=0.0, le=1.0)
     max_det: int = Field(default=100, ge=1, le=1000)
@@ -138,17 +146,29 @@ def create_batch(db, body: BatchBody) -> DetectTask:
     """Insert a queued batch task and assign the frames it will run (ADR 12).
 
     The selection happens once, here. A task's work list is fixed at creation and identical for every
-    worker, and frames already detected or already owned by another task are skipped - otherwise two
-    batches created back to back would claim the same frames before either had run. Frames the quality
-    gate refused are skipped too: AC-07 says a defocused frame stays out of the queue, and a batch is
-    the queue.
+    worker, and two forms are accepted: `asset_count` takes that many frames from the queue,
+    `frame_ids` takes exactly the frames the operator ticked. Both apply the same queue rules - the
+    frame passed the quality gate (AC-07: a defocused frame stays out of the queue), has not been
+    detected, and is owned by no other task - because a batch is the queue.
+
+    A ticked selection is all-or-nothing. One frame the queue cannot take refuses the whole request
+    with 40002, naming the frame and the reason: dropping it instead would run a different job than
+    the one the operator confirmed.
     """
+    if body.frame_ids is None:
+        if body.asset_count is None:
+            raise ApiError(MISSING_PARAM, "asset_count 与 frame_ids 至少需要一个")
+        assigned = _automatic_selection(db, body.asset_count)
+        recorded = body.asset_count
+    else:
+        assigned = _selected_frames(db, body.frame_ids)
+        recorded = len(assigned)
     online = db.scalar(select(ModelVersion).where(ModelVersion.is_online == 1))
     row = DetectTask(
         task_code=next_task_code(db),
         task_type=2,
         model_version_id=online.model_id if online else None,
-        asset_count=body.asset_count,
+        asset_count=recorded,
         conf_thr=body.conf_thr,
         iou_thr=body.iou_thr,
         max_det=body.max_det,
@@ -158,16 +178,6 @@ def create_batch(db, body: BatchBody) -> DetectTask:
     )
     db.add(row)
     db.flush()
-    assigned = db.scalars(
-        select(MediaAsset.asset_id)
-        .where(
-            MediaAsset.quality_flag == 0,
-            MediaAsset.asset_id.not_in(select(DetectObject.asset_id)),
-            MediaAsset.asset_id.not_in(select(DetectTaskItem.asset_id)),
-        )
-        .order_by(MediaAsset.asset_id)
-        .limit(body.asset_count)
-    ).all()
     db.add_all(
         DetectTaskItem(task_id=row.task_id, asset_id=asset_id, state=ITEM_PENDING)
         for asset_id in assigned
@@ -175,6 +185,64 @@ def create_batch(db, body: BatchBody) -> DetectTask:
     db.commit()
     db.refresh(row)
     return row
+
+
+def _automatic_selection(db, asset_count: int) -> list[int]:
+    """The first eligible frames, up to the requested count."""
+    return list(
+        db.scalars(
+            select(MediaAsset.asset_id)
+            .where(
+                MediaAsset.quality_flag == 0,
+                MediaAsset.asset_id.not_in(select(DetectObject.asset_id)),
+                MediaAsset.asset_id.not_in(select(DetectTaskItem.asset_id)),
+            )
+            .order_by(MediaAsset.asset_id)
+            .limit(asset_count)
+        ).all()
+    )
+
+
+def _selected_frames(db, frame_ids: list[str]) -> list[int]:
+    """Resolve the ticked frame ids to asset ids in the ticked order, or refuse the whole list.
+
+    Duplicates describe one frame, and an empty list describes none of them. Every other refusal
+    names the frame and why it cannot be queued, so the operator can fix the tick instead of guessing
+    which frames the server quietly dropped.
+    """
+    wanted = list(dict.fromkeys(frame_ids))
+    if not wanted:
+        raise ApiError(BAD_PARAM, "所选帧为空，请至少选择一帧")
+    assets = db.scalars(select(MediaAsset).where(MediaAsset.frame_id.in_(wanted))).all()
+    by_frame = {asset.frame_id: asset for asset in assets}
+    asset_ids = {asset.asset_id for asset in assets}
+    detected: set[int] = set()
+    owned: set[int] = set()
+    if asset_ids:
+        detected = set(
+            db.scalars(
+                select(DetectObject.asset_id).where(DetectObject.asset_id.in_(asset_ids))
+            ).all()
+        )
+        owned = set(
+            db.scalars(
+                select(DetectTaskItem.asset_id).where(DetectTaskItem.asset_id.in_(asset_ids))
+            ).all()
+        )
+    problems: list[str] = []
+    for frame_id in wanted:
+        asset = by_frame.get(frame_id)
+        if asset is None:
+            problems.append(f"帧 {frame_id} 不存在")
+        elif asset.quality_flag == 1:
+            problems.append(f"帧 {frame_id} 画质不合格，已被质量门禁拒绝")
+        elif asset.asset_id in detected:
+            problems.append(f"帧 {frame_id} 已有识别结果")
+        elif asset.asset_id in owned:
+            problems.append(f"帧 {frame_id} 已被其他任务占用")
+    if problems:
+        raise ApiError(BAD_PARAM, "无法按所选帧创建任务：" + "；".join(problems))
+    return [by_frame[frame_id].asset_id for frame_id in wanted]
 
 
 def _task(db, task_id: int) -> DetectTask:

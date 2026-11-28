@@ -833,8 +833,11 @@ minute rather than a meeting:
       - it is a reporting task and can start as soon as E0 is recorded: the table fills run by run, so it
         does not sit on the critical path at the end. The acceptance check is §5.3's - someone other than
         the owner reads it
-- [ ] **P4-05** Defect closure · @FrozenYty · done when every defect has a recorded severity, a fix and
-      a regression check, and blocker and major counts are zero — "no defects" is not a number
+- [x] **P4-05** Defect closure · @FrozenYty · **delivered 11-28**: the audit's nine majors (eight code,
+      one ADR) and the five the 11-28 review added are each closed with a regression check named in its
+      entry, and the blocker and major rows are zero at this commit · done when every defect has a recorded
+      severity, a fix and a regression check, and blocker and major counts are zero — "no defects" is not a
+      number
       - **major: a needs-retake frame enters a detection batch.** `create_batch` selects every frame that
         has not been detected yet and never filters `quality_flag`, so AC-07's "stays out of the queue"
         half is false today: the queue accepts what the quality gate refused. Found by `P3-34`'s verdict
@@ -883,6 +886,12 @@ minute rather than a meeting:
         - **11-27: seven of the eight code majors are closed with their tests.** The one left is a
           batch built from a selection - AC-08's drill-down - which needs `POST /api/detect/batches` to
           accept frame ids, a contract change rather than a defect fix, so this task stays open.
+        - **11-28: the eighth code major is closed, and with it every major on this list.** A batch can
+          now be built from a selection: `BatchBody.frame_ids` carries the ticked list, `create_batch`
+          applies the same queue rules and refuses the whole request with `40002`, naming the frame, when
+          one tick cannot be queued, and `tests/test_batch_selection.py` proves the work list is exactly
+          the ticked frames (on the old code, `assert [1, 2] == [3, 5]`). The frozen-tag half of the
+          acceptance is checked when `P4-15` tags the tree.
       - **review 11-28, four majors closed outside the audit's list, each with a check that fails on
         the old code:** the four statistics routes counted "the last seven days" over three different
         windows, so one

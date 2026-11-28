@@ -386,9 +386,18 @@ const ROUTES = {
     };
   },
 
-  // The server takes { asset_count, conf_thr, ... }; frame_ids is sent too and ignored there.
+  // The server takes `asset_count` for the automatic form or `frame_ids` for a ticked selection.
+  // The browser sends both; the recorded count is the number of distinct frames in the selection.
   "POST /detect/batches": ({ body }) => {
-    if (!(body?.asset_count >= 1)) throw new Fail(40001, "请至少选择一帧");
+    const frameIds = body?.frame_ids;
+    let count = body?.asset_count;
+    if (frameIds !== undefined) {
+      if (!Array.isArray(frameIds) || frameIds.length === 0) {
+        throw new Fail(40002, "所选帧为空，请至少选择一帧");
+      }
+      count = new Set(frameIds).size;
+    }
+    if (!(count >= 1)) throw new Fail(40001, "请至少选择一帧");
     const id = Math.max(0, ...TASKS.map((t) => t.task_id)) + 1;
     const task = {
       task_id: id,
@@ -396,7 +405,7 @@ const ROUTES = {
       type: "batch",
       status: "queued",
       progress: 0,
-      asset_count: body.asset_count,
+      asset_count: count,
       obj_count: 0,
       model_version_id: 4,
       error_msg: null,
