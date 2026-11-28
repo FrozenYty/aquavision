@@ -67,7 +67,8 @@ python -m pytest tests/test_detect_real.py -o addopts="" -q
 除了那个解释器，它们还需要四样东西；缺哪样，报告就**跳过并把它的名字写出来**，而不是算通过：
 `ultralytics`（误用其他环境的 `python` 时，跳过信息会说它没装）、第 3 节建好的开发库及其唯一一条在线
 `model_version` 记录、该记录指向的权重文件，以及一张可跑的帧图——本机有 DUO 测试集就用
-`data/dataset/test/images`，否则用数据根下任意一张已采集的帧。
+`data/dataset/test/images`，否则用采集流程记录过的帧：一条 `media_asset` 记录，且其图像文件仍在仓库的
+`data/` 目录下。单独一张图片文件，或数据根设在别处，都不算。
 
 **Windows 上有三件事会出问题，本项目三件都遇到过：**
 

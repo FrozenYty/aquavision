@@ -280,9 +280,12 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         `train_baseline.py`, and the tests synthesise their frames (lane D)
 
 - [x] **P2-20** An environment that can run inference · @Gtechson · unblocks `GATE P2`, `P2-13`,
-      `P3-10` and `P4-10` · **delivered 11-27**: runbook section 4's three commands, into a fresh conda
-      environment, installed the pinned stack and ran `tests/test_detect_real.py` to **3 passed, 0
-      skipped**; the section now names the four prerequisites a skip reports · done when
+      `P3-10` and `P4-10` · **delivered 11-27, statement corrected 11-28**: runbook section 4's three
+      commands, into a throwaway conda environment built from `requirements.txt`, ran
+      `tests/test_detect_real.py` to **3 passed, 0 skipped** - on top of this checkout's git-ignored
+      `data/app.db` (one online `model_version` row) and a frame it already carried. Section 4 now names
+      those four prerequisites, so a missing one is a skip that names it; a clean clone has neither and
+      skips 3/3 until a frame is captured · done when
       `pip install -r requirements.txt` into a fresh environment makes
       `python -m pytest tests/test_detect_real.py -o addopts="" -q` **run and pass** instead of skip, and
       the command is written down as a step rather than discovered per machine
@@ -897,6 +900,13 @@ minute rather than a meeting:
         operating zone belongs; the history filters said "period start/end" for an overlap test; the
         empty archive claimed a filter was set; statistics empty states named no next step; and TM-087,
         TM-088 and TM-096 described pages that no longer existed
+      - **review 11-28, one more major closed:** a clean clone could not create its database at all -
+        `data/` is git-ignored, `init_db.py` did not create the directory, and README section 3's three
+        commands died with `sqlite3.OperationalError: unable to open database file`. `server/app/db.py`
+        now creates a file-backed SQLite DSN's parent directory in `engine_from_dsn` (never for
+        PostgreSQL or `:memory:`), and `tests/test_init_db.py` runs the script against a missing parent,
+        asserting the file and its one online `model_version` row; the pristine tree fails that test with
+        the same error.
       - **review 11-28, left open:** `GET /api/reports` takes only `page`/`size`, so the page still
         fetches the whole archive and filters in the browser - a server-side filter is a contract
         change; no route serves the generated Markdown, which FR-M5-04's "downloadable" and TM-096

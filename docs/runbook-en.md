@@ -75,7 +75,9 @@ They need four things besides the interpreter, and a missing one is a **skip tha
 pass: `ultralytics` (the skip says it is not installed when a `python` from another environment was
 used), the development database from section 3 with its one online `model_version` row, the weight
 file that row names, and one frame image - the DUO test split under `data/dataset/test/images` when
-this machine has it, otherwise any frame captured into the data root.
+this machine has it, otherwise a frame the capture pipeline recorded - a `media_asset` row whose image
+file is still under the repository's `data/` directory. A bare image file, or a data root elsewhere,
+does not count.
 
 **Three things that go wrong on Windows, all seen on this project:**
 
