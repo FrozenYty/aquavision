@@ -2,8 +2,9 @@
 
 A report is generated as a Markdown document. The format is the one open question: the SRS asks for
 Word or PDF, and neither can be produced without a rendering dependency, so the same row shape will
-serve a later export step. What is already real is the part AC-22 checks — the figures come from the
-same queries the dashboard uses, and the footer carries the model version and the basis.
+serve a later export step. What is already real is the part AC-22 checks — the figures are counted by
+the same helpers the dashboard calls, on the same half-open window, and the footer carries the model
+version and the basis.
 
 The row is what makes the history queryable by period, template and basis; the file is the document.
 """
@@ -23,15 +24,9 @@ from sqlalchemy import func, select
 from app import serializers, timebase
 from app.deps import SessionDep, SettingsDep, UserDep, get_current_user, require
 from app.envelope import BAD_PARAM, CONFLICT, INTERNAL, NOT_FOUND, ApiError, ok
-from app.models import (
-    DetectObject,
-    MediaAsset,
-    ModelVersion,
-    Report,
-    SpeciesDict,
-    SysLog,
-)
+from app.models import ModelVersion, Report, SpeciesDict, SysLog
 from app.notify import LEVEL_INFO, notify
+from app.routers.stats import quality_counts, species_counts
 
 router = APIRouter(
     prefix="/api/reports", tags=["reports"], dependencies=[Depends(get_current_user)]
@@ -61,7 +56,7 @@ def preview_report(
     if end <= start:
         raise ApiError(BAD_PARAM, "结束日期不能早于开始日期")
     online = db.scalar(select(ModelVersion).where(ModelVersion.is_online == 1))
-    figures = _figures(db, start, end, basis)
+    figures = _figures(db, start, _exclusive_end(period_end), basis)
     return ok(
         {
             "preview_token": _preview_token(start, end, basis, figures, online),
@@ -157,6 +152,7 @@ def create_report(
     start, end = timebase.report_bounds(body.period_start, body.period_end)
     if end <= start:
         raise ApiError(BAD_PARAM, "结束日期不能早于开始日期")
+    until = _exclusive_end(body.period_end)
     body = body.model_copy(
         update={"period_start": timebase.to_zone(start), "period_end": timebase.to_zone(end)}
     )
@@ -167,7 +163,7 @@ def create_report(
         raise ApiError(CONFLICT, "报告编号冲突，请重试")
 
     online = db.scalar(select(ModelVersion).where(ModelVersion.is_online == 1))
-    figures = _figures(db, start, end, body.basis)
+    figures = _figures(db, start, until, body.basis)
     if body.preview_token and body.preview_token != _preview_token(
         start, end, body.basis, figures, online
     ):
@@ -240,36 +236,33 @@ def _report(row: Report) -> dict[str, object]:
     }
 
 
-def _figures(db, start: datetime, end: datetime, basis: str) -> dict[str, object]:
-    """The same numbers the dashboard shows, computed with the same filters."""
-    frames = (
-        db.scalar(
-            select(func.count(MediaAsset.asset_id)).where(
-                MediaAsset.captured_at >= start, MediaAsset.captured_at <= end
-            )
-        )
-        or 0
-    )
-    rejected = (
-        db.scalar(
-            select(func.count(MediaAsset.asset_id)).where(
-                MediaAsset.captured_at >= start,
-                MediaAsset.captured_at <= end,
-                MediaAsset.quality_flag == 1,
-            )
-        )
-        or 0
-    )
+def _exclusive_end(period_end: date | datetime) -> datetime:
+    """The half-open upper bound that covers the instants the report period means.
 
-    stmt = (
-        select(DetectObject.class_code, func.count(DetectObject.object_id))
-        .join(MediaAsset, MediaAsset.frame_id == DetectObject.frame_id)
-        .where(MediaAsset.captured_at >= start, MediaAsset.captured_at <= end)
-        .group_by(DetectObject.class_code)
-    )
-    if basis == "reviewed":
-        stmt = stmt.where(DetectObject.review_status != 3)
-    counts = {code: count for code, count in db.execute(stmt).all()}
+    `report_bounds` answers a period's last instant: the final microsecond of a whole local
+    day, or the exact instant a client sent. The dashboard's counters take an exclusive bound,
+    so the report derives it from the period instead of reusing the inclusive value: a
+    calendar date ends at the next local midnight - the same instant `stats._window` counts
+    to - and an instant ends at the instant itself. Reusing the inclusive value would leave
+    the dashboard's last microsecond out of the report; treating that value as exclusive would
+    count the frame on the boundary the dashboard excludes.
+    """
+    if isinstance(period_end, datetime):
+        return timebase.as_utc(period_end)
+    _, upper = timebase.day_bounds(period_end.isoformat(), period_end.isoformat())
+    assert upper is not None
+    return upper
+
+
+def _figures(db, start: datetime, until: datetime, basis: str) -> dict[str, object]:
+    """The dashboard's figures for `[start, until)`, counted by the dashboard's own helpers.
+
+    `until` is exclusive, as in `stats`: the callers derive it with `_exclusive_end`, so a
+    whole-day report ends at the local midnight the dashboard ends at and a frame on that
+    boundary is counted by neither.
+    """
+    frames, rejected = quality_counts(db, start, until)
+    counts = species_counts(db, start, until, basis)
     names = {row.class_code: row.cn_name for row in db.scalars(select(SpeciesDict)).all()}
     total = sum(counts.values()) or 1
 

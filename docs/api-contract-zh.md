@@ -236,7 +236,7 @@ POST /api/review/frames/{frame_id}/rollback
 
 `GET /api/reports/preview` 接受与生成相同的周期和 `basis`，要求登录，返回 `{ preview_token, period_start, period_end, basis, model_version, figures: { frames, rejected, rate, species: [{ name, count, share }] } }`。预览复用生成查询，不写入文件或历史记录。
 
-`POST /api/reports` 的 `period_start`、`period_end` 接受 `YYYY-MM-DD` 日期（按 `AV_TIMEZONE` 解释为完整日，首尾包含），也兼容带偏移的 ISO 时间戳（精确时刻）。响应仍返回带偏移的时间戳。
+`POST /api/reports` 的 `period_start`、`period_end` 接受 `YYYY-MM-DD` 日期（按 `AV_TIMEZONE` 解释为完整日，首尾包含），也兼容带偏移的 ISO 时间戳（精确时刻）。响应仍返回带偏移的时间戳。按精确时刻给周期时，下界包含、上界不包含——与仪表盘统计所用的半开区间一致；按完整日给周期时，两天都包含。
 
 `GET /api/reports` 返回报告档案，最新的在前。除 `page`、`size` 外接受四个可选筛选条件，可叠加：`from`、`to`（`YYYY-MM-DD`，按 `AV_TIMEZONE` 解释为完整日，首尾包含）筛出统计周期与该范围**有重叠**的报告——`period_end` 不早于 `from` 当日零点，且 `period_start` 不晚于 `to` 当日结束；`template`（`standard` 或 `brief`）与 `basis`（`reviewed` 或 `raw`）。`total` 是筛选后集合的条数，不是整个档案的条数，`page`/`size` 在该集合上翻页。重叠判断基于存储的 UTC 时刻，因此周期刚过本地零点的报告仍属于它自己的作业日；页面据此只发送操作者选定的条件，不再取回全部页再在浏览器里过滤。
 

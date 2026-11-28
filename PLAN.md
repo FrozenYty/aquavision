@@ -400,7 +400,10 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         still system. Resetting mid-batch can leave the worker writing rows just deleted; `P3-12` is where
         that belongs if it ever bites
       - **evidence:** `tests/test_demo_reset.py` and `tests/test_mock_demo.py` cover the reset's refusals and its kept state; AC-36's live chain is `P2-13`'s.
-- [ ] **P3-07** Report generation and history · @chemflowers · closes AC-22 · done when a report is
+- [x] **P3-07** Report generation and history · @chemflowers · **delivered 11-28**: Markdown reports
+      from the dashboard's own counting queries, a history filtered and paged by the server, a stored
+      document served as a download, and an equality test that pins the report's figures to the
+      dashboard's for the same seven operating days · closes AC-22 · done when a report is
       generated as Markdown from the same queries the dashboard uses, its figures equal the dashboard,
       and the footer carries the model version and the basis — **not Word or PDF; SRS V1.6 settled that**
       - **11-28: the two service gaps the review left open are closed.** `GET /api/reports` now filters
@@ -411,10 +414,14 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         `tests/test_reports_route.py` (12 cases) and `tests/report_preview.mjs` fail on the old code (8 of
         10 route cases). TM-096 now says the control exists, and the contract's route table and both
         design and handover documents move from 47 to 48 routes.
-      - **what still keeps this open:** AC-22 asks the report's figures to equal the dashboard's for an
-        identical period; that equality is checked in its own follow-up (the report's figures are a
-        second copy of the dashboard queries today, and the window's end boundary disagrees by one
-        instant), so this task stays open until the shared-query test lands.
+      - **11-28, AC-22 closed by a shared-query test:** `_figures` was a second copy of the dashboard's
+        queries with an inclusive upper bound. `stats.py` now exports `species_counts` and
+        `quality_counts` over the same `[start, until)` window, and the report calls them, so the
+        module's "the same queries" claim is literal. `tests/test_report_dashboard_agree.py` freezes the
+        clock, previews a report for the last seven operating days and asserts frames, rejected, rate
+        and every per-class count equal the dashboard's, including frames at both window edges; on the
+        old code it fails with `the report counted 5 frames at the exclusive end, the dashboard counted
+        4`. The contract now states that an instant period's upper bound is exclusive.
 - [x] **P3-08** Retention cleanup and reference nulling · @FrozenYty · **delivered 11-27**:
       `scripts/cleanup_retention.py` previews by default and acts under `--apply`. It deletes an expired
       thumbnail, nulls the reference that pointed at it, and prunes `frames/live/`; it never touches a

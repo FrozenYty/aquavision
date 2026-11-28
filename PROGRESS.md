@@ -62,6 +62,20 @@
   alone, and checking it turned up a defect worth its own fix: `_figures` re-spells the dashboard's
   queries instead of sharing them, and its end bound is inclusive where the dashboard's is exclusive.
 
+- **AC-22 is demonstrated: the report's figures are the dashboard's figures, by construction.** The
+  review of P3-07 had found `server/app/routers/reports.py::_figures` to be a second copy of the
+  dashboard's counts with an inclusive upper bound. `stats.py` now exports `species_counts(db, start,
+  until, basis)` and `quality_counts(db, start, until)` over a half-open window; both dashboard cards
+  and the report call them, and `_figures` only derives its exclusive end (next local midnight for a
+  whole-day period, the instant itself for an instant period) before calling them. The new
+  `tests/test_report_dashboard_agree.py` freezes the clock, previews a report for the last seven
+  operating days and asserts frames, rejected, rate and every per-class count equal the dashboard's,
+  including a frame at the window start and one at the exclusive end; on the old code it fails with
+  `the report counted 5 frames at the exclusive end, the dashboard counted 4`. The contract states the
+  instant period's half-open bound. `P3-07` is ticked: Markdown from the same queries, equal figures,
+  footer with model version and basis, plus the server-side history filter/pager and the
+  stored-Markdown download landed in #226.
+
 ## 2026-11-27
 
 - **P2-20: a fresh environment built from `requirements.txt` runs the delivered weights.** Walked
