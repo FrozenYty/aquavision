@@ -1,14 +1,15 @@
 ## 2026-11-28
 
 - **A review of yesterday's statistics and report-history merges closed four majors and nine minors,
-  each with a check that fails on the old code.** The four statistics routes counted "近 7 日" three
-  different ways - rolling 168 hours for species, quality and corrections, local calendar days for trend -
+  each with a check that fails on the old code.** The four statistics routes counted "the last seven
+  days" three different ways - rolling 168 hours for species, quality and corrections, local calendar days
+  for trend -
   so one page printed two different frame totals; `stats.py` now has one `_window()` built from
   `recent_days`/`day_bounds` (ADR 14), and `tests/test_stats_windows.py` pins a frame on each side of the
   boundary (`assert 5 == 3` fails on the old code). The report history paged by page 1's live `total`, so
   a report created mid-scan counted one row twice and dropped another; it now follows short pages and
   dedupes by `report_id`. A refresh requested while another scan ran was dropped, which is how a freshly
-  generated report failed to appear; it is queued now. The 简版 template the select offered was not
+  generated report failed to appear; it is queued now. The brief template the select offered was not
   implemented in `_render`; brief now keeps the period, species and footer only, while standard keeps
   the capture-quality and model sections. The minors: count axes printed `0.6000000000000001`, a one-day
   trend rendered `NaN`, the statistics mock echoed the wrong `days` and `cn_name`, mock report rows and

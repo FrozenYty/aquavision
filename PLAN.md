@@ -881,13 +881,14 @@ minute rather than a meeting:
           batch built from a selection - AC-08's drill-down - which needs `POST /api/detect/batches` to
           accept frame ids, a contract change rather than a defect fix, so this task stays open.
       - **review 11-28, four majors closed outside the audit's list, each with a check that fails on
-        the old code:** the four statistics routes counted "近 7 日" over three different windows, so one
+        the old code:** the four statistics routes counted "the last seven days" over three different
+        windows, so one
         page printed two different frame totals - `stats.py` now has one `_window` built from
         `recent_days`/`day_bounds`, and `tests/test_stats_windows.py` shows `5 != 3` on the old code; the
         report history paged by page 1's live `total`, counting one report twice and dropping another
         when a report was created mid-scan - it follows short pages and dedupes by `report_id`; a history
         refresh requested while another scan ran was dropped, which is how a freshly generated report
-        never appeared - it is queued now; and the 简版 template the select offered was not implemented in
+        never appeared - it is queued now; and the brief template the select offered was not implemented in
         `_render` - brief now carries the period, species and footer only, asserted in
         `tests/test_report_preview.py`
       - **review 11-28, minors closed:** count axes printed fractions and `0.6000000000000001`; a
