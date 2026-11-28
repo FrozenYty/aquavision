@@ -769,6 +769,14 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
       screenshots are regenerated from the current build and each is referenced by the matrix row it
       illustrates
       - the pages were renamed and restyled since the figures were taken
+      - **11-28: twelve of the thirteen are regenerated and this task is not done.** Figures 1-2 and
+        4-13 were captured from the current build (demo mode, 1440 px) and their hand-drawn callouts
+        re-mapped from the previous figures - 93 pastes, each checked against the row that cites it,
+        and a revision row records the date. Figure 3 keeps the previous capture because the mock
+        capture page no longer renders a live frame: three of its callouts would land on blank card,
+        so replacing it would make the matrix wrong rather than current. Figure 1 has no callout 4
+        for a different reason - the sign-in page shows no refusal message until a sign-in fails, so
+        the screenshot cannot show one. The task stays open for figure 3 and that one callout.
 
 - [x] **P3-37** The turbidity sensor either measures or says it cannot · @FrozenYty · **closed 11-14 by
       removing the sensor**, because it could not measure and could not say anything else: a full sweep of

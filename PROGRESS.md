@@ -138,6 +138,19 @@
   open cosmetic, zero blocker and zero major open. The last section prints the commands that reproduce
   every number, so the report is checkable rather than trusted.
 
+- **P3-36, twelve of thirteen: the traceability figures now show the build that ships.** The old
+  screenshots predated the page renames and restyle. Figures 1-2 and 4-13 were captured from the current
+  build in demo mode at 1440 px wide, and because every matrix row points at a hand-drawn red numbered
+  callout, those callouts were transplanted onto the new captures: the crimson circles were detected in
+  the old figures, mapped by measurement rather than by a uniform scale (the shell does not scale - the
+  sidebar, titles and body rows sit at identical pixels, only the content grid stretches), re-anchored by
+  annular cross-correlation, and pasted at native size - 93 pastes, all scoring above the acceptance
+  threshold and each checked against the row that cites it. `docs/traceability-en/zh.md` gains a revision
+  row and a note; the two exceptions are written down rather than papered over: figure 3 keeps the
+  previous capture because the mock capture page no longer renders a live frame (three callouts would
+  land on blank card), and figure 1 has no callout 4 because the current sign-in page shows no refusal
+  message until a sign-in fails. `PLAN.md` keeps P3-36 open for those two.
+
 ## 2026-11-27
 
 - **P2-20: a fresh environment built from `requirements.txt` runs the delivered weights.** Walked
