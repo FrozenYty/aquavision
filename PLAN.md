@@ -1029,9 +1029,18 @@ minute rather than a meeting:
       response carries both sets of boxes and both version names, and the page can show them side by
       side — it could not be built earlier because it needs two registered versions
 
-- [ ] **P4-11** The test report · @IkeaFyj · done when it states the plan, what was executed, what
-      passed, what was skipped and why, and the defects found with their severity - a reader can
-      reproduce the number rather than trust it
+- [x] **P4-11** The test report · @IkeaFyj · **delivered 11-28**: `docs/test-report-en/zh.md` states the
+      levels and their owners, one completed run at `3259dfb` (`pytest -v`, 563 collected, 563 passed,
+      0 failed, 0 skipped, 432 s, CPython 3.11.18, torch 2.15.0+cpu in the `aquavision` environment) and
+      what CI runs instead (563 collected, 6 skipped, 557 executed - the six skip conditions named in
+      the code: three `test_detect_real`, two `test_demo_driver`, one `test_delivered_weights`; none is
+      server-stack, and the CI number is derived and labelled as such). §5 carries two tables - 21
+      manual cases with why a person must run them and where the evidence lands, and 6 uncovered cases
+      with what would close them - and no manual case is called passed. §6 lists the defects with
+      severity, fix and the regression check that fails on the old code (15 majors, 10 minors, one open
+      cosmetic, zero blocker, zero major open). §7 gives the commands to reproduce every number · done
+      when it states the plan, what was executed, what passed, what was skipped and why, and the defects
+      found with their severity - a reader can reproduce the number rather than trust it
 - [x] **P4-12** A demo driver, not a memory · @IkeaFyj · **delivered 11-12**: `scripts/demo.py` runs the
       slice against a fresh scratch database and prints a table plus a machine-readable summary -
       frames captured, boxes, per-class counts, per-step elapsed time, and the statistics total, which

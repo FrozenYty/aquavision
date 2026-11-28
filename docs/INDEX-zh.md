@@ -30,6 +30,7 @@
 | 打包并核对演示现场用品 | `demo-kit-card-zh.md` |
 | 按分钟排练受评演示 | `demo-script-zh.md` |
 | 知道每条验收项是已闭环、待人工还是未覆盖 | `acceptance-checklist-zh.md` |
+| 复现一个测试数字 | `test-report-zh.md` |
 | 加表加字段 | `data-model-zh.md` |
 | 买硬件、接线 | `procurement-zh.md` |
 | 知道原型展示什么 | `prototype-zh.md` |
@@ -60,6 +61,7 @@
 | `demo-script-en/zh.md` | 八分钟受评演示、故障那句与十个问题 | 步骤、页面、问题或幻灯片变化时 | @IkeaFyj |
 | `test-cases-en/zh.md` | 每条验收项一条用例，以及怎么跑 | 验收项变化，或某条用例被执行 | @IkeaFyj |
 | `acceptance-checklist-en/zh.md` | 每条验收项一行，旁边是证据与状态 | 验收项变化，或证据移动时 | @IkeaFyj |
+| `test-report-en/zh.md` | 跑了什么、通过了什么、跳过了什么及原因、每个缺陷的级别 | 再次跑测试套件，或某条验收用例变化时 | @IkeaFyj |
 | `glossary-en-zh.md` | 每个概念的唯一叫法 | 出现新概念 | @FrozenYty |
 | `adr/01-17` | 为什么这样定、什么时候该重审 | 不改写，只被新 ADR 取代 | 该篇作者 |
 | `PLAN.md` | 阶段、任务、门禁 | 任务交付或重新划范围 | 全员 |
