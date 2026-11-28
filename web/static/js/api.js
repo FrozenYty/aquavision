@@ -136,8 +136,8 @@ export const closeSession = (sessionId) => request("POST", `/capture/sessions/${
 
 // ---- Frames and detection ----
 export const listFrames = (query) => request("GET", "/frames", { query });
-// The server counts frames (asset_count); which frames is not part of the contract yet, so the ids
-// travel along for when it is.
+// The ids are the selection the operator ticked; the server records exactly those frames (contract
+// §6, Batch task). asset_count travels beside them and the recorded count is the number assigned.
 export const startBatch = (frameIds) =>
   request("POST", "/detect/batches", { body: { asset_count: frameIds.length, frame_ids: frameIds } });
 export const listTasks = (query) => request("GET", "/tasks", { query });

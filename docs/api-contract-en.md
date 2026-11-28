@@ -159,6 +159,28 @@ and no path separator, because both end up in the stored file's path). The numbe
 - `is_manual` — `0` detected, `1` drawn by a reviewer.
 - `review_status` — `0` pending, `1` confirmed, `2` modified, `3` rejected.
 
+### Batch task
+
+```
+POST /api/detect/batches
+{ "asset_count": 100 }                    // automatic: the next 100 eligible frames
+{ "frame_ids": ["20261103T193012-0042", "20261103T193015-0043"] }   // selection: exactly these
+```
+
+The body carries one of the two forms. `asset_count` asks the queue for that many frames: the server
+takes the undetected frames the quality gate accepted, skips frames another task already owns, and
+walks them in queue order. `frame_ids` names the frames one by one - the image browser's checkboxes
+send it - and the task's work list is exactly that list, in the order given, with duplicates dropped.
+`asset_count` may travel beside `frame_ids` (the browser sends it as a convenience count); when a
+selection is present the recorded count is the number of frames assigned, not the number asked for. A
+body with neither answers `40001`.
+
+A selection is all-or-nothing: every frame listed must pass the same queue rules the automatic form
+applies, and one that is unknown, refused by the quality gate (`quality_flag = 1`), already detected,
+or already owned by another task refuses the whole request with `40002` and a message naming the
+frame and the reason. An empty list answers `40002` as well. The selection is never silently shrunk:
+the operator ticked those frames, and a job that ran a different set would be a different job.
+
 ### Review submission
 
 ```
