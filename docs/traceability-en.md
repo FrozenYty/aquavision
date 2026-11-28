@@ -28,11 +28,13 @@ Every screen of the prototype, element by element, traced to the requirement it 
 | 1.2 | 2026-11-10 | Yao Tianyu, Sun Jianheng | Page names follow SRS V1.11 §5.2 (#122); the image-browser and result-detail templates and figures are renamed (#127) |
 | 1.3 | 2026-11-11 | Sun Jianheng | P-07 gains the zoom row (TM-062), so the ids after it shift by one: 108 rows (#137); TM-056 points at the CSV export button (#138) |
 | 1.4 | 2026-11-11 | Sun Jianheng | Every in-progress row reviewed against the real server: 17 rows move to Done in COD (TM-041, TM-047, TM-048, TM-058 to TM-068, TM-074, TM-105, TM-106, numbered as in this version); the UT column is filled where a test runs the element's logic; two elements SRS §5.2 lists but the pages lack get rows of their own (Recent jobs on P-02, Version compare and rollback on P-07): 110 rows |
+| 1.5 | 2026-11-28 | Yao Tianyu | Figures 1–2 and 4–13 regenerated from the current build (demo mode, 1440 px) and their callouts re-mapped and checked against the rows; figure 3 keeps the previous capture (the mock capture page no longer renders a live frame) and figure 1 has no callout 4 (no refusal message until a sign-in fails) |
 
 ## 3. How to read it
 
 - **Figure N, callout M** points at the red numbered circle M on figure N. Callouts are numbered in reading order within each screen; a row with no callout describes an element the requirement asks for that is not on screen.
 - **Screenshots show the prototype in demo mode** (`?mock=1`). The status columns describe the system against the real server: an element that only works on mock data is not counted as done.
+- **Regenerated 2026-11-28**: figures 1–2 and 4–13 were captured from the current build in demo mode at 1440 px wide, and their callouts were re-mapped from the previous figures (93 pastes, each checked against the row that cites it). Figure 3 keeps the previous capture: the mock capture page no longer renders a live frame, so three of its callouts would land on blank card. Figure 1 has no callout 4 because the current sign-in page shows no refusal message until a sign-in fails.
 - **PD** — screen design exists and was reviewed in the prototype walkthrough. **COD** — coded and checked against the real server; the revision history says when. **UT** — Done when an automated test runs the element's own logic and checks the result (`tests/test_review_canvas.py`, `tests/test_result_csv.py`); In progress when a test only checks it from the source text (`tests/test_page_names.py`, `tests/test_live_socket.py`). Server tests cover the routes behind many rows, but they do not exercise the element, so they are not counted here.
 - **Assignee** builds the element; **owner** answers for the screen.
 
