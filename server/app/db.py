@@ -113,6 +113,25 @@ OBSOLETE_COLUMNS: tuple[tuple[str, str, str], ...] = (
 )
 
 
+def ensure_indexes(engine: Engine) -> list[str]:
+    """Create every index the models declare that this database is missing, and name them.
+
+    ``create_all`` builds a missing table *with* its indexes, but it does not touch a table that
+    already exists - so a database created before an index was declared keeps the slow plan the index
+    was added to remove (the hard-sample pool scanned five million rows per request, AC-34). This is
+    the index half of ``add_missing_columns``, and like it, it is additive only: nothing is dropped.
+    """
+    inspector = inspect(engine)
+    created: list[str] = []
+    for table in Base.metadata.sorted_tables:
+        existing = {index["name"] for index in inspector.get_indexes(table.name)}
+        for index in table.indexes:
+            if index.name not in existing:
+                index.create(bind=engine)
+                created.append(str(index.name))
+    return created
+
+
 def add_missing_columns(
     engine: Engine, metadata: MetaData | None = None
 ) -> tuple[list[str], list[str]]:

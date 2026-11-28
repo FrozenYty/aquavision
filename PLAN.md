@@ -445,9 +445,23 @@ Handles: `@FrozenYty` Tianyu Yao · `@Gtechson` Gao Tianxiang · `@chemflowers` 
         message store, and the store had a table, a list route and a mark-read route with **nothing
         that ever wrote a row**, so the unread count was permanently zero
       - "messages kept 30 days" is the same business rule's other half and belongs to `P3-08`'s cleanup
-- [ ] **P3-10** Performance budget, measured · @FrozenYty · closes AC-34 · done when a committed script
+- [x] **P3-10** Performance budget, measured · @FrozenYty · **delivered 11-28**: a committed script
+      (`scripts/measure_performance.py`) seeds NFR-P-05's design capacity - 100,000 image assets and
+      5,000,000 detected objects, plus 200 batch tasks and 100,000 task items - in a throwaway SQLite
+      database and times the four paginated list routes in-process and the real single-frame route 100
+      times. Measured: list P90 12.8 / 9.0 / 143.8 / 7.6 ms per route (worst 143.8 ms, budget 2,000);
+      single-frame median 71.1 ms, P90 87.6 ms (budget 1,500), on a CPU (`torch 2.15.0+cpu`) - so the
+      deployment GPU run is the acceptance run, and this CPU pass is its lower-bound evidence · closes
+      AC-34 · done when a committed script
       measures single-frame latency and the list endpoints' P90 against a database at design capacity,
       and the numbers are pasted into the pull request — a claim is not a measurement
+      - **the first run found a major defect and this delivery fixes it:** `/api/hard-samples` measured
+        **357,241 ms** per request at capacity because the pool's filter, grouping and ordering scanned
+        the five-million-row table with no covering index. `detect_object` now declares
+        `(hard_flag, review_status, frame_id, hard_reason)`, `init_db` creates missing indexes on an
+        existing database as well (`ensure_indexes`, pinned by two tests in `tests/test_init_db.py`),
+        and the re-run measured 143.8 ms P90. `/api/datasets` is named as skipped: a list route with no
+        page/size to time.
 - [x] **P3-11** The permission matrix, negatively tested · @Gtechson · closes AC-02 · **delivered
       11-12**: `tests/test_permission_matrix.py` holds a (method, path, allowed roles) table derived
       from SRS Table 2-1, FR-M1-02 and the contract's own sentences, and exercises all four roles
@@ -943,6 +957,12 @@ minute rather than a meeting:
         filtered set, and `GET /api/reports/{report_code}/file` serves the stored Markdown
         (`tests/test_reports_route.py`, `tests/report_preview.mjs`); the species card's slow-server
         notice is the only one left, and it is cosmetic.
+      - **measurement 11-28, one more major closed:** the performance measurement of `P3-10` found
+        `GET /api/hard-samples` taking 357,241 ms per request at design capacity - the hard-sample pool
+        filtered, grouped and ordered over five million `detect_object` rows with no covering index.
+        `detect_object` now declares `(hard_flag, review_status, frame_id, hard_reason)`, `init_db`
+        creates a missing index on an existing database (`ensure_indexes`), and the re-measured P90 is
+        143.8 ms; `tests/test_init_db.py` pins both the declared index and the upgrade path.
 - [ ] **P4-06** Acceptance checklist, demo script, slides · @IkeaFyj · done when every acceptance item
       is ticked with the evidence beside it, and the demo runs end to end on paper without a question
       left unanswerable; the ten questions an examiner is most likely to ask have written answers beside

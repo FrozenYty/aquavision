@@ -51,6 +51,8 @@ committed; the images themselves are not.
 A single +0.03 margin sits close to run-to-run noise on the 1,111-image frozen test set. Run the
 baseline and the improved model with three seeds and report mean ± standard deviation.
 
+TC-PERF-02 in `test-cases-en.md` measures at the design capacity NFR-P-05 defines: 100,000 image assets and 5,000,000 detected objects, with the 200 batch tasks and 100,000 task items those frames imply. `scripts/measure_performance.py` seeds that database by default; its smaller routine-load check is the 30-day operating envelope (three monitoring points × 500 frames per point per day = 45,000 frames, ~135,000 boxes), selected with `--frames 45000 --objects 135000`.
+
 ## 4. Test data and fixtures
 
 - Committed fixtures do not exist yet. The capture tests synthesise what they need in code — a

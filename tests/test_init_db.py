@@ -124,3 +124,39 @@ def test_script_creates_the_missing_database_directory(tmp_path: Path):
     finally:
         eng.dispose()
     assert len(online) == 1, "the delivered model version must be registered as the online one"
+
+
+def test_the_hard_sample_pool_index_is_part_of_the_schema(engine: Engine):
+    """AC-34 measured the pool at 357 s per request without this covering index."""
+    indexes = {index["name"] for index in inspect(engine).get_indexes("detect_object")}
+    assert "ix_detect_object_hard_pool" in indexes, sorted(indexes)
+
+
+def test_init_db_adds_a_missing_index_to_an_existing_database(tmp_path: Path):
+    """A database created before the index was declared gets it from the deployment command."""
+    db = tmp_path / "existing.db"
+    dsn = f"sqlite:///{db}"
+    command = [sys.executable, str(ROOT / "scripts" / "init_db.py"), "--dsn", dsn]
+    first = subprocess.run(command, capture_output=True, text=True, check=False)
+    assert first.returncode == 0, first.stderr
+
+    engine = create_engine(dsn)
+    try:
+        with engine.begin() as connection:
+            connection.exec_driver_sql("DROP INDEX ix_detect_object_hard_pool")
+        assert "ix_detect_object_hard_pool" not in {
+            index["name"] for index in inspect(engine).get_indexes("detect_object")
+        }
+    finally:
+        engine.dispose()
+
+    second = subprocess.run(command, capture_output=True, text=True, check=False)
+    assert second.returncode == 0, second.stderr
+    assert "ix_detect_object_hard_pool" in second.stdout, second.stdout
+
+    engine = create_engine(dsn)
+    try:
+        names = {index["name"] for index in inspect(engine).get_indexes("detect_object")}
+    finally:
+        engine.dispose()
+    assert "ix_detect_object_hard_pool" in names, sorted(names)

@@ -329,6 +329,7 @@ high-traffic single-column indices only:
 | `detect_object` | `(frame_id)` | Fetch boxes for one frame |
 | `detect_object` | `(task_id, class_code)` | Per-task class counts |
 | `detect_object` | `(review_status)` | Review queue |
+| `detect_object` | `(hard_flag, review_status, frame_id, hard_reason)` | Hard-sample pool: filter, group and order read from the index alone (AC-34; without it the route took 357 s at design capacity) |
 | `sys_log` | `(created_at)` | Audit queries by date |
 | `detect_task_item` | `(task_id, asset_id)` | Unique: one item per frame per task |
 | `detect_task_item` | `(task_id, state)` | Claim the next pending item of a task |

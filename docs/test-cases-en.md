@@ -395,16 +395,16 @@ checked.
 ### 3.9 Performance
 
 **TC-PERF-01** — AC-34 · single-frame latency · manual
-- Precondition: the deployment machine with its GPU.
+- Precondition: the deployment machine; `scripts/measure_performance.py --detect-only` seeds its own database and frame.
 - Steps: time 100 single-frame detections; take median and P90.
 - Expected: median at most 1.5 s end to end.
-- Where: manual — the deployment machine. No test times 100 detections or takes a median.
+- Where: manual — `python scripts/measure_performance.py --detect-only` on the deployment machine: it times the real route and prints the median, P90, the interpreter and `torch.cuda.is_available()`, so a CPU result is never read as the GPU measurement AC-34 asks for.
 
 **TC-PERF-02** — AC-34 · list latency · manual
-- Precondition: a database at design capacity.
+- Precondition: a database at design capacity — NFR-P-05 defines it as 100,000 image assets and 5,000,000 detected objects, with the 200 batch tasks and 100,000 task items those frames imply. The smaller 30-day operating envelope (three monitoring points × 500 frames per point per day = 45,000 frames, ~135,000 boxes) is `--frames 45000 --objects 135000`.
 - Steps: run a load test against the list endpoints; take P90.
-- Expected: P90 at most 2 s.
-- Where: manual — a load test at design capacity, which no environment here has.
+- Expected: P90 at most 2 s (AC-34, NFR-P-01); NFR-P-05's 3 s bound covers the same large-table queries and is the looser one.
+- Where: manual — `python scripts/measure_performance.py --list-only`, which seeds that database in a throwaway file and times the real list routes in-process.
 
 ### 3.10 Delivery and demonstration
 

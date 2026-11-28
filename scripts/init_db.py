@@ -38,6 +38,7 @@ from app.db import (  # noqa: E402
     drop_obsolete_columns,
     dsn_from_env,
     engine_from_dsn,
+    ensure_indexes,
 )
 from app.models import EXPECTED_COLUMNS, ModelVersion, SpeciesDict, SysUser  # noqa: E402
 from app.security import hash_password  # noqa: E402
@@ -116,6 +117,7 @@ def init_db(dsn: str, admin_password: str | None = None) -> None:
     # gained does not, and every query selecting it would fail with "no such column" (P3-25), so the
     # missing columns are added next, in place, without touching a row.
     Base.metadata.create_all(engine)
+    indexed = ensure_indexes(engine)
     added, refused = add_missing_columns(engine)
     dropped, undroppable = drop_obsolete_columns(engine)
 
@@ -135,6 +137,8 @@ def init_db(dsn: str, admin_password: str | None = None) -> None:
     print(f"species seeded: {inserted} new, {len(codes)} total")
     if added:
         print(f"schema upgraded: {', '.join(added)} (existing rows kept)")
+    if indexed:
+        print(f"schema indexed: {', '.join(indexed)}")
     if dropped:
         print(f"schema migrated: dropped {', '.join(dropped)}")
     if refused:
