@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { correctionsView, qualityView, speciesView, trendView } from "../web/static/js/stats.js";
-import { renderSpeciesDonut, renderTotalBars } from "../web/static/js/charts.js";
+import {
+  renderSpeciesDonut,
+  renderTotalBars,
+  renderTrendLine,
+} from "../web/static/js/charts.js";
 
 class Element {
   constructor(tag) { this.tag = tag; this.attrs = {}; this.style = {}; this.children = []; }
@@ -34,3 +38,66 @@ assert.ok([
   qualityView({ total: 0, rejected: 0, rate: 0 }),
   correctionsView({ total: 0, modified: 0, added: 0, rejected: 0 }),
 ].every((view) => view.empty));
+
+// Count axes are whole numbers: a maximum of 1 stepped by 0.2 and printed labels
+// like "0.6000000000000001". Both count charts must label with integers.
+const axisLabels = (root) =>
+  root.children[0].children
+    .filter((element) => element.tag === "text" && element.attrs["text-anchor"] === "end")
+    .map((element) => element.textContent);
+renderTotalBars(root, qualityView({ total: 1, rejected: 0, rate: 0 }).bars);
+let countLabels = axisLabels(root);
+assert.ok(countLabels.length >= 2, `count axis drew ${countLabels.length} labels`);
+assert.ok(
+  countLabels.every((label) => /^\d+$/.test(label)),
+  `fractional count axis: ${countLabels}`,
+);
+
+renderTrendLine(root, [
+  { date: "2026-11-01", frames: 1 },
+  { date: "2026-11-02", frames: 1 },
+]);
+countLabels = axisLabels(root);
+assert.ok(
+  countLabels.every((label) => /^\d+$/.test(label)),
+  `fractional trend axis: ${countLabels}`,
+);
+
+// Fewer than two days cannot be drawn: the line divides by rows.length - 1, which
+// was NaN for a one-day response.
+const oneDay = trendView({ days: 1, items: [{ date: "2026-11-01", frames: 5 }] });
+assert.equal(oneDay.empty, true);
+assert.match(oneDay.emptyText, /数据不足两天，画不出趋势/);
+const quietOneDay = trendView({ days: 1, items: [{ date: "2026-11-01", frames: 0 }] });
+assert.equal(quietOneDay.empty, true);
+assert.match(quietOneDay.emptyText, /没有采集任何帧/, "a zero-frame period keeps its no-capture message");
+
+// Every empty state names a next step, as the other pages do.
+assert.match(qualityView({ total: 0, rejected: 0, rate: 0 }).emptyText, /href="capture\.html"/);
+assert.match(trendView({ days: 7, items: [] }).emptyText, /href="capture\.html"/);
+assert.match(
+  correctionsView({ total: 0, modified: 0, added: 0, rejected: 0 }).emptyText,
+  /href="review\.html"/,
+);
+assert.match(
+  speciesView({ basis: "reviewed", total: 0, items: [], days: 7 }).emptyText,
+  /原始识别结果/,
+  "the species card keeps its basis hint",
+);
+
+// The mock answers in the routers' shapes: days is echoed and applied, and cn_name
+// comes from the mock's species catalog instead of repeating the class code.
+globalThis.sessionStorage = { getItem: () => null, setItem() {} };
+const mock = await import("../web/static/mock/index.js");
+const mockGet = async (path, query) => (await mock.handle("GET", path, { query })).data;
+const mockSpecies = await mockGet("/stats/species", { days: 3 });
+assert.equal(mockSpecies.days, 3);
+assert.equal(
+  mockSpecies.items.find((item) => item.class_code === "holothurian").cn_name,
+  "海参",
+);
+assert.equal((await mockGet("/stats/quality", { days: 3 })).days, 3);
+assert.equal((await mockGet("/stats/corrections", { days: 3 })).days, 3);
+const mockTrend = await mockGet("/stats/trend", { days: 3 });
+assert.equal(mockTrend.days, 3);
+assert.equal(mockTrend.items.length, 3, "the trend item count follows days");

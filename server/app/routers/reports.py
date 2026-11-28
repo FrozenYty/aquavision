@@ -222,19 +222,28 @@ def _figures(db, start: datetime, end: datetime, basis: str) -> dict[str, object
 
 
 def _render(code: str, body: ReportBody, figures: dict[str, object], online) -> str:
+    model = online.version_name if online else "未上线"
+    basis = "复核后结果" if body.basis == "reviewed" else "原始识别结果"
     lines = [
         f"# 巡检报告 {code}",
         "",
         f"- 统计周期：{timebase.to_zone(body.period_start):%Y-%m-%d} 至 "
         f"{timebase.to_zone(body.period_end):%Y-%m-%d}",
         f"- 模板：{body.template}",
-        f"- 统计口径：{'复核后结果' if body.basis == 'reviewed' else '原始识别结果'}",
-        f"- 模型版本：{online.version_name if online else '未上线'}",
-        "",
-        "## 采集与质量",
-        "",
-        f"- 采集成像：{figures['frames']} 帧",
-        f"- 质量拦截：{figures['rejected']} 帧，拦截率 {figures['rate']:.2%}",
+        f"- 统计口径：{basis}",
+    ]
+    # The brief template keeps the period, the species composition and the footer; the standard one
+    # adds the capture-quality and model sections that make the full inspection record.
+    if body.template == "standard":
+        lines += [
+            f"- 模型版本：{model}",
+            "",
+            "## 采集与质量",
+            "",
+            f"- 采集成像：{figures['frames']} 帧",
+            f"- 质量拦截：{figures['rejected']} 帧，拦截率 {figures['rate']:.2%}",
+        ]
+    lines += [
         "",
         "## 物种组成",
         "",
@@ -251,8 +260,7 @@ def _render(code: str, body: ReportBody, figures: dict[str, object], online) -> 
         "",
         "---",
         "",
-        f"生成于 {timebase.iso(timebase.now())} · 模型版本 "
-        f"{online.version_name if online else '未上线'} · 口径 "
+        f"生成于 {timebase.iso(timebase.now())} · 模型版本 {model} · 口径 "
         f"{'复核后' if body.basis == 'reviewed' else '原始'}",
         "",
         "> 演示阶段报告以 Markdown 生成；Word 与 PDF 由同一份数据在导出环节渲染。",

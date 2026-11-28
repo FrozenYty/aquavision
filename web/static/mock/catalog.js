@@ -26,10 +26,12 @@ export const DATASETS = [
   { dataset_id: 1, snapshot_name: "DS-V1", split_ratio: "7:2:1", seed: 42, frame_count: 6200, status: "archived", splits: { train: 4340, val: 1240, test: 620 }, created_at: "2026-10-30T02:05:00+00:00" },
 ];
 
-// Inspection reports (FR-M5-04), in the shape the reports route returns.
+// Inspection reports (FR-M5-04), in the shape the reports route returns. A report's period is stored
+// as whole local days in the operating zone (ADR 14), so the timestamps carry that zone's offset:
+// the day a filter compares is the operating day, not a UTC one.
 export const REPORTS = [
-  { report_id: 12, report_code: "RP261106-012", period_start: "2026-11-01T00:00:00+00:00", period_end: "2026-11-06T23:59:59+00:00", template: "standard", basis: "reviewed", model_version_id: 4, status: "ready", error_msg: null, file_path: "reports/RP261106-012.md", created_at: "2026-11-06T01:00:00+00:00" },
-  { report_id: 11, report_code: "RP261101-011", period_start: "2026-10-01T00:00:00+00:00", period_end: "2026-10-31T23:59:59+00:00", template: "standard", basis: "reviewed", model_version_id: 3, status: "ready", error_msg: null, file_path: "reports/RP261101-011.md", created_at: "2026-11-01T00:30:00+00:00" },
+  { report_id: 12, report_code: "RP261106-012", period_start: "2026-11-01T00:00:00+08:00", period_end: "2026-11-06T23:59:59+08:00", template: "standard", basis: "reviewed", model_version_id: 4, status: "ready", error_msg: null, file_path: "reports/RP261106-012.md", created_at: "2026-11-06T09:00:00+08:00" },
+  { report_id: 11, report_code: "RP261101-011", period_start: "2026-10-01T00:00:00+08:00", period_end: "2026-10-31T23:59:59+08:00", template: "standard", basis: "reviewed", model_version_id: 3, status: "ready", error_msg: null, file_path: "reports/RP261101-011.md", created_at: "2026-11-01T08:30:00+08:00" },
 ];
 
 // model_version, train_experiment and species_dict, in the shapes serializers.model_version, the

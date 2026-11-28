@@ -54,8 +54,9 @@
         <section class="av-card">
           <h2 class="av-card-title">历史报告 <small class="text-secondary fw-normal">保留全部版本，可回溯</small></h2>
           <form id="history-filters" class="d-flex flex-wrap align-items-end gap-2 mb-3">
-            <label class="small">周期开始<input id="history-from" class="form-control form-control-sm" type="date"></label>
-            <label class="small">周期结束<input id="history-to" class="form-control form-control-sm" type="date"></label>
+            <label class="small">起日<input id="history-from" class="form-control form-control-sm" type="date"></label>
+            <label class="small">止日<input id="history-to" class="form-control form-control-sm" type="date"></label>
+            <span class="small text-secondary">与所选范围有重叠的报告</span>
             <label class="small">模板<select id="history-template" class="form-select form-select-sm">
               <option value="">全部</option><option value="standard">标准巡检</option><option value="brief">简版</option>
             </select></label>
@@ -133,32 +134,46 @@
       return `<span class="badge text-bg-${kind}">${label}</span>${r.error_msg ? `<div class="text-danger">${esc(r.error_msg)}</div>` : ""}`;
     }
 
+    let historyQueued = false;
+
     async function loadHistory() {
       const button = $("history-search");
-      if (button.disabled) return;
-      const filters = {
-        from: $("history-from").value, to: $("history-to").value,
-        template: $("history-template").value, basis: $("history-basis").value,
-      };
-      if (filters.from && filters.to && filters.from > filters.to) {
-        showError($("history"), new Error("结束日期不能早于开始日期，请调整周期。"));
+      // A refresh wanted while a scan runs is remembered and run once in `finally`: the table is
+      // never rendered by two scans at once, and a generation's follow-up is not dropped.
+      if (button.disabled) {
+        historyQueued = true;
         return;
       }
       button.disabled = true;
       try {
+        const filters = {
+          from: $("history-from").value, to: $("history-to").value,
+          template: $("history-template").value, basis: $("history-basis").value,
+        };
+        if (filters.from && filters.to && filters.from > filters.to) {
+          showError($("history"), new Error("结束日期不能早于开始日期，请调整周期。"));
+          return;
+        }
+        const filtered = Boolean(filters.from || filters.to || filters.template || filters.basis);
         await loadInto($("history"), () => reportHistory(api.listReports, filters), {
-        isEmpty: (d) => d.items.length === 0,
-        empty: "没有符合筛选条件的报告。请调整查询条件。",
-        render: ({ items }) => {
-          $("history").innerHTML = items.map((r) => `<tr>
-            <td class="av-mono">${esc(r.report_code)}</td><td class="av-mono">${day(r.period_start)} ~ ${day(r.period_end)}</td>
-            <td>${TEMPLATE[r.template] ?? esc(r.template)}</td><td>${BASIS[r.basis] ?? esc(r.basis)}</td>
-            <td class="av-mono">${r.model_version_id == null ? "—" : `#${r.model_version_id}`}</td><td>${fmtTime(r.created_at)}</td>
-            <td>${statusCell(r)}</td></tr>`).join("");
+          isEmpty: (d) => d.items.length === 0,
+          empty: filtered
+            ? "没有符合筛选条件的报告。请调整查询条件。"
+            : "还没有生成过报告。选好周期后点“生成报告”。",
+          render: ({ items }) => {
+            $("history").innerHTML = items.map((r) => `<tr>
+              <td class="av-mono">${esc(r.report_code)}</td><td class="av-mono">${day(r.period_start)} ~ ${day(r.period_end)}</td>
+              <td>${TEMPLATE[r.template] ?? esc(r.template)}</td><td>${BASIS[r.basis] ?? esc(r.basis)}</td>
+              <td class="av-mono">${r.model_version_id == null ? "—" : `#${r.model_version_id}`}</td><td>${fmtTime(r.created_at)}</td>
+              <td>${statusCell(r)}</td></tr>`).join("");
           },
         });
       } finally {
         button.disabled = false;
+        if (historyQueued) {
+          historyQueued = false;
+          loadHistory();
+        }
       }
     }
     $("history-filters").addEventListener("submit", (event) => {

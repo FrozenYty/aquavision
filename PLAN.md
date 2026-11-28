@@ -880,6 +880,26 @@ minute rather than a meeting:
         - **11-27: seven of the eight code majors are closed with their tests.** The one left is a
           batch built from a selection - AC-08's drill-down - which needs `POST /api/detect/batches` to
           accept frame ids, a contract change rather than a defect fix, so this task stays open.
+      - **review 11-28, four majors closed outside the audit's list, each with a check that fails on
+        the old code:** the four statistics routes counted "近 7 日" over three different windows, so one
+        page printed two different frame totals - `stats.py` now has one `_window` built from
+        `recent_days`/`day_bounds`, and `tests/test_stats_windows.py` shows `5 != 3` on the old code; the
+        report history paged by page 1's live `total`, counting one report twice and dropping another
+        when a report was created mid-scan - it follows short pages and dedupes by `report_id`; a history
+        refresh requested while another scan ran was dropped, which is how a freshly generated report
+        never appeared - it is queued now; and the 简版 template the select offered was not implemented in
+        `_render` - brief now carries the period, species and footer only, asserted in
+        `tests/test_report_preview.py`
+      - **review 11-28, minors closed:** count axes printed fractions and `0.6000000000000001`; a
+        one-day trend rendered `NaN`; the statistics mock echoed the wrong `days` and `cn_name`;
+        report-history mock rows and the contract's Report example carried a UTC offset where the
+        operating zone belongs; the history filters said "period start/end" for an overlap test; the
+        empty archive claimed a filter was set; statistics empty states named no next step; and TM-087,
+        TM-088 and TM-096 described pages that no longer existed
+      - **review 11-28, left open:** `GET /api/reports` takes only `page`/`size`, so the page still
+        fetches the whole archive and filters in the browser - a server-side filter is a contract
+        change; no route serves the generated Markdown, which FR-M5-04's "downloadable" and TM-096
+        record; the species card alone bypasses `loadInto`'s slow-server notice
 - [ ] **P4-06** Acceptance checklist, demo script, slides · @IkeaFyj · done when every acceptance item
       is ticked with the evidence beside it, and the demo runs end to end on paper without a question
       left unanswerable; the ten questions an examiner is most likely to ask have written answers beside
